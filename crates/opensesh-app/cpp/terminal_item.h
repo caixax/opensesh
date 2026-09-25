@@ -86,6 +86,12 @@ public:
     void setClipboardText(const QString &text, bool primarySelection);
     QString clipboardText(bool primarySelection) const;
     bool supportsPrimarySelection() const;
+    // Pointer shape over the grid: a pointing hand over a link the user can open, else a text
+    // cursor.
+    void setLinkCursor(bool overLink);
+    // Opens a URL with the desktop's handler (QDesktopServices). The Rust side decides which
+    // URLs may be opened. Returns whether a handler took it.
+    bool openUrl(const QString &url) const;
 
 Q_SIGNALS:
     void fontFamilyChanged();
@@ -118,8 +124,11 @@ protected:
     virtual void handleMouse(const TerminalMouseEvent &event) = 0;
     // Wheel or touchpad scroll: Qt's angle delta (1/8 degree, 120 per notch) and pixel delta.
     virtual void handleWheel(const TerminalWheelEvent &event) = 0;
-    // Pointer moved without a button pressed (link hover).
+    // Pointer moved without a button pressed (link hover), or the modifiers changed while the
+    // pointer is over the item. `column` and `line` are -1 when the pointer left the item.
     virtual void handleHover(double x, double y, int column, int line, int modifiers) = 0;
+    // The grid size or the cell size (device pixels) changed; 0 x 0 while there is no window.
+    virtual void handleGridSize(int columns, int lines, int cellWidth, int cellHeight) = 0;
     virtual void handleFocusChange(bool focused) = 0;
     // Text committed by an input method (the preedit is drawn here, in C++).
     virtual void handleImeCommit(const QString &text) = 0;
@@ -138,6 +147,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void hoverMoveEvent(QHoverEvent *event) override;
+    void hoverLeaveEvent(QHoverEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
     void inputMethodEvent(QInputMethodEvent *event) override;
@@ -157,6 +167,8 @@ private:
     void onFrameSwapped();
     int clickCountFor(const QMouseEvent *event);
     void sendMouse(int kind, const QMouseEvent *event, int clickCount);
+    // Re-sends the last hover position with new modifiers (Ctrl pressed or released over a link).
+    void resendHover(Qt::KeyboardModifiers modifiers);
 
     QString m_fontFamily;
     qreal m_fontPointSize;
@@ -164,7 +176,14 @@ private:
     bool m_reduceMotion = false;
     int m_columns = 0;
     int m_lines = 0;
+    // Cell size (device pixels) last passed to handleGridSize.
+    int m_sentCellWidth = 0;
+    int m_sentCellHeight = 0;
     terminal::Metrics m_metrics;
+
+    // Last hover position, while the pointer is over the item.
+    bool m_hovering = false;
+    QPointF m_hoverPosition;
 
     // Cursor blinking (GUI thread). `m_blinkOn` is read during updatePaintNode.
     QTimer m_blinkTimer;

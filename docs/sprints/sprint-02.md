@@ -30,20 +30,20 @@
 - [ ] Cursor shapes and blinking (honouring reduce motion)
 
 ### Interaction
-- [ ] Selection: character, word (double click), line (triple click), block (Alt+drag); optional copy on select; primary selection on Linux
-- [ ] Bracketed paste
-- [ ] Mouse reporting: X10, normal, button, any; SGR encoding
-- [ ] Scrollback with a thin scrollbar; alternate screen
-- [ ] Search with regex (Ctrl+Shift+F)
-- [ ] Links: URL detection, Ctrl+click opens, OSC 8
-- [ ] OSC 0/2 (title), OSC 7 (cwd), focus reporting, bell
+- [x] Selection: character, word (double click), line (triple click), block (Alt+drag); optional copy on select; primary selection on Linux
+- [x] Bracketed paste
+- [x] Mouse reporting: X10, normal, button, any; SGR encoding
+- [x] Scrollback with a thin scrollbar; alternate screen
+- [x] Search with regex (Ctrl+Shift+F)
+- [x] Links: URL detection, Ctrl+click opens, OSC 8
+- [x] OSC 0/2 (title), OSC 7 (cwd), focus reporting, bell
 - [ ] IME: basic preedit (ibus, fcitx5)
-- [ ] Keyboard encoding (Alt/Meta, F1-F24, keypad and cursor modes, Ctrl+Space, ...) with unit tests
+- [x] Keyboard encoding (Alt/Meta, F1-F24, keypad and cursor modes, Ctrl+Space, ...) with unit tests
 
 ### Integration
-- [ ] "Local terminal" tabs from the rail, Hosts and Ctrl+Shift+T replace the placeholders
-- [ ] Tab title from OSC 0/2, closing a tab ends its session
-- [ ] Copy and paste shortcuts (Ctrl+Shift+C / Ctrl+Shift+V) and a context menu
+- [x] "Local terminal" tabs from the rail, Hosts and Ctrl+Shift+T replace the placeholders
+- [x] Tab title from OSC 0/2, closing a tab ends its session
+- [x] Copy and paste shortcuts (Ctrl+Shift+C / Ctrl+Shift+V) and a context menu
 
 ### Performance
 - [ ] Coalesced reading and rendering limited to the display refresh
@@ -52,7 +52,7 @@
 ### Quality
 - [ ] Unit tests: key and mouse encoding, snapshot, selection, search, URL detection
 - [ ] Headless harness: nvim, tmux, htop, mc, less, fzf and vttest basic sections on the real PTY
-- [ ] Smoke tests cover a terminal tab (shell starts, output renders, exits cleanly)
+- [x] Smoke tests cover a terminal tab (shell starts, output renders, exits cleanly)
 
 ### Close
 - [ ] fmt, clippy `-D warnings`, tests, lint-qml, i18n, deny, audit

@@ -1,9 +1,11 @@
 // `--smoke-test`: after the first frame, runs `steps` (one per ~frame, e.g. open every view so
 // its QML is instantiated), then checks the Rust bridges and the text encoding and exits. A step
 // may return an array of further steps; they run next (e.g. the steps of a view that the
-// previous step loaded).
-// Exit codes: 0 ok, 3 no frame rendered, 4 bridge broken, 5 text encoding broken. main.rs turns
-// a clean exit into 6 if our QML logged any warning.
+// previous step loaded, or a step that polls for a condition by returning itself). A step calls
+// fail(reason) when a check fails.
+// Exit codes: 0 ok, 3 no frame rendered, 4 bridge broken, 5 text encoding broken, 8 a step
+// failed or the steps took longer than `stepsTimeout` ms. main.rs turns a clean exit into 6 if
+// our QML logged any warning.
 import QtQuick
 import cc.caixa.opensesh
 
@@ -14,7 +16,10 @@ Item {
     // Functions run in order, one every `stepInterval` ms, before the checks.
     property var steps: []
     property int stepInterval: 60
+    // The steps must finish within this time (ms).
+    property int stepsTimeout: 120000
     property bool started: false
+    property bool failed: false
     // Steps run so far.
     property int stepIndex: 0
     property var queue: []
@@ -32,6 +37,16 @@ Item {
                 && Platform.languages().length >= 2
                 && Theme.textOn(Theme.accent) === Theme.accentText
                 && Theme.controlHeight > 0;
+    }
+
+    // Ends the run with exit code 8 and a clear log line.
+    function fail(reason) {
+        if (failed)
+            return;
+        failed = true;
+        stepTimer.stop();
+        console.error("smoke test: FAILED:", reason);
+        Qt.exit(8);
     }
 
     function finish() {
@@ -63,7 +78,9 @@ Item {
         interval: smoke.stepInterval
         repeat: true
         onTriggered: {
-            if (smoke.queue.length > 0) {
+            if (smoke.failed) {
+                stop();
+            } else if (smoke.queue.length > 0) {
                 const step = smoke.queue[0];
                 smoke.queue = smoke.queue.slice(1);
                 const more = step();
@@ -79,10 +96,16 @@ Item {
 
     Timer {
         interval: 20000
-        running: AppInfo.smokeTest
+        running: AppInfo.smokeTest && !smoke.started
         onTriggered: {
             console.error("smoke test: no frame rendered after", interval, "ms");
             Qt.exit(3);
         }
+    }
+
+    Timer {
+        interval: smoke.stepsTimeout
+        running: smoke.started && !smoke.failed
+        onTriggered: smoke.fail("the steps did not finish within " + interval / 1000 + " s")
     }
 }

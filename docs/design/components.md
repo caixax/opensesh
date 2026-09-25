@@ -119,6 +119,7 @@ Every component appears in the Gallery (`opensesh-app --gallery`) in every state
 | Name | Kind | Responsibility |
 |---|---|---|
 | `Theme`, `AppSettings`, `AppInfo`, `Platform`, `UiState` | Rust | Tokens, persisted settings, startup info, OS helpers, remembered UI state |
+| `TerminalSessions` | Rust | The terminal sessions of the main window, by tab id (`src/terminal/registry.rs`): `close(id)` ends the session of a closed tab, `isOpen(id)`, `count()`. A session outlives the `TerminalItem` that shows it; only closing its tab ends it. |
 | `ActionRegistry` | QML singleton | The single list of user actions. Each is an `OsAction` (`actionId`, `text`, `shortcut`, `category`, `iconName`, `enabled`, `showInPalette`, signal `triggered`) declared next to its handler and added with `register(action)`. `find(id)`, `trigger(id)`, `search(query)` (fuzzy, for the palette) and `conflicts()` (duplicate shortcuts). The shell's `ShortcutHost` creates one `Shortcut` per action. |
 | `Toasts` | QML singleton | `show(text, kind, actionText, actionId)` plus the history (`history`, `unread`) used by the notifications panel |
 
@@ -133,5 +134,6 @@ Every component appears in the Gallery (`opensesh-app --gallery`) in every state
 | `StatusBar.qml`, `SidePanel.qml`, `NotificationsPanel.qml` | Bottom bar, collapsible side panel, notification history drawer |
 | `AppActions.qml`, `ShortcutHost.qml` | The shell's `OsAction`s (PLAN §6.4 defaults) and one `Shortcut` per action |
 | `ThemeBinder.qml` | Feeds `Theme` (see §1) |
-| `SmokeTest.qml` | `--smoke-test`: first frame, bridge and encoding checks, then runs `steps` (functions; a step may return more steps) and exits |
+| `TerminalTab.qml` | One local terminal tab: the `TerminalItem` attached to the tab's session, its scroll bar, search bar (Ctrl+Shift+F), context menu, visual bell and the banner shown when the shell ends with an error. `AppShell` creates one per `sessionModel` row and keeps them all alive; only the current one is visible |
+| `SmokeTest.qml` | `--smoke-test`: first frame, bridge and encoding checks, then runs `steps` (functions; a step may return more steps, or itself to poll) and exits; `fail(reason)` ends the run with exit code 8. The main window's steps open a local terminal, type into it and check its output |
 | `ScreenshotRunner.qml` | `--screenshots <dir>`: every page in dark/light × comfortable/compact |

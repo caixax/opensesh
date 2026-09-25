@@ -23,6 +23,7 @@ QtObject {
     readonly property string categoryView: qsTr("View")
     readonly property string categoryAppearance: qsTr("Appearance")
     readonly property string categorySessions: qsTr("Sessions")
+    readonly property string categoryTerminal: qsTr("Terminal")
     readonly property string categoryDebug: qsTr("Debug")
 
     readonly property ComingSoon comingSoon: ComingSoon {}
@@ -116,6 +117,48 @@ QtObject {
             enabled: root.shell.sessionCount > 0
             onTriggered: root.shell.cycleTab(-1)
         },
+        // The current terminal tab (PLAN §6.4: Copy / Paste, Find in terminal).
+        OsAction {
+            actionId: "terminal.copy"
+            text: qsTr("Copy")
+            shortcut: "Ctrl+Shift+C"
+            category: root.categoryTerminal
+            iconName: "copy"
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.copy()
+        },
+        OsAction {
+            actionId: "terminal.paste"
+            text: qsTr("Paste")
+            shortcut: "Ctrl+Shift+V"
+            category: root.categoryTerminal
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.paste()
+        },
+        OsAction {
+            actionId: "terminal.find"
+            text: qsTr("Find in terminal")
+            shortcut: "Ctrl+Shift+F"
+            category: root.categoryTerminal
+            iconName: "search"
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.openSearch()
+        },
+        OsAction {
+            actionId: "terminal.selectAll"
+            text: qsTr("Select all in terminal")
+            category: root.categoryTerminal
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.selectAll()
+        },
+        OsAction {
+            actionId: "terminal.clearScrollback"
+            text: qsTr("Clear scrollback")
+            category: root.categoryTerminal
+            iconName: "trash-2"
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.clearScrollback()
+        },
         OsAction {
             actionId: "view.sidePanel"
             text: qsTr("Toggle side panel")
@@ -152,7 +195,7 @@ QtObject {
             text: qsTr("Go to Terminal")
             category: root.categoryView
             iconName: "square-terminal"
-            onTriggered: root.shell.showView("terminal")
+            onTriggered: root.shell.openTerminal()
         },
         OsAction {
             actionId: "view.sftp"

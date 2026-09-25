@@ -232,8 +232,10 @@ Window {
     }
 
     SmokeTest {
+        id: smoke
+
         window: window
-        steps: shell.smokeSteps()
+        steps: shell.smokeSteps(smoke)
     }
 
     // Two series: the shell on the Hosts view, then Settings > Appearance.
