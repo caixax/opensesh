@@ -4,6 +4,7 @@
 #![allow(clippy::print_stdout, clippy::print_stderr)]
 
 mod common;
+mod conpty;
 mod fonts;
 mod http;
 mod i18n;
@@ -11,6 +12,7 @@ mod icons;
 mod lint_qml;
 mod notices;
 mod pseudo;
+mod vttest;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -34,9 +36,18 @@ Tasks:
              date.
   lint-qml   Check QML sources for hardcoded colors and strings without qsTr().
              Optional argument: directory to scan (default: crates/opensesh-app/qml).
+  conpty     Download the pinned Windows ConPTY package (assets/conpty/conpty.toml), verify its
+             sha256 and copy conpty.dll and OpenConsole.exe next to the app in target/debug and
+             target/release (ADR 0014). Also refreshes the license copy and THIRD_PARTY_NOTICES.md.
+             --dest <folder>: copy there instead (repeatable).
+             --remove: delete the copies, to test the ConPTY built into Windows (no network).
+  vttest     Download the pinned vttest release, verify its sha256 and build it with configure
+             and make into target/vttest/vttest, for the terminal harness tests. Linux and other
+             Unix systems only (use WSL on Windows). --force: rebuild.
   help       Show this message.
 
-Only `icons` and `fonts` use the network, and downloads are cached in target/xtask-cache.";
+Only `icons`, `fonts`, `conpty` and `vttest` use the network, and downloads are cached in
+target/xtask-cache.";
 
 fn main() -> ExitCode {
     match run() {
@@ -90,6 +101,14 @@ fn run() -> Result<ExitCode> {
                 eprintln!("i18n: run `cargo xtask i18n` and commit the result");
                 Ok(ExitCode::FAILURE)
             }
+        }
+        Some("conpty") => {
+            conpty::run(&root, &conpty::Options::parse(args)?)?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Some("vttest") => {
+            vttest::run(&root, &vttest::Options::parse(args)?)?;
+            Ok(ExitCode::SUCCESS)
         }
         Some("lint-qml") => {
             // Kept as an `OsString`, so directories with non-UTF-8 names work too.

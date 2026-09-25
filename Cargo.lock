@@ -863,6 +863,7 @@ version = "0.0.1"
 dependencies = [
  "alacritty_terminal",
  "crossbeam-channel",
+ "opensesh-core",
  "portable-pty",
  "regex",
  "rustix",

@@ -116,7 +116,29 @@ When Qt lives outside the dynamic loader's default directories (aqtinstall, the 
 
    If `PATH` is missing the Qt `bin` directory, the program exits immediately with `0xC0000135` (DLL not found).
 
+4. **Copy the bundled ConPTY next to the app** after the first build ([ADR 0014](adr/0014-bundled-conpty.md)):
+
+   ```powershell
+   cargo build -p opensesh-app
+   cargo xtask conpty
+   ```
+
 Cargo builds always link the **release** Qt DLLs and the release MSVC runtime, even in debug builds. This is expected: see the cxx-qt book.
+
+### ConPTY (Windows pseudoconsole host)
+
+Local terminals on Windows run through ConPTY. OpenSesh bundles the modern ConPTY from the NuGet package `Microsoft.Windows.Console.ConPTY` 1.24.260710001 (MIT), because the one built into Windows 10 re-renders the output, is several times slower and can hang when a session closes ([ADR 0014](adr/0014-bundled-conpty.md)).
+
+- **`cargo xtask conpty`** downloads the package from nuget.org (pinned in `assets/conpty/conpty.toml`, sha256 verified, cached in `target/xtask-cache/`), and copies `conpty.dll` and `OpenConsole.exe` (x64) into `target/debug` and `target/release`, whichever exist. It honours `CARGO_TARGET_DIR`. It also refreshes `assets/conpty/LICENSE-MIT.txt` and `THIRD_PARTY_NOTICES.md`.
+- **`--dest <folder>`** copies them somewhere else, for example `--dest target/debug/deps` so that `cargo test` binaries (which live in `deps`) use the bundled host too. Without it, tests use the ConPTY built into Windows.
+- **`--remove`** deletes the copies again, to test the built-in ConPTY. The app works without them.
+- `cargo build` never deletes the files, but `cargo clean` does: run the task again afterwards.
+- **Is it in use?** While a terminal is open, `Get-CimInstance Win32_Process -Filter "Name='OpenConsole.exe'" | Select-Object ProcessId, ParentProcessId, CommandLine` lists the bundled host (`...\target\debug\OpenConsole.exe --headless --inheritcursor ...`). With the built-in ConPTY the host is `conhost.exe --headless ...` instead.
+- If the copy fails with "access denied", an OpenSesh (or a test) that uses the files is still running.
+
+### AltGr
+
+On Windows, the app starts Qt with `QT_QPA_PLATFORM=windows:altgr` unless you set `QT_QPA_PLATFORM` yourself. With that option, Qt reports AltGr as its own modifier instead of Ctrl+Alt, so the terminal can tell AltGr+Q (`@` on a German layout) from Ctrl+Alt+Q. The value is removed from the environment of shells started in local terminals. If you set `QT_QPA_PLATFORM=windows` (or anything else), it is left alone and AltGr arrives as Ctrl+Alt.
 
 ## Build, run and check
 
@@ -150,7 +172,10 @@ The assets these tasks generate are committed, so normal builds work offline:
 - **`cargo xtask fonts`** extracts Inter and JetBrains Mono from their pinned release zips.
 - **`cargo xtask i18n`** updates the `.ts` files with `lupdate`, regenerates the pseudo-locale and compiles the `.qm` files with `lrelease` ([ADR 0009](adr/0009-i18n-pipeline.md)). With `--check` it changes nothing, and fails when a `.ts` file is out of date or a `.qm` file differs from what `lrelease` builds. CI runs `--check` with Qt 6.10.3, so commit `.qm` files built with that version.
 
-`icons` and `fonts` download from the network; no other task does.
+- **`cargo xtask conpty`** (Windows) copies the bundled ConPTY next to the app; see [ConPTY](#conpty-windows-pseudoconsole-host). Its outputs in `target/` are not committed; the license copy and the notices are.
+- **`cargo xtask vttest`** (Linux) builds the pinned vttest used by the terminal harness tests; see [vttest](#vttest).
+
+`icons`, `fonts`, `conpty` and `vttest` download from the network; no other task does.
 
 Smoke-test exit codes:
 
@@ -173,7 +198,7 @@ Smoke-test exit codes:
 | `OPENSESH_LOG` | Log filter with `RUST_LOG` syntax, e.g. `debug` or `opensesh_app=trace,qt=warn`. The default is `info`, and an invalid value falls back to it with a warning. |
 | `OPENSESH_NO_CRASH_DIALOG=1` | Never open the crash dialog after a panic. Use it for headless runs. |
 | `OPENSESH_DEBUG_PANIC=1` | **Debug builds only.** The "Debug: trigger a panic" command panics inside a QML → Rust call, to test the crash report and dialog ([ADR 0004](adr/0004-crash-reporting.md)). |
-| `QT_QPA_PLATFORM` | Qt platform plugin: `wayland`, `xcb`, `windows`, `offscreen`, ... |
+| `QT_QPA_PLATFORM` | Qt platform plugin: `wayland`, `xcb`, `windows`, `offscreen`, ... On Windows the app uses `windows:altgr` when it is unset (see [AltGr](#altgr)). |
 | `QT_QUICK_BACKEND=software` | Software Qt Quick renderer. Use it in CI and on machines without a GPU. |
 | `WAYLAND_DEBUG=1` | Prints the Wayland protocol traffic. Useful to check the `app_id`. |
 
@@ -218,3 +243,44 @@ WSLg provides a Wayland compositor and XWayland, so all three platforms (`waylan
 
 - **Build from a Linux path.** Use `CARGO_TARGET_DIR=~/.cache/opensesh-target` so the Linux and Windows builds don't share `target/`.
 - **Wayland fails in some distros.** If the systemd user session fails to start, `/run/user/$UID` stays empty and Qt reports `Failed to create wl_display`. Run with `XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir`.
+
+## Terminal test programs
+
+The terminal harness tests (Sprint 2) drive real TUI programs through the PTY and the engine, so they need these programs. Install them with the distro's package manager:
+
+```sh
+sudo pacman -S --needed neovim tmux htop mc fzf less time             # Arch (vttest: see below)
+sudo apt install vttest neovim tmux htop mc fzf less time             # Debian 13, Ubuntu 22.04
+sudo dnf install vttest neovim tmux htop mc fzf less time             # Fedora 43
+```
+
+In WSL, `wsl.exe -d <distro> -u root -- <command>` runs a command as root without `sudo`. Versions installed in the WSL test distros on 2026-09-25:
+
+| Program | Arch | Debian 13 | Fedora 43 | Ubuntu 22.04 |
+|---|---|---|---|---|
+| vttest | AUR only: use `cargo xtask vttest` | 2.7+20241208-1 | 2.7.20241204-8.fc43 | 2.7+20210210-1 |
+| neovim | 0.12.5-1 | 0.10.4-8 | 0.11.6-1.fc43 | 0.6.1-3 |
+| tmux | 3.7_c-1 | 3.5a-3 | 3.7c-2.fc43 | 3.2a-4ubuntu0.2 |
+| htop | 3.5.3-1 | 3.4.1-5 | 3.4.1-2.fc43 | 3.0.5-7build2 |
+| mc | 4.8.33-1 | 3:4.8.33-1+deb13u1 | 4.8.33-2.fc43 | 3:4.8.27-1 |
+| fzf | 0.74.4-1 | 0.60.3-1+b2 | 0.74.4-1.fc43 | 0.29.0-1ubuntu0.1 |
+| less | 1:710-1 | 668-1 | 679-2.fc43 | 590-1ubuntu0.22.04.3 |
+| GNU time (`/usr/bin/time -v`) | 1.10-1 | 1.9-0.2 | 1.9-27.fc43 | 1.9-0.1build2 |
+
+Ubuntu 22.04 ships old neovim (0.6) and fzf (0.29) releases; they are good enough for smoke tests.
+
+### vttest
+
+Each distro packages a different vttest release (see the table), and the screens differ between releases. The harness goldens use one pinned upstream release, 20251205, built from source:
+
+```sh
+cargo xtask vttest            # Linux; add --force to rebuild
+```
+
+- It downloads `https://invisible-island.net/archives/vttest/vttest-20251205.tgz` (sha256 `cd6886f9aefe6a3f6c566fa61271a55710901a71849c630bf5376aa984bf77cc`, cached in `target/xtask-cache/`), unpacks it into `<target>/vttest/vttest-20251205/` and runs `./configure && make` there. It needs a C compiler and `make` (`build-essential`, `base-devel`, or `gcc` and `make` on Fedora).
+- The program ends up in **`<target>/vttest/vttest`**, where `<target>` is `$CARGO_TARGET_DIR` when it is set, else `target/`. A stamp file next to it makes later runs skip the build.
+- On Windows the task only prints a note: vttest needs a Unix terminal. From PowerShell, build it in a distro with the same target folder the tests use:
+
+  ```powershell
+  wsl.exe -d Debian -- bash -lc 'cd /mnt/i/Projects/opensesh && CARGO_TARGET_DIR=~/.cache/opensesh-target cargo xtask vttest'
+  ```
