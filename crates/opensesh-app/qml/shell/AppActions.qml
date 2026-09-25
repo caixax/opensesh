@@ -3,6 +3,8 @@ pragma ComponentBehavior: Bound
 // The main window's actions (PLAN §6.4 defaults), registered in ActionRegistry: the command
 // palette lists them and ShortcutHost binds their shortcuts. App shortcuts use Shift or Alt
 // combinations so they never take keys terminal programs need (Ctrl+A, Ctrl+B, Ctrl+K, Ctrl+R...).
+// The exception is F6 / Shift+F6 to move between the window regions (ADR 0011): from Sprint 2 the
+// terminal keeps function keys for its programs, and Ctrl+F6 / Ctrl+Shift+F6 always work.
 // Debug builds add a few "Debug:" actions. Conflicting shortcuts are reported with console.warn,
 // which fails the smoke test.
 //   shell: Item      the AppShell
@@ -253,6 +255,23 @@ QtObject {
             actionId: "focus.previousRegion"
             text: qsTr("Focus the previous region")
             shortcut: "Shift+F6"
+            category: root.categoryView
+            showInPalette: false
+            onTriggered: root.shell.cycleRegion(-1)
+        },
+        // The same with Ctrl, which the terminal never takes: the keyboard way out of it (ADR 0011).
+        OsAction {
+            actionId: "focus.nextRegionAlt"
+            text: qsTr("Focus the next region")
+            shortcut: "Ctrl+F6"
+            category: root.categoryView
+            showInPalette: false
+            onTriggered: root.shell.cycleRegion(1)
+        },
+        OsAction {
+            actionId: "focus.previousRegionAlt"
+            text: qsTr("Focus the previous region")
+            shortcut: "Ctrl+Shift+F6"
             category: root.categoryView
             showInPalette: false
             onTriggered: root.shell.cycleRegion(-1)

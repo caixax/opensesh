@@ -1,6 +1,8 @@
 // `--screenshots <dir>`: captures `target` in every theme x density combination as
 // <dir>/<prefix>-<mode>-<density>.png, then emits `finished`. With `pages`, it captures every
 // page in every combination as <dir>/<prefix>-<page>-<mode>-<density>.png instead.
+// A capture that fails logs a warning and counts in `failures`, so the `finished` handler can
+// exit with code 7. main.rs also fails a screenshot run whose QML logged any warning (code 6).
 import QtQuick
 import cc.caixa.opensesh
 
@@ -21,6 +23,8 @@ Item {
     readonly property var pageList: pages.length > 0 ? pages : [""]
     // Index into combos x pageList, combination-major.
     property int index: -1
+    // Captures that could not be taken or saved.
+    property int failures: 0
 
     readonly property int comboIndex: Math.floor(index / pageList.length)
     readonly property string page: index >= 0 ? pageList[index % pageList.length] : ""
@@ -57,14 +61,17 @@ Item {
             const file = AppInfo.screenshotDir + "/" + name + "-" + runner.combos[runner.comboIndex][0]
                     + "-" + runner.combos[runner.comboIndex][1] + ".png";
             const started = runner.target.grabToImage(result => {
-                if (!result.saveToFile(file))
-                    console.warn("screenshot: could not save", file);
-                else
+                if (result.saveToFile(file)) {
                     console.info("screenshot:", file);
+                } else {
+                    runner.failures += 1;
+                    console.warn("screenshot: could not save", file);
+                }
                 runner.next();
             });
             if (!started) {
-                console.warn("screenshot: grabToImage failed");
+                runner.failures += 1;
+                console.warn("screenshot: grabToImage failed for", file);
                 runner.next();
             }
         }

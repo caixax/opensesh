@@ -11,7 +11,8 @@
 // The body goes in as children (like any Popup) and sizes the dialog through its implicit size
 // (at least 400 px wide at scale 1). Wrap text in a fixed-width Column: a wrapped Text alone
 // reports its unwrapped width. Escape, the close button and the reject button call `reject()`;
-// the accept button calls `accept()`. Assign `footer` to replace the default buttons.
+// the accept button calls `accept()`. Assign `footer` to replace the default buttons. Closing
+// gives the focus back to where it was, with its focus ring (OsFocusReturn).
 import QtQuick
 import QtQuick.Templates as T
 import cc.caixa.opensesh
@@ -31,6 +32,9 @@ T.Dialog {
     readonly property real maxHeight: T.Overlay.overlay ? T.Overlay.overlay.height - 2 * Theme.spacingXl
                                                         : implicitHeight
     readonly property bool headerShown: title.length > 0 || showClose
+    readonly property OsFocusReturn focusReturn: OsFocusReturn {
+        popup: control
+    }
 
     anchors.centerIn: T.Overlay.overlay
     width: Math.max(0, Math.min(implicitWidth, maxWidth))
@@ -57,6 +61,9 @@ T.Dialog {
 
     font.family: Theme.fontFamily
     font.pixelSize: Theme.fontSize
+
+    onAboutToShow: focusReturn.save()
+    onClosed: focusReturn.restore()
 
     enter: Transition {
         NumberAnimation {

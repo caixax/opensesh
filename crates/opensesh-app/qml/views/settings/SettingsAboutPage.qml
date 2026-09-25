@@ -19,7 +19,9 @@ SettingsPage {
         },
         {
             name: qsTr("Simple Icons"),
-            license: qsTr("CC0 1.0 (the logos are trademarks of their owners)")
+            // Per-logo licenses from data/simple-icons.json of the pinned package; keep in sync
+            // with the `notice` of assets/icons/icons.toml.
+            license: qsTr("CC0 1.0, except the Debian (CC BY-SA 3.0), Fedora (custom license), Gentoo (CC BY-SA 2.5), NixOS (CC BY 4.0) and Rocky Linux (CC BY-SA 4.0) logos. The logos are trademarks of their owners.")
         },
         {
             name: qsTr("Inter"),
@@ -192,7 +194,7 @@ SettingsPage {
     SettingsGroup {
         width: parent.width
         title: qsTr("Third-party notices")
-        description: qsTr("OpenSesh bundles these works, each under its own license. The full texts are in THIRD_PARTY_NOTICES.md and the LICENSES folders that ship with OpenSesh.")
+        description: qsTr("OpenSesh bundles these works, each under its own license. THIRD_PARTY_NOTICES.md and the LICENSES folders that ship with OpenSesh have the details and the license texts or links to them.")
 
         Repeater {
             model: page.credits

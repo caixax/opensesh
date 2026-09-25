@@ -232,18 +232,40 @@ fn read_entry<R: Read + Seek>(
     Ok(bytes)
 }
 
-/// Deletes font files that are no longer listed in the manifest.
+/// Deletes font files that are no longer listed in the manifest. `keep` holds the files just
+/// written, so each of them is on disk.
+///
+/// On a case-insensitive file system (Windows, macOS), writing `Inter-Regular.ttf` over an
+/// existing `inter-regular.ttf` keeps the old spelling. That file is the one just written, so it is
+/// renamed to the manifest's spelling instead of being deleted. A case-sensitive file system lists
+/// both names, and the old one is stale.
 fn remove_stale_fonts(dir: &Path, keep: &BTreeSet<String>) -> Result<()> {
+    let mut names = Vec::new();
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
-        let Some(name) = path.file_name().map(|name| name.to_string_lossy()) else {
-            continue;
-        };
+        if path.is_file()
+            && let Some(name) = path.file_name()
+        {
+            names.push(name.to_string_lossy().into_owned());
+        }
+    }
+    for name in &names {
         let is_font = FONT_EXTENSIONS
             .iter()
             .any(|ext| name.to_ascii_lowercase().ends_with(ext));
-        if path.is_file() && is_font && !keep.contains(name.as_ref()) {
-            std::fs::remove_file(&path)?;
+        if !is_font || keep.contains(name) {
+            continue;
+        }
+        let path = dir.join(name);
+        if let Some(wanted) = keep
+            .iter()
+            .find(|wanted| wanted.eq_ignore_ascii_case(name) && !names.contains(wanted))
+        {
+            std::fs::rename(&path, dir.join(wanted))
+                .with_context(|| format!("renaming {} to {wanted}", path.display()))?;
+            println!("renamed {} to {wanted}", path.display());
+        } else {
+            std::fs::remove_file(&path).with_context(|| format!("removing {}", path.display()))?;
             println!("removed stale {}", path.display());
         }
     }
@@ -377,6 +399,41 @@ mod tests {
             .collect();
         left.sort();
         assert_eq!(left, ["Keep.ttf", "README.txt"]);
+    }
+
+    #[test]
+    fn a_font_whose_name_only_changed_case_is_kept() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("inter-regular.ttf"), "old").unwrap();
+        // What `run` does: a case-insensitive file system writes through the old entry and keeps
+        // its spelling; a case-sensitive one creates a second file.
+        write_if_changed(&dir.path().join("Inter-Regular.ttf"), "new").unwrap();
+        remove_stale_fonts(
+            dir.path(),
+            &BTreeSet::from(["Inter-Regular.ttf".to_owned()]),
+        )
+        .unwrap();
+        let left: Vec<String> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(left, ["Inter-Regular.ttf"]);
+        assert_eq!(
+            std::fs::read(dir.path().join("Inter-Regular.ttf")).unwrap(),
+            b"new"
+        );
+    }
+
+    #[test]
+    fn a_differently_cased_file_is_renamed_to_the_manifest_name() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("keep.TTF"), "font").unwrap();
+        remove_stale_fonts(dir.path(), &BTreeSet::from(["Keep.ttf".to_owned()])).unwrap();
+        let left: Vec<String> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(left, ["Keep.ttf"]);
     }
 
     #[test]

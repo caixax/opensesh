@@ -15,8 +15,13 @@ pub const STATE_FILE: &str = "state.toml";
 /// Smallest window size we restore (logical pixels).
 pub const MIN_WINDOW_SIZE: (u32, u32) = (640, 420);
 
-/// Largest window size we restore; anything bigger is treated as corrupt.
+/// Largest window size we restore; anything bigger is treated as corrupt. It is larger than any
+/// real screen, so the window shell still fits the size to the screen it opens on.
 const MAX_WINDOW_SIZE: u32 = 16_384;
+
+/// A saved coordinate must be closer than this to the origin. Nothing real is further away:
+/// X11 coordinates are 16-bit, and Windows parks minimized windows at (-32000, -32000).
+const MAX_WINDOW_OFFSET: u32 = 32_000;
 
 /// Remembered UI state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -59,7 +64,9 @@ impl Default for UiState {
 }
 
 impl UiState {
-    /// Clamps sizes to sane ranges and drops obviously broken values.
+    /// Replaces obviously broken values with the defaults: a size under the minimum or larger
+    /// than any screen, a position that is incomplete or far outside any desktop, and so on.
+    /// (Values that aren't whole numbers, like `nan` or `inf`, already fail to load.)
     #[must_use]
     pub fn sanitized(mut self) -> Self {
         let defaults = Self::default();
@@ -67,6 +74,13 @@ impl UiState {
         if !valid(self.width, MIN_WINDOW_SIZE.0) || !valid(self.height, MIN_WINDOW_SIZE.1) {
             self.width = defaults.width;
             self.height = defaults.height;
+        }
+        let on_a_desktop = |coordinate: Option<i32>| {
+            coordinate.is_some_and(|value| value.unsigned_abs() < MAX_WINDOW_OFFSET)
+        };
+        if !on_a_desktop(self.x) || !on_a_desktop(self.y) {
+            self.x = None;
+            self.y = None;
         }
         if !(160..=1200).contains(&self.side_panel_width) {
             self.side_panel_width = defaults.side_panel_width;
@@ -163,5 +177,78 @@ mod tests {
         );
         assert_eq!(state.side_panel_width, defaults.side_panel_width);
         assert_eq!(state.active_view, defaults.active_view);
+    }
+
+    #[test]
+    fn sizes_larger_than_any_screen_are_rejected() {
+        let defaults = UiState::default();
+        for (width, height) in [(16_385, 900), (1400, 16_385), (u32::MAX, u32::MAX)] {
+            let state = UiState {
+                width,
+                height,
+                ..UiState::default()
+            }
+            .sanitized();
+            assert_eq!(
+                (state.width, state.height),
+                (defaults.width, defaults.height),
+                "{width}x{height}"
+            );
+        }
+        // The limits themselves are kept; the window shell fits them to the screen.
+        let largest = UiState {
+            width: 16_384,
+            height: 16_384,
+            ..UiState::default()
+        };
+        assert_eq!(largest.clone().sanitized(), largest);
+        let smallest = UiState {
+            width: 640,
+            height: 420,
+            ..UiState::default()
+        };
+        assert_eq!(smallest.clone().sanitized(), smallest);
+    }
+
+    #[test]
+    fn positions_off_every_desktop_are_dropped() {
+        for (x, y) in [
+            (Some(-32_000), Some(-32_000)), // A minimized window on Windows.
+            (Some(i32::MAX), Some(0)),
+            (Some(0), Some(i32::MIN)),
+            (Some(100), None),
+            (None, Some(100)),
+        ] {
+            let state = UiState {
+                x,
+                y,
+                ..UiState::default()
+            }
+            .sanitized();
+            assert_eq!((state.x, state.y), (None, None), "{x:?}, {y:?}");
+        }
+        // A monitor left of or above the primary one has negative coordinates.
+        let left = UiState {
+            x: Some(-1920),
+            y: Some(-200),
+            ..UiState::default()
+        };
+        assert_eq!(left.clone().sanitized(), left);
+    }
+
+    #[test]
+    fn non_finite_or_fractional_numbers_give_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(STATE_FILE);
+        for text in [
+            "width = inf\nheight = 900\n",
+            "width = 1400\nheight = nan\n",
+            "x = -inf\ny = 0\n",
+            "side_panel_width = 1e400\n",
+            "width = 1400.5\n",
+        ] {
+            std::fs::write(&path, text).unwrap();
+            assert_eq!(load_state(&path), UiState::default(), "{text}");
+        }
     }
 }

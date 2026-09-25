@@ -4,6 +4,8 @@
 //!   and queue an atomic save on the background writer (the GUI thread never touches disk).
 //! - External edits of `config.toml` are picked up by a file watcher and applied live
 //!   (`reloadedFromDisk`); our own writes are recognised and ignored.
+//! - Problems reach QML as `problem(kind, detail)`: QML owns the translated sentence for each
+//!   kind, and `detail` is technical text (a path, an OS or parser error).
 //! - A file written by a newer OpenSesh, or one that can't be read (a syntax error), is never
 //!   overwritten (`readOnly`, `readOnlyReason`); changes still apply in memory.
 
@@ -62,10 +64,13 @@ pub mod qobject {
         #[cxx_name = "reloadedFromDisk"]
         fn reloaded_from_disk(self: Pin<&mut Self>);
 
-        /// Saving failed, or an external edit couldn't be applied.
+        /// Something the user should hear about. `kind` is one of `load-failed`, `load-newer`,
+        /// `load-warnings` (at startup), `reload-failed` (an external edit was rejected),
+        /// `save-blocked-newer`, `save-blocked-unreadable` (once per protection state) and
+        /// `save-failed`. `detail` is technical text, possibly empty.
         #[qsignal]
         #[cxx_name = "problem"]
-        fn problem(self: Pin<&mut Self>, message: QString);
+        fn problem(self: Pin<&mut Self>, kind: QString, detail: QString);
 
         fn language(self: &Self) -> QString;
         fn set_language(self: Pin<&mut Self>, value: QString);
@@ -123,9 +128,8 @@ pub mod qobject {
 
 use core::pin::Pin;
 use std::collections::VecDeque;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use cxx_qt::{CxxQtType, Threading};
@@ -159,9 +163,14 @@ pub struct AppSettingsRust {
     config: Config,
     path: Option<PathBuf>,
     protection: Protection,
+    /// Whether the user was already told that saves are blocked in the current protection state.
+    blocked_reported: bool,
+    /// The last save error reported, so a persistent one (a read-only directory) is reported
+    /// once rather than on every change. Cleared by a successful write.
+    last_failure: Option<String>,
     warnings: Vec<String>,
-    /// Texts of our recent saves, to ignore the watcher's echo of our own writes.
-    recent_saves: Arc<RecentSaves>,
+    /// Our own writes, to tell the watcher's echo of them from external edits.
+    own_writes: OwnWrites,
     watcher: Option<FileWatcher>,
 }
 
@@ -181,8 +190,10 @@ impl Default for AppSettingsRust {
             config: Config::default(),
             path: None,
             protection: Protection::None,
+            blocked_reported: false,
+            last_failure: None,
             warnings: Vec::new(),
-            recent_saves: Arc::new(RecentSaves::default()),
+            own_writes: OwnWrites::default(),
             watcher: None,
         }
     }
@@ -196,25 +207,59 @@ fn qstring_list(values: impl IntoIterator<Item = String>) -> QStringList {
     values.into_iter().map(|v| QString::from(&v)).collect()
 }
 
-/// Result of reading `config.toml` off the GUI thread.
+/// Result of reading `config.toml`.
 enum Reload {
     Loaded {
         config: Box<Config>,
         warnings: Vec<String>,
         read_only: bool,
     },
+    /// The file can't be used; the text is a technical detail for the user.
     Failed(String),
 }
 
-fn read_config(path: &std::path::Path) -> Reload {
-    match config::load_file(path) {
-        Ok(loaded) => Reload::Loaded {
-            config: Box::new(loaded.config),
-            warnings: loaded.warnings.iter().map(ToString::to_string).collect(),
-            read_only: loaded.read_only,
+/// Parses the text of `config.toml` (read from `path`).
+fn parse_config(path: &Path, text: &str) -> Reload {
+    match Config::from_toml_str(text) {
+        Ok((config, warnings, read_only)) => Reload::Loaded {
+            config: Box::new(config),
+            warnings: warnings.iter().map(ToString::to_string).collect(),
+            read_only,
         },
-        Err(error) => Reload::Failed(error.to_string()),
+        Err(message) => Reload::Failed(format!("{} is not valid TOML: {message}", path.display())),
     }
+}
+
+/// Reads and parses `config.toml`, returning the text that was read (to recognise our own
+/// writes) with the result. A missing file means the defaults.
+fn read_config(path: &Path) -> (Option<String>, Reload) {
+    match std::fs::read_to_string(path) {
+        Ok(text) => {
+            let reload = parse_config(path, &text);
+            (Some(text), reload)
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => (
+            None,
+            Reload::Loaded {
+                config: Box::default(),
+                warnings: Vec::new(),
+                read_only: false,
+            },
+        ),
+        Err(error) => (
+            None,
+            Reload::Failed(format!("could not read {}: {error}", path.display())),
+        ),
+    }
+}
+
+/// How a read of `config.toml` is being applied.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Load {
+    /// The first load, at startup.
+    Startup,
+    /// After an external edit.
+    External,
 }
 
 impl qobject::AppSettings {
@@ -257,42 +302,74 @@ impl qobject::AppSettings {
         };
         let blocked = match self.protection {
             Protection::None => None,
-            Protection::NewerSchema => {
-                Some("config.toml was written by a newer OpenSesh, so changes are not saved.")
-            }
-            Protection::Unreadable => {
-                Some("config.toml has an error, so changes are not saved until it is fixed.")
-            }
+            Protection::NewerSchema => Some("save-blocked-newer"),
+            Protection::Unreadable => Some("save-blocked-unreadable"),
         };
-        if let Some(message) = blocked {
-            self.as_mut().problem(qstring(message));
+        if let Some(kind) = blocked {
+            // The Settings notice explains the state; one toast per state is enough.
+            if !self.blocked_reported {
+                self.as_mut().rust_mut().blocked_reported = true;
+                self.as_mut().problem(qstring(kind), QString::default());
+            }
             return;
         }
         let Some(services) = services::get() else {
             return;
         };
         let text = self.config.to_toml_string();
-        self.recent_saves.remember(&text);
+        let seq = self.as_mut().rust_mut().own_writes.queued(text.clone());
         let qt_thread = self.qt_thread();
         services.writer.write(
             path,
-            text.into_bytes(),
+            text.clone().into_bytes(),
             fsutil::DEFAULT_BACKUPS,
             Some(Box::new(move |path, result| {
-                if let Err(error) = result {
-                    let message = format!("Could not save {}: {error}", path.display());
-                    // The object may already be gone at exit; nothing to report then.
-                    let _ = qt_thread.queue(move |settings| {
-                        settings.problem(QString::from(&message));
-                    });
-                }
+                let failure = result
+                    .err()
+                    .map(|error| format!("{}: {error}", path.display()));
+                // The object may already be gone at exit; nothing to report then.
+                let _ = qt_thread.queue(move |settings| settings.write_done(seq, text, failure));
             })),
         );
     }
 
-    /// Applies a read of `config.toml` on the GUI thread: the first load at startup, or a reload
-    /// after an external edit (which is logged and announced with `reloadedFromDisk`).
-    fn apply_reload(mut self: Pin<&mut Self>, reload: Reload, initial: bool) {
+    /// A queued write finished (on the GUI thread). `failure` is the error detail.
+    fn write_done(mut self: Pin<&mut Self>, seq: u64, text: String, failure: Option<String>) {
+        if let Some(detail) = failure {
+            self.as_mut().rust_mut().own_writes.settled(seq, None);
+            tracing::warn!("could not save config.toml: {detail}");
+            if self.last_failure.as_ref() != Some(&detail) {
+                self.as_mut().rust_mut().last_failure = Some(detail.clone());
+                self.as_mut()
+                    .problem(qstring("save-failed"), QString::from(&detail));
+            }
+            return;
+        }
+        self.as_mut().rust_mut().last_failure = None;
+        // The file now holds exactly this text, so warnings about the old content are stale.
+        let warnings: Vec<String> = match Config::from_toml_str(&text) {
+            Ok((_, warnings, _)) => warnings.iter().map(ToString::to_string).collect(),
+            Err(_) => Vec::new(),
+        };
+        self.as_mut().rust_mut().own_writes.settled(seq, Some(text));
+        if self.protection == Protection::None && self.warnings != warnings {
+            self.as_mut().rust_mut().warnings = warnings;
+            self.as_mut().status_changed();
+        }
+    }
+
+    /// Sets the protection; a new state may be reported again.
+    fn set_protection(mut self: Pin<&mut Self>, protection: Protection) {
+        let mut state = self.as_mut().rust_mut();
+        if state.protection != protection {
+            state.protection = protection;
+            state.blocked_reported = false;
+        }
+    }
+
+    /// Applies a read of `config.toml` on the GUI thread. An external edit that changed
+    /// something is logged and announced with `reloadedFromDisk`; a rejected one with `problem`.
+    fn apply_reload(mut self: Pin<&mut Self>, reload: Reload, load: Load) {
         match reload {
             Reload::Loaded {
                 config,
@@ -304,53 +381,58 @@ impl qobject::AppSettings {
                     let mut state = self.as_mut().rust_mut();
                     state.config = *config;
                     state.warnings = warnings;
-                    state.protection = if read_only {
-                        Protection::NewerSchema
-                    } else {
-                        Protection::None
-                    };
                 }
+                self.as_mut().set_protection(if read_only {
+                    Protection::NewerSchema
+                } else {
+                    Protection::None
+                });
                 self.as_mut().status_changed();
-                if changed && !initial {
+                if changed && load == Load::External {
                     tracing::info!("config.toml changed on disk; settings reloaded");
                     self.as_mut().settings_changed();
                     self.as_mut().reloaded_from_disk();
                 }
             }
-            Reload::Failed(message) => {
-                if initial {
-                    tracing::warn!("using the default settings: {message}");
-                } else {
-                    tracing::warn!("ignoring external edit of config.toml: {message}");
+            Reload::Failed(detail) => {
+                match load {
+                    Load::Startup => tracing::warn!("using the default settings: {detail}"),
+                    Load::External => {
+                        tracing::warn!("ignoring external edit of config.toml: {detail}");
+                    }
                 }
-                {
-                    let mut state = self.as_mut().rust_mut();
-                    state.warnings = vec![message.clone()];
-                    state.protection = Protection::Unreadable;
-                }
+                self.as_mut().rust_mut().warnings = vec![detail.clone()];
+                self.as_mut().set_protection(Protection::Unreadable);
                 self.as_mut().status_changed();
-                self.as_mut().problem(QString::from(&message));
+                if load == Load::External {
+                    self.as_mut()
+                        .problem(qstring("reload-failed"), QString::from(&detail));
+                }
             }
+        }
+    }
+
+    /// The watcher saw `config.toml` change; `text` is what it read (on the GUI thread).
+    fn file_changed(self: Pin<&mut Self>, text: Option<String>, reload: Reload) {
+        // While the file is protected we never write it, so anything on disk is the user's.
+        let echo = self.protection == Protection::None
+            && text
+                .as_deref()
+                .is_some_and(|text| self.own_writes.is_echo(text));
+        if !echo {
+            self.apply_reload(reload, Load::External);
         }
     }
 
     /// Starts watching `config.toml` for external edits.
     fn start_watcher(mut self: Pin<&mut Self>, path: PathBuf) {
         let qt_thread = self.qt_thread();
-        let recent_saves = Arc::clone(&self.recent_saves);
         let watched = path.clone();
         let watcher = FileWatcher::spawn(&path, RELOAD_DEBOUNCE, move || {
-            let current = std::fs::read_to_string(&watched).ok();
-            // Any of our recent saves may be what's on disk right now (a newer one can still be
-            // waiting in the writer), so only content we never wrote counts as an external edit.
-            if current
-                .as_deref()
-                .is_some_and(|text| recent_saves.contains(text))
-            {
-                return;
-            }
-            let reload = read_config(&watched);
-            let _ = qt_thread.queue(move |settings| settings.apply_reload(reload, false));
+            // Read and parse here, off the GUI thread; whether it's our own write is decided on
+            // the GUI thread, which knows every save in flight.
+            let (text, reload) = read_config(&watched);
+            let _ = qt_thread.queue(move |settings| settings.file_changed(text, reload));
         });
         match watcher {
             Ok(watcher) => self.as_mut().rust_mut().watcher = Some(watcher),
@@ -385,14 +467,16 @@ impl qobject::AppSettings {
         // it as `config.toml.bak.1`. A newer file stays protected.
         let replace_broken = self.protection == Protection::Unreadable;
         if replace_broken {
-            {
-                let mut state = self.as_mut().rust_mut();
-                state.protection = Protection::None;
-                state.warnings.clear();
-            }
+            self.as_mut().rust_mut().warnings.clear();
+            self.as_mut().set_protection(Protection::None);
             self.as_mut().status_changed();
         }
-        let changed = replace(&mut self.as_mut().rust_mut().config, Config::default());
+        // Settings this build doesn't know (from a newer OpenSesh) are not ours to reset.
+        let defaults = Config {
+            extra: self.config.extra.clone(),
+            ..Config::default()
+        };
+        let changed = replace(&mut self.as_mut().rust_mut().config, defaults);
         self.as_mut().settings_changed();
         if changed || replace_broken {
             self.save();
@@ -547,31 +631,53 @@ impl qobject::AppSettings {
     }
 }
 
-/// The last few `config.toml` texts we queued for writing. The watcher reads the file while
-/// newer saves may still be pending, so comparing only against the latest save would mistake
-/// our own earlier write for an external edit and revert the newer in-memory value.
+/// Our own writes of `config.toml`, in the order they were queued on the background writer.
+/// The writer handles them in order and may skip a superseded one, so when write `n` finishes,
+/// every write queued before it is settled too. Used on the GUI thread only.
 #[derive(Debug, Default)]
-struct RecentSaves {
-    texts: Mutex<VecDeque<String>>,
+struct OwnWrites {
+    next_seq: u64,
+    /// Queued and not yet finished, oldest first.
+    pending: VecDeque<(u64, String)>,
+    /// What the last successful write put on disk.
+    last_written: Option<String>,
 }
 
-impl RecentSaves {
-    const CAPACITY: usize = 16;
+impl OwnWrites {
+    /// Bound for `pending` if the writer stopped answering (it never should).
+    const MAX_PENDING: usize = 64;
 
-    fn remember(&self, text: &str) {
-        if let Ok(mut texts) = self.texts.lock() {
-            if texts.len() == Self::CAPACITY {
-                texts.pop_front();
-            }
-            texts.push_back(text.to_owned());
+    /// Remembers a queued write and returns its sequence number.
+    fn queued(&mut self, text: String) -> u64 {
+        let seq = self.next_seq;
+        self.next_seq += 1;
+        if self.pending.len() == Self::MAX_PENDING {
+            self.pending.pop_front();
+        }
+        self.pending.push_back((seq, text));
+        seq
+    }
+
+    /// Write `seq` finished: `written` is its text if it reached the disk.
+    fn settled(&mut self, seq: u64, written: Option<String>) {
+        while self
+            .pending
+            .front()
+            .is_some_and(|(queued, _)| *queued <= seq)
+        {
+            self.pending.pop_front();
+        }
+        if written.is_some() {
+            self.last_written = written;
         }
     }
 
-    fn contains(&self, text: &str) -> bool {
-        self.texts
-            .lock()
-            .map(|texts| texts.iter().any(|saved| saved == text))
-            .unwrap_or(false)
+    /// Whether `text` (just read from disk) is one of our writes: in flight, or the last one
+    /// that landed. Anything else, including an older text of ours restored by the user, is an
+    /// external edit.
+    fn is_echo(&self, text: &str) -> bool {
+        self.last_written.as_deref() == Some(text)
+            || self.pending.iter().any(|(_, pending)| pending == text)
     }
 }
 
@@ -593,15 +699,30 @@ impl cxx_qt::Initialize for qobject::AppSettings {
         };
         let path = services.paths.config_dir().join(config::CONFIG_FILE);
         // A single small file read at startup, before the first frame.
-        let reload = read_config(&path);
-        if let Reload::Loaded { warnings, .. } = &reload {
-            for warning in warnings {
-                tracing::warn!("config.toml: {warning}");
+        let (_, reload) = read_config(&path);
+        let startup_problem = match &reload {
+            Reload::Loaded {
+                read_only: true, ..
+            } => Some(("load-newer", String::new())),
+            Reload::Loaded { warnings, .. } if !warnings.is_empty() => {
+                for warning in warnings {
+                    tracing::warn!("config.toml: {warning}");
+                }
+                Some(("load-warnings", String::new()))
             }
-        }
+            Reload::Loaded { .. } => None,
+            Reload::Failed(detail) => Some(("load-failed", detail.clone())),
+        };
         self.as_mut().rust_mut().path = Some(path.clone());
-        self.as_mut().apply_reload(reload, true);
+        self.as_mut().apply_reload(reload, Load::Startup);
         self.as_mut().start_watcher(path);
+        // This runs while QML is still creating the singleton, before any Connections exist:
+        // report on the next event loop turn so the shell hears it.
+        if let Some((kind, detail)) = startup_problem {
+            let _ = self.qt_thread().queue(move |settings| {
+                settings.problem(qstring(kind), QString::from(&detail));
+            });
+        }
     }
 }
 
@@ -610,23 +731,57 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_recent_save_is_recognised_as_our_own() {
-        let saves = RecentSaves::default();
-        saves.remember("a = 1");
-        saves.remember("a = 2");
+    fn writes_in_flight_and_the_last_one_are_echoes() {
+        let mut writes = OwnWrites::default();
+        let a = writes.queued("a = 1".to_owned());
+        let _b = writes.queued("a = 2".to_owned());
         // The file may still hold the older write while the newer one is pending.
-        assert!(saves.contains("a = 1"));
-        assert!(saves.contains("a = 2"));
-        assert!(!saves.contains("a = 3"), "an external edit is not an echo");
+        assert!(writes.is_echo("a = 1"));
+        assert!(writes.is_echo("a = 2"));
+        assert!(!writes.is_echo("a = 3"), "an external edit is not an echo");
+        writes.settled(a, Some("a = 1".to_owned()));
+        assert!(writes.is_echo("a = 1"));
+        assert!(writes.is_echo("a = 2"), "still in flight");
     }
 
     #[test]
-    fn only_the_last_saves_are_kept() {
-        let saves = RecentSaves::default();
-        for i in 0..=RecentSaves::CAPACITY {
-            saves.remember(&format!("v{i}"));
+    fn an_old_text_of_ours_restored_later_is_an_external_edit() {
+        let mut writes = OwnWrites::default();
+        writes.queued("theme = dark".to_owned());
+        let light = writes.queued("theme = light".to_owned());
+        // The writer skipped the superseded write and wrote the newer one.
+        writes.settled(light, Some("theme = light".to_owned()));
+        assert!(writes.is_echo("theme = light"));
+        assert!(
+            !writes.is_echo("theme = dark"),
+            "the user put the old value back by hand"
+        );
+    }
+
+    #[test]
+    fn a_failed_write_is_forgotten() {
+        let mut writes = OwnWrites::default();
+        let seq = writes.queued("x".to_owned());
+        writes.settled(seq, None);
+        assert!(!writes.is_echo("x"));
+    }
+
+    #[test]
+    fn pending_writes_are_bounded() {
+        let mut writes = OwnWrites::default();
+        for i in 0..=OwnWrites::MAX_PENDING {
+            writes.queued(format!("v{i}"));
         }
-        assert!(!saves.contains("v0"));
-        assert!(saves.contains(&format!("v{}", RecentSaves::CAPACITY)));
+        assert!(!writes.is_echo("v0"));
+        assert!(writes.is_echo(&format!("v{}", OwnWrites::MAX_PENDING)));
+    }
+
+    #[test]
+    fn unparsable_text_fails_with_the_path() {
+        let reload = parse_config(Path::new("config.toml"), "[appearance");
+        assert!(matches!(
+            reload,
+            Reload::Failed(detail) if detail.starts_with("config.toml is not valid TOML")
+        ));
     }
 }

@@ -47,9 +47,12 @@ extra_notice_files = ["package/DISCLAIMER.md"]
 notice = """\
 The logos are trademarks of their respective owners and are only used to identify the system \
 or tool they stand for. The Simple Icons collection is CC0, but some logos carry their own \
-license (per `package/data/simple-icons.json` of the pinned package): `debian` CC-BY-SA-3.0, \
-`fedora` custom (<https://docs.fedoraproject.org/en-US/project/brand/>), `gentoo` CC-BY-SA-2.5, \
-`nixos` CC-BY-4.0 and `rockylinux` CC-BY-SA-4.0. Brand guidelines: \
+license (per `package/data/simple-icons.json` of the pinned package): \
+`debian` [CC-BY-SA-3.0](https://creativecommons.org/licenses/by-sa/3.0/legalcode), \
+`fedora` custom (<https://docs.fedoraproject.org/en-US/project/brand/>), \
+`gentoo` [CC-BY-SA-2.5](https://creativecommons.org/licenses/by-sa/2.5/legalcode), \
+`nixos` [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/legalcode) and \
+`rockylinux` [CC-BY-SA-4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode). Brand guidelines: \
 [Arch Linux](https://wiki.archlinux.org/index.php/DeveloperWiki:TrademarkPolicy#Logo_Usage_Guidelines), \
 [AlmaLinux](https://almalinux.org/p/the-almalinux-os-trademark-usage-policy/), \
 [Debian](https://www.debian.org/logos/), \

@@ -18,19 +18,32 @@ Window {
 
     property bool geometryReady: false
     property string appliedLanguage: ""
+    // Room left for a native title bar and frame, which QML can't measure.
+    readonly property int nativeFrameAllowance: 48
+    // The size restoreGeometry() shrank the window to so it fits its screen. It isn't saved over
+    // the remembered size until the user resizes the window.
+    property size fittedSize: Qt.size(0, 0)
 
-    // True if a window at (left, top) this wide would show enough of its title bar on a screen
-    // (a saved position can point at a monitor that is gone).
-    function positionVisible(windowX, windowY, windowWidth) {
+    // The screen that would show enough of the title bar of a window at (left, top) this wide,
+    // or null (a saved position can point at a monitor that is gone).
+    function screenShowing(windowX, windowY, windowWidth) {
         for (const screen of Qt.application.screens) {
             const left = Math.max(windowX, screen.virtualX);
             const right = Math.min(windowX + windowWidth, screen.virtualX + screen.width);
             const top = Math.max(windowY, screen.virtualY);
             const bottom = Math.min(windowY + Theme.titleBarHeight, screen.virtualY + screen.height);
             if (right - left >= Theme.spacingXxl * 3 && bottom - top >= Theme.spacingLg)
-                return true;
+                return screen;
         }
-        return false;
+        return null;
+    }
+
+    // The area of a screen that the taskbar or panels leave free. QML only gives the free area of
+    // the whole desktop (desktopAvailableWidth/Height), so with several screens this is the size
+    // of the screen.
+    function freeArea(screen) {
+        return Qt.size(Math.min(screen.width, screen.desktopAvailableWidth),
+                       Math.min(screen.height, screen.desktopAvailableHeight));
     }
 
     function restoreGeometry() {
@@ -39,12 +52,31 @@ Window {
             height = 800;
             return false;
         }
-        width = Math.max(minimumWidth, UiState.windowWidth);
-        height = Math.max(minimumHeight, UiState.windowHeight);
-        if (positionSupported && UiState.hasPosition && positionVisible(UiState.windowX, UiState.windowY, width)) {
-            x = UiState.windowX;
-            y = UiState.windowY;
+        const savedWidth = Math.max(minimumWidth, UiState.windowWidth);
+        const savedHeight = Math.max(minimumHeight, UiState.windowHeight);
+        const savedScreen = positionSupported && UiState.hasPosition
+                ? screenShowing(UiState.windowX, UiState.windowY, savedWidth) : null;
+        // The saved size (or the default one) can be too large for the screen the window opens
+        // on: another monitor, resolution or scale factor. Without a saved position that is the
+        // window's own screen.
+        const free = freeArea(savedScreen ?? Screen);
+        const frame = frameless ? 0 : nativeFrameAllowance;
+        if (savedWidth + frame <= free.width && savedHeight + frame <= free.height) {
+            width = savedWidth;
+            height = savedHeight;
+            if (savedScreen) {
+                x = UiState.windowX;
+                y = UiState.windowY;
+            }
+            return UiState.maximized;
         }
+        // Too large: shrink it below 8/9 of the free area and drop the saved position. Qt centers
+        // a window that small in the free area of its screen, whichever side the taskbar is on.
+        width = Math.max(minimumWidth, Math.min(savedWidth, Math.floor(free.width * 8 / 9) - 1));
+        height = Math.max(minimumHeight, Math.min(savedHeight, Math.floor(free.height * 8 / 9) - 1));
+        fittedSize = Qt.size(width, height);
+        if (savedScreen)
+            screen = savedScreen;
         return UiState.maximized;
     }
 
@@ -53,8 +85,11 @@ Window {
         if (!persistState || !geometryReady)
             return;
         if (visibility === Window.Windowed) {
-            UiState.windowWidth = width;
-            UiState.windowHeight = height;
+            if (width !== fittedSize.width || height !== fittedSize.height) {
+                UiState.windowWidth = width;
+                UiState.windowHeight = height;
+                fittedSize = Qt.size(0, 0);
+            }
             if (positionSupported) {
                 UiState.windowX = x;
                 UiState.windowY = y;
@@ -75,7 +110,11 @@ Window {
     minimumHeight: 420
     title: qsTr("OpenSesh")
     color: Theme.bg
-    flags: frameless ? (Qt.Window | Qt.FramelessWindowHint) : Qt.Window
+    // Frameless windows keep the system menu and the minimize, maximize and close functions. On
+    // Windows these add no caption, and without them the taskbar button, Win+Down / Win+Up and
+    // Alt+Space do nothing; X11 and Wayland only look at FramelessWindowHint.
+    flags: frameless ? (Qt.Window | Qt.FramelessWindowHint | Qt.WindowSystemMenuHint
+                        | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint) : Qt.Window
 
     onWidthChanged: scheduleGeometrySave()
     onHeightChanged: scheduleGeometrySave()
@@ -122,8 +161,36 @@ Window {
             Toasts.show(qsTr("Settings reloaded from config.toml"), "info");
         }
 
-        function onProblem(message) {
-            Toasts.show(message, "danger");
+        // kind names the problem; detail is technical text (a path, an OS or parser error), which
+        // the log has too and only a failed save shows.
+        function onProblem(kind, detail) {
+            switch (kind) {
+            case "load-failed":
+                Toasts.show(qsTr("config.toml could not be read, so OpenSesh uses the default settings. The file is left as it is until you fix it."), "danger");
+                break;
+            case "load-newer":
+                Toasts.show(qsTr("config.toml was written by a newer version of OpenSesh. Your changes apply but are not saved."), "warning");
+                break;
+            case "load-warnings":
+                Toasts.show(qsTr("Some settings in config.toml were not valid and use their default values. See Settings > General."), "warning");
+                break;
+            case "reload-failed":
+                Toasts.show(qsTr("Your edit of config.toml could not be applied, so the current settings stay. Fix the file to apply it."), "danger");
+                break;
+            case "save-blocked-newer":
+                Toasts.show(qsTr("Changes are not saved, because config.toml was written by a newer version of OpenSesh."), "danger");
+                break;
+            case "save-blocked-unreadable":
+                Toasts.show(qsTr("Changes are not saved until config.toml is fixed."), "danger");
+                break;
+            case "save-failed":
+                Toasts.show(qsTr("Could not save the settings: %1").arg(detail || ""), "danger");
+                break;
+            default:
+                // A kind this file doesn't know yet (fails the smoke test).
+                console.warn("Main: unknown settings problem", kind);
+                Toasts.show(qsTr("There is a problem with config.toml. The log has the details."), "danger");
+            }
         }
     }
 
@@ -187,6 +254,7 @@ Window {
         binder: themeBinder
         prefix: "settings"
         prepare: () => shell.prepareSettingsScreenshot()
-        onFinished: Qt.exit(0)
+        // Exit code 7: a capture failed (see the warnings in the log).
+        onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures > 0 ? 7 : 0)
     }
 }

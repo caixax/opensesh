@@ -1,9 +1,13 @@
 //! Application settings stored in `config.toml` (PLAN §4.2, §6.1).
 //!
-//! Parsing is **lenient per field**: an unknown or invalid value falls back to its default and
-//! produces a [`Warning`] that names the key, so one typo never discards the whole file.
+//! Parsing is **lenient per field**: an invalid value falls back to its default and produces a
+//! [`Warning`] that names the key, so one typo never discards the whole file.
 //! Serialization is deterministic (sections and keys in alphabetical order, one value per line)
 //! so the file diffs and merges well in Git or Syncthing folders.
+//!
+//! Sections and keys this version doesn't know (written by a newer OpenSesh sharing the folder,
+//! for example) produce a warning too, but are kept in [`Config::extra`] and written back
+//! unchanged. Comments and formatting are not kept: the file is regenerated on every save.
 //!
 //! A file whose `schema_version` is newer than [`SCHEMA_VERSION`] was written by a newer
 //! OpenSesh: it is read as far as possible but must not be overwritten ([`Loaded::read_only`]).
@@ -25,7 +29,9 @@ pub const SCHEMA_VERSION: i64 = 1;
 
 /// Header written at the top of the file.
 const HEADER: &str = "# OpenSesh settings. You can edit this file while OpenSesh is running:\n\
-                      # changes are applied automatically. Invalid values fall back to defaults.\n";
+                      # changes are applied automatically. Invalid values fall back to defaults.\n\
+                      # OpenSesh rewrites this file when a setting changes in the app: unknown\n\
+                      # settings are kept, but comments and formatting are not.\n";
 
 /// Declares a string-backed settings enum with its TOML/QML identifiers.
 macro_rules! choice {
@@ -259,6 +265,11 @@ pub struct Config {
     pub general: General,
     /// `[appearance]`.
     pub appearance: Appearance,
+    /// What this version doesn't know, written back as it was read so a save never deletes a
+    /// newer OpenSesh's settings: unknown top-level keys and tables as they are, and the unknown
+    /// keys of `[general]` and `[appearance]` as tables under those names. Known keys always
+    /// win over entries here.
+    pub extra: Table,
 }
 
 /// A value that was ignored while loading.
@@ -484,6 +495,15 @@ impl Config {
             reader.unknown(&appearance, "appearance");
         }
         reader.unknown(&root, "");
+
+        // Every known key was taken out above (valid or not): what is left is kept as is.
+        let mut extra = root;
+        for (name, rest) in [("general", general), ("appearance", appearance)] {
+            if !rest.is_empty() {
+                extra.insert(name.to_owned(), Value::Table(rest));
+            }
+        }
+        config.extra = extra;
         Ok((config, reader.warnings, read_only))
     }
 
@@ -537,7 +557,23 @@ impl Config {
             Value::String(a.window_decorations.as_str().into()),
         );
 
+        // Unknown settings go back where they were read from; known keys take precedence.
+        let keep_unknown = |known: &mut Table, unknown: &Table| {
+            for (key, value) in unknown {
+                known.entry(key.clone()).or_insert_with(|| value.clone());
+            }
+        };
         let mut root = Table::new();
+        for (key, value) in &self.extra {
+            match (key.as_str(), value) {
+                ("general", Value::Table(unknown)) => keep_unknown(&mut general, unknown),
+                ("appearance", Value::Table(unknown)) => keep_unknown(&mut appearance, unknown),
+                ("schema_version" | "general" | "appearance", _) => {}
+                _ => {
+                    root.insert(key.clone(), value.clone());
+                }
+            }
+        }
         root.insert("schema_version".into(), Value::Integer(SCHEMA_VERSION));
         root.insert("general".into(), Value::Table(general));
         root.insert("appearance".into(), Value::Table(appearance));
@@ -679,7 +715,10 @@ impl Reader {
             } else {
                 format!("{section}.{name}")
             };
-            self.warn(&key, "unknown setting, ignored".to_owned());
+            self.warn(
+                &key,
+                "unknown setting, not used by this version (kept in the file)".to_owned(),
+            );
         }
     }
 }
@@ -796,6 +835,99 @@ mod tests {
         ] {
             assert!(joined.contains(key), "missing warning for {key}:\n{joined}");
         }
+    }
+
+    #[test]
+    fn unknown_sections_and_keys_survive_a_save() {
+        // As written by a newer OpenSesh (same schema_version) sharing a synced folder.
+        let (mut config, warnings, read_only) = parse(
+            r##"
+            # A comment: not kept.
+            schema_version = 1
+            zeta = "top-level value"
+            [general]
+            language = "es"
+            future_flag = true
+            [appearance]
+            theme = "dark"
+            density = "huge"
+            [appearance.fonts]
+            mono = "Iosevka"
+            [terminal]
+            font_size = 13
+            [[plugins]]
+            name = "a"
+            [[plugins]]
+            name = "b"
+            "##,
+        );
+        assert!(!read_only);
+        let joined = warnings.join("\n");
+        for key in [
+            "zeta",
+            "general.future_flag",
+            "appearance.fonts",
+            "terminal",
+            "plugins",
+        ] {
+            assert!(joined.contains(key), "missing warning for {key}:\n{joined}");
+        }
+
+        // A change made in the app, then a save.
+        config.appearance.rail_labels = true;
+        let saved = config.to_toml_string();
+        let document: Table = saved.parse().unwrap();
+        assert_eq!(document["zeta"].as_str(), Some("top-level value"));
+        assert_eq!(document["general"]["future_flag"].as_bool(), Some(true));
+        assert_eq!(document["general"]["language"].as_str(), Some("es"));
+        assert_eq!(
+            document["appearance"]["fonts"]["mono"].as_str(),
+            Some("Iosevka")
+        );
+        assert_eq!(document["appearance"]["rail_labels"].as_bool(), Some(true));
+        assert_eq!(document["terminal"]["font_size"].as_integer(), Some(13));
+        let plugins = document["plugins"].as_array().unwrap();
+        assert_eq!(plugins.len(), 2);
+        assert_eq!(plugins[1]["name"].as_str(), Some("b"));
+        // Invalid values of known keys still fall back to the default, and comments go.
+        assert_eq!(
+            document["appearance"]["density"].as_str(),
+            Some("comfortable")
+        );
+        assert!(!saved.contains("A comment"));
+
+        // Loading the saved file gives the same config, and saving again the same text.
+        let (reloaded, _, _) = parse(&saved);
+        assert_eq!(reloaded, config);
+        assert_eq!(reloaded.to_toml_string(), saved);
+    }
+
+    #[test]
+    fn known_keys_win_over_extra_entries() {
+        let mut config = Config::default();
+        config
+            .extra
+            .insert("schema_version".into(), Value::Integer(99));
+        config
+            .extra
+            .insert("general".into(), Value::String("not a table".into()));
+        let mut appearance = Table::new();
+        appearance.insert("theme".into(), Value::String("light".into()));
+        appearance.insert("sparkle".into(), Value::Boolean(true));
+        config
+            .extra
+            .insert("appearance".into(), Value::Table(appearance));
+
+        let (parsed, _, read_only) = parse(&config.to_toml_string());
+        assert!(
+            !read_only,
+            "our schema_version is written, not the extra one"
+        );
+        assert_eq!(parsed.general, General::default());
+        assert_eq!(parsed.appearance.theme, ThemeMode::System);
+        let kept = parsed.extra["appearance"]["sparkle"].as_bool();
+        assert_eq!(kept, Some(true));
+        assert_eq!(parsed.extra.len(), 1, "{:?}", parsed.extra);
     }
 
     #[test]

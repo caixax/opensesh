@@ -6,7 +6,7 @@ Thanks for your interest! OpenSesh is in an early stage (see [`docs/PLAN.md`](do
 
 1. Set up Rust, a C++ compiler and Qt 6 by following [`docs/dev-setup.md`](docs/dev-setup.md).
 2. Build and run the app: `cargo run -p opensesh-app`.
-3. Before opening a pull request, run the checks CI runs. They are listed under [Build, run and check](docs/dev-setup.md#build-run-and-check) in `docs/dev-setup.md`: fmt, clippy, tests, the QML lint, `cargo deny` and `cargo audit`. If you changed `assets/icons/icons.toml`, also run `cargo xtask icons` and commit everything it generates. CI regenerates the icons and fails on any difference, including new untracked files.
+3. Before opening a pull request, run the checks CI runs. They are listed under [Build, run and check](docs/dev-setup.md#build-run-and-check) in `docs/dev-setup.md`: fmt, clippy, tests, the QML lint, the translation check (`cargo xtask i18n --check`), `cargo deny` and `cargo audit`. If you added, changed or removed a `qsTr()` string, run `cargo xtask i18n` and commit the updated `.ts` and `.qm` files. If you changed `assets/icons/icons.toml`, also run `cargo xtask icons` and commit everything it generates. CI regenerates the icons and fails on any difference, including new untracked files.
 
 ## Ground rules
 

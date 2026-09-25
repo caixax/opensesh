@@ -526,6 +526,19 @@ Column {
             OsColorPicker {}
         }
         Cell {
+            caption: qsTr("Color picker, with a default swatch")
+
+            // Stand-alone: it keeps its own choice, where Settings stores "default" or the color.
+            OsColorPicker {
+                id: defaultColorDemo
+
+                showDefault: true
+                defaultSelected: true
+                onDefaultPicked: defaultColorDemo.defaultSelected = true
+                onAccepted: defaultColorDemo.defaultSelected = false
+            }
+        }
+        Cell {
             caption: qsTr("Color picker, disabled")
 
             OsColorPicker {

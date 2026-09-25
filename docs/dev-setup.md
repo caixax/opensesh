@@ -138,6 +138,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo xtask lint-qml          # QML: no hardcoded colors, no strings without qsTr()
+cargo xtask i18n --check      # translations up to date; run cargo xtask i18n after changing QML strings (needs the Qt linguist tools)
 cargo xtask icons             # regenerate icons; CI fails if the result differs from the committed files
 cargo deny check              # licenses, advisories, bans, sources (cargo install cargo-deny@0.20.2)
 cargo audit                   # RustSec vulnerabilities (cargo install cargo-audit@0.22.2)
@@ -147,7 +148,7 @@ The assets these tasks generate are committed, so normal builds work offline:
 
 - **`cargo xtask icons`** regenerates the icons from the pinned Lucide, Tabler and Simple Icons packages ([ADR 0005](adr/0005-icon-pipeline-bootstrap.md)). Run it after editing `assets/icons/icons.toml`.
 - **`cargo xtask fonts`** extracts Inter and JetBrains Mono from their pinned release zips.
-- **`cargo xtask i18n`** updates the `.ts` files with `lupdate`, regenerates the pseudo-locale and compiles the `.qm` files with `lrelease` ([ADR 0009](adr/0009-i18n-pipeline.md)). With `--check`, it fails when the translations are out of date.
+- **`cargo xtask i18n`** updates the `.ts` files with `lupdate`, regenerates the pseudo-locale and compiles the `.qm` files with `lrelease` ([ADR 0009](adr/0009-i18n-pipeline.md)). With `--check` it changes nothing, and fails when a `.ts` file is out of date or a `.qm` file differs from what `lrelease` builds. CI runs `--check` with Qt 6.10.3, so commit `.qm` files built with that version.
 
 `icons` and `fonts` download from the network; no other task does.
 
@@ -161,7 +162,8 @@ Smoke-test exit codes:
 | 3 | No frame rendered in time |
 | 4 | QML/Rust bridge broken |
 | 5 | Non-ASCII text mangled by the build (e.g. MSVC without `/utf-8`) |
-| 6 | The UI ran, but our QML logged a warning (binding error, unknown icon, ...); see the log |
+| 6 | The UI ran, but our QML logged a warning (binding error, unknown icon, layout loop, ...); see the log. Applies to `--screenshots` runs too. |
+| 7 | `--screenshots`: a capture could not be taken or saved |
 | 134 / `0xC0000409` | Abort: a Qt fatal error (e.g. no usable display for `QT_QPA_PLATFORM`) or a panic across FFI. A `crash-*.txt` report is written. |
 
 ### Useful environment variables

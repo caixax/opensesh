@@ -4,7 +4,8 @@
 // `popup(parentItem, x, y)` or `open()`. T.Menu provides Accessible.role PopupMenu and the
 // keyboard handling (arrows, Enter, Escape, Left/Right for submenus).
 // It is always drawn inside the window (`popupType: Popup.Item`), so it is themed and captured
-// by screenshots on every platform.
+// by screenshots on every platform. Closing a top-level menu gives the focus back to where it
+// was, with its focus ring (OsFocusReturn); a submenu leaves that to its parent menu.
 //   hasLeadingColumn: bool  read-only; some item shows an icon or is checkable, so every
 //                           OsMenuItem reserves the leading column and the labels line up
 import QtQuick
@@ -25,6 +26,9 @@ T.Menu {
         }
         return false;
     }
+    readonly property OsFocusReturn focusReturn: OsFocusReturn {
+        popup: control
+    }
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
                             implicitContentWidth + leftPadding + rightPadding)
@@ -41,6 +45,14 @@ T.Menu {
     font.pixelSize: Theme.fontSize
 
     delegate: OsMenuItem {}
+
+    onAboutToShow: {
+        focusReturn.save();
+        // A submenu opens from an item of its parent menu, which takes the focus back itself.
+        if (focusReturn.item as T.MenuItem)
+            focusReturn.item = null;
+    }
+    onClosed: focusReturn.restore()
 
     // Fade in only. Closing is instant like native menus, and because T.Menu ignores `popup()`
     // while an exit transition runs, an exit fade would swallow a right-click made to reopen the

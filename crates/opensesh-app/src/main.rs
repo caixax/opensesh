@@ -128,21 +128,23 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
     let code = result?;
     tracing::info!(code, "event loop finished");
 
-    if code == 0 && options.smoke_test {
+    // A test run also fails when our QML logged a warning: a binding error, an unknown icon, or a
+    // screenshot that could not be taken.
+    if code == 0 && (options.smoke_test || options.screenshot_dir.is_some()) {
         let warnings = bridge::shim::qml_warning_count();
         if warnings > 0 {
             tracing::error!(
                 warnings,
-                "smoke test: QML produced warnings (see the log above)"
+                "test run: QML produced warnings (see the log above)"
             );
-            return Ok(ExitCode::from(SMOKE_QML_WARNINGS));
+            return Ok(ExitCode::from(QML_WARNINGS));
         }
     }
     Ok(exit_code(code))
 }
 
-/// Smoke-test exit code when the QML ran but logged warnings.
-const SMOKE_QML_WARNINGS: u8 = 6;
+/// Exit code of a smoke test or screenshot run when the QML ran but logged warnings.
+const QML_WARNINGS: u8 = 6;
 
 /// Maps the Qt event loop result to a process exit code.
 fn exit_code(code: i32) -> ExitCode {

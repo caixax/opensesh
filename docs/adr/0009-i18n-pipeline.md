@@ -28,9 +28,11 @@ Facts verified in Sprint 1 research:
 - It updates `crates/opensesh-app/i18n/opensesh_<code>.ts` for every language in `assets/i18n/languages.toml`, which is empty for now.
 - It **always** generates a **pseudo-locale** (`opensesh_pseudo`): accented, about 30 % longer text in brackets that keeps the placeholders. This makes untranslated strings and truncation visible.
 - It compiles the `.qm` files with `lrelease`.
-- `--check` fails when the `.ts` files are out of date.
+- `--check` fails when the `.ts` files are out of date, or when a committed `.qm` differs from what `lrelease` builds from its `.ts`. lrelease output is reproducible byte for byte with a given Qt version, and CI runs the check with the pinned Qt (6.10.3), so the committed files are built with that version.
 
-**Build:** the `.qm` files are committed, compiled into the Qt resources (`build.rs` discovers them), and listed by `Platform.languages()`. The pseudo-locale is listed in **debug builds only**.
+**Build:** the `.qm` files are committed, compiled into the Qt resources (`build.rs` discovers them), and listed by `Platform.languages()`. The pseudo-locale is bundled and listed in **debug builds only**: release builds leave `opensesh_pseudo.qm` out of the resources, so a `language = "pseudo"` in a `config.toml` shared with a debug build falls back to English.
+
+**What is translated:** every sentence the user reads is a `qsTr()` string in QML. Rust never builds user-facing sentences: it reports codes (for example `AppSettings.problem(kind, detail)` and `AppSettings.readOnlyReason`) and QML chooses the translated text. Technical details passed along (file paths, OS errors, TOML parser messages, config key names) are shown as they are.
 
 **Runtime:**
 - The C++ shim installs the translator: "system" follows `QLocale::system().uiLanguages()`, and "en" means the source strings. It then calls `retranslate()`, so switching language in Settings updates the UI live.

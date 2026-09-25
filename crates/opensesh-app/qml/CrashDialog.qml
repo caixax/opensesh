@@ -188,6 +188,6 @@ Window {
         target: root
         binder: themeBinder
         prefix: "crash"
-        onFinished: Qt.exit(0)
+        onFinished: Qt.exit(screenshots.failures > 0 ? 7 : 0)
     }
 }

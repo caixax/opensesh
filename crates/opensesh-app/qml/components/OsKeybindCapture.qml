@@ -26,14 +26,22 @@ T.AbstractButton {
         recorder.recording = true;
         if (!activeFocus)
             forceActiveFocus(Qt.OtherFocusReason);
+        Accessible.announce(qsTr("Recording. Press the key combination."));
     }
 
     function stopRecording() {
+        if (!recorder.recording)
+            return;
         recorder.recording = false;
+        Accessible.announce(qsTr("Recording cancelled."));
     }
 
     function commit(newSequence: string) {
+        const wasRecording = recorder.recording;
         recorder.recording = false;
+        if (wasRecording || newSequence !== sequence)
+            Accessible.announce(newSequence.length > 0 ? qsTr("Shortcut set to %1.").arg(newSequence)
+                                                       : qsTr("Shortcut cleared."));
         if (newSequence === sequence)
             return;
         sequence = newSequence;
@@ -62,7 +70,13 @@ T.AbstractButton {
 
     Accessible.role: Accessible.Button
     Accessible.name: text
-    Accessible.description: qsTr("Keyboard shortcut. Press Enter or Space to record a new one, then press the key combination. Escape cancels, Backspace clears.")
+    // Also carries the combination and the recording state, which a label set as the
+    // accessible name would otherwise hide.
+    Accessible.description: recording
+                            ? qsTr("Recording a keyboard shortcut: press the key combination. Escape cancels, Backspace clears.")
+                            : sequence.length > 0
+                              ? qsTr("Keyboard shortcut: %1. Press Enter or Space to record a new one, then press the key combination. Backspace clears it.").arg(sequence)
+                              : qsTr("Keyboard shortcut: not set. Press Enter or Space to record one, then press the key combination.")
 
     onClicked: recording ? stopRecording() : startRecording()
     onActiveFocusChanged: {

@@ -9,7 +9,9 @@
 //!
 //! Everything is generated in `target/xtask-i18n/` first and copied over only when it changed,
 //! so an unchanged run doesn't touch the files the app's `build.rs` watches. With `--check`
-//! nothing is written: the task fails if the committed `.ts` files are stale.
+//! nothing is written: the task fails if a committed `.ts` file is stale, or if a committed `.qm`
+//! file differs from what lrelease builds (lrelease output is reproducible for a given Qt
+//! version; CI checks with the pinned Qt).
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -51,13 +53,9 @@ struct Languages {
 /// I/O errors.
 pub fn run(root: &Path, check: bool) -> Result<bool> {
     let codes = load_languages(root)?;
+    // Look both tools up before changing anything, so a missing tool fails early.
     let lupdate = find_tool("lupdate")?;
-    // Look lrelease up before changing anything, so a missing tool fails early.
-    let lrelease = if check {
-        None
-    } else {
-        Some(find_tool("lrelease")?)
-    };
+    let lrelease = find_tool("lrelease")?;
 
     let work = native_path(root, WORK_DIR);
     if work.exists() {
@@ -67,9 +65,12 @@ pub fn run(root: &Path, check: bool) -> Result<bool> {
     let i18n = native_path(root, I18N_DIR);
     let qml = native_path(root, QML_DIR);
 
-    let mut problems = Vec::new();
+    // Every language is generated and compiled in the scratch folder first, so a failing tool
+    // leaves the committed files untouched instead of a new `.ts` next to a stale `.qm`.
+    let mut outputs = Vec::new();
     for code in &codes {
         let ts_name = format!("{PREFIX}{code}.ts");
+        let qm_name = format!("{PREFIX}{code}.qm");
         let committed = i18n.join(&ts_name);
         let generated_path = work.join(&ts_name);
         if committed.is_file() {
@@ -85,43 +86,46 @@ pub fn run(root: &Path, check: bool) -> Result<bool> {
         };
         run_lupdate(&lupdate, &qml, &work, &ts_name, target_language, check)?;
 
-        let mut generated = std::fs::read_to_string(&generated_path)
+        let mut ts = std::fs::read_to_string(&generated_path)
             .with_context(|| format!("reading {}", generated_path.display()))?
             .replace("\r\n", "\n");
         if code == PSEUDO {
-            generated = crate::pseudo::fill_ts(&generated)
+            ts = crate::pseudo::fill_ts(&ts)
                 .with_context(|| format!("pseudo-translating {ts_name}"))?;
         }
-        std::fs::write(&generated_path, &generated)?;
+        std::fs::write(&generated_path, &ts)?;
 
+        run_lrelease(&lrelease, &work, &ts_name, &qm_name, check)?;
+        let qm = std::fs::read(work.join(&qm_name))
+            .with_context(|| format!("lrelease wrote no {qm_name}"))?;
+        ensure!(!qm.is_empty(), "lrelease wrote an empty {qm_name}");
+        outputs.push((ts_name, ts, qm_name, qm));
+    }
+
+    let mut problems = Vec::new();
+    for (ts_name, ts, qm_name, qm) in &outputs {
         if check {
-            let current = std::fs::read_to_string(&committed)
+            let current_ts = std::fs::read_to_string(i18n.join(ts_name))
                 .ok()
                 .map(|text| text.replace("\r\n", "\n"));
-            if current.as_deref() != Some(generated.as_str()) {
+            if current_ts.as_deref() != Some(ts.as_str()) {
                 problems.push(format!("{I18N_DIR}/{ts_name} is out of date"));
             }
-            let qm_name = format!("{PREFIX}{code}.qm");
-            if !i18n.join(&qm_name).is_file() {
-                problems.push(format!("{I18N_DIR}/{qm_name} is missing"));
+            // lrelease output is byte-for-byte reproducible for a given Qt version, so a `.qm`
+            // that differs was not rebuilt after its `.ts` changed (or came from another Qt).
+            match std::fs::read(i18n.join(qm_name)) {
+                Err(_) => problems.push(format!("{I18N_DIR}/{qm_name} is missing")),
+                Ok(current_qm) if current_qm != *qm => problems.push(format!(
+                    "{I18N_DIR}/{qm_name} does not match what lrelease builds from {ts_name}"
+                )),
+                Ok(_) => {}
             }
         } else {
             std::fs::create_dir_all(&i18n)?;
-            if write_if_changed(&committed, &generated)? {
+            if write_if_changed(&i18n.join(ts_name), ts)? {
                 println!("updated {I18N_DIR}/{ts_name}");
             }
-        }
-    }
-
-    if let Some(lrelease) = lrelease {
-        for code in &codes {
-            let ts_name = format!("{PREFIX}{code}.ts");
-            let qm_name = format!("{PREFIX}{code}.qm");
-            run_lrelease(&lrelease, &work, &ts_name, &qm_name)?;
-            let qm = std::fs::read(work.join(&qm_name))
-                .with_context(|| format!("lrelease wrote no {qm_name}"))?;
-            ensure!(!qm.is_empty(), "lrelease wrote an empty {qm_name}");
-            if write_if_changed(&i18n.join(&qm_name), &qm)? {
+            if write_if_changed(&i18n.join(qm_name), qm)? {
                 println!("updated {I18N_DIR}/{qm_name}");
             }
         }
@@ -269,11 +273,21 @@ fn run_lupdate(
     Ok(())
 }
 
-fn run_lrelease(lrelease: &Path, work: &Path, ts_name: &str, qm_name: &str) -> Result<()> {
+fn run_lrelease(
+    lrelease: &Path,
+    work: &Path,
+    ts_name: &str,
+    qm_name: &str,
+    silent: bool,
+) -> Result<()> {
+    let mut command = Command::new(lrelease);
+    command.current_dir(work);
+    if silent {
+        command.arg("-silent");
+    }
     // Unfinished translations are left out, so a half-translated language falls back to English
     // instead of showing drafts.
-    let status = Command::new(lrelease)
-        .current_dir(work)
+    let status = command
         .args(["-nounfinished", ts_name, "-qm", qm_name])
         .status()
         .with_context(|| format!("running {}", lrelease.display()))?;
