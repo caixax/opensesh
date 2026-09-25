@@ -145,8 +145,21 @@ public:
     // Changes whenever existing glyphs move or the texture size changes: every quad built
     // before must be rebuilt.
     int generation() const { return m_generation; }
-    // Allows one clear-and-restart per frame when the atlas is full.
-    void beginFrame() { m_clearedThisFrame = false; }
+    // Allows one clear-and-restart per frame when the atlas is full, and restarts the
+    // rasterizing budget.
+    void beginFrame()
+    {
+        m_clearedThisFrame = false;
+        m_frameNs = 0;
+        m_deferred = 0;
+    }
+    // Glyphs left blank this frame because the rasterizing budget was spent.
+    int deferred() const { return m_deferred; }
+
+    // Most time spent rasterizing new glyphs in one frame. This runs while the GUI thread is
+    // blocked, and a fallback-font glyph (CJK, emoji) costs about 0.2 ms: a screen full of new
+    // ones is spread over several frames instead of freezing the UI.
+    static constexpr qint64 kFrameBudgetNs = 4'000'000;
 
     int glyphsRasterized = 0;
     qint64 rasterNs = 0;
@@ -171,6 +184,8 @@ private:
     bool m_dirty = false;
     int m_generation = 0;
     bool m_clearedThisFrame = false;
+    qint64 m_frameNs = 0;
+    int m_deferred = 0;
     QHash<quint32, Glyph> m_fast;
     QHash<QString, Glyph> m_clusters;
     Glyph m_curly;
@@ -214,6 +229,8 @@ public:
     void sync(QQuickWindow *window, const RenderInput &input, RenderStats &stats);
 
     bool hasFrame() const { return m_hasFrame; }
+    // Some glyphs were left for later frames (rasterizing budget): request another frame.
+    bool wantsAnotherFrame() const { return m_atlas.deferred() > 0; }
     const CursorInfo &cursor() const { return m_cursor; }
     int frameColumns() const { return m_columns; }
     int frameLines() const { return m_lines; }

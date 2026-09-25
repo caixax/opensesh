@@ -29,7 +29,7 @@ Item {
     property real edgeInset: 0
 
     readonly property alias terminal: terminal
-    readonly property bool current: index >= 0 && shell.currentTab === index + 1
+    readonly property bool current: shell.currentTabId !== 0 && shell.currentTabId === tabId
     property bool searchOpen: false
     // "none", "nomatch" or "error".
     property string searchState: "none"

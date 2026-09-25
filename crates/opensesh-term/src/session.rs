@@ -495,6 +495,17 @@ impl Session {
         }
     }
 
+    /// Whether a non-empty selection exists (the engine clears it itself on some screen
+    /// changes, e.g. switching to the alternate screen). Locks briefly.
+    #[must_use]
+    pub fn has_selection(&self) -> bool {
+        self.lock()
+            .term
+            .selection
+            .as_ref()
+            .is_some_and(|selection| !selection.is_empty())
+    }
+
     /// The selected text (wide characters, combining marks and wrapped lines handled; `Lines`
     /// selections end with a newline), or `None` without a non-empty selection. Locks briefly.
     #[must_use]
@@ -2135,5 +2146,18 @@ mod tests {
         };
         assert!(title.chars().count() <= MAX_TITLE_CHARS);
         assert!(title.starts_with("AAAA"));
+    }
+    #[test]
+    fn the_alternate_screen_clears_the_selection() {
+        let h = start(20, 3);
+        h.feed_until(b"select me", "select me");
+        let at = |column| ViewportPoint { row: 0, column };
+        h.session
+            .selection_start(at(0), Side::Left, SelectionKind::Simple);
+        h.session.selection_update(at(5), Side::Right);
+        assert!(h.session.has_selection());
+        // vim, less and tmux switch screens: the engine drops the selection by itself.
+        h.feed_until(b"\x1b[?1049halt", "alt");
+        assert!(!h.session.has_selection());
     }
 }

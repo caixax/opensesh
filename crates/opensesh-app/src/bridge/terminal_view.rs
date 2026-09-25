@@ -508,7 +508,8 @@ use cxx_qt::{CxxQtThread, CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use opensesh_term::backend::TermSize;
 use opensesh_term::input::keys::{
-    Key, KeyInput, KeyOptions, encode_key, modifiers_from_qt, qt, terminal_wants_shortcut,
+    Key, KeyInput, KeyOptions, encode_key, is_windows_alt_code, modifiers_from_qt, qt,
+    terminal_wants_shortcut,
 };
 use opensesh_term::input::mouse::{
     MouseAction, MouseButton, MouseInput, MouseProtocol, alternate_scroll, encode_mouse,
@@ -641,6 +642,9 @@ pub struct TerminalItemRust {
     quiet_until: Option<Instant>,
     /// The focus state last told to the session.
     focus_sent: Option<bool>,
+    /// A focus change was sent while hidden: the redraw it causes (the hollow cursor) is not
+    /// the program's activity.
+    focus_redraw: bool,
     mouse: MouseState,
     wheel: WheelSteps,
     /// The pointer is over an openable link (pointing-hand cursor).
@@ -695,6 +699,7 @@ impl Default for TerminalItemRust {
             grid: None,
             quiet_until: None,
             focus_sent: None,
+            focus_redraw: false,
             mouse: MouseState::default(),
             wheel: WheelSteps::default(),
             link_hovered: false,
@@ -917,6 +922,10 @@ fn exit_status(exit: Option<Option<i32>>) -> (i32, bool) {
 /// [ADR 0011]: ../../../../docs/adr/0011-focus-regions-and-function-keys.md
 fn wants_shortcut_override(key: i32, modifiers: i32) -> bool {
     let bits = qt_bits(modifiers);
+    // Windows Alt codes: the keypad digits must not switch tabs (Alt+1..9).
+    if is_windows_alt_code(key, bits) {
+        return true;
+    }
     let key = Key::from_qt(key, bits & qt::KEYPAD_MODIFIER != 0);
     terminal_wants_shortcut(&key, modifiers_from_qt(bits))
 }
@@ -1110,6 +1119,11 @@ impl qobject::TerminalItem {
         };
         if events.dirty {
             self.as_mut().on_dirty(&entry);
+            // The engine clears the selection itself (alternate screen, erased cells, reset).
+            if self.has_selection && !self.mouse.selecting {
+                let has_selection = entry.session().has_selection();
+                self.as_mut().set_has_selection_value(has_selection);
+            }
         }
         if events.info || events.exited {
             self.as_mut().publish_info(&info, true);
@@ -1126,13 +1140,14 @@ impl qobject::TerminalItem {
 
     /// The screen changed: draw it, or report activity while hidden.
     fn on_dirty(mut self: Pin<&mut Self>, entry: &SessionEntry) {
+        let focus_redraw = std::mem::take(&mut self.as_mut().rust_mut().focus_redraw);
         if self.is_visible() {
             self.update();
             return;
         }
-        if self.quiet() {
-            // The app's own change (a resize, new colors). Take the snapshot nobody draws, so the
-            // engine sends a new notice when the program writes something.
+        if focus_redraw || self.quiet() {
+            // The app's own change (a resize, new colors, the cursor losing the focus). Take the
+            // snapshot nobody draws, so the engine sends a new notice when the program writes.
             let mut state = self.as_mut().rust_mut();
             entry.session().snapshot(&mut state.frame);
             state.needs_full = true;
@@ -1479,6 +1494,10 @@ impl qobject::TerminalItem {
         let Some(entry) = self.entry() else {
             return false;
         };
+        if is_windows_alt_code(key, qt_bits(modifiers)) {
+            // Windows types the composed character when Alt is released.
+            return true;
+        }
         let input = KeyInput::from_qt(key, qt_bits(modifiers), &text.to_string());
         let session = entry.session();
         let modes = session.modes();
@@ -1582,7 +1601,16 @@ impl qobject::TerminalItem {
                     self.cell_width(),
                     self.grid.map_or(0, |grid| grid.columns),
                 );
-                if mods.shift && self.has_selection {
+                // Shift extends the engine's selection, unless Shift is only bypassing a
+                // program's mouse reporting: then it starts a new one (as alacritty does).
+                let bypassing = mouse_reporting_active(
+                    &modes,
+                    Modifiers {
+                        shift: false,
+                        ..mods
+                    },
+                );
+                if mods.shift && !bypassing && session.has_selection() {
                     session.selection_update(point, side);
                 } else {
                     let kind = match event.click_count {
@@ -1795,8 +1823,11 @@ impl qobject::TerminalItem {
             return;
         };
         if self.focus_sent != Some(focused) {
+            let hidden = !self.is_visible();
+            let mut state = self.as_mut().rust_mut();
+            state.focus_sent = Some(focused);
+            state.focus_redraw = hidden;
             entry.session().focus_changed(focused);
-            self.as_mut().rust_mut().focus_sent = Some(focused);
         }
         if !focused {
             self.as_mut().set_link_hover(&entry, None);

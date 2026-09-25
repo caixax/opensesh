@@ -329,6 +329,8 @@ QSGNode *TerminalItemBase::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData
     input.preedit = m_preedit;
     input.preeditCursor = m_preeditCursor;
     root->sync(win, input, m_renderStats);
+    if (root->wantsAnotherFrame())
+        QMetaObject::invokeMethod(this, [this] { update(); }, Qt::QueuedConnection);
 
     if (m_stats) {
         const qint64 elapsed = timer.nsecsElapsed();
