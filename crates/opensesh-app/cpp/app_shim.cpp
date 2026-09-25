@@ -223,7 +223,9 @@ QString key_sequence_text(std::int32_t key, std::int32_t modifiers)
     // Keypad state is not part of a shortcut.
     const auto mods = Qt::KeyboardModifiers(modifiers) & ~Qt::KeypadModifier;
     const QKeySequence sequence(QKeyCombination(mods, Qt::Key(key)));
-    return sequence.toString(QKeySequence::NativeText);
+    // Portable text ("Ctrl+Shift+P") is stable, untranslated and safe to store in
+    // keybindings.toml; NativeText follows Qt's own translations and the OS locale.
+    return sequence.toString(QKeySequence::PortableText);
 }
 
 void set_translation_engine(QQmlApplicationEngine& engine)

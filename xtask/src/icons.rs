@@ -4,7 +4,8 @@
 //! 2. Downloads the pinned npm tarball of every referenced source (cached under
 //!    `target/xtask-cache/`) and verifies its sha256 before touching it.
 //! 3. Extracts only the listed icons. The only change applied is normalizing the root `stroke` /
-//!    `fill` attributes to `currentColor`; path data is never modified.
+//!    `fill` attributes to `currentColor` (and, for fill-style sources whose root has no `fill`,
+//!    adding `fill="currentColor"`); path data is never modified.
 //! 4. Writes them to `crates/opensesh-app/qml/icons/`, composes the placeholder application logo,
 //!    copies the upstream licenses and regenerates `THIRD_PARTY_NOTICES.md`.
 //!
@@ -13,11 +14,14 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
+
+use crate::common::{
+    fetch_verified, is_safe_file_name, is_safe_version, is_sha256_hex, write_if_changed,
+};
 
 /// Manifest location, relative to the workspace root.
 const MANIFEST: &str = "assets/icons/icons.toml";
@@ -27,34 +31,52 @@ const ICONS_OUT: &str = "crates/opensesh-app/qml/icons";
 const APP_ICON_OUT: &str = "crates/opensesh-app/data/icons";
 /// Folder for upstream license texts, relative to the workspace root.
 const LICENSES_OUT: &str = "assets/icons/LICENSES";
-/// Generated notices file, relative to the workspace root.
-const NOTICES: &str = "THIRD_PARTY_NOTICES.md";
-/// Download cache, relative to the workspace root.
-const CACHE_DIR: &str = "target/xtask-cache";
 /// Upper bound for a downloaded tarball, to fail fast on unexpected responses.
 const MAX_TARBALL_BYTES: u64 = 64 * 1024 * 1024;
-/// Only SVG files at most this large are accepted from a tarball.
-const MAX_SVG_BYTES: u64 = 256 * 1024;
+/// Only SVG and license files at most this large are accepted from a tarball.
+const MAX_FILE_BYTES: u64 = 256 * 1024;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Manifest {
+pub struct Manifest {
     schema_version: u32,
-    sources: BTreeMap<String, Source>,
+    pub sources: BTreeMap<String, Source>,
     icons: BTreeMap<String, String>,
     app_icon: AppIcon,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Source {
-    package: String,
-    version: String,
-    sha256: String,
-    license: String,
-    license_file: String,
+pub struct Source {
+    pub package: String,
+    pub version: String,
+    pub sha256: String,
+    pub license: String,
+    pub license_file: String,
+    /// Extra upstream files shipped next to the license (for example a disclaimer), copied to
+    /// `assets/icons/LICENSES/<source>-<file name>`.
+    #[serde(default)]
+    pub extra_notice_files: Vec<String>,
+    /// Free text added to the source's entry in `THIRD_PARTY_NOTICES.md`.
+    #[serde(default)]
+    pub notice: Option<String>,
     icon_path: String,
-    homepage: String,
+    pub homepage: String,
+    /// How the icons are painted, which decides the color normalization.
+    #[serde(default)]
+    style: Style,
+}
+
+/// How a source's icons are painted.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Style {
+    /// Outlines drawn with `stroke` (Lucide, Tabler outline). Root attributes are only rewritten.
+    #[default]
+    Stroke,
+    /// Filled shapes (Simple Icons). A root without a `fill` attribute gets
+    /// `fill="currentColor"`, since SVG would otherwise paint them black.
+    Fill,
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,10 +116,32 @@ fn is_safe_name(name: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
+/// npm package names, optionally scoped: `lucide-static`, `@tabler/icons`.
+fn is_safe_package(package: &str) -> bool {
+    let is_part = |part: &str| {
+        !part.is_empty()
+            && !part.starts_with('.')
+            && part.bytes().all(|b| {
+                b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'-' | b'.' | b'_')
+            })
+    };
+    match package.strip_prefix('@') {
+        Some(scoped) => scoped
+            .split_once('/')
+            .is_some_and(|(scope, name)| is_part(scope) && is_part(name)),
+        None => is_part(package),
+    }
+}
+
 /// Checks the source fields that end up in file names, URLs and the notices before any of them
 /// is used: the id names the license copy, the version is part of the cache file and the URL.
 fn validate_source(id: &str, source: &Source) -> Result<()> {
     ensure!(is_safe_name(id), "invalid source name `{id}`");
+    ensure!(
+        is_safe_package(&source.package),
+        "source `{id}` has an invalid package name `{}`",
+        source.package
+    );
     ensure!(
         is_safe_version(&source.version),
         "source `{id}` has an invalid version `{}`",
@@ -107,31 +151,38 @@ fn validate_source(id: &str, source: &Source) -> Result<()> {
         is_sha256_hex(&source.sha256),
         "source `{id}` sha256 must be 64 lowercase hex characters"
     );
+    for file in &source.extra_notice_files {
+        ensure!(
+            notice_file_name(file).is_some(),
+            "source `{id}` has an invalid extra notice file `{file}`"
+        );
+    }
     Ok(())
 }
 
-/// npm versions (`1.48.0`, `2.0.0-rc.1+build.5`) only need `[0-9A-Za-z.+-]`.
-fn is_safe_version(version: &str) -> bool {
-    !version.is_empty()
-        && version
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'+' | b'-'))
+/// Base name of an extra notice file (`package/DISCLAIMER.md` -> `DISCLAIMER.md`), if it is a
+/// safe file name.
+fn notice_file_name(path: &str) -> Option<&str> {
+    let name = path.rsplit('/').next()?;
+    (is_safe_file_name(name) && name != "LICENSE.txt").then_some(name)
 }
 
-/// Same format as `sha256_hex` produces, so a checksum can't mismatch on letter case alone.
-fn is_sha256_hex(value: &str) -> bool {
-    value.len() == 64
-        && value
-            .bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+/// Where a source's license copy lives, relative to the workspace root.
+pub fn license_copy(source_id: &str) -> String {
+    format!("{LICENSES_OUT}/{source_id}-LICENSE.txt")
 }
 
-/// Runs the whole pipeline from the workspace root.
+/// Where a source's extra notice file lives, relative to the workspace root.
+pub fn notice_copy(source_id: &str, upstream_path: &str) -> Option<String> {
+    notice_file_name(upstream_path).map(|name| format!("{LICENSES_OUT}/{source_id}-{name}"))
+}
+
+/// Reads and validates `assets/icons/icons.toml`.
 ///
 /// # Errors
 ///
-/// Fails on network errors, checksum mismatches, missing icons or I/O errors.
-pub fn run(root: &Path) -> Result<()> {
+/// Fails if the manifest can't be read or parsed, or has an invalid field or icon reference.
+pub fn load_manifest(root: &Path) -> Result<Manifest> {
     let manifest_path = root.join(MANIFEST);
     let manifest: Manifest = toml::from_str(
         &std::fs::read_to_string(&manifest_path)
@@ -146,8 +197,17 @@ pub fn run(root: &Path) -> Result<()> {
     for (id, source) in &manifest.sources {
         validate_source(id, source)?;
     }
+    used_icons(&manifest)?;
+    Ok(manifest)
+}
 
-    // Group the requested icons by source so every tarball is read once.
+/// The requested icons grouped by source, as (internal name, upstream name) pairs, so every
+/// tarball is read once. Only sources with at least one icon are listed.
+///
+/// # Errors
+///
+/// Fails on an invalid internal name or icon reference, or an unknown source.
+pub fn used_icons(manifest: &Manifest) -> Result<BTreeMap<&str, Vec<(&str, &str)>>> {
     let mut wanted: BTreeMap<&str, Vec<(&str, &str)>> = BTreeMap::new();
     for (internal, reference) in &manifest.icons {
         ensure!(
@@ -165,6 +225,17 @@ pub fn run(root: &Path) -> Result<()> {
             .or_default()
             .push((internal.as_str(), icon.name));
     }
+    Ok(wanted)
+}
+
+/// Runs the whole pipeline from the workspace root.
+///
+/// # Errors
+///
+/// Fails on network errors, checksum mismatches, missing icons or I/O errors.
+pub fn run(root: &Path) -> Result<()> {
+    let manifest = load_manifest(root)?;
+    let wanted = used_icons(&manifest)?;
 
     let icons_out = root.join(ICONS_OUT);
     let licenses_out = root.join(LICENSES_OUT);
@@ -173,24 +244,32 @@ pub fn run(root: &Path) -> Result<()> {
 
     let mut extracted: BTreeMap<String, String> = BTreeMap::new();
     for (source_id, icons) in &wanted {
-        let source = &manifest.sources[*source_id];
+        let source = manifest
+            .sources
+            .get(*source_id)
+            .with_context(|| format!("unknown source `{source_id}`"))?;
         let tarball = fetch_tarball(root, source)?;
         let mut files = read_tarball(&tarball, source, icons)?;
 
         let license = files
             .remove(&source.license_file)
             .with_context(|| format!("{} not found in the tarball", source.license_file))?;
-        write_if_changed(
-            &licenses_out.join(format!("{source_id}-LICENSE.txt")),
-            &license,
-        )?;
+        write_if_changed(&root.join(license_copy(source_id)), &license)?;
+        for upstream in &source.extra_notice_files {
+            let text = files
+                .remove(upstream)
+                .with_context(|| format!("{upstream} not found in the tarball"))?;
+            let copy = notice_copy(source_id, upstream)
+                .with_context(|| format!("invalid extra notice file `{upstream}`"))?;
+            write_if_changed(&root.join(copy), &text)?;
+        }
 
         for (internal, upstream) in icons {
             let path = source.icon_path.replace("{name}", upstream);
             let svg = files
                 .remove(&path)
                 .with_context(|| format!("icon `{source_id}:{upstream}` ({path}) not found"))?;
-            let normalized = normalize_root_colors(&svg)?;
+            let normalized = normalize_root_colors(&svg, source.style)?;
             write_if_changed(&icons_out.join(format!("{internal}.svg")), &normalized)?;
             extracted.insert((*internal).to_owned(), normalized);
             println!("icon {internal:<24} <- {source_id}:{upstream}");
@@ -216,41 +295,23 @@ pub fn run(root: &Path) -> Result<()> {
         opensesh_core::identity::APP_ID
     );
 
-    write_if_changed(&root.join(NOTICES), &render_notices(&manifest, &wanted))?;
-    println!("wrote {NOTICES}");
-    Ok(())
+    crate::notices::write(root)
 }
 
 /// Returns the verified tarball bytes, downloading them unless a verified cached copy exists.
 fn fetch_tarball(root: &Path, source: &Source) -> Result<Vec<u8>> {
-    let file_name = format!(
+    let cache_name = format!(
         "{}-{}.tgz",
         source.package.replace('/', "__"),
         source.version
     );
-    let cache_path = root.join(CACHE_DIR).join(&file_name);
-
-    if let Ok(bytes) = std::fs::read(&cache_path) {
-        if sha256_hex(&bytes) == source.sha256 {
-            return Ok(bytes);
-        }
-        eprintln!("cached {file_name} fails the checksum, downloading it again");
-    }
-
-    let url = tarball_url(&source.package, &source.version);
-    println!("downloading {url}");
-    let bytes = crate::http::get(&url, MAX_TARBALL_BYTES)?;
-    let actual = sha256_hex(&bytes);
-    ensure!(
-        actual == source.sha256,
-        "checksum mismatch for {url}\n  expected {}\n  actual   {actual}",
-        source.sha256
-    );
-    if let Some(parent) = cache_path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(&cache_path, &bytes)?;
-    Ok(bytes)
+    fetch_verified(
+        root,
+        &cache_name,
+        &tarball_url(&source.package, &source.version),
+        &source.sha256,
+        MAX_TARBALL_BYTES,
+    )
 }
 
 /// npm registry tarball URL. Scoped packages (`@scope/name`) keep the scope in the path but not
@@ -260,16 +321,7 @@ fn tarball_url(package: &str, version: &str) -> String {
     format!("https://registry.npmjs.org/{package}/-/{base_name}-{version}.tgz")
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .fold(String::with_capacity(64), |mut out, byte| {
-            let _ = write!(out, "{byte:02x}");
-            out
-        })
-}
-
-/// Reads the license file and the requested icons out of a `.tgz`, as UTF-8 text.
+/// Reads the license and notice files and the requested icons out of a `.tgz`, as UTF-8 text.
 fn read_tarball(
     tarball: &[u8],
     source: &Source,
@@ -280,6 +332,7 @@ fn read_tarball(
         .map(|(_, upstream)| source.icon_path.replace("{name}", upstream))
         .collect();
     wanted.push(source.license_file.clone());
+    wanted.extend(source.extra_notice_files.iter().cloned());
 
     let mut found = BTreeMap::new();
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(tarball));
@@ -294,7 +347,7 @@ fn read_tarball(
             "{path} is not a regular file"
         );
         ensure!(
-            entry.size() <= MAX_SVG_BYTES,
+            entry.size() <= MAX_FILE_BYTES,
             "{path} is unexpectedly large"
         );
         let mut text = String::new();
@@ -307,17 +360,21 @@ fn read_tarball(
 }
 
 /// Sets the root `<svg>` element's `stroke` / `fill` to `currentColor` unless they are `none`.
-/// Nothing else in the file is touched.
-fn normalize_root_colors(svg: &str) -> Result<String> {
+/// For [`Style::Fill`] sources, a root without a `fill` attribute also gets
+/// `fill="currentColor"`. Nothing else in the file is touched, so child elements (and their own
+/// `fill` / `stroke`, such as Tabler's invisible `stroke="none"` bounding box) stay verbatim.
+fn normalize_root_colors(svg: &str, style: Style) -> Result<String> {
     let start = svg.find("<svg").context("no <svg> element")?;
     let end = start + svg[start..].find('>').context("unterminated <svg> tag")?;
     let tag = &svg[start..end];
 
-    let mut normalized_tag = String::with_capacity(tag.len());
+    let mut normalized_tag = String::with_capacity(tag.len() + 24);
+    let mut has_fill = false;
     let mut rest = tag;
     while let Some(pos) = find_color_attribute(rest) {
         let (before, attr) = rest.split_at(pos);
         normalized_tag.push_str(before);
+        has_fill |= attr.starts_with("fill=");
         let name_end = attr.find('=').context("malformed attribute")?;
         let quote = attr[name_end + 1..]
             .chars()
@@ -337,6 +394,15 @@ fn normalize_root_colors(svg: &str) -> Result<String> {
         rest = &attr[value_start + value_len..];
     }
     normalized_tag.push_str(rest);
+
+    if style == Style::Fill && !has_fill {
+        // Insert before a self-closing `/` and any trailing whitespace, so a multi-line root tag
+        // keeps its closing `>` on its own line.
+        let body = normalized_tag.trim_end();
+        let body = body.strip_suffix('/').map_or(body, str::trim_end);
+        let insert_at = body.len();
+        normalized_tag.insert_str(insert_at, r#" fill="currentColor""#);
+    }
 
     Ok(format!("{}{normalized_tag}{}", &svg[..start], &svg[end..]))
 }
@@ -436,49 +502,6 @@ fn remove_stale_icons(dir: &Path, keep: &BTreeMap<String, String>) -> Result<()>
     Ok(())
 }
 
-fn render_notices(manifest: &Manifest, used: &BTreeMap<&str, Vec<(&str, &str)>>) -> String {
-    let mut out = String::new();
-    out.push_str("# Third-party notices\n\n");
-    out.push_str(
-        "<!-- Generated by `cargo xtask icons`. Do not edit by hand. -->\n\n\
-         OpenSesh is licensed under GPL-3.0-or-later (see `LICENSE`). It bundles the following \
-         third-party assets, which keep their own licenses.\n\n## Icons\n\n",
-    );
-    for (source_id, icons) in used {
-        let source = &manifest.sources[*source_id];
-        let mut names: Vec<&str> = icons.iter().map(|(_, upstream)| *upstream).collect();
-        names.sort_unstable();
-        names.dedup();
-        let _ = write!(
-            out,
-            "### {package} {version}\n\n\
-             - Homepage: <{homepage}>\n\
-             - License: {license}. Full text: [`{LICENSES_OUT}/{source_id}-LICENSE.txt`]({LICENSES_OUT}/{source_id}-LICENSE.txt)\n\
-             - Source: `https://registry.npmjs.org/{package}` (tarball sha256 `{sha}`)\n\
-             - Icons used: {names}\n\n",
-            package = source.package,
-            version = source.version,
-            homepage = source.homepage,
-            license = source.license,
-            sha = source.sha256,
-            names = names
-                .iter()
-                .map(|n| format!("`{n}`"))
-                .collect::<Vec<_>>()
-                .join(", "),
-        );
-    }
-    out
-}
-
-/// Writes `contents` only if the file differs, so unchanged runs don't touch timestamps.
-fn write_if_changed(path: &PathBuf, contents: &str) -> Result<()> {
-    if std::fs::read_to_string(path).is_ok_and(|current| current == contents) {
-        return Ok(());
-    }
-    std::fs::write(path, contents).with_context(|| format!("writing {}", path.display()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -500,6 +523,12 @@ mod tests {
   <path d="M22 21h-3" />
 </svg>
 "#;
+
+    /// Shape of every Simple Icons file: no `fill` anywhere.
+    const DEBIAN: &str = r#"<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Debian</title><path d="M13.88 12.685c-.4 0 .08.2.601.28"/></svg>"#;
+
+    /// Shape of every Tabler outline file: an invisible bounding-box path first.
+    const TABLER: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-windows"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17.8 20l-12 -1.5" /></svg>"#;
 
     #[test]
     fn icon_refs_are_parsed_and_validated() {
@@ -523,33 +552,94 @@ mod tests {
             "https://registry.npmjs.org/lucide-static/-/lucide-static-1.48.0.tgz"
         );
         assert_eq!(
-            tarball_url("@tabler/icons", "3.0.0"),
-            "https://registry.npmjs.org/@tabler/icons/-/icons-3.0.0.tgz"
+            tarball_url("@tabler/icons", "3.48.0"),
+            "https://registry.npmjs.org/@tabler/icons/-/icons-3.48.0.tgz"
         );
     }
 
     #[test]
-    fn sha256_is_lowercase_hex() {
-        assert_eq!(
-            sha256_hex(b"abc"),
-            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-        );
+    fn package_names_are_restricted() {
+        assert!(is_safe_package("lucide-static"));
+        assert!(is_safe_package("simple-icons"));
+        assert!(is_safe_package("@tabler/icons"));
+        assert!(!is_safe_package(""));
+        assert!(!is_safe_package("@tabler"));
+        assert!(!is_safe_package("@/icons"));
+        assert!(!is_safe_package("@tabler/../x"));
+        assert!(!is_safe_package("a/b"));
+        assert!(!is_safe_package("Lucide"));
+        assert!(!is_safe_package("lucide?x=1"));
     }
 
     #[test]
     fn lucide_icons_are_already_normalized() {
-        assert_eq!(normalize_root_colors(DOOR_OPEN).unwrap(), DOOR_OPEN);
+        assert_eq!(
+            normalize_root_colors(DOOR_OPEN, Style::Stroke).unwrap(),
+            DOOR_OPEN
+        );
+    }
+
+    #[test]
+    fn tabler_outline_icons_are_already_normalized() {
+        assert_eq!(
+            normalize_root_colors(TABLER, Style::Stroke).unwrap(),
+            TABLER
+        );
     }
 
     #[test]
     fn root_colors_are_normalized_without_touching_children() {
         let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" fill="#000" stroke='red'><path fill="#fff" d="M0 0"/></svg>"##;
-        assert_eq!(
-            normalize_root_colors(svg).unwrap(),
-            r##"<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" stroke='currentColor'><path fill="#fff" d="M0 0"/></svg>"##
-        );
+        let expected = r##"<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" stroke='currentColor'><path fill="#fff" d="M0 0"/></svg>"##;
+        assert_eq!(normalize_root_colors(svg, Style::Stroke).unwrap(), expected);
+        // An existing root fill is rewritten, never duplicated.
+        assert_eq!(normalize_root_colors(svg, Style::Fill).unwrap(), expected);
         let none = r#"<svg fill="none" stroke-width="2"></svg>"#;
-        assert_eq!(normalize_root_colors(none).unwrap(), none);
+        assert_eq!(normalize_root_colors(none, Style::Stroke).unwrap(), none);
+        assert_eq!(normalize_root_colors(none, Style::Fill).unwrap(), none);
+    }
+
+    #[test]
+    fn fill_sources_get_a_current_color_root_fill() {
+        let normalized = normalize_root_colors(DEBIAN, Style::Fill).unwrap();
+        assert_eq!(
+            normalized,
+            r#"<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><title>Debian</title><path d="M13.88 12.685c-.4 0 .08.2.601.28"/></svg>"#
+        );
+        // Path data and children are untouched: only the root tag grew.
+        let root_end = DEBIAN.find('>').unwrap();
+        assert!(normalized.ends_with(&DEBIAN[root_end..]));
+        // Idempotent: a second run finds the fill it added.
+        assert_eq!(
+            normalize_root_colors(&normalized, Style::Fill).unwrap(),
+            normalized
+        );
+        // Stroke sources never get a fill added.
+        assert_eq!(
+            normalize_root_colors(DEBIAN, Style::Stroke).unwrap(),
+            DEBIAN
+        );
+    }
+
+    #[test]
+    fn fill_is_added_before_a_self_closing_slash_and_trailing_whitespace() {
+        assert_eq!(
+            normalize_root_colors(r#"<svg viewBox="0 0 24 24" />"#, Style::Fill).unwrap(),
+            r#"<svg viewBox="0 0 24 24" fill="currentColor" />"#
+        );
+        assert_eq!(
+            normalize_root_colors(
+                "<svg\n  viewBox=\"0 0 24 24\"\n>\n<path d=\"M0 0\"/></svg>",
+                Style::Fill
+            )
+            .unwrap(),
+            "<svg\n  viewBox=\"0 0 24 24\" fill=\"currentColor\"\n>\n<path d=\"M0 0\"/></svg>"
+        );
+        // An attribute that merely ends in `fill` is not a fill.
+        assert_eq!(
+            normalize_root_colors(r#"<svg data-fill="x"></svg>"#, Style::Fill).unwrap(),
+            r#"<svg data-fill="x" fill="currentColor"></svg>"#
+        );
     }
 
     #[test]
@@ -615,8 +705,11 @@ mod tests {
             sha256: sha256.into(),
             license: "ISC".into(),
             license_file: "package/LICENSE".into(),
+            extra_notice_files: Vec::new(),
+            notice: None,
             icon_path: "package/icons/{name}.svg".into(),
             homepage: "https://lucide.dev".into(),
+            style: Style::Stroke,
         }
     }
 
@@ -638,36 +731,45 @@ mod tests {
         assert!(validate_source("lucide", &source("2.0.0-rc.1+build.5", SHA)).is_ok());
         assert!(validate_source("lucide", &source("", SHA)).is_err());
         assert!(validate_source("lucide", &source("1.0.0/../../x", SHA)).is_err());
-        assert!(validate_source("lucide", &source("1.0.0\\x", SHA)).is_err());
-        assert!(validate_source("lucide", &source("1.0 0", SHA)).is_err());
         assert!(validate_source("lucide", &source("1.0.0?x=1", SHA)).is_err());
-        assert!(validate_source("lucide", &source("1.0.0\u{e9}", SHA)).is_err());
     }
 
     #[test]
     fn source_checksums_must_be_lowercase_sha256_hex() {
         assert!(validate_source("lucide", &source("1.48.0", &SHA.to_uppercase())).is_err());
         assert!(validate_source("lucide", &source("1.48.0", &SHA[..63])).is_err());
-        assert!(validate_source("lucide", &source("1.48.0", &format!("{SHA}0"))).is_err());
-        assert!(validate_source("lucide", &source("1.48.0", &SHA.replace('c', "g"))).is_err());
         assert!(validate_source("lucide", &source("1.48.0", "")).is_err());
+    }
+
+    #[test]
+    fn extra_notice_files_must_have_safe_names() {
+        let mut simple = source("16.32.0", SHA);
+        simple.extra_notice_files = vec!["package/DISCLAIMER.md".into()];
+        assert!(validate_source("simple", &simple).is_ok());
+        assert_eq!(
+            notice_copy("simple", "package/DISCLAIMER.md").as_deref(),
+            Some("assets/icons/LICENSES/simple-DISCLAIMER.md")
+        );
+        for bad in ["package/", "package/..", "package/.hidden", "LICENSE.txt"] {
+            simple.extra_notice_files = vec![bad.into()];
+            assert!(validate_source("simple", &simple).is_err(), "{bad}");
+        }
     }
 
     #[test]
     fn manifest_in_repo_parses() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-        let text = std::fs::read_to_string(root.join(MANIFEST)).unwrap();
-        let manifest: Manifest = toml::from_str(&text).unwrap();
-        assert_eq!(manifest.schema_version, 1);
-        for (id, source) in &manifest.sources {
-            validate_source(id, source).unwrap();
-        }
-        for (internal, reference) in &manifest.icons {
-            assert!(is_safe_name(internal));
-            let icon = parse_icon_ref(reference).unwrap();
-            let source = &manifest.sources[icon.source];
+        let manifest = load_manifest(&root).unwrap();
+        let used = used_icons(&manifest).unwrap();
+        for (source_id, icons) in &used {
+            let source = &manifest.sources[*source_id];
             assert_eq!(source.sha256.len(), 64);
+            assert!(!icons.is_empty());
         }
         assert!(manifest.icons.contains_key(&manifest.app_icon.glyph));
+        // Simple Icons files have no fill, so they must be normalized as a fill source.
+        if let Some(simple) = manifest.sources.get("simple") {
+            assert_eq!(simple.style, Style::Fill);
+        }
     }
 }

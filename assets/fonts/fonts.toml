@@ -1,0 +1,47 @@
+# Bundled fonts manifest (PLAN §5.1). Consumed by `cargo xtask fonts`.
+#
+# The fonts are extracted byte for byte from the official release zips below; the sha256 of each
+# zip is verified before it is opened. They are written to crates/opensesh-app/fonts/ (compiled
+# into the Qt resources and registered with QFontDatabase at startup), the licenses are copied
+# to assets/fonts/LICENSES/ and THIRD_PARTY_NOTICES.md is regenerated.
+#
+# Static TTFs on purpose: Qt names them predictably on every platform ("Inter" plus a weight),
+# while the variable fonts load under platform-dependent family and style names.
+schema_version = 1
+
+# Per source:
+#   url, sha256     the official release zip and its sha256.
+#   license_file    path of the license inside the zip; copied to assets/fonts/LICENSES/<license_output>.
+#   [.files]        "<zip entry>" = "<file name in crates/opensesh-app/fonts/>".
+[sources.inter]
+name = "Inter"
+version = "4.1"
+url = "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip"
+sha256 = "9883fdd4a49d4fb66bd8177ba6625ef9a64aa45899767dde3d36aa425756b11e"
+license = "SIL Open Font License 1.1 (OFL-1.1)"
+license_file = "LICENSE.txt"
+license_output = "inter-OFL.txt"
+homepage = "https://github.com/rsms/inter"
+
+[sources.inter.files]
+"extras/ttf/Inter-Regular.ttf" = "Inter-Regular.ttf"
+"extras/ttf/Inter-Medium.ttf" = "Inter-Medium.ttf"
+"extras/ttf/Inter-SemiBold.ttf" = "Inter-SemiBold.ttf"
+"extras/ttf/Inter-Bold.ttf" = "Inter-Bold.ttf"
+"extras/ttf/Inter-Italic.ttf" = "Inter-Italic.ttf"
+
+[sources.jetbrains_mono]
+name = "JetBrains Mono"
+version = "2.304"
+url = "https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip"
+sha256 = "6f6376c6ed2960ea8a963cd7387ec9d76e3f629125bc33d1fdcd7eb7012f7bbf"
+license = "SIL Open Font License 1.1 (OFL-1.1)"
+license_file = "OFL.txt"
+license_output = "jetbrains-mono-OFL.txt"
+homepage = "https://github.com/JetBrains/JetBrainsMono"
+
+[sources.jetbrains_mono.files]
+"fonts/ttf/JetBrainsMono-Regular.ttf" = "JetBrainsMono-Regular.ttf"
+"fonts/ttf/JetBrainsMono-Bold.ttf" = "JetBrainsMono-Bold.ttf"
+"fonts/ttf/JetBrainsMono-Italic.ttf" = "JetBrainsMono-Italic.ttf"
+"fonts/ttf/JetBrainsMono-BoldItalic.ttf" = "JetBrainsMono-BoldItalic.ttf"

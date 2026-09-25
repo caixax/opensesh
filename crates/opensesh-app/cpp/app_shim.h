@@ -40,7 +40,7 @@ void set_application_font_family(const QString& family);
 // Installed font families, optionally only fixed-pitch ones, sorted.
 QStringList font_families(bool monospace_only);
 
-// Native text of a key combination, e.g. "Ctrl+Shift+P" (QKeySequence::NativeText).
+// Portable text of a key combination, e.g. "Ctrl+Shift+P" (QKeySequence::PortableText).
 QString key_sequence_text(std::int32_t key, std::int32_t modifiers);
 
 // Remembers the engine whose bindings are re-evaluated when the language changes.
