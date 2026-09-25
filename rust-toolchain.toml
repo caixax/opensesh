@@ -1,0 +1,7 @@
+# The development toolchain is pinned to the MSRV (workspace.package.rust-version in Cargo.toml),
+# so every local and CI build proves the MSRV. Bump both together with an ADR.
+# See docs/adr/0002-toolchain-and-msrv.md.
+[toolchain]
+channel = "1.88.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

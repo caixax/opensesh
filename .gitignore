@@ -1,0 +1,26 @@
+# Build output
+/target/
+**/*.rs.bk
+
+# Portable-mode data folder created next to the executable during local runs
+/data/
+
+# Editors and OS files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Written by cxx-qt-build into the crate directory (absolute paths, machine specific)
+.qmlls.ini
+
+# Qt Creator
+*.user
+*.user.*
+
+# Local overrides
+.env
+
+# aqtinstall writes its log to the current directory
+aqtinstall.log
