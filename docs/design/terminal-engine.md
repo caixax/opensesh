@@ -126,14 +126,18 @@ pub enum BackendEvent { Output(Vec<u8>), Exited(Option<i32>), Error(String) }
 cargo test -p opensesh-term                                   # unit tests + real shell on the real PTY
 cargo test -p opensesh-term --test tui -- --include-ignored   # tmux, htop, less, nvim, mc, fzf (Unix; skipped if missing)
 cargo test -p opensesh-term --test local_shell -- --include-ignored   # + the shutdown stress test
+cargo test -p opensesh-term --test vttest -- --include-ignored   # vttest items 1, 2, 3, 6, 8 against goldens (Linux; cargo xtask vttest first)
 cargo test --release -p opensesh-term --test perf -- --ignored --nocapture --test-threads=1
 ```
+
+`OPENSESH_BLESS=1` rewrites the vttest goldens (review every changed screen before committing). The acceptance list and the deviations are in [`docs/testing/vttest.md`](../testing/vttest.md); the measured numbers are in [`docs/perf.md`](../perf.md).
 
 `tests/common/mod.rs` is the harness. It drives a `Session` over `pty::spawn`, waits on `text_dump()` with timeouts (scale them with `OPENSESH_TEST_TIMEOUT_SCALE`) and checks exit codes through `Notice::Exited`.
 
 ## 8. Known limits
 
-- vttest double-size lines, VT52, 132 columns, the UK character set, blink and DECSCNM are not supported (see the Sprint 2 research). Grapheme clustering is per code point: VS16 emoji stay 1 cell wide.
+- vttest double-size lines, VT52, 132 columns, the UK character set, blink and DECSCNM are not supported ([`docs/testing/vttest.md`](../testing/vttest.md) has the full list). Grapheme clustering is per code point: VS16 emoji stay 1 cell wide.
+- `alacritty_terminal` 0.26.0 bug: in origin mode, cursor up (CUU, CPL) adds the scroll region's top twice, so vttest screens 2-07 and 2-09 are wrong. It is still on alacritty master; the goldens record the current behaviour and `docs/testing/vttest.md` explains it.
 - In searches, `^` and `$` don't match at each line, and `\b` is an ASCII word boundary.
-- Windows: throughput and redraw quality are the inbox ConPTY's (Windows 10: about 1.3 MB/s). The console host's first title is the shell's executable path.
+- Windows: throughput and redraw quality are the console host's. The inbox ConPTY of Windows 10 is slow (a 100 MiB copy takes about a minute); the bundled one from `cargo xtask conpty` is much faster ([ADR 0014](../adr/0014-bundled-conpty.md), [`docs/perf.md`](../perf.md)). The console host's first title is the shell's executable path.
 - Unix: a program that ignores `SIGHUP` outlives its tab, as in other terminals.
