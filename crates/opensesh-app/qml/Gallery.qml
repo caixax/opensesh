@@ -1,16 +1,14 @@
-// Main window. (Temporary scaffold: the full shell replaces the content in this sprint.)
+// Component gallery (`--gallery`). (Temporary scaffold: completed in this sprint.)
 import QtQuick
 import cc.caixa.opensesh
 
 Window {
     id: window
 
-    width: UiState.windowWidth
-    height: UiState.windowHeight
-    minimumWidth: 640
-    minimumHeight: 420
+    width: 1200
+    height: 800
     visible: true
-    title: qsTr("OpenSesh")
+    title: qsTr("OpenSesh component gallery")
     color: Theme.bg
 
     ThemeBinder {
@@ -23,20 +21,19 @@ Window {
         anchors.fill: parent
         color: Theme.bg
 
-        Column {
+        Row {
             anchors.centerIn: parent
-            spacing: Theme.spacingLg
+            spacing: Theme.spacingMd
 
-            OsText {
-                text: qsTr("OpenSesh")
-                size: "title"
-            }
+            Repeater {
+                model: ["primary", "secondary", "ghost", "danger"]
 
-            OsButton {
-                text: qsTr("Open sesame")
-                variant: "primary"
-                iconName: "door-open"
-                focus: true
+                OsButton {
+                    required property string modelData
+
+                    text: qsTr("Button")
+                    variant: modelData
+                }
             }
         }
     }
@@ -50,7 +47,7 @@ Window {
 
         target: root
         binder: themeBinder
-        prefix: "main"
+        prefix: "gallery"
         onFinished: Qt.exit(0)
     }
 

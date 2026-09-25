@@ -1,5 +1,5 @@
-//! Bindings to the hand-written C++ helpers in `cpp/app_shim.h`, for the few `QGuiApplication`
-//! features that cxx-qt-lib doesn't expose yet.
+//! Bindings to the hand-written C++ helpers in `cpp/app_shim.h`, for the Qt features that
+//! cxx-qt-lib doesn't expose yet.
 
 #[cxx_qt::bridge]
 pub mod ffi {
@@ -7,6 +7,14 @@ pub mod ffi {
         include!("cxx-qt-lib/qstring.h");
         /// Qt string type from cxx-qt-lib.
         type QString = cxx_qt_lib::QString;
+
+        include!("cxx-qt-lib/qstringlist.h");
+        /// Qt string list type from cxx-qt-lib.
+        type QStringList = cxx_qt_lib::QStringList;
+
+        include!("cxx-qt-lib/qqmlapplicationengine.h");
+        /// QML engine type from cxx-qt-lib.
+        type QQmlApplicationEngine = cxx_qt_lib::QQmlApplicationEngine;
 
         include!("opensesh-app/app_shim.h");
 
@@ -21,8 +29,46 @@ pub mod ffi {
         /// Routes every Qt log message (level, category, text) to `sink`.
         #[namespace = "opensesh"]
         fn install_qt_message_handler(sink: fn(level: i32, category: &QString, message: &QString));
+
+        /// Registers the `image://icon/...` provider on the engine.
+        #[namespace = "opensesh"]
+        fn install_icon_provider(engine: Pin<&mut QQmlApplicationEngine>);
+
+        /// Registers the bundled fonts; returns how many files were loaded.
+        #[namespace = "opensesh"]
+        fn register_bundled_fonts() -> i32;
+
+        /// Sets the application default font family.
+        #[namespace = "opensesh"]
+        fn set_application_font_family(family: &QString);
+
+        /// Installed font families, optionally only fixed-pitch ones.
+        #[namespace = "opensesh"]
+        fn font_families(monospace_only: bool) -> QStringList;
+
+        /// Native text of a key combination.
+        #[namespace = "opensesh"]
+        fn key_sequence_text(key: i32, modifiers: i32) -> QString;
+
+        /// Engine to retranslate when the language changes.
+        #[namespace = "opensesh"]
+        fn set_translation_engine(engine: Pin<&mut QQmlApplicationEngine>);
+
+        /// Codes of the bundled translations.
+        #[namespace = "opensesh"]
+        fn available_translations() -> QStringList;
+
+        /// Installs a translation and retranslates the UI.
+        #[namespace = "opensesh"]
+        fn apply_translation(code: &QString) -> bool;
+
+        /// Native name of a language code.
+        #[namespace = "opensesh"]
+        fn language_native_name(code: &QString) -> QString;
     }
 }
+
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cxx_qt_lib::QString;
 
@@ -33,13 +79,34 @@ const QT_CRITICAL: i32 = 2;
 const QT_FATAL: i32 = 3;
 const QT_INFO: i32 = 4;
 
+/// Warnings (and worse) about our own QML seen so far; the smoke test fails if any.
+static QML_WARNINGS: AtomicUsize = AtomicUsize::new(0);
+
 /// Sends Qt and QML messages to `tracing` (target `qt`), so they end up in the log file too.
 pub fn install_qt_message_handler() {
     ffi::install_qt_message_handler(forward_qt_message);
 }
 
+/// Number of warnings about OpenSesh's own QML or icons since startup.
+pub fn qml_warning_count() -> usize {
+    QML_WARNINGS.load(Ordering::SeqCst)
+}
+
+/// Whether a Qt message is about our own QML module or assets (not environment noise such as
+/// missing system fonts on the offscreen platform).
+fn is_about_our_ui(category: &str, message: &str) -> bool {
+    category == "qml"
+        || category == "js"
+        || category.starts_with("qt.qml")
+        || message.contains("qrc:/qt/qml/cc/caixa/opensesh/")
+        || message.starts_with("OsIcon:")
+}
+
 fn forward_qt_message(level: i32, category: &QString, message: &QString) {
     let category = category.to_string();
+    if level != QT_DEBUG && level != QT_INFO && is_about_our_ui(&category, &message.to_string()) {
+        QML_WARNINGS.fetch_add(1, Ordering::SeqCst);
+    }
     match level {
         QT_DEBUG => tracing::debug!(target: "qt", %category, "{message}"),
         QT_INFO => tracing::info!(target: "qt", %category, "{message}"),
@@ -51,5 +118,27 @@ fn forward_qt_message(level: i32, category: &QString, message: &QString) {
             crate::crash::record_qt_fatal(&category, &message.to_string());
         }
         _ => tracing::warn!(target: "qt", %category, level, "{message}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_our_ui_messages_count_as_qml_warnings() {
+        assert!(is_about_our_ui("qml", "anything"));
+        assert!(is_about_our_ui(
+            "default",
+            "qrc:/qt/qml/cc/caixa/opensesh/qml/Main.qml:10: TypeError"
+        ));
+        assert!(is_about_our_ui(
+            "default",
+            "OsIcon: unknown icon \"srever\""
+        ));
+        assert!(!is_about_our_ui(
+            "default",
+            "QFontDatabase: Cannot find font directory"
+        ));
     }
 }

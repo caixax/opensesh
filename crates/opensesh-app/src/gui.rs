@@ -4,13 +4,17 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::{Context, Result, bail};
-use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};
+use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQuickStyle, QString, QUrl};
 use opensesh_core::identity;
 
 use crate::bridge::shim::ffi as shim;
+use crate::bridge::theme::DEFAULT_UI_FONT;
 
 /// Main window, compiled into the `cc.caixa.opensesh` QML module by `build.rs`.
 pub const MAIN_QML: &str = "qrc:/qt/qml/cc/caixa/opensesh/qml/Main.qml";
+
+/// Component gallery shown by the `--gallery` mode.
+pub const GALLERY_QML: &str = "qrc:/qt/qml/cc/caixa/opensesh/qml/Gallery.qml";
 
 /// Crash dialog shown by the `--crash-report` mode.
 pub const CRASH_DIALOG_QML: &str = "qrc:/qt/qml/cc/caixa/opensesh/qml/CrashDialog.qml";
@@ -19,14 +23,18 @@ pub const CRASH_DIALOG_QML: &str = "qrc:/qt/qml/cc/caixa/opensesh/qml/CrashDialo
 const WINDOW_ICON: &str = ":/qt/qml/cc/caixa/opensesh/data/icons/cc.caixa.OpenSesh.svg";
 
 /// Creates the `QGuiApplication`, loads `qml_url` and runs the event loop until it exits.
+/// `language` is the configured UI language, applied before the first frame.
 ///
 /// Returns the exit code of the event loop.
 ///
 /// # Errors
 ///
 /// Fails if Qt objects can't be created or the QML file fails to load.
-pub fn run(qml_url: &str) -> Result<i32> {
+pub fn run(qml_url: &str, language: &str) -> Result<i32> {
     crate::bridge::shim::install_qt_message_handler();
+    // Our components are built on QtQuick.Templates; any stock control that slips in uses the
+    // light, predictable Basic style. Must be set before QML is loaded.
+    QQuickStyle::set_style(&QString::from("Basic"));
 
     let mut app = QGuiApplication::new();
     let mut app = app
@@ -43,9 +51,12 @@ pub fn run(qml_url: &str) -> Result<i32> {
     if !shim::set_window_icon(&QString::from(WINDOW_ICON)) {
         tracing::warn!("could not load the window icon; is the Qt SVG image plugin installed?");
     }
+    let fonts = shim::register_bundled_fonts();
+    shim::set_application_font_family(&QString::from(DEFAULT_UI_FONT));
     tracing::info!(
         platform = %shim::platform_name(),
         app_id = identity::APP_ID,
+        bundled_fonts = fonts,
         "Qt application created"
     );
 
@@ -53,6 +64,10 @@ pub fn run(qml_url: &str) -> Result<i32> {
     let mut engine = engine
         .as_mut()
         .context("could not create the QQmlApplicationEngine")?;
+
+    shim::install_icon_provider(engine.as_mut());
+    shim::set_translation_engine(engine.as_mut());
+    shim::apply_translation(&QString::from(language));
 
     // Emitted synchronously from load() when the root object can't be created.
     let load_failed = Arc::new(AtomicBool::new(false));

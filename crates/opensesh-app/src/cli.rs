@@ -11,6 +11,8 @@ use std::path::PathBuf;
 pub enum Mode {
     /// The regular application window.
     App,
+    /// The component gallery (every `Os*` component in every state).
+    Gallery,
     /// Show the crash dialog for a report written by the panic hook of another process.
     CrashReport(PathBuf),
     /// Print the version and exit.
@@ -25,8 +27,12 @@ pub struct Options {
     /// What to show.
     pub mode: Mode,
     /// Render one frame, run the built-in checks and exit (for CI, usually with
-    /// `QT_QPA_PLATFORM=offscreen`). Works with the main window and with the crash dialog.
+    /// `QT_QPA_PLATFORM=offscreen`). Works with the main window, the gallery and the crash
+    /// dialog.
     pub smoke_test: bool,
+    /// Save screenshots of the window in every theme/density combination to this folder, then
+    /// quit (main window and gallery).
+    pub screenshot_dir: Option<PathBuf>,
 }
 
 /// Command-line usage text.
@@ -36,6 +42,8 @@ Usage: opensesh-app [OPTIONS] [QT OPTIONS]
 Options:
   --smoke-test           Render one frame, run the built-in checks and exit (for CI);
                          combine with QT_QPA_PLATFORM=offscreen on headless machines
+  --gallery              Show the component gallery instead of the main window
+  --screenshots <DIR>    Save screenshots in every theme and density to DIR, then exit
   --crash-report <FILE>  Show the crash dialog for FILE (used internally by the panic hook)
   -V, --version          Print the version
   -h, --help             Print this help
@@ -66,6 +74,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options, CliErr
     let mut options = Options {
         mode: Mode::App,
         smoke_test: false,
+        screenshot_dir: None,
     };
     // The first of `--version` / `--help` wins over everything else.
     let mut print: Option<Mode> = None;
@@ -73,6 +82,13 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options, CliErr
     while let Some(arg) = args.next() {
         match arg.to_str() {
             Some("--smoke-test") => options.smoke_test = true,
+            Some("--gallery") => options.mode = Mode::Gallery,
+            Some("--screenshots") => {
+                let dir = args
+                    .next()
+                    .ok_or_else(|| CliError("--screenshots needs a folder argument".to_owned()))?;
+                options.screenshot_dir = Some(PathBuf::from(dir));
+            }
             Some("--crash-report") => {
                 let file = args
                     .next()
@@ -89,6 +105,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options, CliErr
         Some(mode) => Options {
             mode,
             smoke_test: false,
+            screenshot_dir: None,
         },
         None => options,
     })
@@ -103,7 +120,11 @@ mod tests {
     }
 
     fn options(mode: Mode, smoke_test: bool) -> Options {
-        Options { mode, smoke_test }
+        Options {
+            mode,
+            smoke_test,
+            screenshot_dir: None,
+        }
     }
 
     #[test]
@@ -131,6 +152,18 @@ mod tests {
             Ok(options(Mode::CrashReport(report), true))
         );
         assert!(parse_strs(&["--crash-report"]).is_err());
+    }
+
+    #[test]
+    fn gallery_and_screenshots() {
+        assert_eq!(
+            parse_strs(&["--gallery", "--smoke-test"]),
+            Ok(options(Mode::Gallery, true))
+        );
+        let parsed = parse_strs(&["--screenshots", "shots"]).unwrap();
+        assert_eq!(parsed.mode, Mode::App);
+        assert_eq!(parsed.screenshot_dir, Some(PathBuf::from("shots")));
+        assert!(parse_strs(&["--screenshots"]).is_err());
     }
 
     #[test]
