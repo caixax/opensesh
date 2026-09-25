@@ -36,6 +36,7 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError, select};
 
 use crate::backend::{BackendEvent, TermSize, TerminalBackend};
 use crate::input::InputModes;
+use crate::input::paste::encode_focus;
 use crate::osc::SideParser;
 use crate::palette::{ColorTable, DIM_BLEND, Palette};
 use crate::search::{Search, SearchError};
@@ -54,10 +55,6 @@ const NOTICE_INTERVAL: Duration = Duration::from_millis(50);
 
 /// Longest window title passed to the GUI, in characters.
 const MAX_TITLE_CHARS: usize = 512;
-
-/// Focus-in and focus-out reports (xterm mode 1004).
-const FOCUS_IN: &[u8] = b"\x1b[I";
-const FOCUS_OUT: &[u8] = b"\x1b[O";
 
 /// What the engine tells the GUI. Delivered through the `notify` callback on the engine thread.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1132,10 +1129,14 @@ impl Engine {
                 let changed = state.focused != focused;
                 state.focused = focused;
                 state.term.is_focused = focused;
-                let report = state.term.mode().contains(TermMode::FOCUS_IN_OUT);
+                // Only the engine's modes matter for focus reports.
+                let modes = InputModes {
+                    term: *state.term.mode(),
+                    x10_mouse: false,
+                };
                 drop(state);
-                if report {
-                    self.write_backend(if focused { FOCUS_IN } else { FOCUS_OUT });
+                if let Some(report) = encode_focus(focused, &modes) {
+                    self.write_backend(report);
                 }
                 if changed {
                     self.shared.mark_dirty();

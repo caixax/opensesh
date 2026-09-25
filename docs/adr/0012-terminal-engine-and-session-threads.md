@@ -57,7 +57,7 @@ Option 3, with no tokio in Sprint 2. This deviates from PLAN §3.2; SSH (Sprint 
   |---|---|---|
   | Engine throughput | 113 MB/s | 108 MB/s |
   | Snapshot wait, p99 | 1–2 ms | 0.4 ms |
-  | `cat` of 105 MB through the PTY | ConPTY-bound (research: about 1.3 MB/s on the inbox host) | 1.0 s, snapshot p99 0.3 ms |
+  | `cat` of 105 MB through the PTY | ConPTY-bound (about 0.9 MB/s with `type` on the inbox host at 200x60; see [`docs/perf.md`](../perf.md)) | 1.0 s, snapshot p99 0.3 ms |
 
   A full 200 × 60 snapshot costs about 95 µs, or 230 µs while a search is active. A search step that finds nothing in 10,000 lines of 200 columns takes about 16 ms on the calling thread. `SessionConfig::search_max_lines` bounds it.
 - `\b` means an ASCII word boundary in searches, and `^` and `$` don't match at every line (the search sees the buffer as one stream).

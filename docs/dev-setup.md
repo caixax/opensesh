@@ -301,3 +301,5 @@ cargo xtask vttest            # Linux; add --force to rebuild
   ```powershell
   wsl.exe -d Debian -- bash -lc 'cd /mnt/i/Projects/opensesh && CARGO_TARGET_DIR=~/.cache/opensesh-target cargo xtask vttest'
   ```
+- Run the goldens with `cargo test -p opensesh-term --test vttest -- --include-ignored`. `OPENSESH_VTTEST=<path>` points to another build of the same release, and `OPENSESH_BLESS=1` rewrites the goldens (review each changed screen before committing; see [`testing/vttest.md`](testing/vttest.md)).
+- The performance baselines in [`perf.md`](perf.md) also use `script(1)` (Fedora package: `util-linux-script`).

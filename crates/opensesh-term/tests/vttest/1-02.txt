@@ -1,0 +1,24 @@
+********************************************************************************
+*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*
+*+                                                                            +*
+*+                                                                            +*
+*+                                                                            +*
+*+                                                                            +*
+*+                                                                            +*
+*+                                                                            +*
+*+                                  EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE+*
+*+                                  E
+                                    EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE+*
+ The screen should be cleared,  and hader of *'s and +'s around the edge,   and
+exactly in the                        middle  there should be a frame of E's aro
+und this  text                        with  one (1) free position around it.
+Push <RETURN>                                             EEEEEEEEEEEEEEEEEEEE+*
+                                                          EEEEEEEEEEEEEEEEEEEE+*
+*+                                                                            +*
+*+                                                                            +*
+*+                                                                            +*
+*+                                                                            +*
+*+                                                                            +*
+*+                                                                            +*
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ *
+********************************************************************************

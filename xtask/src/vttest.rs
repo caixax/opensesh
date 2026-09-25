@@ -198,6 +198,20 @@ fn unpack(tarball: &[u8], out: &Path) -> Result<()> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn the_harness_expects_the_pinned_release() {
+        // The vttest goldens were recorded with this release; the harness checks the version it
+        // runs, so both constants must move together.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let harness =
+            std::fs::read_to_string(root.join("crates/opensesh-term/tests/vttest.rs")).unwrap();
+        let expected = format!("const VTTEST_VERSION: &str = \"{VERSION}\";");
+        assert!(
+            harness.contains(&expected),
+            "crates/opensesh-term/tests/vttest.rs must declare {expected}"
+        );
+    }
+
     /// A gzip tarball with raw entry names, so hostile paths can be written too (`set_path`
     /// refuses `..`).
     fn tarball(entries: &[(&str, tar::EntryType)]) -> Vec<u8> {

@@ -3,19 +3,108 @@
 //! Waits poll the engine's text dump with generous timeouts (scale them with
 //! `OPENSESH_TEST_TIMEOUT_SCALE` on slow machines). Predicates should match program output, not
 //! the echoed command line.
+//!
+//! Keys go through the production key encoder ([`Terminal::press`], [`Terminal::type_text`]):
+//! a key is described the way Qt reports it (`QKeyEvent::key()`, `modifiers()`, `text()`) and
+//! encoded with the program's current modes, as the terminal item does. [`Terminal::send`]
+//! writes raw bytes and is for typed shell commands only.
 
 #![allow(dead_code)]
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crossbeam_channel::Receiver;
-use opensesh_term::backend::TermSize;
+use opensesh_term::backend::{BackendEvent, TermSize, TerminalBackend};
+use opensesh_term::input::keys::{KeyInput, KeyOptions, encode_key, qt};
 use opensesh_term::pty;
 use opensesh_term::session::{Notice, Session, SessionConfig};
 use opensesh_term::shell::ShellCommand;
 use opensesh_term::snapshot::Frame;
+
+/// A key press as Qt reports it in a `QKeyEvent`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct QtKey {
+    /// `QKeyEvent::key()`.
+    pub key: i32,
+    /// `QKeyEvent::modifiers()`.
+    pub modifiers: u32,
+    /// `QKeyEvent::text()`.
+    pub text: &'static str,
+}
+
+/// The main Enter key.
+pub const ENTER: QtKey = QtKey {
+    key: qt::KEY_RETURN,
+    modifiers: 0,
+    text: "\r",
+};
+/// Escape.
+pub const ESCAPE: QtKey = QtKey {
+    key: qt::KEY_ESCAPE,
+    modifiers: 0,
+    text: "\x1b",
+};
+/// Space.
+pub const SPACE: QtKey = QtKey {
+    key: qt::KEY_SPACE,
+    modifiers: 0,
+    text: " ",
+};
+/// F1 (Qt gives no text for function keys).
+pub const F1: QtKey = QtKey {
+    key: qt::KEY_F1,
+    modifiers: 0,
+    text: "",
+};
+/// F10.
+pub const F10: QtKey = QtKey {
+    key: qt::KEY_F1 + 9,
+    modifiers: 0,
+    text: "",
+};
+/// Ctrl+B, as Qt reports it on Linux (the text is the control character).
+pub const CTRL_B: QtKey = QtKey {
+    key: 0x42,
+    modifiers: qt::CONTROL_MODIFIER,
+    text: "\x02",
+};
+/// Ctrl+C.
+pub const CTRL_C: QtKey = QtKey {
+    key: 0x43,
+    modifiers: qt::CONTROL_MODIFIER,
+    text: "\x03",
+};
+
+/// The environment variables that make a program ignore the user's configuration: a clean home
+/// directory, the C.UTF-8 locale and a short prompt.
+pub fn hermetic(command: ShellCommand, home: &Path) -> ShellCommand {
+    command
+        .cwd(home)
+        .env("HOME", home)
+        .env("XDG_CONFIG_HOME", home.join(".config"))
+        .env("XDG_DATA_HOME", home.join(".local/share"))
+        .env("XDG_CACHE_HOME", home.join(".cache"))
+        .env("XDG_STATE_HOME", home.join(".local/state"))
+        .env("LANG", "C.UTF-8")
+        .env("LC_ALL", "C.UTF-8")
+        .env("PS1", "$ ")
+        .env("ENV", "")
+        .env("TMUX", "")
+        .env("LESSHISTFILE", "-")
+        .env("FZF_DEFAULT_OPTS", "")
+        .env("FZF_DEFAULT_COMMAND", "")
+}
+
+/// The multiplier from `OPENSESH_TEST_TIMEOUT_SCALE` (at least 1).
+pub fn timeout_scale() -> u32 {
+    std::env::var("OPENSESH_TEST_TIMEOUT_SCALE")
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok())
+        .unwrap_or(1)
+        .max(1)
+}
 
 /// A terminal session under test.
 pub struct Terminal {
@@ -26,23 +115,32 @@ pub struct Terminal {
 
 /// The default wait, scaled by `OPENSESH_TEST_TIMEOUT_SCALE`.
 pub fn timeout() -> Duration {
-    let scale = std::env::var("OPENSESH_TEST_TIMEOUT_SCALE")
-        .ok()
-        .and_then(|value| value.parse::<u32>().ok())
-        .unwrap_or(1)
-        .max(1);
-    Duration::from_secs(20) * scale
+    Duration::from_secs(20) * timeout_scale()
 }
 
 /// Starts `command` on a PTY of `columns` x `lines` behind a `Session`.
 pub fn start(command: ShellCommand, columns: u16, lines: u16) -> Terminal {
-    let size = TermSize {
+    let size = test_size(columns, lines);
+    let (backend, events) = pty::spawn(command, size).expect("backend thread");
+    attach(backend, events, size)
+}
+
+/// The size tests use: `columns` x `lines` cells of 8 x 16 pixels.
+pub fn test_size(columns: u16, lines: u16) -> TermSize {
+    TermSize {
         columns,
         lines,
         cell_width: 8,
         cell_height: 16,
-    };
-    let (backend, events) = pty::spawn(command, size).expect("backend thread");
+    }
+}
+
+/// Starts a focused `Session` over any backend (spawned with `size`).
+pub fn attach(
+    backend: Box<dyn TerminalBackend>,
+    events: Receiver<BackendEvent>,
+    size: TermSize,
+) -> Terminal {
     let (notice_tx, notices) = crossbeam_channel::unbounded();
     let session = Session::start(
         backend,
@@ -65,9 +163,93 @@ pub fn start(command: ShellCommand, columns: u16, lines: u16) -> Terminal {
 }
 
 impl Terminal {
-    /// Sends text as typed input.
+    /// Writes `text` to the program as it is (no key encoding).
     pub fn send(&self, text: &str) {
         self.session.write(text.as_bytes());
+    }
+
+    /// Presses `key`: the production encoder turns it into bytes with the program's current
+    /// modes (application cursor keys, line feed / new line mode...), as the terminal item does.
+    pub fn press(&self, key: QtKey) {
+        let input = KeyInput::from_qt(key.key, key.modifiers, key.text);
+        self.press_input(&input);
+    }
+
+    /// Types `text` one key at a time through the encoder. Each character is reported as Qt does
+    /// for a US layout: the key code is the upper-case character, and upper-case letters carry
+    /// Shift.
+    pub fn type_text(&self, text: &str) {
+        for c in text.chars() {
+            let mut buffer = [0; 4];
+            let key = i32::try_from(u32::from(c.to_ascii_uppercase())).unwrap();
+            let modifiers = if c.is_ascii_uppercase() {
+                qt::SHIFT_MODIFIER
+            } else {
+                0
+            };
+            let input = KeyInput::from_qt(key, modifiers, c.encode_utf8(&mut buffer));
+            self.press_input(&input);
+        }
+    }
+
+    fn press_input(&self, input: &KeyInput) {
+        let bytes = encode_key(input, &self.session.modes(), &KeyOptions::default())
+            .unwrap_or_else(|| panic!("the key {input:?} sends nothing"));
+        self.session.write(&bytes);
+    }
+
+    /// Runs `input`, waits until the program printed something, then until its output stayed
+    /// quiet for `quiet` (the engine sent no `Dirty` notice), and returns the screen.
+    ///
+    /// Waiting for new output first matters: right after the input the previous screen is still
+    /// there, and it may already contain the text the next screen will show.
+    pub fn step(&self, quiet: Duration, input: impl FnOnce(&Self)) -> String {
+        // Drain first, then clear the dirty flag: a `Dirty` sent after this is new output.
+        self.drain_dirty();
+        let mut frame = Frame::default();
+        self.session.snapshot(&mut frame);
+        input(self);
+        assert!(
+            self.wait_dirty(timeout()),
+            "no output after the input; screen:\n{}",
+            self.screen()
+        );
+        let deadline = Instant::now() + timeout();
+        loop {
+            self.session.snapshot(&mut frame);
+            if !self.wait_dirty(quiet) {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "the output never went quiet; screen:\n{}",
+                self.screen()
+            );
+        }
+        self.screen()
+    }
+
+    /// Drops pending `Dirty` notices and keeps the others.
+    fn drain_dirty(&self) {
+        let mut seen = self.seen.borrow_mut();
+        seen.extend(
+            self.notices
+                .try_iter()
+                .filter(|notice| *notice != Notice::Dirty),
+        );
+    }
+
+    /// Waits up to `limit` for a `Dirty` notice, keeping the others.
+    pub fn wait_dirty(&self, limit: Duration) -> bool {
+        let deadline = Instant::now() + limit;
+        loop {
+            let left = deadline.saturating_duration_since(Instant::now());
+            match self.notices.recv_timeout(left) {
+                Ok(Notice::Dirty) => return true,
+                Ok(other) => self.seen.borrow_mut().push(other),
+                Err(_) => return false,
+            }
+        }
     }
 
     /// The visible screen.
@@ -135,7 +317,12 @@ impl Terminal {
 
     /// Waits for `Notice::Exited` and returns its code.
     pub fn wait_exit(&self) -> Option<i32> {
-        let deadline = Instant::now() + timeout();
+        self.wait_exit_within(timeout())
+    }
+
+    /// Like [`Terminal::wait_exit`], waiting up to `limit`.
+    pub fn wait_exit_within(&self, limit: Duration) -> Option<i32> {
+        let deadline = Instant::now() + limit;
         if let Some(code) = self.recorded_exit() {
             return code;
         }
@@ -175,12 +362,7 @@ impl Terminal {
 
     /// Resizes and waits until the engine applied it.
     pub fn resize(&self, columns: u16, lines: u16) {
-        self.session.resize(TermSize {
-            columns,
-            lines,
-            cell_width: 8,
-            cell_height: 16,
-        });
+        self.session.resize(test_size(columns, lines));
         let deadline = Instant::now() + timeout();
         loop {
             let frame = self.frame();
