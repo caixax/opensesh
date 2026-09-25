@@ -63,6 +63,12 @@ pub struct Startup {
 
 static STARTUP: OnceLock<Startup> = OnceLock::new();
 
+/// Whether this run is a `--smoke-test`.
+#[must_use]
+pub fn is_smoke_test() -> bool {
+    STARTUP.get().is_some_and(|startup| startup.smoke_test)
+}
+
 /// Records the startup data. Only the first call has an effect; it must happen before the QML
 /// engine instantiates the singleton.
 pub fn set_startup(startup: Startup) {

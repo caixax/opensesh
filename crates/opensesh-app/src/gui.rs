@@ -93,6 +93,11 @@ pub fn run(qml_url: &str, language: &str) -> Result<i32> {
     if !shim::set_window_icon(&QString::from(WINDOW_ICON)) {
         tracing::warn!("could not load the window icon; is the Qt SVG image plugin installed?");
     }
+    // Portable mode keeps everything under `<exe>/data` (PLAN §4.1); Qt would otherwise write
+    // its shader pipeline cache to the per-user cache folder.
+    if crate::services::get().is_some_and(|services| services.paths.is_portable()) {
+        shim::disable_shader_disk_cache();
+    }
     let fonts = shim::register_bundled_fonts();
     shim::set_application_font_family(&QString::from(DEFAULT_UI_FONT));
     // What Qt was asked for (on Windows usually `windows:altgr`, see `enable_windows_altgr`).

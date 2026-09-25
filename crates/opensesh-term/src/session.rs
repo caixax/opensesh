@@ -45,6 +45,9 @@ use crate::snapshot::{Cell, Cursor, CursorShape, Damage, Frame, Row, flags};
 /// Most bytes parsed per `Term` lock hold. Bounds how long `snapshot` can wait for the engine.
 const CHUNK_BYTES: usize = 16 * 1024;
 
+/// Most combining marks per cell copied into a snapshot (the engine may store more).
+const MAX_COMBINING_MARKS: usize = 8;
+
 /// How long a synchronized update (DEC mode 2026) may hold the redraw back, as in vte.
 const SYNC_HOLD: Duration = Duration::from_millis(150);
 
@@ -969,7 +972,7 @@ impl Painter<'_> {
         };
         let cluster = match cell.zerowidth() {
             Some(marks) if !marks.is_empty() && !spacer => {
-                clusters.push(marks.to_vec());
+                clusters.push(marks.iter().take(MAX_COMBINING_MARKS).copied().collect());
                 u32::try_from(clusters.len()).unwrap_or(0)
             }
             _ => 0,

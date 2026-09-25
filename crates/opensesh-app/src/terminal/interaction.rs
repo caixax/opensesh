@@ -168,11 +168,11 @@ impl WheelSteps {
     }
 }
 
-/// Qt on Windows turns Alt + vertical wheel into a horizontal delta
-/// (`qwindowspointerhandler.cpp`); undo it so Alt+wheel still scrolls vertically.
+/// Qt turns Alt + vertical wheel into a horizontal delta on Windows, Wayland and X11 (not on
+/// macOS); undo it (`transposed`) so Alt+wheel still scrolls vertically.
 #[must_use]
-pub fn unswap_alt_wheel(windows: bool, alt: bool, angle_x: f64, angle_y: f64) -> (f64, f64) {
-    if windows && alt && angle_y == 0.0 && angle_x != 0.0 {
+pub fn unswap_alt_wheel(transposed: bool, alt: bool, angle_x: f64, angle_y: f64) -> (f64, f64) {
+    if transposed && alt && angle_y == 0.0 && angle_x != 0.0 {
         (0.0, angle_x)
     } else {
         (angle_x, angle_y)
@@ -313,7 +313,7 @@ mod tests {
     }
 
     #[test]
-    fn alt_wheel_is_vertical_again_on_windows() {
+    fn alt_wheel_is_vertical_again() {
         assert_eq!(unswap_alt_wheel(true, true, 120.0, 0.0), (0.0, 120.0));
         assert_eq!(unswap_alt_wheel(true, false, 120.0, 0.0), (120.0, 0.0));
         assert_eq!(unswap_alt_wheel(false, true, 120.0, 0.0), (120.0, 0.0));

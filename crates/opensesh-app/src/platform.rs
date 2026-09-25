@@ -4,6 +4,22 @@
 //! nowhere. These helpers keep command-line output and fatal startup errors visible there; on
 //! every other build they do nothing.
 
+/// Removes the current directory from the DLL search order (Windows). ConPTY is loaded by bare
+/// name (`conpty.dll`): without the copy bundled next to the executable (ADR 0014), a DLL
+/// planted in the folder the app was started from would otherwise be loaded.
+pub fn harden_dll_search() {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::LibraryLoader::SetDllDirectoryW;
+        let empty = [0_u16];
+        // SAFETY: `empty` is a valid NUL-terminated wide string that outlives the call; an
+        // empty string only removes the current directory from the search order.
+        unsafe {
+            SetDllDirectoryW(empty.as_ptr());
+        }
+    }
+}
+
 /// Attaches to the console of the parent process, if there is one, so `--help`, `--version` and
 /// early errors are visible when a Windows release build is started from a terminal.
 pub fn attach_parent_console() {

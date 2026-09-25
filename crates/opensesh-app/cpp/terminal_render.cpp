@@ -327,6 +327,11 @@ bool GlyphAtlas::place(const QImage &source, const QRect &area, bool color, QRec
             // Grow: existing entries keep their texels, but normalized coordinates change.
             const int size = m_image.width() * 2;
             QImage grown(size, size, QImage::Format_RGBA8888_Premultiplied);
+            if (grown.isNull()) {
+                // Out of memory: keep the current atlas; this glyph stays blank.
+                qCWarning(lcTerminal) << "could not grow the glyph atlas to" << size << "px";
+                return false;
+            }
             grown.fill(Qt::transparent);
             for (int y = 0; y < m_image.height(); ++y)
                 std::memcpy(grown.scanLine(y), m_image.constScanLine(y),

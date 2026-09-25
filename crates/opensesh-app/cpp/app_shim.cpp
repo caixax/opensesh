@@ -192,6 +192,11 @@ std::int32_t register_bundled_fonts()
     return added;
 }
 
+void disable_shader_disk_cache()
+{
+    QCoreApplication::setAttribute(Qt::AA_DisableShaderDiskCache, true);
+}
+
 void set_application_font_family(const QString& family)
 {
     QFont font = QGuiApplication::font();

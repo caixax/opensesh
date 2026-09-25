@@ -1498,9 +1498,24 @@ impl qobject::TerminalItem {
             // Windows types the composed character when Alt is released.
             return true;
         }
+        // A finished program takes no keys: Tab and F6 reach the Restart and Close banner.
+        if !self.running {
+            return false;
+        }
         let input = KeyInput::from_qt(key, qt_bits(modifiers), &text.to_string());
         let session = entry.session();
         let modes = session.modes();
+        // Shift+Insert pastes, as in xterm and most terminals.
+        if input.key == Key::Insert
+            && input.mods
+                == (Modifiers {
+                    shift: true,
+                    ..Modifiers::NONE
+                })
+        {
+            self.paste();
+            return true;
+        }
         // The Menu key opens the context menu at the cursor.
         if input.key == Key::Menu && input.mods.is_empty() {
             let (x, y) = self.cursor_position();
@@ -1535,7 +1550,8 @@ impl qobject::TerminalItem {
     }
 
     fn handle_shortcut_override(self: Pin<&mut Self>, key: i32, modifiers: i32) -> bool {
-        self.attached.is_some() && wants_shortcut_override(key, modifiers)
+        // Once the program ended, F6 and the rest go back to the app.
+        self.attached.is_some() && self.running && wants_shortcut_override(key, modifiers)
     }
 
     fn handle_mouse(mut self: Pin<&mut Self>, event: &TerminalMouseEvent) {
@@ -1723,8 +1739,12 @@ impl qobject::TerminalItem {
             return;
         };
         let mods = modifiers_from_qt(qt_bits(event.modifiers));
-        let (angle_x, angle_y) =
-            unswap_alt_wheel(cfg!(windows), mods.alt, event.angle_x, event.angle_y);
+        let (angle_x, angle_y) = unswap_alt_wheel(
+            !cfg!(target_os = "macos"),
+            mods.alt,
+            event.angle_x,
+            event.angle_y,
+        );
         let (steps_x, steps_y) = self.as_mut().rust_mut().wheel.add(angle_x, angle_y);
         if steps_x == 0 && steps_y == 0 {
             return;
@@ -1838,8 +1858,13 @@ impl qobject::TerminalItem {
         let Some(entry) = self.entry() else {
             return;
         };
-        // A commit is typing, not pasting (VTE does the same).
-        let text = text.to_string();
+        // A commit is typing, not pasting (VTE does the same), but it never carries control
+        // characters: an input method can't type ESC sequences into the program.
+        let text: String = text
+            .to_string()
+            .chars()
+            .filter(|c| !c.is_control())
+            .collect();
         self.send_input(&entry, text.as_bytes());
     }
 

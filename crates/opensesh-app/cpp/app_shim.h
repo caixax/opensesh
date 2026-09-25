@@ -37,6 +37,10 @@ std::int32_t register_bundled_fonts();
 // Sets the application default font family (size stays the platform default).
 void set_application_font_family(const QString& family);
 
+// Turns off Qt Quick's automatic shader pipeline cache, which Qt writes to the per-user cache
+// folder (QStandardPaths::CacheLocation): portable mode keeps everything next to the executable.
+void disable_shader_disk_cache();
+
 // Installed font families, optionally only fixed-pitch ones, sorted.
 QStringList font_families(bool monospace_only);
 
