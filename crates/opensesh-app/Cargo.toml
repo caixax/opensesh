@@ -21,6 +21,7 @@ cxx.workspace = true
 cxx-qt.workspace = true
 cxx-qt-lib = { workspace = true, features = ["qt_gui", "qt_qml", "qt_quickcontrols"] }
 opensesh-core.workspace = true
+opensesh-term.workspace = true
 toml.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true

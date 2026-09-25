@@ -1,8 +1,9 @@
-// Component gallery (`--gallery`): every Os* component in its states, in five sections (Tokens,
-// Typography and spacing, Inputs, Structure, Overlays) behind a navigation rail. The toolbar
-// switches the gallery's own theme, density, accent and reduce motion through the ThemeBinder
-// overrides; the user's settings are never written.
-// `--smoke-test` visits every section, opens and closes every overlay and flips each switch.
+// Component gallery (`--gallery`): every Os* component in its states, in six sections (Tokens,
+// Typography and spacing, Inputs, Structure, Overlays, Terminal) behind a navigation rail. The
+// toolbar switches the gallery's own theme, density, accent and reduce motion through the
+// ThemeBinder overrides; the user's settings are never written.
+// `--smoke-test` visits every section, opens and closes every overlay, flips each switch and
+// drives the terminal renderer demo.
 // `--screenshots <dir>` captures every section, plus the open overlays and the custom accent
 // dialog, in each theme x density combination as gallery-<page>-<mode>-<density>.png; for a
 // section page the window grows to fit the whole section.
@@ -21,7 +22,8 @@ Window {
         { id: "typography", text: qsTr("Typography and spacing"), iconName: "type" },
         { id: "inputs", text: qsTr("Inputs"), iconName: "sliders-horizontal" },
         { id: "structure", text: qsTr("Structure"), iconName: "columns-2" },
-        { id: "overlays", text: qsTr("Overlays"), iconName: "app-window" }
+        { id: "overlays", text: qsTr("Overlays"), iconName: "app-window" },
+        { id: "terminal", text: qsTr("Terminal"), iconName: "square-terminal" }
     ]
     property string currentSection: "tokens"
     readonly property Item currentItem: {
@@ -34,6 +36,8 @@ Window {
             return structureSection;
         case "overlays":
             return overlaysSection;
+        case "terminal":
+            return terminalSection;
         default:
             return tokensSection;
         }
@@ -236,6 +240,13 @@ Window {
                     visibleTop: flick.contentY - page.y
                     visibleBottom: flick.contentY - page.y + flick.height
                 }
+
+                SectionTerminal {
+                    id: terminalSection
+
+                    width: parent.width
+                    visible: window.currentSection === "terminal"
+                }
             }
 
             T.ScrollBar.vertical: OsScrollBar {}
@@ -256,6 +267,8 @@ Window {
             () => window.showSection("overlays")
         ].concat(overlaysSection.smokeSteps).concat([
             () => toastHost.clear(),
+            () => window.showSection("terminal")
+        ]).concat(terminalSection.smokeSteps).concat([
             () => toolbar.setMode(Theme.dark ? "light" : "dark"),
             () => toolbar.setDensity(Theme.compact ? "comfortable" : "compact"),
             () => toolbar.setAccent(Theme.accentPresets[4]),
@@ -273,7 +286,8 @@ Window {
         binder: themeBinder
         prefix: "gallery"
         pages: ["tokens", "typography", "inputs", "structure", "overlays", "overlays-dialog",
-            "overlays-menu", "overlays-drawer", "overlays-palette", "overlays-toasts", "tokens-accent"]
+            "overlays-menu", "overlays-drawer", "overlays-palette", "overlays-toasts", "tokens-accent",
+            "terminal"]
         prepare: (mode, density, page) => window.preparePage(page)
         onFinished: Qt.exit(screenshots.failures > 0 ? 7 : 0)
     }

@@ -177,6 +177,23 @@ The assets these tasks generate are committed, so normal builds work offline:
 
 `icons`, `fonts`, `conpty` and `vttest` download from the network; no other task does.
 
+### Shaders
+
+The terminal renderer draws its glyphs with a Qt Quick material whose shaders live in `crates/opensesh-app/shaders/` (Vulkan-style GLSL 440). The compiled `.qsb` files next to them are committed and bundled into the Qt resources, so normal builds need no shader tools ([ADR 0013](adr/0013-terminal-rendering.md)).
+
+After editing a `.vert` or `.frag` file, run `cargo xtask shaders` and commit the regenerated `.qsb` files. It needs `qsb` from the **Qt Shader Tools** module, found through `QMAKE` (`<Qt>/bin`) or on `PATH`:
+
+| Setup | Install |
+|---|---|
+| aqtinstall (Windows, Linux) | Add the module to the Qt you already have. `--noarchives` installs only the module: `aqt install-qt windows desktop 6.10.3 win64_msvc2022_64 -m qtshadertools --noarchives -O C:\Qt` (Linux: `linux desktop 6.10.3 linux_gcc_64 ... -O ~/Qt`) |
+| Arch | `pacman -S qt6-shadertools` |
+| Debian 13 | `apt install qt6-shader-baker` (qsb 6.8.2) |
+| Fedora | `dnf install qt6-qtshadertools` (`/usr/lib64/qt6/bin/qsb`, also `qsb-qt6`) |
+
+- `cargo xtask shaders --check` changes nothing. It fails when a committed `.qsb` differs from what qsb builds.
+- qsb output is byte-for-byte reproducible with one Qt version, but other versions may produce other bytes. So build committed files with qsb **6.10.3**, the version CI uses. Qt 6.8 loads them (`.qsb` format version 9 in both).
+- The vertex shader is compiled with `-b` (the batchable variant Qt Quick needs to merge the per-row nodes). It must not use vertex input location 7, which that variant takes.
+
 Smoke-test exit codes:
 
 | Code | Meaning |

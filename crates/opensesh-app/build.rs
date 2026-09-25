@@ -3,16 +3,28 @@
 //! Files are discovered, so adding a component, bridge or asset needs no edit here:
 //! - `qml/**/*.qml` are QML module files; those under `qml/singletons/` are QML singletons;
 //! - `src/bridge/*.rs` (except `mod.rs`) are cxx-qt bridges;
-//! - `cpp/*.cpp` are compiled; `cpp/*.h` are exported as `opensesh-app/<name>.h`;
-//! - `qml/icons/*.svg`, `fonts/*.{ttf,otf}`, `i18n/*.qm` and `data/icons/*.svg` go into the
-//!   Qt resources under `qrc:/qt/qml/cc/caixa/opensesh/`.
+//! - `cpp/*.cpp` are compiled; `cpp/*.h` are exported as `opensesh-app/<name>.h` and run through
+//!   moc, so a header can declare `Q_OBJECT` classes, and `QML_ELEMENT` / `QML_ANONYMOUS` types
+//!   that qmltyperegistrar adds to the QML module (a header without `Q_OBJECT` gets an empty moc
+//!   file);
+//! - `qml/icons/*.svg`, `fonts/*.{ttf,otf}`, `i18n/*.qm`, `data/icons/*.svg` and `shaders/*.qsb`
+//!   (compiled by `cargo xtask shaders`, ADR 0013) go into the Qt resources under
+//!   `qrc:/qt/qml/cc/caixa/opensesh/`.
 
 use std::path::{Path, PathBuf};
 
 use cxx_qt_build::{CxxQtBuilder, QmlFile, QmlModule};
 
 fn main() {
-    for watched in ["qml", "src/bridge", "cpp", "fonts", "i18n", "data"] {
+    for watched in [
+        "qml",
+        "src/bridge",
+        "cpp",
+        "fonts",
+        "i18n",
+        "data",
+        "shaders",
+    ] {
         println!("cargo::rerun-if-changed={watched}");
     }
 
@@ -27,7 +39,8 @@ fn main() {
         .into_iter()
         .filter(|path| !path.ends_with("/mod.rs"))
         .collect();
-    let cpp_files = files_with_extensions(Path::new("cpp"), &["cpp"], false);
+    // Sources are compiled; headers are moc'd (cxx-qt-build tells them apart by extension).
+    let cpp_files = files_with_extensions(Path::new("cpp"), &["cpp", "h"], false);
 
     let mut resources = Vec::new();
     resources.extend(files_with_extensions(
@@ -45,6 +58,8 @@ fn main() {
         &["ttf", "otf"],
         false,
     ));
+    // Qt Quick material shaders (terminal glyphs), loaded by QSGMaterialShader.
+    resources.extend(files_with_extensions(Path::new("shaders"), &["qsb"], false));
     // The pseudo-locale is a debug tool (ADR 0009): release builds don't bundle it, so a
     // `language = "pseudo"` left in a shared config.toml falls back to English there.
     let release = std::env::var("PROFILE").is_ok_and(|profile| profile == "release");
@@ -68,7 +83,7 @@ fn main() {
         .files(bridges)
         .cpp_files(cpp_files)
         .qrc_resources(resources)
-        // QQuickImageProvider (icons) and QSvgRenderer.
+        // QQuickImageProvider (icons), the terminal's scene graph nodes, and QSvgRenderer.
         .qt_module("Quick")
         .qt_module("Svg")
         // Qt Qml requires Qt Network on macOS; linking it everywhere keeps the build uniform.
