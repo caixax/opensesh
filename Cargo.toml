@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["crates/opensesh-core", "crates/opensesh-app", "xtask"]
-default-members = ["crates/opensesh-core", "crates/opensesh-app"]
+members = ["crates/opensesh-core", "crates/opensesh-term", "crates/opensesh-app", "xtask"]
+default-members = ["crates/opensesh-core", "crates/opensesh-term", "crates/opensesh-app"]
 
 [workspace.package]
 version = "0.0.1"
@@ -19,12 +19,22 @@ publish = false
 [workspace.dependencies]
 # Internal crates
 opensesh-core = { path = "crates/opensesh-core" }
+opensesh-term = { path = "crates/opensesh-term" }
 
 # Qt bridge (KDAB cxx-qt)
 cxx = "1.0.202"
 cxx-qt = "0.10.0"
 cxx-qt-lib = { version = "0.10.0", default-features = false }
 cxx-qt-build = "0.10.0"
+
+# Terminal (Sprint 2, ADR 0012). alacritty_terminal: caret pin so `cargo update` can pick up
+# 0.26.x fixes (the zero-width cap); `serde` isn't needed. Its `vte` re-export is used, not a
+# separate vte dependency.
+alacritty_terminal = { version = "0.26.0", default-features = false }
+crossbeam-channel = "0.5.17"
+portable-pty = "0.9.0"
+# Unix only (opensesh-term): IUTF8, poll with a wake pipe, process-group signals.
+rustix = { version = "1.1.5", default-features = false, features = ["std", "termios", "event", "pipe", "process"] }
 
 # Errors
 anyhow = "1.0.104"
@@ -41,7 +51,7 @@ notify = { version = "8.2.0", default-features = false, features = ["macos_fseve
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.1.6"
 
-# xtask only
+# xtask only (regex is also used by opensesh-term)
 flate2 = "1.1.10"
 regex = "1.13.1"
 sha2 = "0.11.0"
