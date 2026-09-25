@@ -95,7 +95,9 @@ QtObject {
             if (!action.showInPalette)
                 continue;
             const haystack = action.category + " " + action.text + " " + action.actionId;
-            const score = Math.max(fuzzyScore(query, action.text) + 1, fuzzyScore(query, haystack));
+            // A title match ranks above a category/id match; -1 (no match) must stay negative.
+            const titleScore = fuzzyScore(query, action.text);
+            const score = Math.max(titleScore >= 0 ? titleScore + 1 : -1, fuzzyScore(query, haystack));
             if (score >= 0)
                 results.push({ action: action, score: score });
         }

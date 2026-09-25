@@ -14,6 +14,10 @@ pub mod qobject {
         include!("cxx-qt-lib/qcolor.h");
         /// Qt color type from cxx-qt-lib.
         type QColor = cxx_qt_lib::QColor;
+
+        include!("cxx-qt-lib/qstringlist.h");
+        /// Qt string list type from cxx-qt-lib.
+        type QStringList = cxx_qt_lib::QStringList;
     }
 
     extern "RustQt" {
@@ -43,6 +47,14 @@ pub mod qobject {
         #[qproperty(QColor, text_muted, cxx_name = "textMuted", READ, NOTIFY = theme_changed)]
         #[qproperty(QColor, text_disabled, cxx_name = "textDisabled", READ, NOTIFY = theme_changed)]
         #[qproperty(QColor, accent, READ, NOTIFY = theme_changed)]
+        #[qproperty(QColor, default_accent, cxx_name = "defaultAccent", READ, NOTIFY = theme_changed)]
+        #[qproperty(
+            QStringList,
+            accent_presets,
+            cxx_name = "accentPresets",
+            READ,
+            CONSTANT
+        )]
         #[qproperty(QColor, accent_text, cxx_name = "accentText", READ, NOTIFY = theme_changed)]
         #[qproperty(QColor, accent_fg, cxx_name = "accentFg", READ, NOTIFY = theme_changed)]
         #[qproperty(QColor, success, READ, NOTIFY = theme_changed)]
@@ -127,7 +139,7 @@ pub mod qobject {
 use core::pin::Pin;
 
 use cxx_qt::CxxQtType;
-use cxx_qt_lib::{QColor, QString};
+use cxx_qt_lib::{QColor, QString, QStringList};
 use opensesh_core::theme::{self, ColorScheme, Density, Rgba, ThemeInputs, ThemeMode};
 
 /// Bundled UI font (registered at startup).
@@ -160,6 +172,10 @@ pub struct ThemeRust {
     text_muted: QColor,
     text_disabled: QColor,
     accent: QColor,
+    /// The default ("Sesame") accent of the current scheme, whatever accent is chosen.
+    default_accent: QColor,
+    /// `#RRGGBB` codes of [`theme::ACCENT_PRESETS`].
+    accent_presets: QStringList,
     accent_text: QColor,
     accent_fg: QColor,
     success: QColor,
@@ -225,6 +241,11 @@ impl Default for ThemeRust {
             text_muted: QColor::default(),
             text_disabled: QColor::default(),
             accent: QColor::default(),
+            default_accent: QColor::default(),
+            accent_presets: theme::ACCENT_PRESETS
+                .iter()
+                .map(|preset| QString::from(&preset.to_hex()))
+                .collect(),
             accent_text: QColor::default(),
             accent_fg: QColor::default(),
             success: QColor::default(),
@@ -329,6 +350,11 @@ impl ThemeRust {
         self.text_muted = qcolor(p.text_muted);
         self.text_disabled = qcolor(p.text_disabled);
         self.accent = qcolor(p.accent);
+        self.default_accent = qcolor(if self.dark {
+            theme::DEFAULT_ACCENT_DARK
+        } else {
+            theme::DEFAULT_ACCENT_LIGHT
+        });
         self.accent_text = qcolor(p.accent_text);
         self.accent_fg = qcolor(p.accent_fg);
         self.success = qcolor(p.success);

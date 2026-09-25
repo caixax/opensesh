@@ -136,8 +136,20 @@ T.Drawer {
             anchors.bottom: parent.bottom
             anchors.margins: Theme.spacingXl
             anchors.topMargin: control.headerShown ? Theme.spacingSm : Theme.spacingXl
-            implicitWidth: childrenRect.width
-            implicitHeight: childrenRect.height
+            // From the children's implicit sizes, not childrenRect: a child that fills the body
+            // (`anchors.fill: parent`) would feed the body's size back into it (binding loop).
+            implicitWidth: {
+                let widest = 0;
+                for (let i = 0; i < children.length; ++i)
+                    widest = Math.max(widest, children[i].implicitWidth);
+                return widest;
+            }
+            implicitHeight: {
+                let tallest = 0;
+                for (let i = 0; i < children.length; ++i)
+                    tallest = Math.max(tallest, children[i].implicitHeight);
+                return tallest;
+            }
         }
     }
 

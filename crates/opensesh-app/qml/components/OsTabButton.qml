@@ -180,9 +180,11 @@ T.TabButton {
             visible: control.checked
         }
 
+        // Inset ring: the tab strip clips its tabs (it scrolls).
         OsFocusRing {
+            anchors.margins: 0
             target: control
-            baseRadius: Theme.radiusControl
+            baseRadius: Theme.radiusControl - Theme.focusRingWidth - gap
         }
     }
 }

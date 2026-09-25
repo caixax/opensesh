@@ -290,6 +290,10 @@ QString language_native_name(const QString& code)
     if (code == QStringLiteral("pseudo")) {
         return QStringLiteral("Pseudo-locale");
     }
+    if (code == QStringLiteral("en")) {
+        // QLocale("en") is US English ("American English"); the UI source strings are neutral.
+        return QStringLiteral("English");
+    }
     const QLocale locale(code);
     const QString name = locale.nativeLanguageName();
     if (name.isEmpty()) {

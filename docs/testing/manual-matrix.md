@@ -4,6 +4,46 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 1 (2026-09-25)
+
+### Automated checks
+
+Each smoke test fails on any warning from our QML (exit code 6), besides the Sprint 0 checks:
+
+- **Main window (`--smoke-test`, 50 steps):** visits every view and every Settings section, opens and closes the command palette, the notifications, the side panel and the Restore defaults dialog, opens and closes tabs, cycles focus with F6 and switches the layout. It writes no settings.
+- **Gallery (`--gallery --smoke-test`, 26 steps):** visits every section, opens and closes every dialog, drawer and menu, runs a command palette search, shows toasts, and flips theme, density, accent and reduce motion.
+- **Crash dialog (`--crash-report <file> --smoke-test`):** unchanged.
+
+**Host:** as in Sprint 0 (Windows 10 22H2; WSL2 with WSLg for Linux).
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery / dialog) | Native Wayland (main / gallery / dialog) | X11 `xcb` (main / gallery / dialog) |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ | ✅ / ✅ / ✅ | — (native `windows`: ✅ / ✅ / ✅) | — |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ (1) | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ (2) | ✅ / ✅ / ✅ |
+| Ubuntu 22.04 (WSLg) | 6.10.3 (aqt) | ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ (2) | ✅ / ✅ / ✅ |
+
+(1) GCC 16 prints a `-Wsfinae-incomplete` warning from Qt's own `qchar.h` while it compiles the cxx-qt generated code. It is not in our code and doesn't fail the build.
+
+(2) With `XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir`, as in Sprint 0.
+
+Screenshots (`--screenshots`) of the main window, Settings, every gallery page and the crash dialog were reviewed in dark/light × comfortable/compact on Windows (offscreen) and on Debian 13 (native Wayland, Qt 6.8.2). The pseudo-locale was reviewed on Windows.
+
+### Manual checks
+
+| Check | Windows 10 | Linux (WSLg) |
+|---|---|---|
+| Real key presses (sent with `WScript.Shell.SendKeys` to the running window): Ctrl+Shift+P opens the palette, typing filters it, Enter runs the action (density switched to compact live), Ctrl+Shift+T opens a tab, F6 moves the focus to the rail with a visible focus ring, Ctrl+Shift+Q quits with exit code 0 | ✅ | ⏳ |
+| Rail with real key presses: F6 twice reaches the rail (the first stop is the title bar), Down moves, Enter opens SFTP, End then Space opens Settings; the focused item shows its focus ring and label tooltip | ✅ | ⏳ |
+| `config.toml` with a TOML syntax error: the app starts on defaults, warns, and leaves the file byte-for-byte unchanged | ✅ | ⏳ |
+| An existing `config.toml` doesn't produce a "changed on disk" reload at startup | ✅ | ⏳ |
+| Pseudo-locale (`language = "pseudo"`, debug build): every visible string is translated, long strings wrap without clipping | ✅ | ⏳ |
+| Real mouse (`SetCursorPos` + `mouse_event`), `custom` decorations: dragging the title bar moves the window, a double-click maximizes and restores it, dragging the bottom-right corner resizes it, the close button quits with exit code 0 | ✅ | ⏳ |
+| Frameless maximize fills the work area exactly (1920×1040 on a 1920×1080 screen), so the taskbar stays visible | ✅ | — |
+| Tiling compositor: `auto` decorations drop the window buttons (Hyprland, Sway, niri, i3) | — | ⏳ (needs real hardware) |
+| Screen reader names (Narrator, Orca) | ⏳ | ⏳ |
+
 ## Sprint 0 (2026-09-25)
 
 ### Automated checks
@@ -69,6 +109,7 @@ The procedure for each is in [`../dev-setup.md`](../dev-setup.md#checking-waylan
 # Linux (repeat with QT_QPA_PLATFORM=wayland and QT_QPA_PLATFORM=xcb)
 export OPENSESH_NO_CRASH_DIALOG=1 QT_QPA_PLATFORM=offscreen
 cargo run -p opensesh-app -- --smoke-test; echo "exit=$?"
+cargo run -p opensesh-app -- --gallery --smoke-test; echo "exit=$?"
 printf 'test report\n' > /tmp/report.txt
 cargo run -p opensesh-app -- --crash-report /tmp/report.txt --smoke-test; echo "exit=$?"
 ```

@@ -95,9 +95,15 @@ T.Switch {
         }
     }
 
+    // The paddings reserve the track's room (and the gap only when there is a label, so a switch
+    // without text is exactly as wide as its track).
     contentItem: OsText {
-        leftPadding: control.indicator && !control.mirrored ? control.indicator.width + control.spacing : 0
-        rightPadding: control.indicator && control.mirrored ? control.indicator.width + control.spacing : 0
+        readonly property real trackSpace: control.indicator
+                                           ? control.indicator.width + (control.text.length > 0 ? control.spacing : 0)
+                                           : 0
+
+        leftPadding: control.mirrored ? 0 : trackSpace
+        rightPadding: control.mirrored ? trackSpace : 0
         text: control.text
         font: control.font
         Accessible.ignored: true
