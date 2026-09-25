@@ -32,17 +32,19 @@ sudo pacman -S --needed base-devel git lld qt6-base qt6-declarative qt6-svg qt6-
 
 - **qmake:** `/usr/bin/qmake6`, found automatically.
 - Since Qt 6.10 the Wayland platform plugin ships in `qt6-base`. `qt6-wayland` adds the client-side decorations used on GNOME.
+- **Translation tools:** `lupdate` and `lrelease` (for `cargo xtask i18n`) come with `qt6-tools`, under `/usr/lib/qt6/bin/`.
 
 ### Debian 13 "trixie" (Qt 6.8.2, the minimum supported)
 
 ```sh
 sudo apt install build-essential pkg-config git curl lld \
-  qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-wayland-dev qt6-wayland qt6-tools-dev \
+  qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-wayland-dev qt6-wayland qt6-tools-dev qt6-l10n-tools \
   qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts \
   qml6-module-qtquick-window qml6-module-qtquick-templates qml6-module-qtqml-workerscript
 ```
 
 - **qmake:** `/usr/bin/qmake6`, from the `qmake6` package, which `qt6-base-dev` pulls in.
+- **Translation tools:** `lupdate` and `lrelease` are in `qt6-l10n-tools`, under `/usr/lib/qt6/bin/`.
 - **`qt6-wayland` is required to run on Wayland.** On Qt 6.8 the Wayland platform plugin lives in this runtime package, and `qt6-wayland-dev` does not depend on it.
 - On trixie, `qt6-declarative-dev` already depends on the `qml6-module-*` packages. They are listed explicitly to document the QML runtime modules the app imports.
 
@@ -50,10 +52,11 @@ sudo apt install build-essential pkg-config git curl lld \
 
 ```sh
 sudo dnf install gcc-c++ git lld \
-  qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg-devel qt6-qtwayland-devel qt6-qttools-devel
+  qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg-devel qt6-qtwayland-devel qt6-qttools-devel qt6-linguist
 ```
 
 - **qmake:** `/usr/bin/qmake6`, found automatically.
+- **Translation tools:** `lupdate` and `lrelease` are in `qt6-linguist`, under `/usr/lib64/qt6/bin/`.
 
 ### Ubuntu
 
@@ -118,14 +121,17 @@ Cargo builds always link the **release** Qt DLLs and the release MSVC runtime, e
 ## Build, run and check
 
 ```sh
-cargo run -p opensesh-app                  # the app
-cargo run -p opensesh-app -- --smoke-test  # renders one frame, clicks the button, checks, exits
-cargo xtask help                           # developer tasks
+cargo run -p opensesh-app                                      # the app
+cargo run -p opensesh-app -- --gallery                         # every Os* component in every state
+cargo run -p opensesh-app -- --smoke-test                      # renders, visits every view, checks the bridges, exits
+cargo run -p opensesh-app -- --screenshots shots/              # PNGs of the window in all 4 theme x density combos
+cargo run -p opensesh-app -- --gallery --screenshots shots/    # same for the gallery
+cargo xtask help                                               # developer tasks
 ```
 
-`--smoke-test` uses your normal display. On a headless machine, add `QT_QPA_PLATFORM=offscreen` (PowerShell: `$Env:QT_QPA_PLATFORM = 'offscreen'`). `--crash-report <file> --smoke-test` does the same for the crash dialog.
+`--smoke-test` and `--screenshots` use your normal display. On a headless machine, add `QT_QPA_PLATFORM=offscreen` (PowerShell: `$Env:QT_QPA_PLATFORM = 'offscreen'`). `--gallery --smoke-test` and `--crash-report <file> --smoke-test` check the gallery and the crash dialog the same way.
 
-These are the checks CI runs. The icon step is only needed after editing `assets/icons/icons.toml`:
+These are the checks CI runs:
 
 ```sh
 cargo fmt --all --check
@@ -137,7 +143,13 @@ cargo deny check              # licenses, advisories, bans, sources (cargo insta
 cargo audit                   # RustSec vulnerabilities (cargo install cargo-audit@0.22.2)
 ```
 
-`cargo xtask icons` regenerates the committed icons from the pinned upstream packages (see [ADR 0005](adr/0005-icon-pipeline-bootstrap.md)). It is the only task that uses the network.
+The assets these tasks generate are committed, so normal builds work offline:
+
+- **`cargo xtask icons`** regenerates the icons from the pinned Lucide, Tabler and Simple Icons packages ([ADR 0005](adr/0005-icon-pipeline-bootstrap.md)). Run it after editing `assets/icons/icons.toml`.
+- **`cargo xtask fonts`** extracts Inter and JetBrains Mono from their pinned release zips.
+- **`cargo xtask i18n`** updates the `.ts` files with `lupdate`, regenerates the pseudo-locale and compiles the `.qm` files with `lrelease` ([ADR 0009](adr/0009-i18n-pipeline.md)). With `--check`, it fails when the translations are out of date.
+
+`icons` and `fonts` download from the network; no other task does.
 
 Smoke-test exit codes:
 
@@ -146,9 +158,10 @@ Smoke-test exit codes:
 | 0 | OK |
 | 1 | Startup error (QML failed to load, data or log directory unusable); see the log |
 | 2 | Invalid command-line arguments |
-| 3 | No frame rendered within 15 s |
+| 3 | No frame rendered in time |
 | 4 | QML/Rust bridge broken |
 | 5 | Non-ASCII text mangled by the build (e.g. MSVC without `/utf-8`) |
+| 6 | The UI ran, but our QML logged a warning (binding error, unknown icon, ...); see the log |
 | 134 / `0xC0000409` | Abort: a Qt fatal error (e.g. no usable display for `QT_QPA_PLATFORM`) or a panic across FFI. A `crash-*.txt` report is written. |
 
 ### Useful environment variables
@@ -157,7 +170,7 @@ Smoke-test exit codes:
 |---|---|
 | `OPENSESH_LOG` | Log filter with `RUST_LOG` syntax, e.g. `debug` or `opensesh_app=trace,qt=warn`. The default is `info`, and an invalid value falls back to it with a warning. |
 | `OPENSESH_NO_CRASH_DIALOG=1` | Never open the crash dialog after a panic. Use it for headless runs. |
-| `OPENSESH_DEBUG_PANIC=1` | **Debug builds only.** The Knock button panics inside a QML → Rust call, to test the crash report and dialog ([ADR 0004](adr/0004-crash-reporting.md)). |
+| `OPENSESH_DEBUG_PANIC=1` | **Debug builds only.** The "Debug: trigger a panic" command panics inside a QML → Rust call, to test the crash report and dialog ([ADR 0004](adr/0004-crash-reporting.md)). |
 | `QT_QPA_PLATFORM` | Qt platform plugin: `wayland`, `xcb`, `windows`, `offscreen`, ... |
 | `QT_QUICK_BACKEND=software` | Software Qt Quick renderer. Use it in CI and on machines without a GPU. |
 | `WAYLAND_DEBUG=1` | Prints the Wayland protocol traffic. Useful to check the `app_id`. |
@@ -166,13 +179,15 @@ Smoke-test exit codes:
 
 | | Linux | Windows |
 |---|---|---|
-| Config | `$XDG_CONFIG_HOME/opensesh` | `%APPDATA%\OpenSesh` |
+| Config: `config.toml`, plus its 5 backups `config.toml.bak.N` | `$XDG_CONFIG_HOME/opensesh` | `%APPDATA%\OpenSesh` |
 | Data (logs, vault, recordings) | `$XDG_DATA_HOME/opensesh` | `%LOCALAPPDATA%\OpenSesh` |
+| Window and panel state (`state.toml`) | `<data>/state.toml` | same |
 | Cache | `$XDG_CACHE_HOME/opensesh` | `%LOCALAPPDATA%\OpenSesh\cache` |
 | Logs | `<data>/logs/opensesh.YYYY-MM-DD.log`, plus `crash-*.txt` | same |
 
 - If a file named `portable` sits next to the executable, everything goes to `./data/` next to it instead.
-- On Linux, directories the app creates get mode `0700`, and the data directory is always kept private.
+- On Linux, directories the app creates get mode `0700`, the data directory is always kept private, and `config.toml` is written with mode `0600`.
+- You can edit `config.toml` while the app runs: changes apply live. An invalid value is ignored, with a warning that names the key.
 
 ## Checking Wayland and X11
 

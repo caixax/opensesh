@@ -46,7 +46,7 @@ pub mod ffi {
         #[namespace = "opensesh"]
         fn font_families(monospace_only: bool) -> QStringList;
 
-        /// Native text of a key combination.
+        /// Portable text of a key combination (e.g. `Ctrl+Shift+P`).
         #[namespace = "opensesh"]
         fn key_sequence_text(key: i32, modifiers: i32) -> QString;
 

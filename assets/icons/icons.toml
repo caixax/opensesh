@@ -2,11 +2,19 @@
 #
 # Hard rule: icons are never drawn, generated or hand-edited. They are extracted byte-for-byte
 # from the pinned upstream npm tarballs below (the sha256 is verified before extraction). Only the
-# root `stroke` / `fill` attributes are normalized to `currentColor`.
+# root `stroke` / `fill` attributes are normalized to `currentColor`; a `style = "fill"` source
+# whose root `<svg>` has no `fill` gets `fill="currentColor"` added to it. Paths are never touched.
 schema_version = 1
 
 # Pinned upstream packages. `sha256` is the digest of the npm tarball
 # (https://registry.npmjs.org/<package>/-/<name>-<version>.tgz).
+#   style               "stroke" (default: outline icons) or "fill" (filled shapes, Simple Icons).
+#   license_file        copied to assets/icons/LICENSES/<source>-LICENSE.txt.
+#   extra_notice_files  optional; each copied to assets/icons/LICENSES/<source>-<file name>.
+#   notice              optional text added to the source's entry in THIRD_PARTY_NOTICES.md.
+#
+# Source priority (PLAN §7): Lucide first; Tabler only for concepts Lucide lacks; Simple Icons only
+# for operating system, distro and tool logos.
 [sources.lucide]
 package = "lucide-static"
 version = "1.48.0"
@@ -15,6 +23,45 @@ license = "ISC (plus MIT for the Feather-derived icons listed in the license fil
 license_file = "package/LICENSE"
 icon_path = "package/icons/{name}.svg"
 homepage = "https://lucide.dev"
+
+[sources.tabler]
+package = "@tabler/icons"
+version = "3.48.0"
+sha256 = "28447dcf6f0bb2b8d92c59a1b3d30900a180de2e97d7db4d267e6320dc68f449"
+license = "MIT"
+license_file = "package/LICENSE"
+icon_path = "package/icons/outline/{name}.svg"
+homepage = "https://tabler.io/icons"
+style = "stroke"
+
+# Simple Icons files have no `fill` at all (they would render black), hence `style = "fill"`.
+# When bumping the version, re-check the per-logo `license` / `guidelines` fields of
+# package/data/simple-icons.json for every logo used and update `notice`.
+[sources.simple]
+package = "simple-icons"
+version = "16.32.0"
+sha256 = "df6676b2dca83e8807d60ef3a55b50c86b289cb98e4252c55d977d032e8b0c85"
+license = "CC0-1.0"
+license_file = "package/LICENSE.md"
+extra_notice_files = ["package/DISCLAIMER.md"]
+notice = """\
+The logos are trademarks of their respective owners and are only used to identify the system \
+or tool they stand for. The Simple Icons collection is CC0, but some logos carry their own \
+license (per `package/data/simple-icons.json` of the pinned package): `debian` CC-BY-SA-3.0, \
+`fedora` custom (<https://docs.fedoraproject.org/en-US/project/brand/>), `gentoo` CC-BY-SA-2.5, \
+`nixos` CC-BY-4.0 and `rockylinux` CC-BY-SA-4.0. Brand guidelines: \
+[Arch Linux](https://wiki.archlinux.org/index.php/DeveloperWiki:TrademarkPolicy#Logo_Usage_Guidelines), \
+[AlmaLinux](https://almalinux.org/p/the-almalinux-os-trademark-usage-policy/), \
+[Debian](https://www.debian.org/logos/), \
+[Fedora](https://fedoraproject.org/wiki/Legal:Trademark_guidelines), \
+[Gentoo](https://www.gentoo.org/inside-gentoo/foundation/name-logo-guidelines.html), \
+[NixOS](https://brand.nixos.org/documents/nixos-branding-guide.pdf), \
+[openSUSE](https://en.opensuse.org/Portal:Artwork), \
+[Raspberry Pi](https://www.raspberrypi.org/trademark-rules), \
+[Ubuntu](https://design.ubuntu.com/brand)."""
+icon_path = "package/icons/{name}.svg"
+homepage = "https://simpleicons.org"
+style = "fill"
 
 [icons]
 # Internal icon name = "<source>:<upstream name>". Written to crates/opensesh-app/qml/icons/<internal name>.svg
@@ -110,6 +157,30 @@ user = "lucide:user"
 waypoints = "lucide:waypoints"
 x = "lucide:x"
 zap = "lucide:zap"
+
+# Operating system, distro and tool logos (host OS detection, PLAN §7). Simple Icons has no
+# Windows logo, so `os-windows` comes from Tabler. A system without a logo falls back to `server`.
+os-almalinux = "simple:almalinux"
+os-alpinelinux = "simple:alpinelinux"
+os-apple = "simple:apple"
+os-archlinux = "simple:archlinux"
+os-debian = "simple:debian"
+os-docker = "simple:docker"
+os-fedora = "simple:fedora"
+os-freebsd = "simple:freebsd"
+os-gentoo = "simple:gentoo"
+os-kubernetes = "simple:kubernetes"
+os-linux = "simple:linux"
+os-linuxmint = "simple:linuxmint"
+os-manjaro = "simple:manjaro"
+os-nixos = "simple:nixos"
+os-opensuse = "simple:opensuse"
+os-podman = "simple:podman"
+os-raspberrypi = "simple:raspberrypi"
+os-redhat = "simple:redhat"
+os-rockylinux = "simple:rockylinux"
+os-ubuntu = "simple:ubuntu"
+os-windows = "tabler:brand-windows"
 
 # Placeholder application logo (until a human-made design exists): the `door-open` glyph in white
 # on a rounded square filled with the dark-theme accent color (PLAN §5.2 / §7).

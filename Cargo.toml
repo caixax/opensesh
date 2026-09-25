@@ -47,6 +47,9 @@ regex = "1.13.1"
 sha2 = "0.11.0"
 tar = "0.4.46"
 ureq = "3.4.2"
+# Exact pin: zip may raise its MSRV (1.88 today) in any minor release. Reading deflate entries is
+# all `cargo xtask fonts` needs.
+zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 # Windows only (opensesh-app: console attach and error message box)
 windows-sys = "0.61.2"

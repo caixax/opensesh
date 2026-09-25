@@ -34,7 +34,8 @@ pub mod qobject {
         #[cxx_name = "fontFamilies"]
         fn font_families(self: &Self, monospace_only: bool) -> QStringList;
 
-        /// Human-readable text of a key combination (`KeyEvent.key`, `KeyEvent.modifiers`).
+        /// Portable text of a key combination (`KeyEvent.key`, `KeyEvent.modifiers`), e.g.
+        /// `Ctrl+Shift+P`: untranslated and stable, so it can be stored and shown.
         #[qinvokable]
         #[cxx_name = "keySequenceText"]
         fn key_sequence_text(self: &Self, key: i32, modifiers: i32) -> QString;

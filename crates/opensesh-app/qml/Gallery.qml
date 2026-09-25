@@ -1,12 +1,13 @@
-// Component gallery (`--gallery`). (Temporary scaffold: completed in this sprint.)
+// Component gallery (`--gallery`). (Provisional layout: every section in one scrolling column;
+// the full gallery with theme/density switches is completed later in this sprint.)
 import QtQuick
 import cc.caixa.opensesh
 
 Window {
     id: window
 
-    width: 1200
-    height: 800
+    width: 1280
+    height: 900
     visible: true
     title: qsTr("OpenSesh component gallery")
     color: Theme.bg
@@ -21,25 +22,50 @@ Window {
         anchors.fill: parent
         color: Theme.bg
 
-        Row {
-            anchors.centerIn: parent
-            spacing: Theme.spacingMd
+        Flickable {
+            id: flick
 
-            Repeater {
-                model: ["primary", "secondary", "ghost", "danger"]
+            anchors.fill: parent
+            contentWidth: width
+            contentHeight: column.implicitHeight + Theme.spacingXxl * 2
+            clip: true
 
-                OsButton {
-                    required property string modelData
+            Column {
+                id: column
 
-                    text: qsTr("Button")
-                    variant: modelData
+                x: Theme.spacingXl
+                y: Theme.spacingXl
+                width: flick.width - Theme.spacingXl * 2
+                spacing: Theme.spacingXxl
+
+                SectionInputs {
+                    width: parent.width
+                    focusDemo: false
+                }
+
+                SectionStructure {
+                    width: parent.width
+                }
+
+                SectionOverlays {
+                    id: overlays
+
+                    width: parent.width
+                    pinTooltip: false
                 }
             }
+
+            OsScrollBar.vertical: OsScrollBar {}
+        }
+
+        OsToastHost {
+            anchors.fill: parent
         }
     }
 
     SmokeTest {
         window: window
+        steps: overlays.smokeSteps
     }
 
     ScreenshotRunner {

@@ -106,6 +106,20 @@ jobs:
           report="$RUNNER_TEMP/opensesh-crash-smoke.txt"
           printf 'OpenSesh crash report (CI smoke test)\n' > "$report"
           target/debug/opensesh-app --crash-report "$report" --smoke-test
+      - name: Gallery smoke test (offscreen)
+        timeout-minutes: 3
+        run: target/debug/opensesh-app --gallery --smoke-test
+      - name: Screenshots (main window and gallery, every theme and density)
+        timeout-minutes: 5
+        run: |
+          target/debug/opensesh-app --screenshots screenshots
+          target/debug/opensesh-app --gallery --screenshots screenshots
+      - name: Upload screenshots
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: screenshots-linux
+          path: screenshots/*.png
+          if-no-files-found: error
 
   distro:
     name: ${{ matrix.name }} (distro Qt)
@@ -175,6 +189,10 @@ jobs:
           report="$RUNNER_TEMP/opensesh-crash-smoke.txt"
           printf 'OpenSesh crash report (CI smoke test)\n' > "$report"
           target/debug/opensesh-app --crash-report "$report" --smoke-test
+      - name: Gallery smoke test (offscreen)
+        shell: bash
+        timeout-minutes: 3
+        run: target/debug/opensesh-app --gallery --smoke-test
 
   windows:
     name: Windows (MSVC, aqtinstall Qt)
@@ -215,3 +233,6 @@ jobs:
           report="$RUNNER_TEMP/opensesh-crash-smoke.txt"
           printf 'OpenSesh crash report (CI smoke test)\n' > "$report"
           target/debug/opensesh-app.exe --crash-report "$report" --smoke-test
+      - name: Gallery smoke test (offscreen)
+        timeout-minutes: 3
+        run: target/debug/opensesh-app.exe --gallery --smoke-test
