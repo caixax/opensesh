@@ -1,0 +1,31 @@
+[package]
+name = "opensesh-term"
+description = "OpenSesh terminal engine: alacritty_terminal wrapper, PTY backend, input encoding"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+alacritty_terminal.workspace = true
+crossbeam-channel.workspace = true
+portable-pty.workspace = true
+regex.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+rustix.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_System_Console"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
