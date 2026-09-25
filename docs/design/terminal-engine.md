@@ -56,8 +56,9 @@ let session = Session::start(backend, events, SessionConfig { size, ..SessionCon
 | `resize(&self, size: TermSize)` | no | The engine resizes the `Term`, then the PTY (the other order corrupts tmux redraws). Clamped to ≥ 2 × 1, and bursts are coalesced. The next `Dirty` frame has the new size. |
 | `focus_changed(&self, focused: bool)` | no | Hollow cursor while unfocused. Sends `CSI I` / `CSI O` if the program enabled mode 1004. |
 | `shutdown(&self)` | no | Ends the program and the threads in the background. Idempotent. No notice is sent after it (one may already be in flight). The last screen stays readable. |
-| `modes(&self) -> InputModes` | lock-free | `TermMode` plus `x10_mouse`, as of the last parsed chunk. When `x10_mouse` is set, X10 is the active mouse protocol and the mouse bits of `term` are stale. |
+| `modes(&self) -> InputModes` | lock-free | `TermMode` plus `x10_mouse`, as of the last parsed chunk. When `x10_mouse` is set, X10 is the active mouse protocol and the mouse bits of `term` are stale. `InputModes::alternate_screen()` tells whether a full-screen program is showing. |
 | `snapshot(&self, out: &mut Frame)` | fair lock | See §4. It clears the dirty flag **before** locking. |
+| `snapshot_full(&self, out: &mut Frame)` | fair lock | The same, but always every row (`Damage::Full`): for a view that has no copy of the grid (it attached to a running session, or its scene graph was rebuilt). |
 | `scroll(&self, Scroll)` | fair lock | `Scroll::{Lines(i32), PageUp, PageDown, Top, Bottom}`. A positive `Lines` scrolls up into the history. |
 | `selection_start(&self, ViewportPoint, Side, SelectionKind)` | fair lock | `SelectionKind::{Simple, Block, Semantic, Lines}` (drag, Alt+drag, double click, triple click). `Side::{Left, Right}` is the half of the cell under the pointer. |
 | `selection_update(&self, ViewportPoint, Side)` | fair lock | Moves the end of the selection. |
@@ -65,6 +66,7 @@ let session = Session::start(backend, events, SessionConfig { size, ..SessionCon
 | `selection_text(&self) -> Option<String>` | fair lock | `None` without a non-empty selection. `Lines` selections end with `\n`. |
 | `search(&self, pattern: &str, forward: bool) -> Result<Option<(ViewportPoint, ViewportPoint)>, SearchError>` | fair lock, bounded | Regex, smart case. `forward` goes down (newer output), otherwise up. A new pattern starts at the viewport; repeating it moves from the current match and wraps. It scrolls the match into view and returns its first and last cell. An empty pattern clears the search. It scans at most `SessionConfig::search_max_lines` lines (10,000 by default, about 16 ms for 200 columns in release). |
 | `search_clear(&self)` | fair lock | Removes the highlights. |
+| `clear_history(&self)` | fair lock | Clears the scrollback (as `CSI 3 J` does); the screen stays. |
 | `text_dump(&self) -> String` | fair lock | The visible screen, one `\n`-terminated line per row, trailing spaces trimmed. For tests and the smoke test. |
 | `set_palette(&self, Palette)` | fair lock | For example when the app switches between light and dark. |
 | `hyperlink_at(&self, ViewportPoint) -> Option<String>` | fair lock | The OSC 8 URI under the pointer. Validate the scheme before opening it (PLAN §8). |

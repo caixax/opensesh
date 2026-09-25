@@ -1,4 +1,4 @@
-//! `TerminalItem`: the terminal grid for QML (Sprint 2, [ADR 0013]).
+//! `TerminalItem`: the terminal for QML (Sprint 2, [ADR 0013]).
 //!
 //! The C++ base `TerminalItemBase` (`cpp/terminal_item.h`) draws through the Qt Quick scene graph
 //! with its own glyph atlas and turns Qt input events into calls to its pure virtual functions.
@@ -7,36 +7,36 @@
 //! - `fillFrame` hands the renderer a snapshot of the terminal: an
 //!   [`opensesh_term::snapshot::Frame`] converted by [`write_frame`] to the flat FFI structs
 //!   below. It runs on the scene graph render thread while the GUI thread is blocked, so it only
-//!   touches Rust state.
+//!   touches Rust state (the session's snapshot takes the engine's fair lock briefly).
 //! - `handleKey`, `handleShortcutOverride`, `handleMouse`, `handleWheel`, `handleHover`,
-//!   `handleFocusChange` and `handleImeCommit` receive input on the GUI thread.
+//!   `handleFocusChange`, `handleImeCommit` and `handleGridSize` receive input and layout changes
+//!   on the GUI thread, and turn them into engine calls with the pure encoders of
+//!   `opensesh_term::input`.
 //!
-//! The QML type is `TerminalItem` (the name PLAN §3.2 uses): `TerminalView` is already the
-//! terminal workspace view (`qml/views/TerminalView.qml`). Until the engine is wired in, the item
-//! only draws `demo: true`, a built-in frame that exercises every renderer feature (the component
-//! gallery's Terminal section). The C++ base adds the properties `fontFamily`, `fontPointSize`,
-//! `padding`, `reduceMotion`, the read-only `columns`, `lines`, `cellWidth` and `cellHeight`, the
-//! `gridSizeChanged(columns, lines)` signal and the `requestFrame()` invokable.
+//! **Sessions.** Setting `sessionId` attaches the item to the session of that tab in the
+//! [registry](crate::terminal::registry), which owns it: the session outlives the item, so a view
+//! can move (Sprint 4 splits) without restarting the shell. The first item to attach starts a
+//! local shell once the grid size is known. The engine's notices reach the item through its
+//! `CxxQtThread` (the registry's waker queues `drain` on the GUI thread, once per batch); Qt is
+//! never called from engine threads. Only closing the tab (`TerminalSessions.close`) ends the
+//! session; destroying the item only detaches it.
 //!
-//! The base's other public C++ API is reachable from Rust with more `#[inherit]` declarations in
-//! the `unsafe extern "RustQt"` block, added when something uses them (cxx-qt accepts no
-//! `#[allow(dead_code)]` there):
+//! **QML API** (besides the C++ base's `fontFamily`, `fontPointSize`, `padding`, `reduceMotion`,
+//! the read-only `columns`, `lines`, `cellWidth`, `cellHeight`, `gridSizeChanged` and
+//! `requestFrame()`):
 //!
-//! ```ignore
-//! #[inherit] fn columns(self: &TerminalItem) -> i32;
-//! #[inherit] fn lines(self: &TerminalItem) -> i32;
-//! #[inherit] #[cxx_name = "setClipboardText"]
-//! fn set_clipboard_text(self: Pin<&mut TerminalItem>, text: &QString, primary_selection: bool);
-//! #[inherit] #[cxx_name = "clipboardText"]
-//! fn clipboard_text(self: &TerminalItem, primary_selection: bool) -> QString;
-//! #[inherit] #[cxx_name = "supportsPrimarySelection"]
-//! fn supports_primary_selection(self: &TerminalItem) -> bool;
-//! #[inherit] #[qsignal] #[cxx_name = "gridSizeChanged"]
-//! fn grid_size_changed(self: Pin<&mut TerminalItem>, columns: i32, lines: i32);
-//! ```
+//! - properties: `sessionId`, `dark` (the OpenSesh dark or light terminal colors), `copyOnSelect`,
+//!   and read-only `title`, `workingDirectory`, `running`, `exitCode`, `exitCodeKnown`,
+//!   `hasSelection`, `displayOffset`, `historySize` (for a scroll bar) and `searchError`;
+//! - signals: `bell()`, `exited(code)`, `activity()` (new content while the item is hidden) and
+//!   `contextMenuRequested(x, y)` (right click, or the Menu key at the cursor);
+//! - invokables: `copy()`, `paste()`, `pasteSelection()` (Linux primary selection), `selectAll()`,
+//!   `clearSelection()`, `find(pattern, forward)`, `clearSearch()`, `scrollLines(n)`,
+//!   `scrollTo(offset)`, `scrollToBottom()`, `clearScrollback()`, `restart()`, and for tests
+//!   `screenText()` and `sendText(text)`.
 //!
-//! With `impl cxx_qt::Threading`, a session thread can queue `update()` on the item when the
-//! terminal changed (one queued call per frame at most).
+//! The gallery shows the renderer with `demo: true`, a built-in frame that exercises every
+//! renderer feature, and no session.
 //!
 //! [ADR 0013]: ../../../../docs/adr/0013-terminal-rendering.md
 
@@ -210,7 +210,7 @@ pub mod qobject {
     }
 
     extern "RustQt" {
-        /// The terminal grid item.
+        /// The terminal item.
         #[qobject]
         #[qml_element]
         #[base = TerminalItemBase]
@@ -218,12 +218,71 @@ pub mod qobject {
         #[qproperty(bool, demo_dark, cxx_name = "demoDark", READ, WRITE = set_demo_dark, NOTIFY = demo_changed)]
         #[qproperty(i32, demo_cursor_shape, cxx_name = "demoCursorShape", READ, WRITE = set_demo_cursor_shape, NOTIFY = demo_changed)]
         #[qproperty(bool, demo_animated, cxx_name = "demoAnimated", READ, WRITE = set_demo_animated, NOTIFY = demo_changed)]
+        #[qproperty(i32, session_id, cxx_name = "sessionId", READ, WRITE = set_session_id, NOTIFY = session_id_changed)]
+        #[qproperty(bool, dark, READ, WRITE = set_dark, NOTIFY = dark_changed)]
+        #[qproperty(bool, copy_on_select, cxx_name = "copyOnSelect", READ, WRITE, NOTIFY)]
+        #[qproperty(QString, title, READ, NOTIFY = session_info_changed)]
+        #[qproperty(QString, working_directory, cxx_name = "workingDirectory", READ, NOTIFY = session_info_changed)]
+        #[qproperty(bool, running, READ, NOTIFY = session_info_changed)]
+        #[qproperty(i32, exit_code, cxx_name = "exitCode", READ, NOTIFY = session_info_changed)]
+        #[qproperty(bool, exit_code_known, cxx_name = "exitCodeKnown", READ, NOTIFY = session_info_changed)]
+        #[qproperty(bool, has_selection, cxx_name = "hasSelection", READ, NOTIFY = has_selection_changed)]
+        #[qproperty(i32, display_offset, cxx_name = "displayOffset", READ, NOTIFY = view_changed)]
+        #[qproperty(i32, history_size, cxx_name = "historySize", READ, NOTIFY = view_changed)]
+        #[qproperty(QString, search_error, cxx_name = "searchError", READ, NOTIFY = search_error_changed)]
         type TerminalItem = super::TerminalItemRust;
 
         /// Emitted when a demo property changes.
         #[qsignal]
         #[cxx_name = "demoChanged"]
         fn demo_changed(self: Pin<&mut TerminalItem>);
+
+        /// Emitted when `sessionId` changes.
+        #[qsignal]
+        #[cxx_name = "sessionIdChanged"]
+        fn session_id_changed(self: Pin<&mut TerminalItem>);
+
+        /// Emitted when `dark` changes.
+        #[qsignal]
+        #[cxx_name = "darkChanged"]
+        fn dark_changed(self: Pin<&mut TerminalItem>);
+
+        /// Emitted when the title, the working directory or the running and exit state change.
+        #[qsignal]
+        #[cxx_name = "sessionInfoChanged"]
+        fn session_info_changed(self: Pin<&mut TerminalItem>);
+
+        /// Emitted when `hasSelection` changes.
+        #[qsignal]
+        #[cxx_name = "hasSelectionChanged"]
+        fn has_selection_changed(self: Pin<&mut TerminalItem>);
+
+        /// Emitted when the scroll position or the history size changes.
+        #[qsignal]
+        #[cxx_name = "viewChanged"]
+        fn view_changed(self: Pin<&mut TerminalItem>);
+
+        /// Emitted when `searchError` changes.
+        #[qsignal]
+        #[cxx_name = "searchErrorChanged"]
+        fn search_error_changed(self: Pin<&mut TerminalItem>);
+
+        /// The program rang the bell.
+        #[qsignal]
+        fn bell(self: Pin<&mut TerminalItem>);
+
+        /// The program ended; `code` is meaningful only when `exitCodeKnown` is true.
+        #[qsignal]
+        fn exited(self: Pin<&mut TerminalItem>, code: i32);
+
+        /// The terminal changed while the item is hidden (a background tab has new output).
+        #[qsignal]
+        fn activity(self: Pin<&mut TerminalItem>);
+
+        /// Show the context menu at `x`, `y` (item coordinates).
+        #[qsignal]
+        #[cxx_name = "contextMenuRequested"]
+        fn context_menu_requested(self: Pin<&mut TerminalItem>, x: f64, y: f64);
 
         /// Shows the built-in demo frame instead of a terminal.
         fn set_demo(self: Pin<&mut TerminalItem>, value: bool);
@@ -233,6 +292,77 @@ pub mod qobject {
         fn set_demo_cursor_shape(self: Pin<&mut TerminalItem>, value: i32);
         /// Demo benchmark: every row changes on every frame.
         fn set_demo_animated(self: Pin<&mut TerminalItem>, value: bool);
+        /// Attaches to the session of tab `id` (0 for none), starting a local shell if needed.
+        fn set_session_id(self: Pin<&mut TerminalItem>, id: i32);
+        /// The OpenSesh dark (true) or light terminal colors.
+        fn set_dark(self: Pin<&mut TerminalItem>, value: bool);
+
+        /// Copies the selection to the clipboard. Returns whether there was one.
+        #[qinvokable]
+        fn copy(self: Pin<&mut TerminalItem>) -> bool;
+
+        /// Pastes the clipboard (sanitised, bracketed when the program asked for it).
+        #[qinvokable]
+        fn paste(self: Pin<&mut TerminalItem>);
+
+        /// Pastes the primary selection (X11 and Wayland; nothing elsewhere).
+        #[qinvokable]
+        #[cxx_name = "pasteSelection"]
+        fn paste_selection(self: Pin<&mut TerminalItem>);
+
+        /// Selects the whole buffer, scrollback included.
+        #[qinvokable]
+        #[cxx_name = "selectAll"]
+        fn select_all(self: Pin<&mut TerminalItem>);
+
+        /// Removes the selection.
+        #[qinvokable]
+        #[cxx_name = "clearSelection"]
+        fn clear_selection(self: Pin<&mut TerminalItem>);
+
+        /// Finds the next match of a regex (`forward`: toward newer output) and scrolls to it.
+        /// Returns whether there is a match; an invalid pattern sets `searchError`.
+        #[qinvokable]
+        fn find(self: Pin<&mut TerminalItem>, pattern: &QString, forward: bool) -> bool;
+
+        /// Ends the search and removes its highlights.
+        #[qinvokable]
+        #[cxx_name = "clearSearch"]
+        fn clear_search(self: Pin<&mut TerminalItem>);
+
+        /// Scrolls through the history: positive `lines` go up (older output).
+        #[qinvokable]
+        #[cxx_name = "scrollLines"]
+        fn scroll_lines(self: Pin<&mut TerminalItem>, lines: i32);
+
+        /// Scrolls so the view is `offset` lines above the live screen.
+        #[qinvokable]
+        #[cxx_name = "scrollTo"]
+        fn scroll_to(self: Pin<&mut TerminalItem>, offset: i32);
+
+        /// Back to the live screen.
+        #[qinvokable]
+        #[cxx_name = "scrollToBottom"]
+        fn scroll_to_bottom(self: Pin<&mut TerminalItem>);
+
+        /// Clears the scrollback history (the screen stays).
+        #[qinvokable]
+        #[cxx_name = "clearScrollback"]
+        fn clear_scrollback(self: Pin<&mut TerminalItem>);
+
+        /// Ends the session of this tab and starts a new local shell. Returns whether it started.
+        #[qinvokable]
+        fn restart(self: Pin<&mut TerminalItem>) -> bool;
+
+        /// The visible screen as text, one line per row (tests and the smoke test).
+        #[qinvokable]
+        #[cxx_name = "screenText"]
+        fn screen_text(self: &TerminalItem) -> QString;
+
+        /// Types `text` into the program, as the keyboard would (tests and the smoke test).
+        #[qinvokable]
+        #[cxx_name = "sendText"]
+        fn send_text(self: Pin<&mut TerminalItem>, text: &QString);
 
         /// Called by the renderer on the render thread, GUI thread blocked (see the C++ base).
         #[cxx_override]
@@ -274,7 +404,7 @@ pub mod qobject {
         #[cxx_name = "handleWheel"]
         fn handle_wheel(self: Pin<&mut TerminalItem>, event: &TerminalWheelEvent);
 
-        /// Pointer moved without a button pressed.
+        /// Pointer moved without a button pressed, or left the item (column and line -1).
         #[cxx_override]
         #[cxx_name = "handleHover"]
         fn handle_hover(
@@ -295,29 +425,113 @@ pub mod qobject {
         #[cxx_override]
         #[cxx_name = "handleImeCommit"]
         fn handle_ime_commit(self: Pin<&mut TerminalItem>, text: &QString);
+
+        /// The grid or cell size changed (cells in device pixels).
+        #[cxx_override]
+        #[cxx_name = "handleGridSize"]
+        fn handle_grid_size(
+            self: Pin<&mut TerminalItem>,
+            columns: i32,
+            lines: i32,
+            cell_width: i32,
+            cell_height: i32,
+        );
     }
 
     unsafe extern "RustQt" {
         /// `QQuickItem::update()`: schedules a new frame (GUI thread only).
         #[inherit]
         fn update(self: Pin<&mut TerminalItem>);
+
+        /// `QQuickItem::isVisible()`.
+        #[inherit]
+        #[cxx_name = "isVisible"]
+        fn is_visible(self: &TerminalItem) -> bool;
+
+        /// `QQuickItem::hasActiveFocus()`.
+        #[inherit]
+        #[cxx_name = "hasActiveFocus"]
+        fn has_active_focus(self: &TerminalItem) -> bool;
+
+        /// Cell width in logical pixels.
+        #[inherit]
+        #[cxx_name = "cellWidth"]
+        fn cell_width(self: &TerminalItem) -> f64;
+
+        /// Cell height in logical pixels.
+        #[inherit]
+        #[cxx_name = "cellHeight"]
+        fn cell_height(self: &TerminalItem) -> f64;
+
+        /// Space around the grid in logical pixels.
+        #[inherit]
+        fn padding(self: &TerminalItem) -> f64;
+
+        /// Sets the clipboard, or the primary selection where there is one.
+        #[inherit]
+        #[cxx_name = "setClipboardText"]
+        fn set_clipboard_text(
+            self: Pin<&mut TerminalItem>,
+            text: &QString,
+            primary_selection: bool,
+        );
+
+        /// Reads the clipboard, or the primary selection (empty where there is none).
+        #[inherit]
+        #[cxx_name = "clipboardText"]
+        fn clipboard_text(self: &TerminalItem, primary_selection: bool) -> QString;
+
+        /// Whether the platform has a primary selection (X11, most Wayland compositors).
+        #[inherit]
+        #[cxx_name = "supportsPrimarySelection"]
+        fn supports_primary_selection(self: &TerminalItem) -> bool;
+
+        /// Pointing hand over a link, text cursor elsewhere.
+        #[inherit]
+        #[cxx_name = "setLinkCursor"]
+        fn set_link_cursor(self: Pin<&mut TerminalItem>, over_link: bool);
+
+        /// Opens a URL with the desktop's handler.
+        #[inherit]
+        #[cxx_name = "openUrl"]
+        fn open_url(self: &TerminalItem, url: &QString) -> bool;
     }
 
     impl cxx_qt::Threading for TerminalItem {}
 }
 
 use core::pin::Pin;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
-use cxx_qt::CxxQtType;
+use cxx_qt::{CxxQtThread, CxxQtType, Threading};
 use cxx_qt_lib::QString;
+use opensesh_term::backend::TermSize;
+use opensesh_term::input::keys::{
+    Key, KeyInput, KeyOptions, encode_key, modifiers_from_qt, qt, terminal_wants_shortcut,
+};
+use opensesh_term::input::mouse::{
+    MouseAction, MouseButton, MouseInput, MouseProtocol, alternate_scroll, encode_mouse,
+    mouse_protocol, mouse_reporting_active,
+};
+use opensesh_term::input::paste::encode_paste;
+use opensesh_term::input::{InputModes, Modifiers};
+use opensesh_term::links;
+use opensesh_term::palette::Palette;
+use opensesh_term::session::{Scroll, SelectionKind, Side, ViewportPoint};
 use opensesh_term::snapshot::{self, CursorShape, Damage, Frame};
 
+use crate::terminal::demo;
+use crate::terminal::interaction::{
+    LINES_PER_NOTCH, ScreenText, WheelSteps, display_title, side_of, unswap_alt_wheel, url_at,
+};
+use crate::terminal::registry::{self, LocalOptions, SessionEntry, SessionInfo, Waker};
 use qobject::{
     TerminalCell, TerminalCursorShape, TerminalFrameInfo, TerminalFrameRequest, TerminalMouseEvent,
     TerminalWheelEvent,
 };
 
-/// What the next `fillFrame` has to send.
+/// What the next `fillFrame` has to send (demo only).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Pending {
     /// Nothing changed.
@@ -328,20 +542,122 @@ enum Pending {
     Everything,
 }
 
+/// How long after a change the app itself made (a resize, new colors, attaching) a redraw of a
+/// hidden terminal is not reported as activity.
+const QUIET_AFTER_CHANGE: Duration = Duration::from_millis(600);
+
+/// Most wheel reports written for one wheel event in mouse reporting mode.
+const MAX_WHEEL_REPORTS: i32 = 10;
+
+// `Qt::MouseButton` values.
+const QT_LEFT_BUTTON: i32 = 0x1;
+const QT_RIGHT_BUTTON: i32 = 0x2;
+const QT_MIDDLE_BUTTON: i32 = 0x4;
+
+/// `TerminalItemBase::MousePress` / `MouseRelease` / `MouseMove`.
+const MOUSE_PRESS: i32 = 0;
+const MOUSE_RELEASE: i32 = 1;
+const MOUSE_MOVE: i32 = 2;
+
+/// The session an item shows.
+struct Attached {
+    entry: Arc<SessionEntry>,
+    /// Tells this attachment apart from later ones (see [`registry::next_token`]).
+    token: u64,
+}
+
+/// Mouse state between events (GUI thread).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct MouseState {
+    /// Qt buttons whose press was reported to the program (their release is reported too).
+    reported: i32,
+    /// Cell of the last reported event: motion is reported only when the cell changes.
+    last_cell: Option<ViewportPoint>,
+    /// The left button is dragging a local selection.
+    selecting: bool,
+    /// The press opened a link: its move and release events are ignored.
+    link_click: bool,
+}
+
+/// A link under the pointer while Ctrl is held.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Link {
+    url: String,
+    /// The cells of a detected URL (an OSC 8 link is always underlined, so it has none).
+    range: Option<(ViewportPoint, ViewportPoint)>,
+}
+
 /// Rust state behind `TerminalItem`.
-#[derive(Debug)]
 pub struct TerminalItemRust {
+    // Demo (gallery).
     demo: bool,
     demo_dark: bool,
     demo_cursor_shape: i32,
     demo_animated: bool,
     pending: Pending,
+    tick: u64,
+
+    // QML properties.
+    session_id: i32,
+    dark: bool,
+    copy_on_select: bool,
+    title: QString,
+    working_directory: QString,
+    running: bool,
+    exit_code: i32,
+    exit_code_known: bool,
+    has_selection: bool,
+    display_offset: i32,
+    history_size: i32,
+    search_error: QString,
+
+    // Written by `fillFrame` (render thread, GUI thread blocked) and read on the GUI thread.
     /// Grid size of the last frame sent.
     sent_size: (u16, u16),
-    /// Whether the last frame sent had content (so turning the demo off must clear it).
+    /// Whether the last frame sent had content (so the screen is cleared when it goes away).
     showing: bool,
+    /// The last snapshot (reused between frames).
     frame: Frame,
-    tick: u64,
+    /// The text of the rows shown, for link detection.
+    screen: ScreenText,
+    /// Display offset and history size of the last frame.
+    view_latest: (usize, usize),
+    /// The values the properties were last set to.
+    view_published: (usize, usize),
+    /// A `sync_view` call is queued on the GUI thread.
+    view_sync_queued: bool,
+    /// The next frame must hold every row (the renderer has no copy of this session's grid).
+    needs_full: bool,
+    /// The view may be scrolled into the history: typed input scrolls back down first.
+    scrolled: bool,
+
+    // GUI thread.
+    attached: Option<Attached>,
+    /// Boxed: `CxxQtThread` is not `Unpin`, and `rust_mut()` needs this struct to be.
+    thread: Option<Box<CxxQtThread<qobject::TerminalItem>>>,
+    /// Grid size and cell size, once the item has a window and a size.
+    grid: Option<TermSize>,
+    /// Redraws of a hidden terminal before this instant are not activity.
+    quiet_until: Option<Instant>,
+    /// The focus state last told to the session.
+    focus_sent: Option<bool>,
+    mouse: MouseState,
+    wheel: WheelSteps,
+    /// The pointer is over an openable link (pointing-hand cursor).
+    link_hovered: bool,
+    /// The detected URL currently underlined.
+    link_range: Option<(ViewportPoint, ViewportPoint)>,
+}
+
+impl std::fmt::Debug for TerminalItemRust {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TerminalItemRust")
+            .field("demo", &self.demo)
+            .field("session_id", &self.session_id)
+            .field("attached", &self.attached.is_some())
+            .field("grid", &self.grid)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Default for TerminalItemRust {
@@ -352,10 +668,46 @@ impl Default for TerminalItemRust {
             demo_cursor_shape: 0,
             demo_animated: false,
             pending: Pending::Nothing,
+            tick: 0,
+            session_id: 0,
+            dark: true,
+            copy_on_select: false,
+            title: QString::default(),
+            working_directory: QString::default(),
+            running: false,
+            exit_code: 0,
+            exit_code_known: false,
+            has_selection: false,
+            display_offset: 0,
+            history_size: 0,
+            search_error: QString::default(),
             sent_size: (0, 0),
             showing: false,
             frame: Frame::default(),
-            tick: 0,
+            screen: ScreenText::default(),
+            view_latest: (0, 0),
+            view_published: (0, 0),
+            view_sync_queued: false,
+            needs_full: true,
+            scrolled: false,
+            attached: None,
+            thread: None,
+            grid: None,
+            quiet_until: None,
+            focus_sent: None,
+            mouse: MouseState::default(),
+            wheel: WheelSteps::default(),
+            link_hovered: false,
+            link_range: None,
+        }
+    }
+}
+
+impl Drop for TerminalItemRust {
+    fn drop(&mut self) {
+        // The session lives on in the registry until its tab closes.
+        if let Some(attached) = self.attached.take() {
+            attached.entry.detach(attached.token);
         }
     }
 }
@@ -375,52 +727,198 @@ impl TerminalItemRust {
             lines,
             full,
         } = *request;
-        let resized = self.sent_size != (columns, lines);
-        if !self.demo {
-            // No engine yet: clear what the demo left on screen, once.
+        if self.demo {
+            return self.fill_demo(request, info, rows, cells, clusters);
+        }
+        if let Some(attached) = &self.attached {
+            let session = attached.entry.session();
+            if full || self.needs_full {
+                session.snapshot_full(&mut self.frame);
+                self.needs_full = false;
+            } else {
+                session.snapshot(&mut self.frame);
+            }
+            self.screen.apply(&self.frame);
+            self.publish_view();
+            self.showing = true;
+        } else {
+            // No session: clear what was on screen, once.
             if !(self.showing || full) {
                 return false;
             }
             blank_frame(&mut self.frame, columns, lines);
             self.showing = false;
-        } else {
-            let everything = full || resized || self.pending == Pending::Everything;
-            if !everything && !self.demo_animated && self.pending == Pending::Nothing {
-                return false;
-            }
-            let shape = cursor_shape_from_index(self.demo_cursor_shape);
-            if everything || self.demo_animated {
-                let animation = self.demo_animated.then_some(self.tick);
-                demo::build(
-                    &mut self.frame,
-                    columns,
-                    lines,
-                    self.demo_dark,
-                    shape,
-                    animation,
-                );
-                self.frame.damage = if everything {
-                    Damage::Full
-                } else {
-                    Damage::Partial
-                };
-                self.tick = self.tick.wrapping_add(1);
-            } else {
-                // Only the cursor changed: no rows.
-                self.frame.clear();
-                self.frame.cursor.shape = shape;
-            }
-            self.showing = true;
+            self.needs_full = true;
         }
+        write_frame(&self.frame, info, rows, cells, clusters);
+        self.sent_size = (columns, lines);
+        true
+    }
+
+    fn fill_demo(
+        &mut self,
+        request: &TerminalFrameRequest,
+        info: &mut TerminalFrameInfo,
+        rows: &mut Vec<u16>,
+        cells: &mut Vec<TerminalCell>,
+        clusters: &mut Vec<u32>,
+    ) -> bool {
+        let TerminalFrameRequest {
+            columns,
+            lines,
+            full,
+        } = *request;
+        let resized = self.sent_size != (columns, lines);
+        let everything = full || resized || self.pending == Pending::Everything;
+        if !everything && !self.demo_animated && self.pending == Pending::Nothing {
+            return false;
+        }
+        let shape = cursor_shape_from_index(self.demo_cursor_shape);
+        if everything || self.demo_animated {
+            let animation = self.demo_animated.then_some(self.tick);
+            demo::build(
+                &mut self.frame,
+                columns,
+                lines,
+                self.demo_dark,
+                shape,
+                animation,
+            );
+            self.frame.damage = if everything {
+                Damage::Full
+            } else {
+                Damage::Partial
+            };
+            self.tick = self.tick.wrapping_add(1);
+        } else {
+            // Only the cursor changed: no rows.
+            self.frame.clear();
+            self.frame.cursor.shape = shape;
+        }
+        self.showing = true;
         write_frame(&self.frame, info, rows, cells, clusters);
         self.pending = Pending::Nothing;
         self.sent_size = (columns, lines);
         true
     }
 
+    /// After a snapshot (render thread): hands the scroll position and history size to the GUI
+    /// thread when they changed, with one queued call at a time.
+    fn publish_view(&mut self) {
+        let latest = (self.frame.display_offset, self.frame.history_size);
+        self.view_latest = latest;
+        self.scrolled = self.frame.display_offset > 0;
+        if latest == self.view_published || self.view_sync_queued {
+            return;
+        }
+        if let Some(thread) = &self.thread {
+            self.view_sync_queued = thread.queue(|item| item.sync_view()).is_ok();
+        }
+    }
+
     fn request(&mut self, pending: Pending) {
         self.pending = self.pending.max(pending);
     }
+
+    /// The attached session, if any.
+    fn entry(&self) -> Option<Arc<SessionEntry>> {
+        self.attached
+            .as_ref()
+            .map(|attached| Arc::clone(&attached.entry))
+    }
+
+    /// Whether a redraw now is the app's own doing rather than the program's.
+    fn quiet(&self) -> bool {
+        self.quiet_until.is_some_and(|until| Instant::now() < until)
+    }
+
+    /// The link at `point`: an OSC 8 hyperlink, else a URL detected in the row's text.
+    fn link_at(&self, entry: &SessionEntry, point: ViewportPoint) -> Option<Link> {
+        if let Some(url) = entry.session().hyperlink_at(point) {
+            return Some(Link { url, range: None });
+        }
+        let found = url_at(self.screen.row(point.row)?, point.column)?;
+        Some(Link {
+            url: found.url,
+            range: Some((
+                ViewportPoint::new(point.row, found.first),
+                ViewportPoint::new(point.row, found.last),
+            )),
+        })
+    }
+}
+
+/// The terminal colors for the app's dark or light theme.
+fn palette_for(dark: bool) -> Palette {
+    if dark {
+        Palette::OPENSESH_DARK
+    } else {
+        Palette::OPENSESH_LIGHT
+    }
+}
+
+/// A grid size from the C++ side, `None` while any part is 0 (no window yet).
+fn term_size(columns: i32, lines: i32, cell_width: i32, cell_height: i32) -> Option<TermSize> {
+    let positive = |value: i32| u16::try_from(value).ok().filter(|&value| value > 0);
+    Some(TermSize {
+        columns: positive(columns)?,
+        lines: positive(lines)?,
+        cell_width: positive(cell_width)?,
+        cell_height: positive(cell_height)?,
+    })
+}
+
+/// A cell from the C++ side (already clamped to the grid).
+fn viewport_point(column: i32, line: i32) -> ViewportPoint {
+    let clamp = |value: i32| u16::try_from(value.max(0)).unwrap_or(u16::MAX);
+    ViewportPoint::new(clamp(line), clamp(column))
+}
+
+/// `Qt::KeyboardModifiers` as the encoders take them.
+fn qt_bits(modifiers: i32) -> u32 {
+    u32::from_ne_bytes(modifiers.to_ne_bytes())
+}
+
+/// The mouse button a Qt button value stands for.
+fn mouse_button(qt_button: i32) -> Option<MouseButton> {
+    match qt_button {
+        QT_LEFT_BUTTON => Some(MouseButton::Left),
+        QT_MIDDLE_BUTTON => Some(MouseButton::Middle),
+        QT_RIGHT_BUTTON => Some(MouseButton::Right),
+        _ => None,
+    }
+}
+
+/// The button reported with motion: the lowest one held (left, middle, right).
+fn held_button(qt_buttons: i32) -> MouseButton {
+    if qt_buttons & QT_LEFT_BUTTON != 0 {
+        MouseButton::Left
+    } else if qt_buttons & QT_MIDDLE_BUTTON != 0 {
+        MouseButton::Middle
+    } else if qt_buttons & QT_RIGHT_BUTTON != 0 {
+        MouseButton::Right
+    } else {
+        MouseButton::None
+    }
+}
+
+/// `(code, known)` for the `exitCode` and `exitCodeKnown` properties.
+fn exit_status(exit: Option<Option<i32>>) -> (i32, bool) {
+    match exit {
+        Some(Some(code)) => (code, true),
+        _ => (-1, false),
+    }
+}
+
+/// Whether the terminal takes a key away from the window shortcuts ([ADR 0011]): function keys
+/// without Ctrl or Alt, except F11 (full screen). Ctrl+F6 / Ctrl+Shift+F6 therefore always leave
+/// the terminal, and every Ctrl+Shift / Alt app shortcut keeps working.
+///
+/// [ADR 0011]: ../../../../docs/adr/0011-focus-regions-and-function-keys.md
+fn wants_shortcut_override(key: i32, modifiers: i32) -> bool {
+    let bits = qt_bits(modifiers);
+    let key = Key::from_qt(key, bits & qt::KEYPAD_MODIFIER != 0);
+    terminal_wants_shortcut(&key, modifiers_from_qt(bits))
 }
 
 impl qobject::TerminalItem {
@@ -431,6 +929,7 @@ impl qobject::TerminalItem {
         }
         let mut state = self.as_mut().rust_mut();
         state.demo = value;
+        state.needs_full = true;
         state.request(Pending::Everything);
         self.as_mut().demo_changed();
         self.update();
@@ -474,6 +973,487 @@ impl qobject::TerminalItem {
         self.update();
     }
 
+    /// See the bridge declaration.
+    pub fn set_session_id(mut self: Pin<&mut Self>, id: i32) {
+        let id = id.max(0);
+        if self.session_id == id {
+            return;
+        }
+        self.as_mut().detach();
+        self.as_mut().rust_mut().session_id = id;
+        self.as_mut().session_id_changed();
+        self.as_mut().attach_or_start();
+    }
+
+    /// See the bridge declaration.
+    pub fn set_dark(mut self: Pin<&mut Self>, value: bool) {
+        if self.dark == value {
+            return;
+        }
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.dark = value;
+            state.quiet_until = Some(Instant::now() + QUIET_AFTER_CHANGE);
+        }
+        if let Some(entry) = self.entry() {
+            entry.session().set_palette(palette_for(value));
+        }
+        self.as_mut().dark_changed();
+    }
+
+    /// Attaches to the session of `sessionId`, or starts it once the grid size is known.
+    fn attach_or_start(mut self: Pin<&mut Self>) {
+        let id = self.session_id;
+        if id <= 0 || self.attached.is_some() {
+            return;
+        }
+        let entry = match registry::get(id) {
+            Some(entry) => entry,
+            None => {
+                // The shell starts with the size of the grid it is shown in.
+                let Some(size) = self.grid else {
+                    return;
+                };
+                let options = LocalOptions {
+                    size,
+                    palette: palette_for(self.dark),
+                };
+                match registry::open_local(id, options) {
+                    Ok(entry) => entry,
+                    Err(error) => {
+                        tracing::error!(id, %error, "could not start a local terminal");
+                        self.as_mut().publish_info(
+                            &SessionInfo {
+                                exit: Some(None),
+                                ..SessionInfo::default()
+                            },
+                            false,
+                        );
+                        self.as_mut().exited(-1);
+                        return;
+                    }
+                }
+            }
+        };
+        self.as_mut().attach(entry);
+    }
+
+    fn attach(mut self: Pin<&mut Self>, entry: Arc<SessionEntry>) {
+        let token = registry::next_token();
+        let thread = self.qt_thread();
+        let waker: Waker = {
+            let thread = thread.clone();
+            Arc::new(move || thread.queue(move |item| item.drain(token)).is_ok())
+        };
+        let focused = self.has_active_focus();
+        let (dark, grid) = (self.dark, self.grid);
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.attached = Some(Attached {
+                entry: Arc::clone(&entry),
+                token,
+            });
+            state.thread = Some(Box::new(thread));
+            state.needs_full = true;
+            state.quiet_until = Some(Instant::now() + QUIET_AFTER_CHANGE);
+            state.focus_sent = Some(focused);
+            state.mouse = MouseState::default();
+        }
+        let session = entry.session();
+        session.set_palette(palette_for(dark));
+        if let Some(size) = grid {
+            session.resize(size);
+        }
+        session.focus_changed(focused);
+        entry.attach(token, waker);
+        self.as_mut().publish_info(&entry.info(), true);
+        self.update();
+    }
+
+    /// Lets go of the session (it keeps running in the registry).
+    fn detach(mut self: Pin<&mut Self>) {
+        let Some(attached) = self.as_mut().rust_mut().attached.take() else {
+            return;
+        };
+        attached.entry.detach(attached.token);
+        if self.link_range.is_some() {
+            attached.entry.session().set_link_highlight(None);
+        }
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.needs_full = true;
+            state.focus_sent = None;
+            state.mouse = MouseState::default();
+            state.link_range = None;
+        }
+        if self.link_hovered {
+            self.as_mut().rust_mut().link_hovered = false;
+            self.as_mut().set_link_cursor(false);
+        }
+        self.as_mut().publish_info(&SessionInfo::default(), false);
+        self.as_mut().set_has_selection_value(false);
+        self.update();
+    }
+
+    /// Takes the session's events (GUI thread; queued by the registry's waker).
+    fn drain(mut self: Pin<&mut Self>, token: u64) {
+        let Some(entry) = self
+            .attached
+            .as_ref()
+            .filter(|attached| attached.token == token)
+            .map(|attached| Arc::clone(&attached.entry))
+        else {
+            return;
+        };
+        let Some((events, info)) = entry.take_events(token) else {
+            return;
+        };
+        if events.dirty {
+            self.as_mut().on_dirty(&entry);
+        }
+        if events.info || events.exited {
+            self.as_mut().publish_info(&info, true);
+        }
+        if events.bell {
+            self.as_mut().bell();
+        }
+        if events.exited {
+            let (code, _) = exit_status(info.exit);
+            tracing::info!(id = entry.id(), code = ?info.exit, "terminal program exited");
+            self.as_mut().exited(code);
+        }
+    }
+
+    /// The screen changed: draw it, or report activity while hidden.
+    fn on_dirty(mut self: Pin<&mut Self>, entry: &SessionEntry) {
+        if self.is_visible() {
+            self.update();
+            return;
+        }
+        if self.quiet() {
+            // The app's own change (a resize, new colors). Take the snapshot nobody draws, so the
+            // engine sends a new notice when the program writes something.
+            let mut state = self.as_mut().rust_mut();
+            entry.session().snapshot(&mut state.frame);
+            state.needs_full = true;
+        } else {
+            self.as_mut().activity();
+        }
+    }
+
+    /// Mirrors the session's title, directory and exit state into the properties.
+    fn publish_info(mut self: Pin<&mut Self>, info: &SessionInfo, attached: bool) {
+        let title = info
+            .title
+            .as_deref()
+            .map(|title| display_title(title, cfg!(windows)))
+            .unwrap_or_default();
+        let title = QString::from(&title);
+        let directory = QString::from(info.working_directory.as_deref().unwrap_or_default());
+        let running = attached && info.exit.is_none();
+        let (code, known) = exit_status(info.exit);
+        let changed = self.title != title
+            || self.working_directory != directory
+            || self.running != running
+            || self.exit_code != code
+            || self.exit_code_known != known;
+        if !changed {
+            return;
+        }
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.title = title;
+            state.working_directory = directory;
+            state.running = running;
+            state.exit_code = code;
+            state.exit_code_known = known;
+        }
+        self.as_mut().session_info_changed();
+    }
+
+    /// Sets the scroll properties from the last frame (queued by `fillFrame`).
+    fn sync_view(mut self: Pin<&mut Self>) {
+        let (offset, history) = self.view_latest;
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.view_sync_queued = false;
+            state.view_published = (offset, history);
+        }
+        let offset = i32::try_from(offset).unwrap_or(i32::MAX);
+        let history = i32::try_from(history).unwrap_or(i32::MAX);
+        if self.display_offset != offset || self.history_size != history {
+            {
+                let mut state = self.as_mut().rust_mut();
+                state.display_offset = offset;
+                state.history_size = history;
+            }
+            self.as_mut().view_changed();
+        }
+    }
+
+    fn set_has_selection_value(mut self: Pin<&mut Self>, value: bool) {
+        if self.has_selection != value {
+            self.as_mut().rust_mut().has_selection = value;
+            self.as_mut().has_selection_changed();
+        }
+    }
+
+    fn set_search_error_value(mut self: Pin<&mut Self>, value: QString) {
+        if self.search_error != value {
+            self.as_mut().rust_mut().search_error = value;
+            self.as_mut().search_error_changed();
+        }
+    }
+
+    /// Writes typed or pasted input, back on the live screen first.
+    fn send_input(mut self: Pin<&mut Self>, entry: &SessionEntry, bytes: &[u8]) {
+        if bytes.is_empty() {
+            return;
+        }
+        if self.scrolled {
+            entry.session().scroll(Scroll::Bottom);
+            self.as_mut().rust_mut().scrolled = false;
+        }
+        entry.session().write(bytes);
+    }
+
+    /// Pastes `text` (sanitised and bracketed by `encode_paste`).
+    fn paste_text(self: Pin<&mut Self>, text: &str) {
+        let Some(entry) = self.entry() else {
+            return;
+        };
+        let bytes = encode_paste(text, &entry.session().modes());
+        self.send_input(&entry, &bytes);
+    }
+
+    /// A selection gesture ended: update `hasSelection`, copy on select, and set the primary
+    /// selection where there is one.
+    fn finish_selection(mut self: Pin<&mut Self>, entry: &SessionEntry) {
+        let text = entry.session().selection_text();
+        self.as_mut().set_has_selection_value(text.is_some());
+        let Some(text) = text else {
+            return;
+        };
+        let text = QString::from(&text);
+        if self.copy_on_select {
+            self.as_mut().set_clipboard_text(&text, false);
+        }
+        if self.supports_primary_selection() {
+            self.as_mut().set_clipboard_text(&text, true);
+        }
+    }
+
+    /// Opens `url` if it is a kind of link that may be opened without asking (PLAN §8).
+    fn open_link(&self, url: &str) -> bool {
+        // Only the scheme is logged: a URL can carry tokens.
+        let scheme = url.split(':').next().unwrap_or_default();
+        if !links::is_openable(url) {
+            tracing::info!(scheme, "not opening a link of this kind");
+            return false;
+        }
+        let opened = self.open_url(&QString::from(url));
+        if opened {
+            tracing::info!(scheme, "opened a link");
+        } else {
+            tracing::warn!(scheme, "the desktop could not open a link");
+        }
+        opened
+    }
+
+    /// Underlines the openable link under the pointer and shows a pointing hand, or removes both.
+    fn set_link_hover(mut self: Pin<&mut Self>, entry: &SessionEntry, link: Option<&Link>) {
+        let hovered = link.is_some();
+        let range = link.and_then(|link| link.range);
+        if self.link_range != range {
+            entry.session().set_link_highlight(range);
+            self.as_mut().rust_mut().link_range = range;
+        }
+        if self.link_hovered != hovered {
+            self.as_mut().rust_mut().link_hovered = hovered;
+            self.as_mut().set_link_cursor(hovered);
+        }
+    }
+
+    /// The pixel position of the bottom-right corner of the cursor cell (for the context menu).
+    fn cursor_position(&self) -> (f64, f64) {
+        let cursor = self.frame.cursor;
+        let padding = self.padding();
+        (
+            padding + (f64::from(cursor.column) + 1.0) * self.cell_width(),
+            padding + (f64::from(cursor.row) + 1.0) * self.cell_height(),
+        )
+    }
+
+    // ---- Invokables ------------------------------------------------------------------------
+
+    /// See the bridge declaration.
+    pub fn copy(mut self: Pin<&mut Self>) -> bool {
+        let Some(entry) = self.entry() else {
+            return false;
+        };
+        match entry.session().selection_text() {
+            Some(text) => {
+                self.as_mut()
+                    .set_clipboard_text(&QString::from(&text), false);
+                true
+            }
+            None => {
+                self.as_mut().set_has_selection_value(false);
+                false
+            }
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn paste(self: Pin<&mut Self>) {
+        let text = self.clipboard_text(false).to_string();
+        self.paste_text(&text);
+    }
+
+    /// See the bridge declaration.
+    pub fn paste_selection(self: Pin<&mut Self>) {
+        if !self.supports_primary_selection() {
+            return;
+        }
+        let text = self.clipboard_text(true).to_string();
+        self.paste_text(&text);
+    }
+
+    /// See the bridge declaration.
+    pub fn select_all(self: Pin<&mut Self>) {
+        let (Some(entry), Some(size)) = (self.entry(), self.grid) else {
+            return;
+        };
+        let session = entry.session();
+        let offset = self.display_offset;
+        // Viewport points: from the first cell of the oldest line to the last cell on screen.
+        session.scroll(Scroll::Top);
+        session.selection_start(ViewportPoint::new(0, 0), Side::Left, SelectionKind::Simple);
+        session.scroll(Scroll::Bottom);
+        session.selection_update(
+            ViewportPoint::new(size.lines.saturating_sub(1), size.columns.saturating_sub(1)),
+            Side::Right,
+        );
+        if offset > 0 {
+            session.scroll(Scroll::Lines(offset));
+        }
+        self.finish_selection(&entry);
+    }
+
+    /// See the bridge declaration.
+    pub fn clear_selection(mut self: Pin<&mut Self>) {
+        if let Some(entry) = self.entry() {
+            entry.session().selection_clear();
+        }
+        self.as_mut().set_has_selection_value(false);
+    }
+
+    /// See the bridge declaration.
+    pub fn find(mut self: Pin<&mut Self>, pattern: &QString, forward: bool) -> bool {
+        let Some(entry) = self.entry() else {
+            return false;
+        };
+        let (found, error) = match entry.session().search(&pattern.to_string(), forward) {
+            Ok(found) => (found.is_some(), String::new()),
+            Err(error) => (false, error.to_string()),
+        };
+        if found {
+            self.as_mut().rust_mut().scrolled = true;
+        }
+        self.as_mut().set_search_error_value(QString::from(&error));
+        found
+    }
+
+    /// See the bridge declaration.
+    pub fn clear_search(mut self: Pin<&mut Self>) {
+        if let Some(entry) = self.entry() {
+            entry.session().search_clear();
+        }
+        self.as_mut().set_search_error_value(QString::default());
+    }
+
+    /// See the bridge declaration.
+    pub fn scroll_lines(mut self: Pin<&mut Self>, lines: i32) {
+        if let Some(entry) = self.entry() {
+            entry.session().scroll(Scroll::Lines(lines));
+            self.as_mut().rust_mut().scrolled = true;
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn scroll_to(mut self: Pin<&mut Self>, offset: i32) {
+        let Some(entry) = self.entry() else {
+            return;
+        };
+        // Absolute: the display offset of the last frame may be out of date while dragging.
+        let session = entry.session();
+        session.scroll(Scroll::Bottom);
+        if offset > 0 {
+            session.scroll(Scroll::Lines(offset));
+        }
+        self.as_mut().rust_mut().scrolled = offset > 0;
+    }
+
+    /// See the bridge declaration.
+    pub fn scroll_to_bottom(mut self: Pin<&mut Self>) {
+        if let Some(entry) = self.entry() {
+            entry.session().scroll(Scroll::Bottom);
+            self.as_mut().rust_mut().scrolled = false;
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn clear_scrollback(self: Pin<&mut Self>) {
+        if let Some(entry) = self.entry() {
+            entry.session().clear_history();
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn restart(mut self: Pin<&mut Self>) -> bool {
+        let id = self.session_id;
+        let Some(size) = self.grid else {
+            return false;
+        };
+        if id <= 0 {
+            return false;
+        }
+        self.as_mut().detach();
+        tracing::info!(id, "restarting a local terminal");
+        let options = LocalOptions {
+            size,
+            palette: palette_for(self.dark),
+        };
+        match registry::restart_local(id, options) {
+            Ok(entry) => {
+                self.as_mut().attach(entry);
+                true
+            }
+            Err(error) => {
+                tracing::error!(id, %error, "could not restart a local terminal");
+                false
+            }
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn screen_text(&self) -> QString {
+        self.entry()
+            .map(|entry| QString::from(&entry.session().text_dump()))
+            .unwrap_or_default()
+    }
+
+    /// See the bridge declaration.
+    pub fn send_text(self: Pin<&mut Self>, text: &QString) {
+        let Some(entry) = self.entry() else {
+            return;
+        };
+        let text = text.to_string();
+        self.send_input(&entry, text.as_bytes());
+    }
+
+    // ---- C++ overrides ---------------------------------------------------------------------
+
     /// See the bridge declaration and `TerminalItemBase::fillFrame`.
     fn fill_frame(
         self: Pin<&mut Self>,
@@ -488,83 +1468,403 @@ impl qobject::TerminalItem {
     }
 
     fn handle_key(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         key: i32,
         modifiers: i32,
         text: &QString,
-        keypad: bool,
-        auto_repeat: bool,
+        _keypad: bool,
+        _auto_repeat: bool,
     ) -> bool {
-        // Key text is typed input: it may be a password, so only its length is logged.
-        tracing::debug!(
-            key = format_args!("{key:#x}"),
-            modifiers = format_args!("{modifiers:#x}"),
-            text_len = text.to_string().chars().count(),
-            keypad,
-            auto_repeat,
-            demo = self.demo,
-            "terminal key"
-        );
-        // Nothing consumes keys until the engine is connected, so Tab still moves the focus.
-        false
+        // Without a session nothing consumes keys, so Tab still moves the focus (the gallery).
+        let Some(entry) = self.entry() else {
+            return false;
+        };
+        let input = KeyInput::from_qt(key, qt_bits(modifiers), &text.to_string());
+        let session = entry.session();
+        let modes = session.modes();
+        // The Menu key opens the context menu at the cursor.
+        if input.key == Key::Menu && input.mods.is_empty() {
+            let (x, y) = self.cursor_position();
+            self.as_mut().context_menu_requested(x, y);
+            return true;
+        }
+        // Shift+PageUp/PageDown/Home/End scroll the history, except on the alternate screen
+        // (full-screen programs get them).
+        let shift_only = Modifiers {
+            shift: true,
+            ..Modifiers::NONE
+        };
+        if input.mods == shift_only && !modes.alternate_screen() {
+            let scroll = match input.key {
+                Key::PageUp => Some(Scroll::PageUp),
+                Key::PageDown => Some(Scroll::PageDown),
+                Key::Home => Some(Scroll::Top),
+                Key::End => Some(Scroll::Bottom),
+                _ => None,
+            };
+            if let Some(scroll) = scroll {
+                session.scroll(scroll);
+                self.as_mut().rust_mut().scrolled = scroll != Scroll::Bottom;
+                return true;
+            }
+        }
+        let Some(bytes) = encode_key(&input, &modes, &KeyOptions::default()) else {
+            return false;
+        };
+        self.send_input(&entry, &bytes);
+        true
     }
 
     fn handle_shortcut_override(self: Pin<&mut Self>, key: i32, modifiers: i32) -> bool {
-        wants_shortcut_override(key, modifiers)
+        self.attached.is_some() && wants_shortcut_override(key, modifiers)
     }
 
-    fn handle_mouse(self: Pin<&mut Self>, event: &TerminalMouseEvent) {
-        if event.kind != MOUSE_MOVE {
-            tracing::debug!(?event, "terminal mouse");
+    fn handle_mouse(mut self: Pin<&mut Self>, event: &TerminalMouseEvent) {
+        let Some(entry) = self.entry() else {
+            return;
+        };
+        let mods = modifiers_from_qt(qt_bits(event.modifiers));
+        let point = viewport_point(event.column, event.line);
+        match event.kind {
+            MOUSE_PRESS => self.as_mut().mouse_press(&entry, event, mods, point),
+            MOUSE_MOVE => self.as_mut().mouse_move(&entry, event, mods, point),
+            MOUSE_RELEASE => self.as_mut().mouse_release(&entry, event, mods, point),
+            _ => {}
         }
     }
 
-    fn handle_wheel(self: Pin<&mut Self>, event: &TerminalWheelEvent) {
-        tracing::debug!(?event, "terminal wheel");
+    fn mouse_press(
+        mut self: Pin<&mut Self>,
+        entry: &SessionEntry,
+        event: &TerminalMouseEvent,
+        mods: Modifiers,
+        point: ViewportPoint,
+    ) {
+        let Some(button) = mouse_button(event.button) else {
+            return;
+        };
+        let session = entry.session();
+        // Ctrl+click opens a link, even while a program reports the mouse (the link is visibly
+        // underlined while Ctrl is held).
+        if button == MouseButton::Left && mods.ctrl {
+            if let Some(link) = self.link_at(entry, point) {
+                if self.open_link(&link.url) {
+                    self.as_mut().rust_mut().mouse.link_click = true;
+                    return;
+                }
+            }
+        }
+        let modes = session.modes();
+        if mouse_reporting_active(&modes, mods) {
+            // Lines in the scrollback are not reported.
+            if self.display_offset == 0 {
+                let input = MouseInput {
+                    action: MouseAction::Press,
+                    button,
+                    column: point.column,
+                    row: point.row,
+                    mods,
+                };
+                if let Some(bytes) = encode_mouse(&input, &modes) {
+                    session.write(&bytes);
+                }
+                let mut state = self.as_mut().rust_mut();
+                state.mouse.reported |= event.button;
+                state.mouse.last_cell = Some(point);
+            }
+            return;
+        }
+        match button {
+            MouseButton::Left => {
+                let side = side_of(
+                    event.x,
+                    self.padding(),
+                    self.cell_width(),
+                    self.grid.map_or(0, |grid| grid.columns),
+                );
+                if mods.shift && self.has_selection {
+                    session.selection_update(point, side);
+                } else {
+                    let kind = match event.click_count {
+                        2 => SelectionKind::Semantic,
+                        3 => SelectionKind::Lines,
+                        _ if mods.alt => SelectionKind::Block,
+                        _ => SelectionKind::Simple,
+                    };
+                    session.selection_start(point, side, kind);
+                }
+                self.as_mut().rust_mut().mouse.selecting = true;
+            }
+            MouseButton::Middle => self.paste_selection(),
+            MouseButton::Right => self.as_mut().context_menu_requested(event.x, event.y),
+            _ => {}
+        }
+    }
+
+    fn mouse_move(
+        mut self: Pin<&mut Self>,
+        entry: &SessionEntry,
+        event: &TerminalMouseEvent,
+        mods: Modifiers,
+        point: ViewportPoint,
+    ) {
+        if self.mouse.link_click {
+            return;
+        }
+        let session = entry.session();
+        if self.mouse.reported != 0 {
+            // A reported press: motion goes to the program when the cell changes (button-event
+            // and any-event tracking; `encode_mouse` drops it in the other protocols).
+            if self.mouse.last_cell != Some(point) {
+                let modes = session.modes();
+                let input = MouseInput {
+                    action: MouseAction::Move,
+                    button: held_button(event.buttons),
+                    column: point.column,
+                    row: point.row,
+                    mods,
+                };
+                if let Some(bytes) = encode_mouse(&input, &modes) {
+                    session.write(&bytes);
+                }
+                self.as_mut().rust_mut().mouse.last_cell = Some(point);
+            }
+            return;
+        }
+        if !self.mouse.selecting || event.buttons & QT_LEFT_BUTTON == 0 {
+            return;
+        }
+        // Dragging above or below the grid scrolls the history.
+        let padding = self.padding();
+        let bottom =
+            padding + f64::from(self.grid.map_or(0, |grid| grid.lines)) * self.cell_height();
+        if event.y < padding {
+            session.scroll(Scroll::Lines(1));
+            self.as_mut().rust_mut().scrolled = true;
+        } else if event.y > bottom {
+            session.scroll(Scroll::Lines(-1));
+        }
+        let side = side_of(
+            event.x,
+            padding,
+            self.cell_width(),
+            self.grid.map_or(0, |grid| grid.columns),
+        );
+        session.selection_update(point, side);
+    }
+
+    fn mouse_release(
+        mut self: Pin<&mut Self>,
+        entry: &SessionEntry,
+        event: &TerminalMouseEvent,
+        mods: Modifiers,
+        point: ViewportPoint,
+    ) {
+        if self.mouse.link_click {
+            if event.buttons == 0 {
+                self.as_mut().rust_mut().mouse.link_click = false;
+            }
+            return;
+        }
+        if self.mouse.reported & event.button != 0 {
+            self.as_mut().rust_mut().mouse.reported &= !event.button;
+            if let Some(button) = mouse_button(event.button) {
+                let session = entry.session();
+                let modes = session.modes();
+                let input = MouseInput {
+                    action: MouseAction::Release,
+                    button,
+                    column: point.column,
+                    row: point.row,
+                    mods,
+                };
+                if let Some(bytes) = encode_mouse(&input, &modes) {
+                    session.write(&bytes);
+                }
+            }
+            return;
+        }
+        if event.button == QT_LEFT_BUTTON && self.mouse.selecting {
+            self.as_mut().rust_mut().mouse.selecting = false;
+            self.finish_selection(entry);
+        }
+    }
+
+    fn handle_wheel(mut self: Pin<&mut Self>, event: &TerminalWheelEvent) {
+        let Some(entry) = self.entry() else {
+            return;
+        };
+        let mods = modifiers_from_qt(qt_bits(event.modifiers));
+        let (angle_x, angle_y) =
+            unswap_alt_wheel(cfg!(windows), mods.alt, event.angle_x, event.angle_y);
+        let (steps_x, steps_y) = self.as_mut().rust_mut().wheel.add(angle_x, angle_y);
+        if steps_x == 0 && steps_y == 0 {
+            return;
+        }
+        let session = entry.session();
+        let modes = session.modes();
+        if mouse_reporting_active(&modes, mods) {
+            if self.display_offset == 0 {
+                let point = viewport_point(event.column, event.line);
+                report_wheel(
+                    &entry,
+                    &modes,
+                    point,
+                    mods,
+                    steps_y,
+                    MouseButton::WheelUp,
+                    MouseButton::WheelDown,
+                );
+                report_wheel(
+                    &entry,
+                    &modes,
+                    point,
+                    mods,
+                    steps_x,
+                    MouseButton::WheelLeft,
+                    MouseButton::WheelRight,
+                );
+            }
+            return;
+        }
+        if steps_y == 0 {
+            return;
+        }
+        let lines = steps_y.saturating_mul(LINES_PER_NOTCH);
+        if !mods.shift {
+            if let Some(bytes) = alternate_scroll(lines, &modes) {
+                session.write(&bytes);
+                return;
+            }
+        }
+        session.scroll(Scroll::Lines(lines));
+        self.as_mut().rust_mut().scrolled = true;
     }
 
     fn handle_hover(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         _x: f64,
         _y: f64,
-        _column: i32,
-        _line: i32,
-        _modifiers: i32,
+        column: i32,
+        line: i32,
+        modifiers: i32,
     ) {
-        // Link hover arrives with the engine (URL detection).
+        let Some(entry) = self.entry() else {
+            return;
+        };
+        if column < 0 || line < 0 {
+            // The pointer left the item.
+            self.as_mut().set_link_hover(&entry, None);
+            return;
+        }
+        let mods = modifiers_from_qt(qt_bits(modifiers));
+        let point = viewport_point(column, line);
+        let session = entry.session();
+        let modes = session.modes();
+        // Any-event tracking also reports motion without a button.
+        let any_event = mouse_protocol(&modes) == Some(MouseProtocol::AnyEvent);
+        if any_event
+            && !mods.shift
+            && self.display_offset == 0
+            && self.mouse.last_cell != Some(point)
+        {
+            let input = MouseInput {
+                action: MouseAction::Move,
+                button: MouseButton::None,
+                column: point.column,
+                row: point.row,
+                mods,
+            };
+            if let Some(bytes) = encode_mouse(&input, &modes) {
+                session.write(&bytes);
+            }
+            self.as_mut().rust_mut().mouse.last_cell = Some(point);
+        }
+        // Links under the pointer while Ctrl is held.
+        let link = if mods.ctrl {
+            self.link_at(&entry, point)
+                .filter(|link| links::is_openable(&link.url))
+        } else {
+            None
+        };
+        self.as_mut().set_link_hover(&entry, link.as_ref());
     }
 
-    fn handle_focus_change(self: Pin<&mut Self>, focused: bool) {
-        tracing::debug!(focused, "terminal focus");
+    fn handle_focus_change(mut self: Pin<&mut Self>, focused: bool) {
+        let Some(entry) = self.entry() else {
+            return;
+        };
+        if self.focus_sent != Some(focused) {
+            entry.session().focus_changed(focused);
+            self.as_mut().rust_mut().focus_sent = Some(focused);
+        }
+        if !focused {
+            self.as_mut().set_link_hover(&entry, None);
+        }
     }
 
     fn handle_ime_commit(self: Pin<&mut Self>, text: &QString) {
-        // Committed text is typed input: only its length is logged.
-        tracing::debug!(
-            text_len = text.to_string().chars().count(),
-            "terminal input method commit"
-        );
+        let Some(entry) = self.entry() else {
+            return;
+        };
+        // A commit is typing, not pasting (VTE does the same).
+        let text = text.to_string();
+        self.send_input(&entry, text.as_bytes());
+    }
+
+    fn handle_grid_size(
+        mut self: Pin<&mut Self>,
+        columns: i32,
+        lines: i32,
+        cell_width: i32,
+        cell_height: i32,
+    ) {
+        let size = term_size(columns, lines, cell_width, cell_height);
+        {
+            let mut state = self.as_mut().rust_mut();
+            if state.grid == size {
+                return;
+            }
+            state.grid = size;
+            state.quiet_until = Some(Instant::now() + QUIET_AFTER_CHANGE);
+        }
+        let Some(size) = size else {
+            return;
+        };
+        match self.entry() {
+            Some(entry) => entry.session().resize(size),
+            None => self.as_mut().attach_or_start(),
+        }
     }
 }
 
-/// `TerminalItemBase::MousePress` / `MouseRelease` / `MouseMove`.
-const MOUSE_MOVE: i32 = 2;
-
-// Qt key and modifier values (qnamespace.h).
-const QT_KEY_F1: i32 = 0x0100_0030;
-const QT_KEY_F11: i32 = 0x0100_003a;
-const QT_KEY_F35: i32 = 0x0100_0052;
-const QT_CONTROL_MODIFIER: i32 = 0x0400_0000;
-const QT_ALT_MODIFIER: i32 = 0x0800_0000;
-
-/// Whether the terminal takes a key away from the window shortcuts ([ADR 0011]): function keys
-/// without Ctrl or Alt, except F11 (full screen). Ctrl+F6 / Ctrl+Shift+F6 therefore always leave
-/// the terminal, and every Ctrl+Shift / Alt app shortcut keeps working.
-///
-/// [ADR 0011]: ../../../../docs/adr/0011-focus-regions-and-function-keys.md
-fn wants_shortcut_override(key: i32, modifiers: i32) -> bool {
-    let function_key = (QT_KEY_F1..=QT_KEY_F35).contains(&key);
-    function_key && key != QT_KEY_F11 && modifiers & (QT_CONTROL_MODIFIER | QT_ALT_MODIFIER) == 0
+/// Reports `steps` wheel notches (positive: `positive` button, negative: `negative`), at most
+/// [`MAX_WHEEL_REPORTS`].
+fn report_wheel(
+    entry: &SessionEntry,
+    modes: &InputModes,
+    point: ViewportPoint,
+    mods: Modifiers,
+    steps: i32,
+    positive: MouseButton,
+    negative: MouseButton,
+) {
+    if steps == 0 {
+        return;
+    }
+    let input = MouseInput {
+        action: MouseAction::Press,
+        button: if steps > 0 { positive } else { negative },
+        column: point.column,
+        row: point.row,
+        mods,
+    };
+    let Some(bytes) = encode_mouse(&input, modes) else {
+        return;
+    };
+    for _ in 0..steps.unsigned_abs().min(MAX_WHEEL_REPORTS.unsigned_abs()) {
+        entry.session().write(&bytes);
+    }
 }
 
 fn cursor_shape_from_index(index: i32) -> CursorShape {
@@ -668,575 +1968,6 @@ pub fn write_frame(
             blank,
             columns.saturating_sub(row.cells.len()),
         ));
-    }
-}
-
-/// The built-in demo frame (gallery): every renderer feature on one screen. Its palettes are
-/// placeholders for the demo only; the terminal's real palettes live in `opensesh_term`.
-mod demo {
-    use opensesh_term::snapshot::{Cell, Cursor, CursorShape, Damage, Frame, Row, flags};
-
-    /// A 16-color palette plus the special colors, `0xRRGGBB`.
-    pub struct Palette {
-        pub foreground: u32,
-        pub background: u32,
-        pub cursor: u32,
-        pub cursor_text: u32,
-        pub selection: u32,
-        pub search: u32,
-        pub search_text: u32,
-        pub ansi: [u32; 16],
-    }
-
-    /// OpenSesh Dark from PLAN §4.3.
-    pub const DARK: Palette = Palette {
-        foreground: 0xD9DEE7,
-        background: 0x121419,
-        cursor: 0xE6B450,
-        cursor_text: 0x121419,
-        selection: 0x2B3242,
-        search: 0xE6B450,
-        search_text: 0x121419,
-        ansi: [
-            0x1C1F27, 0xF07178, 0x9BD68A, 0xE6C07B, 0x73B7F2, 0xC9A0F0, 0x6ED6D0, 0xC8CDD6,
-            0x4A5263, 0xFF8F95, 0xB4EBA3, 0xF2D39A, 0x9ACCFA, 0xDDBDFB, 0x94E8E3, 0xF2F4F8,
-        ],
-    };
-
-    /// A light placeholder for the demo, from the app's light theme colors.
-    pub const LIGHT: Palette = Palette {
-        foreground: 0x1B1D22,
-        background: 0xFFFFFF,
-        cursor: 0x1B1D22,
-        cursor_text: 0xFFFFFF,
-        selection: 0xCFE0F5,
-        search: 0xF2C14E,
-        search_text: 0x1B1D22,
-        ansi: [
-            0x1B1D22, 0xC8374D, 0x1E8F52, 0x9A6B00, 0x2B6CB0, 0x8E44AD, 0x11808A, 0xB8BCC4,
-            0x5D6470, 0xE0445C, 0x26A862, 0xB7800F, 0x3D86D1, 0xA45BC6, 0x1A9AA6, 0xE6E8EE,
-        ],
-    };
-
-    const OPAQUE: u32 = 0xFF00_0000;
-
-    fn argb(rgb: u32) -> u32 {
-        OPAQUE | (rgb & 0x00FF_FFFF)
-    }
-
-    /// Color `index` of the xterm 256-color palette.
-    pub fn indexed(palette: &Palette, index: u8) -> u32 {
-        const LEVELS: [u32; 6] = [0, 95, 135, 175, 215, 255];
-        let index = usize::from(index);
-        let rgb = match index {
-            0..=15 => palette.ansi[index],
-            16..=231 => {
-                let cube = index - 16;
-                (LEVELS[cube / 36] << 16) | (LEVELS[(cube / 6) % 6] << 8) | LEVELS[cube % 6]
-            }
-            _ => {
-                let level = 8 + 10 * (index as u32 - 232);
-                (level << 16) | (level << 8) | level
-            }
-        };
-        argb(rgb)
-    }
-
-    /// The color at `t` (0..1) on a hue wheel.
-    fn hue(t: f64) -> u32 {
-        let h = (t.fract() * 6.0).max(0.0);
-        let x = 1.0 - (h % 2.0 - 1.0).abs();
-        let (r, g, b) = match h as u32 {
-            0 => (1.0, x, 0.0),
-            1 => (x, 1.0, 0.0),
-            2 => (0.0, 1.0, x),
-            3 => (0.0, x, 1.0),
-            4 => (x, 0.0, 1.0),
-            _ => (1.0, 0.0, x),
-        };
-        let channel = |v: f64| (v * 255.0).round().clamp(0.0, 255.0) as u32;
-        argb((channel(r) << 16) | (channel(g) << 8) | channel(b))
-    }
-
-    /// Readable text on `background`: black or white.
-    fn text_on(background: u32) -> u32 {
-        let r = (background >> 16) & 0xFF;
-        let g = (background >> 8) & 0xFF;
-        let b = background & 0xFF;
-        if r * 299 + g * 587 + b * 114 > 128_000 {
-            argb(0x000000)
-        } else {
-            argb(0xFFFFFF)
-        }
-    }
-
-    /// Dim (SGR 2): two thirds of the color's intensity.
-    fn dim(color: u32) -> u32 {
-        let scale = |shift: u32| (((color >> shift) & 0xFF) * 2 / 3) << shift;
-        OPAQUE | scale(16) | scale(8) | scale(0)
-    }
-
-    /// Characters the demo draws two cells wide (enough for its own text).
-    fn is_wide(ch: char) -> bool {
-        matches!(u32::from(ch),
-            0x1100..=0x115F | 0x2E80..=0x303E | 0x3041..=0x33FF | 0x3400..=0x4DBF
-            | 0x4E00..=0x9FFF | 0xAC00..=0xD7A3 | 0xF900..=0xFAFF | 0xFF01..=0xFF60
-            | 0x1F300..=0x1F64F | 0x1F680..=0x1F6FF | 0x1F900..=0x1F9FF)
-    }
-
-    /// Zero-width characters the demo attaches to the previous cell.
-    fn is_combining(ch: char) -> bool {
-        matches!(u32::from(ch), 0x0300..=0x036F | 0x20D0..=0x20FF | 0xFE00..=0xFE0F)
-    }
-
-    #[derive(Clone, Copy)]
-    struct Style {
-        fg: u32,
-        bg: u32,
-        underline: u32,
-        flags: u16,
-    }
-
-    /// Writes text into one row, cell by cell.
-    struct RowWriter<'a> {
-        cells: Vec<Cell>,
-        clusters: &'a mut Vec<Vec<char>>,
-        columns: usize,
-        base: Style,
-    }
-
-    impl<'a> RowWriter<'a> {
-        fn new(columns: usize, base: Style, clusters: &'a mut Vec<Vec<char>>) -> Self {
-            Self {
-                cells: Vec::with_capacity(columns),
-                clusters,
-                columns,
-                base,
-            }
-        }
-
-        fn cell(style: Style, ch: char) -> Cell {
-            Cell {
-                ch,
-                cluster: 0,
-                fg: style.fg,
-                bg: style.bg,
-                underline: style.underline,
-                flags: style.flags,
-            }
-        }
-
-        fn text(&mut self, text: &str, style: Style) -> &mut Self {
-            for ch in text.chars() {
-                if is_combining(ch) {
-                    self.attach(ch);
-                } else if is_wide(ch) {
-                    if self.cells.len() + 2 > self.columns {
-                        // No room for both halves: a blank, as terminals do.
-                        self.push(Self::cell(style, ' '));
-                    } else {
-                        let mut first = Self::cell(style, ch);
-                        first.flags |= flags::WIDE;
-                        let mut spacer = Self::cell(style, ' ');
-                        spacer.flags |= flags::WIDE_SPACER;
-                        self.push(first);
-                        self.push(spacer);
-                    }
-                } else {
-                    self.push(Self::cell(style, ch));
-                }
-            }
-            self
-        }
-
-        fn plain(&mut self, text: &str) -> &mut Self {
-            let base = self.base;
-            self.text(text, base)
-        }
-
-        fn push(&mut self, cell: Cell) {
-            if self.cells.len() < self.columns {
-                self.cells.push(cell);
-            }
-        }
-
-        /// Adds a combining character to the last base cell.
-        fn attach(&mut self, mark: char) {
-            let Some(position) = self
-                .cells
-                .iter()
-                .rposition(|cell| cell.flags & flags::WIDE_SPACER == 0)
-            else {
-                return;
-            };
-            let cell = &mut self.cells[position];
-            if cell.cluster == 0 {
-                self.clusters.push(vec![mark]);
-                cell.cluster = u32::try_from(self.clusters.len()).unwrap_or(0);
-            } else if let Some(marks) = self.clusters.get_mut(cell.cluster as usize - 1) {
-                marks.push(mark);
-            }
-        }
-
-        fn column(&self) -> usize {
-            self.cells.len()
-        }
-
-        fn finish(mut self, index: u16) -> Row {
-            let blank = Self::cell(self.base, ' ');
-            self.cells.resize(self.columns, blank);
-            Row {
-                index,
-                cells: self.cells,
-            }
-        }
-    }
-
-    /// Fills `frame` with the demo at `columns` x `lines`. With `animation`, every row is
-    /// pseudo-random text that changes with the tick (the benchmark).
-    pub fn build(
-        frame: &mut Frame,
-        columns: u16,
-        lines: u16,
-        dark: bool,
-        cursor_shape: CursorShape,
-        animation: Option<u64>,
-    ) {
-        let palette = if dark { &DARK } else { &LIGHT };
-        frame.clear();
-        frame.columns = columns;
-        frame.lines = lines;
-        frame.damage = Damage::Full;
-        frame.background = argb(palette.background);
-        frame.display_offset = 0;
-        frame.history_size = 0;
-        let fg = argb(palette.foreground);
-        let base = Style {
-            fg,
-            bg: frame.background,
-            underline: fg,
-            flags: 0,
-        };
-        let width = usize::from(columns);
-        let mut cursor = (0_usize, 0_usize);
-        for line in 0..lines {
-            let mut row = RowWriter::new(width, base, &mut frame.clusters);
-            match animation {
-                Some(tick) => flood(&mut row, palette, tick.wrapping_add(u64::from(line))),
-                None => {
-                    if let Some(position) =
-                        write_line(&mut row, usize::from(line), palette, base, columns, lines)
-                    {
-                        cursor = (usize::from(line), position);
-                    }
-                }
-            }
-            frame.rows.push(row.finish(line));
-        }
-        frame.cursor = Cursor {
-            row: u16::try_from(cursor.0).unwrap_or(0),
-            column: u16::try_from(cursor.1.min(width.saturating_sub(1))).unwrap_or(0),
-            shape: if animation.is_some() {
-                CursorShape::Hidden
-            } else {
-                cursor_shape
-            },
-            blinking: true,
-            wide: false,
-            color: argb(palette.cursor),
-            text_color: argb(palette.cursor_text),
-        };
-    }
-
-    /// Row `line` of the static demo. Returns the cursor column if the cursor goes on it.
-    fn write_line(
-        row: &mut RowWriter<'_>,
-        line: usize,
-        palette: &Palette,
-        base: Style,
-        columns: u16,
-        lines: u16,
-    ) -> Option<usize> {
-        let with = |flags: u16| Style { flags, ..base };
-        let fg = |color: u32| Style {
-            fg: color,
-            underline: color,
-            ..base
-        };
-        let label = Style {
-            fg: dim(base.fg),
-            ..base
-        };
-        match line {
-            0 => {
-                row.text("OpenSesh terminal renderer", with(flags::BOLD))
-                    .text(&format!("  {columns}x{lines} cells"), label);
-            }
-            1 => {
-                row.text("Styles    ", label)
-                    .plain("normal ")
-                    .text("bold", with(flags::BOLD))
-                    .plain(" ")
-                    .text("italic", with(flags::ITALIC))
-                    .plain(" ")
-                    .text("bold italic", with(flags::BOLD | flags::ITALIC))
-                    .plain(" ")
-                    .text("dim", fg(dim(base.fg)))
-                    .plain(" ")
-                    .text(
-                        "inverse",
-                        Style {
-                            fg: base.bg,
-                            bg: base.fg,
-                            ..base
-                        },
-                    )
-                    .plain(" hidden[")
-                    .text(
-                        "secret",
-                        Style {
-                            fg: base.bg,
-                            flags: flags::HIDDEN,
-                            ..base
-                        },
-                    )
-                    .plain("] ")
-                    .text("strike", with(flags::STRIKEOUT));
-            }
-            2 => {
-                let red = indexed(palette, 9);
-                row.text("Underline ", label)
-                    .text("single", with(flags::UNDERLINE))
-                    .plain(" ")
-                    .text("double", with(flags::DOUBLE_UNDERLINE))
-                    .plain(" ")
-                    .text("curly", with(flags::CURLY_UNDERLINE))
-                    .plain(" ")
-                    .text("dotted", with(flags::DOTTED_UNDERLINE))
-                    .plain(" ")
-                    .text("dashed", with(flags::DASHED_UNDERLINE))
-                    .plain(" ")
-                    .text(
-                        "colored",
-                        Style {
-                            underline: red,
-                            flags: flags::CURLY_UNDERLINE,
-                            ..base
-                        },
-                    )
-                    .plain(" ")
-                    .text(
-                        "spelling",
-                        Style {
-                            underline: red,
-                            flags: flags::UNDERLINE,
-                            ..base
-                        },
-                    );
-            }
-            3 => {
-                row.text("16 colors ", label);
-                for index in 0..16_u8 {
-                    let bg = indexed(palette, index);
-                    row.text(
-                        &format!("{index:>2} "),
-                        Style {
-                            fg: text_on(bg),
-                            bg,
-                            ..base
-                        },
-                    );
-                }
-            }
-            4 => {
-                row.text("256       ", label);
-                for index in 232..=255_u8 {
-                    let bg = indexed(palette, index);
-                    row.text("  ", Style { bg, ..base });
-                }
-            }
-            5..=7 => {
-                // The 6x6x6 cube, two red levels per line.
-                row.text("          ", label);
-                let first = (line - 5) * 2;
-                for red in first..first + 2 {
-                    for green in 0..6 {
-                        for blue in 0..6 {
-                            let index = u8::try_from(16 + red * 36 + green * 6 + blue).unwrap_or(0);
-                            row.text(
-                                " ",
-                                Style {
-                                    bg: indexed(palette, index),
-                                    ..base
-                                },
-                            );
-                        }
-                    }
-                }
-            }
-            8 => {
-                row.text("Truecolor ", label);
-                let span = usize::from(columns).saturating_sub(row.column()).max(1);
-                for i in 0..span {
-                    let bg = hue(i as f64 / span as f64);
-                    row.text(" ", Style { bg, ..base });
-                }
-            }
-            9 => {
-                row.text("          ", label);
-                let text = "The quick brown fox jumps over the lazy dog: gradient foreground";
-                let count = text.chars().count().max(1);
-                for (i, ch) in text.chars().enumerate() {
-                    let color = hue(i as f64 / count as f64);
-                    row.text(ch.encode_utf8(&mut [0; 4]), fg(color));
-                }
-            }
-            10 => {
-                row.text("Wide      ", label)
-                    .plain("中文字符 日本語テキスト 한국어 ｗｉｄｅ|");
-            }
-            11 => {
-                row.text("Combining ", label)
-                    .plain("e\u{301} a\u{308} n\u{303} o\u{302}\u{323} q\u{307}\u{323} Z\u{335} ")
-                    .plain("cafe\u{301} |");
-            }
-            12 => {
-                row.text("Emoji     ", label)
-                    .plain("😀 🚀 👍 🎉 🐧 ❤\u{fe0f} ✔ ⚠ ★ |");
-            }
-            13 => {
-                row.text("Box       ", label)
-                    .plain("┌──┬──┐ ╔══╦══╗ ╭──╮ ░▒▓█ ▁▂▃▄▅▆▇█ ⠿⣿ ●○■□◆ ←↑→↓");
-            }
-            14 => {
-                row.text("          ", label)
-                    .plain("│  │  │ ║  ║  ║ │  │ ▗▄▖ ▐█▌");
-            }
-            15 => {
-                row.text("          ", label)
-                    .plain("└──┴──┘ ╚══╩══╝ ╰──╯ ▝▀▘ ▛▀▜");
-            }
-            16 => {
-                row.text("Powerline ", label);
-                let segments = [
-                    (" user@host ", 4_u8),
-                    (" ~/src/opensesh ", 2),
-                    ("  main ", 3),
-                ];
-                for (i, (text, color)) in segments.iter().enumerate() {
-                    let bg = indexed(palette, *color);
-                    row.text(
-                        text,
-                        Style {
-                            fg: text_on(bg),
-                            bg,
-                            flags: flags::BOLD,
-                            ..base
-                        },
-                    );
-                    let next = segments
-                        .get(i + 1)
-                        .map_or(base.bg, |(_, next)| indexed(palette, *next));
-                    row.text(
-                        "\u{e0b0}",
-                        Style {
-                            fg: bg,
-                            bg: next,
-                            ..base
-                        },
-                    );
-                }
-                row.plain(" \u{e0b1} \u{e0b2}\u{e0b3} \u{e0a0}");
-            }
-            17 => {
-                let selection = argb(palette.selection);
-                row.text("Selection ", label).plain("this ").text(
-                    "text is selected",
-                    Style {
-                        bg: selection,
-                        flags: flags::SELECTED,
-                        ..base
-                    },
-                );
-            }
-            18 => {
-                row.text("Search    ", label).plain("find the ").text(
-                    "match",
-                    Style {
-                        fg: argb(palette.search_text),
-                        bg: argb(palette.search),
-                        flags: flags::MATCH,
-                        ..base
-                    },
-                );
-                row.plain(" in this line");
-            }
-            19 => {
-                let blue = indexed(palette, 12);
-                row.text("Link      ", label).text(
-                    "https://example.org/opensesh",
-                    Style {
-                        fg: blue,
-                        underline: blue,
-                        flags: flags::LINK,
-                        ..base
-                    },
-                );
-            }
-            20 => {
-                row.text("Cursor    ", label)
-                    .plain("block, hollow, beam or underline; blinks while focused");
-            }
-            21 => {
-                let green = indexed(palette, 2);
-                row.text("$ ", fg(green)).plain("echo hello ");
-                return Some(row.column());
-            }
-            _ => {}
-        }
-        None
-    }
-
-    /// One row of the benchmark: runs of pseudo-random printable ASCII in varied colors.
-    fn flood(row: &mut RowWriter<'_>, palette: &Palette, seed: u64) {
-        let mut state = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1;
-        let mut next = || {
-            // xorshift64
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            state
-        };
-        while row.column() < row.columns {
-            let run = 3 + (next() % 9) as usize;
-            let bits = next();
-            let fg = indexed(palette, (bits % 16) as u8);
-            let bg = if (bits >> 8) & 7 == 0 {
-                indexed(palette, ((bits >> 16) & 7) as u8)
-            } else {
-                row.base.bg
-            };
-            let flags = if (bits >> 24) & 7 == 0 {
-                flags::BOLD
-            } else {
-                0
-            };
-            let style = Style {
-                fg,
-                bg,
-                underline: fg,
-                flags,
-            };
-            for _ in 0..run {
-                let value = next();
-                let ch = if value % 6 == 0 {
-                    ' '
-                } else {
-                    char::from(33 + (value % 94) as u8)
-                };
-                row.text(ch.encode_utf8(&mut [0; 4]), style);
-            }
-        }
     }
 }
 
@@ -1406,130 +2137,67 @@ mod tests {
     #[test]
     fn function_keys_reach_the_terminal_except_f11_and_ctrl_or_alt() {
         const SHIFT: i32 = 0x0200_0000;
+        const CONTROL: i32 = 0x0400_0000;
+        const ALT: i32 = 0x0800_0000;
         const META: i32 = 0x1000_0000;
         const KEYPAD: i32 = 0x2000_0000;
-        let f6 = QT_KEY_F1 + 5;
+        let f6 = qt::KEY_F1 + 5;
+        let f11 = qt::KEY_F1 + 10;
         assert!(wants_shortcut_override(f6, 0));
         assert!(wants_shortcut_override(f6, SHIFT));
-        assert!(wants_shortcut_override(QT_KEY_F1, META | KEYPAD));
-        assert!(wants_shortcut_override(QT_KEY_F35, 0));
-        assert!(!wants_shortcut_override(f6, QT_CONTROL_MODIFIER));
-        assert!(!wants_shortcut_override(f6, QT_CONTROL_MODIFIER | SHIFT));
-        assert!(!wants_shortcut_override(f6, QT_ALT_MODIFIER));
-        assert!(!wants_shortcut_override(QT_KEY_F11, 0));
+        assert!(wants_shortcut_override(qt::KEY_F1, META | KEYPAD));
+        assert!(wants_shortcut_override(qt::KEY_F24, 0));
+        // F25-F35 have no sequence, so the app keeps them.
+        assert!(!wants_shortcut_override(qt::KEY_F35, 0));
+        assert!(!wants_shortcut_override(f6, CONTROL));
+        assert!(!wants_shortcut_override(f6, CONTROL | SHIFT));
+        assert!(!wants_shortcut_override(f6, ALT));
+        assert!(!wants_shortcut_override(f11, 0));
         // Not function keys: Ctrl+Shift+T, plain letters, Tab.
-        assert!(!wants_shortcut_override(0x54, QT_CONTROL_MODIFIER | SHIFT));
+        assert!(!wants_shortcut_override(0x54, CONTROL | SHIFT));
         assert!(!wants_shortcut_override(0x41, 0));
-        assert!(!wants_shortcut_override(0x0100_0001, 0));
-    }
-
-    fn check_rows(frame: &Frame) {
-        for row in &frame.rows {
-            assert_eq!(
-                row.cells.len(),
-                usize::from(frame.columns),
-                "row {}",
-                row.index
-            );
-            for (i, cell) in row.cells.iter().enumerate() {
-                if cell.flags & flags::WIDE != 0 {
-                    assert!(
-                        row.cells
-                            .get(i + 1)
-                            .is_some_and(|next| next.flags & flags::WIDE_SPACER != 0),
-                        "row {} column {i}: wide cell without spacer",
-                        row.index
-                    );
-                }
-                if cell.cluster != 0 {
-                    assert!(frame.clusters.len() >= cell.cluster as usize);
-                }
-            }
-        }
+        assert!(!wants_shortcut_override(qt::KEY_TAB, 0));
     }
 
     #[test]
-    fn the_demo_exercises_every_feature() {
-        let mut frame = Frame::default();
-        demo::build(&mut frame, 100, 24, true, CursorShape::Beam, None);
-        assert_eq!(frame.rows.len(), 24);
-        assert_eq!(frame.damage, Damage::Full);
-        check_rows(&frame);
-        let mut seen = 0_u16;
-        let mut colors = std::collections::BTreeSet::new();
-        for cell in frame.rows.iter().flat_map(|row| &row.cells) {
-            seen |= cell.flags;
-            colors.insert(cell.bg);
-        }
-        for flag in [
-            flags::BOLD,
-            flags::ITALIC,
-            flags::UNDERLINE,
-            flags::DOUBLE_UNDERLINE,
-            flags::CURLY_UNDERLINE,
-            flags::DOTTED_UNDERLINE,
-            flags::DASHED_UNDERLINE,
-            flags::STRIKEOUT,
-            flags::WIDE,
-            flags::WIDE_SPACER,
-            flags::LINK,
-            flags::SELECTED,
-            flags::MATCH,
-            flags::HIDDEN,
-        ] {
-            assert_ne!(seen & flag, 0, "flag {flag:#x} missing");
-        }
-        // 16 + 24 + 216 palette colors plus a truecolor gradient.
-        assert!(colors.len() > 256 + 20, "{} colors", colors.len());
-        // Combining marks, emoji and Powerline are there.
-        assert!(
-            frame
-                .clusters
-                .iter()
-                .any(|marks| marks.contains(&'\u{301}'))
+    fn qt_values_map_to_engine_values() {
+        assert_eq!(mouse_button(QT_LEFT_BUTTON), Some(MouseButton::Left));
+        assert_eq!(mouse_button(QT_MIDDLE_BUTTON), Some(MouseButton::Middle));
+        assert_eq!(mouse_button(QT_RIGHT_BUTTON), Some(MouseButton::Right));
+        assert_eq!(mouse_button(0x8), None);
+        assert_eq!(
+            held_button(QT_RIGHT_BUTTON | QT_MIDDLE_BUTTON),
+            MouseButton::Middle
         );
-        let text: String = frame
-            .rows
-            .iter()
-            .flat_map(|row| &row.cells)
-            .map(|cell| cell.ch)
-            .collect();
-        for needle in ['😀', '中', '┌', '\u{e0b0}', '⣿'] {
-            assert!(text.contains(needle), "{needle} missing");
-        }
-        assert_eq!(frame.cursor.shape, CursorShape::Beam);
-        assert_eq!(frame.cursor.row, 21);
-    }
-
-    #[test]
-    fn the_demo_fits_any_size() {
-        for (columns, lines) in [(1, 1), (2, 1), (7, 3), (80, 24), (300, 90)] {
-            let mut frame = Frame::default();
-            demo::build(&mut frame, columns, lines, false, CursorShape::Block, None);
-            assert_eq!(frame.rows.len(), usize::from(lines));
-            check_rows(&frame);
-            assert!(frame.cursor.row < lines && frame.cursor.column < columns.max(1));
-            demo::build(
-                &mut frame,
-                columns,
-                lines,
-                true,
-                CursorShape::Block,
-                Some(7),
-            );
-            check_rows(&frame);
-            assert_eq!(frame.cursor.shape, CursorShape::Hidden);
-        }
-    }
-
-    #[test]
-    fn the_256_color_palette_follows_xterm() {
-        assert_eq!(demo::indexed(&demo::DARK, 1), 0xFFF0_7178);
-        assert_eq!(demo::indexed(&demo::DARK, 16), 0xFF00_0000);
-        assert_eq!(demo::indexed(&demo::DARK, 196), 0xFFFF_0000);
-        assert_eq!(demo::indexed(&demo::DARK, 231), 0xFFFF_FFFF);
-        assert_eq!(demo::indexed(&demo::DARK, 232), 0xFF08_0808);
-        assert_eq!(demo::indexed(&demo::DARK, 255), 0xFFEE_EEEE);
+        assert_eq!(
+            held_button(QT_RIGHT_BUTTON | QT_LEFT_BUTTON),
+            MouseButton::Left
+        );
+        assert_eq!(held_button(0), MouseButton::None);
+        assert_eq!(viewport_point(3, 7), ViewportPoint::new(7, 3));
+        assert_eq!(viewport_point(-1, 70_000), ViewportPoint::new(u16::MAX, 0));
+        assert_eq!(qt_bits(i32::MIN), 0x8000_0000);
+        assert_eq!(
+            term_size(80, 24, 9, 20),
+            Some(TermSize {
+                columns: 80,
+                lines: 24,
+                cell_width: 9,
+                cell_height: 20,
+            })
+        );
+        assert_eq!(term_size(80, 0, 9, 20), None);
+        assert_eq!(term_size(80, 24, 0, 20), None);
+        assert_eq!(term_size(-1, 24, 9, 20), None);
+        assert_eq!(exit_status(Some(Some(0))), (0, true));
+        assert_eq!(
+            exit_status(Some(Some(-1_073_741_510))),
+            (-1_073_741_510, true)
+        );
+        assert_eq!(exit_status(Some(None)), (-1, false));
+        assert_eq!(exit_status(None), (-1, false));
+        assert_eq!(palette_for(true), Palette::OPENSESH_DARK);
+        assert_eq!(palette_for(false), Palette::OPENSESH_LIGHT);
     }
 
     fn fill(state: &mut TerminalItemRust, columns: u16, lines: u16, full: bool) -> Option<usize> {

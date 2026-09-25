@@ -4,10 +4,11 @@ pragma ComponentBehavior: Bound
 // content area with the views, collapsible side panel and status bar, plus the command palette,
 // the notifications panel, the app actions and their shortcuts.
 //
-// Tabs: tab 0 is Home, which shows the view picked in the rail; tabs 1..n are sessions
-// (placeholders until Sprint 2) and show their own content, with the rail on Terminal. The
-// Terminal rail entry goes back to the last session tab, or shows the Terminal view while no
-// session is open.
+// Tabs: tab 0 is Home, which shows the view picked in the rail; tabs 1..n are local terminal
+// sessions (TerminalTab, one per sessionModel row, all kept alive) and show their own content,
+// with the rail on Terminal. The Terminal rail entry goes back to the last session tab, or opens
+// a local terminal while none is open. A tab's id is also the id of its session in the Rust
+// registry (TerminalSessions); closing the tab ends the session.
 //
 // Keyboard: Tab follows the regions in order (title bar, rail, content, side panel, status bar),
 // and F6 / Shift+F6 (or Ctrl+F6 / Ctrl+Shift+F6, ADR 0011) jump between them. When a view, tab
@@ -19,10 +20,12 @@ pragma ComponentBehavior: Bound
 //   layoutOverride: var     { tabsPosition, railPosition, railLabels, sidePanelPosition,
 //                           showStatusBar } values that win over AppSettings (tests only)
 //   commandPalette: OsCommandPalette   read-only
-// Functions: showView(id), selectTab(index), newTab(), closeTab(index), cycleTab(step),
-// gotoTab(n), toggleSidePanel(), togglePalette(), toggleNotifications(), toggleMaximize(),
-// toggleFullScreen(), cycleRegion(step), shortcutText(actionId), smokeSteps(),
-// prepareScreenshot(), prepareSettingsScreenshot().
+//   currentTerminal: TerminalTab       the terminal tab shown, or null (set by the tabs)
+// Functions: showView(id), openTerminal(), selectTab(index), newTab(), closeTab(index),
+// closeTabById(tabId), tabIndexOf(tabId), updateTab(tabId, role, value), focusInTabStrip(),
+// cycleTab(step), gotoTab(n), toggleSidePanel(), togglePalette(), toggleNotifications(),
+// toggleMaximize(), toggleFullScreen(), cycleRegion(step), shortcutText(actionId),
+// smokeSteps(smoke), prepareScreenshot(), prepareSettingsScreenshot().
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -43,6 +46,12 @@ Item {
     readonly property string decorations: Platform.effectiveDecorations(AppSettings.windowDecorations)
     readonly property bool frameless: decorations === "custom" || decorations === "none"
     readonly property bool sidePanelLeft: sidePanelPosition === "left"
+    // The resize grip of a frameless window (WindowResizeHandles.grip) covers the right edge of
+    // the content while nothing sits between them: the terminal's scroll bar stays clear of it.
+    readonly property real contentEdgeInset: frameless && window.visibility === Window.Windowed
+                                             && railPosition !== "right"
+                                             && !(sidePanelOpen && !sidePanelLeft)
+                                             ? Math.round(Theme.spacingXs * 1.5) : 0
 
     readonly property var viewIds: ["hosts", "terminal", "sftp", "tunnels", "snippets", "keychain", "history",
         "settings"]
@@ -54,6 +63,7 @@ Item {
     property alias sessionModel: sessionModel
     readonly property int sessionCount: sessionModel.count
     property int nextTabId: 1
+    property Item currentTerminal: null
     // Set while the tab model changes, so the tab bar's own index adjustments are ignored.
     property bool updatingTabs: false
 
@@ -118,11 +128,54 @@ Item {
             selectTab(index);
     }
 
-    function appendSession() {
+    // startSession false: a tab without a shell (screenshot runs, whose tab titles must not
+    // depend on the shell).
+    function appendSession(startSession) {
         updatingTabs = true;
-        sessionModel.append({ tabId: nextTabId, kind: "local" });
+        sessionModel.append({
+            tabId: nextTabId,
+            kind: "local",
+            title: "",
+            newOutput: false,
+            bellRang: false,
+            startSession: startSession ?? true
+        });
         nextTabId += 1;
         updatingTabs = false;
+    }
+
+    // The Terminal rail entry: the last session tab, or a new local terminal.
+    function openTerminal() {
+        if (sessionModel.count > 0)
+            showView("terminal");
+        else
+            newTab();
+    }
+
+    // 1-based tab index of a session tab, or -1.
+    function tabIndexOf(tabId) {
+        for (let i = 0; i < sessionModel.count; ++i) {
+            if (sessionModel.get(i).tabId === tabId)
+                return i + 1;
+        }
+        return -1;
+    }
+
+    function closeTabById(tabId) {
+        const index = tabIndexOf(tabId);
+        if (index > 0)
+            closeTab(index);
+    }
+
+    // Sets a role of a session tab: title, newOutput or bellRang.
+    function updateTab(tabId, role, value) {
+        const index = tabIndexOf(tabId);
+        if (index > 0 && sessionModel.get(index - 1)[role] !== value)
+            sessionModel.setProperty(index - 1, role, value);
+    }
+
+    function focusInTabStrip() {
+        return isInside(window.activeFocusItem, titleRegion);
     }
 
     function newTab() {
@@ -137,6 +190,8 @@ Item {
         // Closing the focused tab destroys the focused item; the focus then goes to the new
         // current tab.
         const focusInTabs = isInside(window.activeFocusItem, titleRegion);
+        // The shell ends in the background; the tab's item only lets go of it.
+        TerminalSessions.close(sessionModel.get(index - 1).tabId);
         updatingTabs = true;
         sessionModel.remove(index - 1);
         updatingTabs = false;
@@ -313,8 +368,66 @@ Item {
         }
     }
 
-    // Functions for SmokeTest.steps: instantiate every view, overlay and layout variant.
-    function smokeSteps() {
+    // Functions for SmokeTest.steps: a real local terminal (shell output, typed input, closing
+    // the tab ends the session, a shell that exits closes its tab). `smoke` is the SmokeTest.
+    function terminalSmokeSteps(smoke) {
+        const timeout = 15000;
+        const marker = "opensesh-smoke-" + Math.floor(Math.random() * 1e9);
+        let tab = null;
+        let tabId = 0;
+        let deadline = 0;
+        // A step that polls `condition` until it holds, then runs `next` (which may return steps).
+        const waitFor = (what, condition, next) => {
+            const poll = () => {
+                if (condition())
+                    return next ? next() : [];
+                if (Date.now() > deadline) {
+                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what);
+                    return [];
+                }
+                return [poll];
+            };
+            return poll;
+        };
+        const openTab = what => {
+            shell.newTab();
+            tab = shell.currentTerminal;
+            if (!tab) {
+                smoke.fail("no terminal tab after opening one");
+                return [];
+            }
+            tabId = tab.tabId;
+            deadline = Date.now() + timeout;
+            return [waitFor(what, () => tab.terminal.screenText().trim().length > 0)];
+        };
+        return [
+            () => openTab("the shell's first output"),
+            () => {
+                tab.terminal.sendText("echo " + marker + "\r");
+                deadline = Date.now() + timeout;
+                return [waitFor("the echoed marker " + marker,
+                                () => tab.terminal.screenText().split("\n").some(line => line.trim() === marker))];
+            },
+            () => {
+                console.info("smoke test: the local terminal echoed", marker);
+                shell.closeTabById(tabId);
+                if (TerminalSessions.isOpen(tabId))
+                    smoke.fail("the session of a closed tab is still open");
+            },
+            () => openTab("the second shell's first output"),
+            () => {
+                tab.terminal.sendText("exit\r");
+                deadline = Date.now() + timeout;
+                return [waitFor("the shell to exit and close its tab",
+                                () => shell.tabIndexOf(tabId) < 0 && !TerminalSessions.isOpen(tabId),
+                                () => console.info("smoke test: the shell exited and closed its tab"))];
+            }
+        ];
+    }
+
+    // Functions for SmokeTest.steps: instantiate every view, overlay and layout variant, then
+    // run the terminal steps.
+    function smokeSteps(smoke) {
         const steps = [];
         let initialView = "hosts";
         const expectVisibleFocus = what => {
@@ -371,16 +484,18 @@ Item {
         steps.push(() => shell.toggleSidePanel());
         steps.push(() => shell.layoutOverride = {});
         steps.push(() => shell.showView(initialView));
+        if (smoke)
+            steps.push(() => shell.terminalSmokeSteps(smoke));
         return steps;
     }
 
-    // --screenshots: the Hosts view, with one placeholder session tab and no popups.
+    // --screenshots: the Hosts view, with one session tab (without a shell) and no popups.
     function prepareScreenshot() {
         palette.close();
         notifications.close();
         sidePanelOpen = false;
         if (sessionModel.count === 0)
-            appendSession();
+            appendSession(false);
         showView("hosts");
     }
 
@@ -497,7 +612,7 @@ Item {
                     { id: "settings", text: qsTr("Settings"), iconName: "settings" }
                 ]
 
-                onActivated: id => shell.showView(id)
+                onActivated: id => id === "terminal" ? shell.openTerminal() : shell.showView(id)
                 onVisibleChanged: {
                     if (!visible)
                         shell.moveFocusOffHiddenItem();
@@ -586,10 +701,15 @@ Item {
                         }
                     }
 
-                    SessionPlaceholder {
-                        anchors.fill: parent
-                        visible: shell.currentTab > 0
-                        title: qsTr("Local terminal")
+                    // One tab per session; only the current one is visible.
+                    Repeater {
+                        model: sessionModel
+
+                        TerminalTab {
+                            anchors.fill: parent
+                            shell: shell
+                            edgeInset: shell.contentEdgeInset
+                        }
                     }
                 }
 
@@ -623,6 +743,7 @@ Item {
 
             Layout.fillWidth: true
             visible: shell.showStatusBar
+            terminal: shell.currentTerminal ? shell.currentTerminal.terminal : null
 
             onVisibleChanged: {
                 if (!visible)

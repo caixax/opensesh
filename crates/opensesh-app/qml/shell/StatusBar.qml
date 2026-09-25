@@ -1,11 +1,22 @@
-// Status bar (PLAN §5.3). Left: the session status (a live monitor arrives in Sprint 11).
+// Status bar (PLAN §5.3). Left: the session status: the current terminal's working directory
+// when the shell reports it (OSC 7), else its title (a live monitor arrives in Sprint 11).
 // Right: the notifications button with the unread count, a theme quick switch
 // (System -> Dark -> Light) and the version.
+//   terminal: TerminalItem   the terminal of the current tab, or null
 import QtQuick
 import cc.caixa.opensesh
 
 Rectangle {
     id: bar
+
+    property TerminalItem terminal: null
+    readonly property string sessionText: {
+        if (!terminal)
+            return qsTr("No active session");
+        if (terminal.workingDirectory.length > 0)
+            return terminal.workingDirectory;
+        return terminal.title.length > 0 ? terminal.title : qsTr("Local terminal");
+    }
 
     readonly property real buttonSize: Theme.statusBarHeight - Theme.spacingXs
     readonly property var themeNames: ({
@@ -39,14 +50,19 @@ Rectangle {
             width: Theme.spacingSm
             height: width
             radius: width / 2
-            color: Theme.textDisabled
+            color: !bar.terminal ? Theme.textDisabled : bar.terminal.running ? Theme.success : Theme.danger
         }
 
         OsText {
             anchors.verticalCenter: parent.verticalCenter
-            text: qsTr("No active session")
+            width: Math.min(implicitWidth, bar.width / 2)
+            text: bar.sessionText
             size: "small"
             muted: true
+            elide: Text.ElideMiddle
+            Accessible.role: Accessible.StaticText
+            Accessible.name: bar.terminal && bar.terminal.workingDirectory.length > 0
+                             ? qsTr("Working directory: %1").arg(bar.terminal.workingDirectory) : text
         }
     }
 

@@ -531,6 +531,16 @@ impl Session {
         }
     }
 
+    /// Clears the scrollback history (as `CSI 3 J` does); the screen stays. A selection in the
+    /// history is removed. Locks briefly.
+    pub fn clear_history(&self) {
+        use alacritty_terminal::vte::ansi::{ClearMode, Handler as _};
+        let mut state = self.lock();
+        state.term.clear_screen(ClearMode::Saved);
+        drop(state);
+        self.redraw();
+    }
+
     /// Copies what changed since the previous snapshot into `out` (reusing its allocations):
     /// only damaged rows, or every row when [`Frame::damage`] is [`Damage::Full`] (first frame,
     /// resize, scrolling, selection, search, palette or focus changes). Colors are final.
@@ -541,6 +551,17 @@ impl Session {
         let shared = &self.inner.shared;
         shared.dirty.store(false, Ordering::Release);
         let mut state = shared.state.lock();
+        state.fill(out);
+    }
+
+    /// [`Session::snapshot`] that always copies every row ([`Damage::Full`]), for a renderer that
+    /// has no copy of the grid: a view that attached to a running session, or a rebuilt scene
+    /// graph. Takes the fair lock.
+    pub fn snapshot_full(&self, out: &mut Frame) {
+        let shared = &self.inner.shared;
+        shared.dirty.store(false, Ordering::Release);
+        let mut state = shared.state.lock();
+        state.full_redraw = true;
         state.fill(out);
     }
 

@@ -19,6 +19,15 @@ pub struct InputModes {
     pub x10_mouse: bool,
 }
 
+impl InputModes {
+    /// Whether the alternate screen is shown (full-screen programs; it has no scrollback, so the
+    /// GUI leaves scrolling keys such as Shift+PageUp to the program there).
+    #[must_use]
+    pub fn alternate_screen(&self) -> bool {
+        self.term.contains(TermMode::ALT_SCREEN)
+    }
+}
+
 /// Keyboard modifiers.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Modifiers {

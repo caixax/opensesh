@@ -10,7 +10,10 @@
 
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QLoggingCategory>
+#include <QtCore/QUrl>
 #include <QtGui/QClipboard>
+#include <QtGui/QCursor>
+#include <QtGui/QDesktopServices>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QInputMethod>
 #include <QtGui/QInputMethodEvent>
@@ -74,6 +77,7 @@ TerminalItemBase::TerminalItemBase(QQuickItem *parent)
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
     setActiveFocusOnTab(true);
+    setCursor(Qt::IBeamCursor);
 
     connect(&m_blinkTimer, &QTimer::timeout, this, &TerminalItemBase::onBlinkTimeout);
     connect(this, &QQuickItem::visibleChanged, this, &TerminalItemBase::updateBlinkTimer);
@@ -177,12 +181,20 @@ void TerminalItemBase::updateGridSize()
         columns = std::min(kMaxGridSide, int(std::floor(width / m_metrics.cellWidth + 1e-6)));
         lines = std::min(kMaxGridSide, int(std::floor(height / m_metrics.cellHeight + 1e-6)));
     }
-    if (columns == m_columns && lines == m_lines)
+    const bool gridChanged = columns != m_columns || lines != m_lines;
+    const bool cellChanged =
+            m_metrics.cellWidth != m_sentCellWidth || m_metrics.cellHeight != m_sentCellHeight;
+    if (!gridChanged && !cellChanged)
         return;
     m_columns = columns;
     m_lines = lines;
-    qCDebug(lcTerminal).nospace() << "grid " << columns << "x" << lines;
-    Q_EMIT gridSizeChanged(columns, lines);
+    m_sentCellWidth = m_metrics.cellWidth;
+    m_sentCellHeight = m_metrics.cellHeight;
+    if (gridChanged) {
+        qCDebug(lcTerminal).nospace() << "grid " << columns << "x" << lines;
+        Q_EMIT gridSizeChanged(columns, lines);
+    }
+    handleGridSize(columns, lines, m_metrics.cellWidth, m_metrics.cellHeight);
     update();
 }
 
@@ -231,6 +243,19 @@ bool TerminalItemBase::supportsPrimarySelection() const
 {
     QClipboard *clipboard = QGuiApplication::clipboard();
     return clipboard && clipboard->supportsSelection();
+}
+
+void TerminalItemBase::setLinkCursor(bool overLink)
+{
+    setCursor(overLink ? Qt::PointingHandCursor : Qt::IBeamCursor);
+}
+
+bool TerminalItemBase::openUrl(const QString &url) const
+{
+    const QUrl parsed(url, QUrl::StrictMode);
+    if (!parsed.isValid())
+        return false;
+    return QDesktopServices::openUrl(parsed);
 }
 
 // ---- Scene graph ------------------------------------------------------------------------------
@@ -371,6 +396,9 @@ void TerminalItemBase::itemChange(ItemChange change, const ItemChangeData &value
         m_statsConnection = QMetaObject::Connection();
         updateBlinkTimer();
     }
+    // A hidden item gets no frames, so what changed meanwhile is drawn when it shows again.
+    if (change == ItemVisibleHasChanged && value.boolValue)
+        update();
 }
 
 // ---- Cursor blinking --------------------------------------------------------------------------
@@ -432,6 +460,9 @@ bool TerminalItemBase::event(QEvent *event)
 void TerminalItemBase::keyPressEvent(QKeyEvent *event)
 {
     const Qt::KeyboardModifiers modifiers = event->modifiers();
+    // Holding Ctrl over a link highlights it (Ctrl+click opens it).
+    if (event->key() == Qt::Key_Control && !event->isAutoRepeat())
+        resendHover(modifiers);
     const bool accepted =
             handleKey(event->key(), int(modifiers.toInt()), event->text(),
                       modifiers.testFlag(Qt::KeypadModifier), event->isAutoRepeat());
@@ -445,8 +476,20 @@ void TerminalItemBase::keyPressEvent(QKeyEvent *event)
 
 void TerminalItemBase::keyReleaseEvent(QKeyEvent *event)
 {
-    // Releases are not reported: the legacy xterm encoding has no release events.
+    // Releases are not reported: the legacy xterm encoding has no release events. Releasing
+    // Ctrl over a link removes its highlight.
+    if (event->key() == Qt::Key_Control)
+        resendHover(event->modifiers());
     event->ignore();
+}
+
+void TerminalItemBase::resendHover(Qt::KeyboardModifiers modifiers)
+{
+    if (!m_hovering)
+        return;
+    const QPoint cell = cellAt(m_hoverPosition);
+    handleHover(m_hoverPosition.x(), m_hoverPosition.y(), cell.x(), cell.y(),
+                int(modifiers.toInt()));
 }
 
 int TerminalItemBase::clickCountFor(const QMouseEvent *event)
@@ -526,9 +569,25 @@ void TerminalItemBase::wheelEvent(QWheelEvent *event)
 
 void TerminalItemBase::hoverMoveEvent(QHoverEvent *event)
 {
+    // Qt Quick delivers the last hover position again after frames, with the application's
+    // modifiers, which lag behind a Ctrl press or release (Windows): only moves count here, and
+    // modifier changes come from the key events (resendHover).
+    if (m_hovering && event->position() == m_hoverPosition) {
+        event->accept();
+        return;
+    }
+    m_hovering = true;
+    m_hoverPosition = event->position();
     const QPoint cell = cellAt(event->position());
     handleHover(event->position().x(), event->position().y(), cell.x(), cell.y(),
                 int(event->modifiers().toInt()));
+    event->accept();
+}
+
+void TerminalItemBase::hoverLeaveEvent(QHoverEvent *event)
+{
+    m_hovering = false;
+    handleHover(-1.0, -1.0, -1, -1, int(event->modifiers().toInt()));
     event->accept();
 }
 

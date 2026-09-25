@@ -24,6 +24,10 @@
         <translation>[Šéššíöñš ~~~]</translation>
     </message>
     <message>
+        <source>Terminal</source>
+        <translation>[Ťéŕmíñáĺ ~~~]</translation>
+    </message>
+    <message>
         <source>Debug</source>
         <translation>[Ďébüĝ ~~]</translation>
     </message>
@@ -66,6 +70,26 @@
     <message>
         <source>Previous tab</source>
         <translation>[Þŕévíöüš ťáb ~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>[Çöþý ~~]</translation>
+    </message>
+    <message>
+        <source>Paste</source>
+        <translation>[Þášťé ~~]</translation>
+    </message>
+    <message>
+        <source>Find in terminal</source>
+        <translation>[Fíñď íñ ťéŕmíñáĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Select all in terminal</source>
+        <translation>[Šéĺéçť áĺĺ íñ ťéŕmíñáĺ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Clear scrollback</source>
+        <translation>[Çĺéáŕ šçŕöĺĺbáçķ ~~~~~]</translation>
     </message>
     <message>
         <source>Toggle side panel</source>
@@ -229,10 +253,6 @@
     <message>
         <source>Settings</source>
         <translation>[Šéťťíñĝš ~~~]</translation>
-    </message>
-    <message>
-        <source>Local terminal</source>
-        <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -1940,8 +1960,8 @@
         <translation>[Ťéŕmíñáĺ ŕéñďéŕéŕ ~~~~~~]</translation>
     </message>
     <message>
-        <source>The terminal grid is drawn by the scene graph with a glyph atlas. This demo frame shows what the renderer supports; a real session replaces it once the engine is connected.</source>
-        <translation>[Ťĥé ťéŕmíñáĺ ĝŕíď íš ďŕáŵñ bý ťĥé šçéñé ĝŕáþĥ ŵíťĥ á ĝĺýþĥ áťĺáš. Ťĥíš ďémö ƒŕámé šĥöŵš ŵĥáť ťĥé ŕéñďéŕéŕ šüþþöŕťš; á ŕéáĺ šéššíöñ ŕéþĺáçéš íť öñçé ťĥé éñĝíñé íš çöññéçťéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>The terminal grid is drawn by the scene graph with a glyph atlas. This demo frame shows what the renderer supports; terminal tabs draw their sessions with the same item.</source>
+        <translation>[Ťĥé ťéŕmíñáĺ ĝŕíď íš ďŕáŵñ bý ťĥé šçéñé ĝŕáþĥ ŵíťĥ á ĝĺýþĥ áťĺáš. Ťĥíš ďémö ƒŕámé šĥöŵš ŵĥáť ťĥé ŕéñďéŕéŕ šüþþöŕťš; ťéŕmíñáĺ ťábš ďŕáŵ ťĥéíŕ šéššíöñš ŵíťĥ ťĥé šámé íťém. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Demo frame</source>
@@ -2375,21 +2395,6 @@
     </message>
 </context>
 <context>
-    <name>SessionPlaceholder</name>
-    <message>
-        <source>The terminal engine arrives in Sprint 2. Until then this tab is a placeholder to try the tab bar and its shortcuts.</source>
-        <translation>[Ťĥé ťéŕmíñáĺ éñĝíñé áŕŕívéš íñ Šþŕíñť 2. Üñťíĺ ťĥéñ ťĥíš ťáb íš á þĺáçéĥöĺďéŕ ťö ťŕý ťĥé ťáb báŕ áñď íťš šĥöŕťçüťš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Close tab</source>
-        <translation>[Çĺöšé ťáb ~~~]</translation>
-    </message>
-    <message>
-        <source>New tab</source>
-        <translation>[Ñéŵ ťáb ~~~]</translation>
-    </message>
-</context>
-<context>
     <name>SessionTabStrip</name>
     <message>
         <source>Tabs</source>
@@ -2402,6 +2407,14 @@
     <message>
         <source>Local terminal</source>
         <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>The bell rang</source>
+        <translation>[Ťĥé béĺĺ ŕáñĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>New activity</source>
+        <translation>[Ñéŵ áçťívíťý ~~~~]</translation>
     </message>
     <message>
         <source>New tab (%1)</source>
@@ -3189,6 +3202,14 @@
         <source>No active session</source>
         <translation>[Ñö áçťívé šéššíöñ ~~~~~~]</translation>
     </message>
+    <message>
+        <source>Local terminal</source>
+        <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Working directory: %1</source>
+        <translation>[Ŵöŕķíñĝ ďíŕéçťöŕý: %1 ~~~~~~~]</translation>
+    </message>
     <message numerus="yes">
         <source>Notifications (%n unread)</source>
         <translation>
@@ -3210,14 +3231,97 @@
     </message>
 </context>
 <context>
+    <name>TerminalTab</name>
+    <message>
+        <source>Local terminal</source>
+        <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Scrollback</source>
+        <translation>[Šçŕöĺĺbáçķ ~~~]</translation>
+    </message>
+    <message>
+        <source>Find in terminal</source>
+        <translation>[Fíñď íñ ťéŕmíñáĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Find (regular expression)</source>
+        <translation>[Fíñď (ŕéĝüĺáŕ éxþŕéššíöñ) ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Invalid regular expression: %1</source>
+        <translation>[Íñváĺíď ŕéĝüĺáŕ éxþŕéššíöñ: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Enter searches up, Shift+Enter searches down, Escape closes.</source>
+        <translation>[Éñťéŕ šéáŕçĥéš üþ, Šĥíƒť+Éñťéŕ šéáŕçĥéš ďöŵñ, Éšçáþé çĺöšéš. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Invalid pattern</source>
+        <translation>[Íñváĺíď þáťťéŕñ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>No match</source>
+        <translation>[Ñö máťçĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>Search up (Enter)</source>
+        <translation>[Šéáŕçĥ üþ (Éñťéŕ) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Search down (Shift+Enter)</source>
+        <translation>[Šéáŕçĥ ďöŵñ (Šĥíƒť+Éñťéŕ) ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close search (Escape)</source>
+        <translation>[Çĺöšé šéáŕçĥ (Éšçáþé) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The shell exited with code %1.</source>
+        <translation>[Ťĥé šĥéĺĺ éxíťéď ŵíťĥ çöďé %1. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The shell was ended or could not start.</source>
+        <translation>[Ťĥé šĥéĺĺ ŵáš éñďéď öŕ çöüĺď ñöť šťáŕť. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Restart</source>
+        <translation>[Ŕéšťáŕť ~~~]</translation>
+    </message>
+    <message>
+        <source>Close tab</source>
+        <translation>[Çĺöšé ťáb ~~~]</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>[Çöþý ~~]</translation>
+    </message>
+    <message>
+        <source>Paste</source>
+        <translation>[Þášťé ~~]</translation>
+    </message>
+    <message>
+        <source>Select all</source>
+        <translation>[Šéĺéçť áĺĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Find…</source>
+        <translation>[Fíñď… ~~]</translation>
+    </message>
+    <message>
+        <source>Clear scrollback</source>
+        <translation>[Çĺéáŕ šçŕöĺĺbáçķ ~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>TerminalView</name>
     <message>
         <source>No terminal open</source>
         <translation>[Ñö ťéŕmíñáĺ öþéñ ~~~~~]</translation>
     </message>
     <message>
-        <source>Open a local terminal or connect to a host. The terminal engine arrives in Sprint 2, and tabs with split panes in Sprint 4.</source>
-        <translation>[Öþéñ á ĺöçáĺ ťéŕmíñáĺ öŕ çöññéçť ťö á ĥöšť. Ťĥé ťéŕmíñáĺ éñĝíñé áŕŕívéš íñ Šþŕíñť 2, áñď ťábš ŵíťĥ šþĺíť þáñéš íñ Šþŕíñť 4. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Open a local terminal or connect to a host.</source>
+        <translation>[Öþéñ á ĺöçáĺ ťéŕmíñáĺ öŕ çöññéçť ťö á ĥöšť. ~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Open local terminal</source>

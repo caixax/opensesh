@@ -4,6 +4,7 @@ pub mod app_info;
 pub mod platform;
 pub mod settings;
 pub mod shim;
+pub mod terminal_sessions;
 pub mod terminal_view;
 pub mod theme;
 pub mod ui_state;

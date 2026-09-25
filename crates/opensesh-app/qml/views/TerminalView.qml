@@ -1,6 +1,6 @@
-// Terminal workspace view (PLAN §5.4). Session tabs show their own content; this view is what the
-// Terminal rail entry shows while no session tab is open. The terminal engine arrives in Sprint 2,
-// tabs and split panes are completed in Sprint 4.
+// Terminal workspace view (PLAN §5.4). Session tabs show their own content (TerminalTab); this
+// view shows when the Terminal view is restored at startup with no tab open. Split panes arrive
+// in Sprint 4.
 import QtQuick
 import cc.caixa.opensesh
 
@@ -11,7 +11,7 @@ Item {
         anchors.fill: parent
         iconName: "square-terminal"
         title: qsTr("No terminal open")
-        description: qsTr("Open a local terminal or connect to a host. The terminal engine arrives in Sprint 2, and tabs with split panes in Sprint 4.")
+        description: qsTr("Open a local terminal or connect to a host.")
 
         OsButton {
             text: qsTr("Open local terminal")

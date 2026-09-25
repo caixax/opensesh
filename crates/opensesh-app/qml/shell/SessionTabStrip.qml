@@ -1,7 +1,8 @@
 pragma ComponentBehavior: Bound
 
-// Session tab strip: the fixed Home tab, one tab per open session and a "+" button for a new
-// placeholder tab. It shows the tab state of an AppShell and forwards the user's choices to it.
+// Session tab strip: the fixed Home tab, one tab per open session (its title, an activity dot
+// for new output in the background, a bell icon after a bell) and a "+" button for a new local
+// terminal. It shows the tab state of an AppShell and forwards the user's choices to it.
 //   shell: Item   the AppShell (sessionModel, currentTab, tabBarSelected(), closeTab(), newTab())
 import QtQuick
 import cc.caixa.opensesh
@@ -48,9 +49,14 @@ Item {
 
             OsTabButton {
                 required property int index
+                required property string title
+                required property bool newOutput
+                required property bool bellRang
 
-                text: qsTr("Local terminal")
-                iconName: "square-terminal"
+                text: title.length > 0 ? title : qsTr("Local terminal")
+                iconName: bellRang ? "bell" : "square-terminal"
+                activity: newOutput || bellRang
+                Accessible.description: bellRang ? qsTr("The bell rang") : newOutput ? qsTr("New activity") : ""
                 onCloseRequested: strip.shell.closeTab(index + 1)
             }
         }

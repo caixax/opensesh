@@ -59,7 +59,7 @@ Column {
 
         OsText {
             width: parent.width
-            text: qsTr("The terminal grid is drawn by the scene graph with a glyph atlas. This demo frame shows what the renderer supports; a real session replaces it once the engine is connected.")
+            text: qsTr("The terminal grid is drawn by the scene graph with a glyph atlas. This demo frame shows what the renderer supports; terminal tabs draw their sessions with the same item.")
             muted: true
             wrapMode: Text.WordWrap
         }
