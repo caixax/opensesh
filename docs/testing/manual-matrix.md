@@ -10,7 +10,7 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 Each smoke test fails on any warning from our QML (exit code 6), besides the Sprint 0 checks:
 
-- **Main window (`--smoke-test`, 50 steps):** visits every view and every Settings section, opens and closes the command palette, the notifications, the side panel and the Restore defaults dialog, opens and closes tabs, cycles focus with F6 and switches the layout. It writes no settings.
+- **Main window (`--smoke-test`, 59 steps):** visits every view and every Settings section, opens and closes the command palette, the notifications, the side panel and the Restore defaults dialog, opens and closes tabs, cycles focus with F6, switches the layout, and checks that the keyboard focus never stays on a hidden item. It writes no settings.
 - **Gallery (`--gallery --smoke-test`, 26 steps):** visits every section, opens and closes every dialog, drawer and menu, runs a command palette search, shows toasts, and flips theme, density, accent and reduce motion.
 - **Crash dialog (`--crash-report <file> --smoke-test`):** unchanged.
 
@@ -19,14 +19,16 @@ Each smoke test fails on any warning from our QML (exit code 6), besides the Spr
 | Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery / dialog) | Native Wayland (main / gallery / dialog) | X11 `xcb` (main / gallery / dialog) |
 |---|---|---|---|---|---|
 | Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ | ✅ / ✅ / ✅ | — (native `windows`: ✅ / ✅ / ✅) | — |
-| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ (1) | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ |
-| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ |
-| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ (2) | ✅ / ✅ / ✅ |
-| Ubuntu 22.04 (WSLg) | 6.10.3 (aqt) | ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ (2) | ✅ / ✅ / ✅ |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ build; clippy and tests ✅ before the review fixes (1) (3) | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ build; clippy and tests ✅ before the review fixes, core tests ✅ after (3) | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ build; clippy and tests ✅ before the review fixes (3) | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ (2) | ✅ / ✅ / ✅ |
+| Ubuntu 22.04 (WSLg) | 6.10.3 (aqt) | ✅ build and clippy; tests ✅ before the review fixes (3) | ✅ / ✅ / ✅ | ✅ / ✅ / ✅ (2) | ✅ / ✅ / ✅ |
 
 (1) GCC 16 prints a `-Wsfinae-incomplete` warning from Qt's own `qchar.h` while it compiles the cxx-qt generated code. It is not in our code and doesn't fail the build.
 
 (2) With `XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir`, as in Sprint 0.
+
+(3) The smoke tests were run on the final code. The final Linux clippy and test run was stopped because the host ran low on memory (four distros building at once); it is pending, one distro at a time.
 
 Screenshots (`--screenshots`) of the main window, Settings, every gallery page and the crash dialog were reviewed in dark/light × comfortable/compact on Windows (offscreen) and on Debian 13 (native Wayland, Qt 6.8.2). The pseudo-locale was reviewed on Windows.
 
@@ -39,6 +41,7 @@ Screenshots (`--screenshots`) of the main window, Settings, every gallery page a
 | `config.toml` with a TOML syntax error: the app starts on defaults, warns, and leaves the file byte-for-byte unchanged | ✅ | ⏳ |
 | An existing `config.toml` doesn't produce a "changed on disk" reload at startup | ✅ | ⏳ |
 | Pseudo-locale (`language = "pseudo"`, debug build): every visible string is translated, long strings wrap without clipping | ✅ | ⏳ |
+| Release build with `language = "pseudo"` in `config.toml`: the pseudo-locale isn't bundled, so the UI is English | ✅ | ⏳ |
 | Real mouse (`SetCursorPos` + `mouse_event`), `custom` decorations: dragging the title bar moves the window, a double-click maximizes and restores it, dragging the bottom-right corner resizes it, the close button quits with exit code 0 | ✅ | ⏳ |
 | Frameless maximize fills the work area exactly (1920×1040 on a 1920×1080 screen), so the taskbar stays visible | ✅ | — |
 | Tiling compositor: `auto` decorations drop the window buttons (Hyprland, Sway, niri, i3) | — | ⏳ (needs real hardware) |

@@ -13,20 +13,23 @@ All notable changes to this project are documented in this file. The format is b
     - Text on accent and status fills is computed for contrast (`accentText`, `Theme.textOn()`), so any user accent stays readable; low-contrast accents raise a warning.
     - Comfortable and compact density, UI scale (80-150 %), UI font and reduce motion (all durations become 0).
   - **Settings (`config.toml`):**
-    - A lenient per-field reader: an invalid value costs only that setting and produces a warning naming the key.
+    - A lenient per-field reader: an invalid value costs only that setting and produces a warning naming the key. Unknown keys and sections survive a save.
     - `schema_version` with a migrations hook. A file from a newer OpenSesh, or one with a syntax error, is never overwritten.
     - Atomic writes (temporary file, fsync, rename) with 5 rotated backups, on a background writer with a 300 ms debounce.
-    - Hot reload with `notify`, which recognises the app's own recent writes.
+    - Hot reload with `notify`, which tells the app's own writes from external edits by sequence number.
+    - On Windows, read-only backups can't block a save, and a symlinked `config.toml` stays a link.
+    - Problems (a broken or newer file, a failed save) reach the UI as translated toasts, also at startup.
     - Window geometry, side panel and last view in a separate `state.toml`.
   - **Settings > General and Appearance:** every PLAN §6.1 option for them, applied live, with a preview card, language selector, restore defaults and the settings file location. The other sections show what sprint they arrive in.
-  - **Component library:** 41 `Os*` QML files built on Qt Quick Templates, using only `Theme` tokens, with keyboard focus rings and accessible names and roles ([ADR 0008](docs/adr/0008-qml-component-library.md), [contract](docs/design/components.md)).
+  - **Component library:** 42 `Os*` QML files built on Qt Quick Templates, using only `Theme` tokens, with keyboard focus rings and accessible names and roles ([ADR 0008](docs/adr/0008-qml-component-library.md), [contract](docs/design/components.md)).
   - **Gallery (`--gallery`):** tokens with live contrast figures, typography and spacing, every icon, and every component in its states, with live dark/light, density, accent and reduce-motion switches that never write the user's settings.
   - **Shell:**
     - Custom title bar with tabs, and window decoration modes `auto`, `custom`, `native` and `none`. `auto` drops the window buttons on tiling compositors (Hyprland, Sway, niri, i3) ([ADR 0010](docs/adr/0010-window-decorations-and-notifications.md)).
-    - Frameless move and resize through `startSystemMove()` / `startSystemResize()`.
+    - Frameless move and resize through `startSystemMove()` / `startSystemResize()`. On Windows the frameless window keeps Win+arrows, taskbar minimize and the system menu.
     - Navigation rail (left, right or hidden, optional labels), placeholder views with empty states, collapsible side panel (left or right), status bar.
-    - Window size, position and maximized state are restored, skipping positions that no longer fit any screen.
-  - **Command palette and shortcuts:** a central action registry drives the palette (Ctrl+Shift+P, fuzzy search, recent actions first) and the PLAN §6.4 default shortcuts, with conflict detection. No shortcut takes a combination terminal programs need.
+    - Window size, position and maximized state are restored, fitted to the screen, skipping positions that no longer fit any screen.
+    - Switching views or tabs never leaves the keyboard focus on a hidden control, and popups give the focus back when they close.
+  - **Command palette and shortcuts:** a central action registry drives the palette (Ctrl+Shift+P, fuzzy search, recent actions first) and the PLAN §6.4 default shortcuts, with conflict detection. Apart from F6 / Shift+F6, which move the focus between the window regions, no shortcut takes a combination terminal programs need. From Sprint 2 the terminal passes function keys to its programs, and Ctrl+F6 / Ctrl+Shift+F6 always move the focus ([ADR 0011](docs/adr/0011-focus-regions-and-function-keys.md)).
   - **Notifications:** in-app toasts plus a notification history in the status bar.
   - **Icons and fonts:**
     - Icons are rendered by a `QQuickImageProvider` (`image://icon/<name>?color=&size=`) from the pinned SVGs, recolored and cached.
@@ -36,9 +39,9 @@ All notable changes to this project are documented in this file. The format is b
   - **Crash dialog** rebuilt with the component library.
   - **Quality:**
     - The smoke tests of the main window and the gallery visit every view and overlay, and fail on any QML warning (exit code 6).
-    - `--screenshots <dir>` captures the main window, the gallery and the crash dialog in dark/light × comfortable/compact.
+    - `--screenshots <dir>` captures the main window, the gallery and the crash dialog in dark/light × comfortable/compact, and fails on a QML warning (exit code 6) or a failed capture (exit code 7).
     - CI runs the gallery smoke tests, uploads the screenshots and checks that translations are up to date.
-  - **Docs:** ADRs 0006-0010, the component contract, developer setup and the manual test matrix.
+  - **Docs:** ADRs 0006-0011, the component contract, developer setup and the manual test matrix.
 - **Sprint 0: foundations.**
   - **Workspace:**
     - Cargo workspace (edition 2024) with the toolchain pinned to the MSRV (Rust 1.88.0).
