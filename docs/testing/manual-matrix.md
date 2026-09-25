@@ -1,0 +1,76 @@
+# Manual test matrix
+
+PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with UI changes. This file records **what was actually run**, when, and on which machine.
+
+**Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
+
+## Sprint 0 (2026-09-25)
+
+### Automated checks
+
+**Main window (`opensesh-app --smoke-test`) passes when:**
+
+1. The main window renders a first frame.
+2. The Knock button is pressed three times and the Rust `SesameDoor` object opens the door.
+3. A typed, AOT-compiled QML probe confirms that non-ASCII text survived the build.
+
+**Crash dialog (`--crash-report <file> --smoke-test`) passes when** the dialog renders a first frame.
+
+**Host:** Windows 10 Pro 22H2 (build 19045), 20 threads. Linux runs happen in WSL2 with WSLg, where the Wayland compositor is Weston and X11 goes through XWayland. The Linux builds link with `lld`.
+
+| Environment | Qt | Build | `offscreen` (main / dialog) | Native Wayland (main / dialog) | X11 `xcb` (main / dialog) | App id / WM_CLASS checked |
+|---|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ debug + release | ✅ / ✅ | — | — | — |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ | ✅ (1) |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ | ⏳ |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ | ✅ / ✅ | ✅ / ✅ (2) | ✅ / ✅ | ⏳ |
+| Ubuntu 22.04 (WSLg) | 6.10.3 (aqt) | ✅ | ✅ / ✅ | ✅ / ✅ (2) | ✅ / ✅ | ⏳ |
+
+(1) Checked on Arch:
+- Wayland: `WAYLAND_DEBUG=1` shows `xdg_toplevel.set_app_id("cc.caixa.OpenSesh")`.
+- X11 (`xprop`): `WM_CLASS = "opensesh-app", "OpenSesh"`, and `_GTK_APPLICATION_ID` and `_KDE_NET_WM_DESKTOP_FILE` are both `cc.caixa.OpenSesh`.
+
+(2) These WSL instances couldn't always start the systemd user session. When that happens, `/run/user/1000` has no `wayland-0` socket and Qt fails with "Failed to create wl_display". It's a WSL environment issue, not an app issue: the runs passed with `XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir`.
+
+The debug build also has a regression check for the smoke test itself: with `/utf-8` removed from `build.rs`, `--smoke-test` exits with code 5 ("text encoding BROKEN").
+
+### Manual checks
+
+| Check | Windows 10 | Arch | Debian 13 | Fedora 43 | Ubuntu 22.04 |
+|---|---|---|---|---|---|
+| Window renders (screenshot), window icon shown | ✅ | ⏳ | ⏳ | ⏳ | ⏳ |
+| Keyboard: Space presses the focused Knock button, door opens after 3 knocks | ✅ | ⏳ | ⏳ | ⏳ | ⏳ |
+| Panic across FFI (`OPENSESH_DEBUG_PANIC=1`, press Knock) (3) | ✅ | ⏳ | ⏳ | ⏳ | ⏳ |
+| Qt fatal error (`QT_QPA_PLATFORM=nosuchplugin`) writes a "Qt fatal error" crash report | ✅ | ⏳ | ⏳ | ⏳ | ⏳ |
+| Release build: `--version` printed; startup error shows a message box | ✅ | — | — | — | — |
+
+(3) On Windows, pressing Knock with `OPENSESH_DEBUG_PANIC=1`:
+- The process aborted (`0xC0000409`).
+- **Exactly one** crash report was written. It starts with the root cause (`sesame.rs`), and cxx's "panic in ffi function ..., aborting" follows as an appended section.
+- **Exactly one** crash dialog opened, showing that report.
+
+### Not run yet (needs real hardware)
+
+| Environment | Build | Native Wayland | X11 | App id | Window + keyboard |
+|---|---|---|---|---|---|
+| Hyprland (`hyprctl clients`), the Sprint 0 "done when" | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| Sway | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| KDE Plasma 6 | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| GNOME | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| X11 session (i3 / XFCE) | ⏳ | — | ⏳ | ⏳ | ⏳ |
+| Windows 11 | ⏳ | — | — | — | ⏳ |
+| Fractional scaling 125 % / 150 % | ⏳ | ⏳ | ⏳ | — | ⏳ |
+
+The procedure for each is in [`../dev-setup.md`](../dev-setup.md#checking-wayland-and-x11).
+
+## How to run the automated part
+
+```sh
+# Linux (repeat with QT_QPA_PLATFORM=wayland and QT_QPA_PLATFORM=xcb)
+export OPENSESH_NO_CRASH_DIALOG=1 QT_QPA_PLATFORM=offscreen
+cargo run -p opensesh-app -- --smoke-test; echo "exit=$?"
+printf 'test report\n' > /tmp/report.txt
+cargo run -p opensesh-app -- --crash-report /tmp/report.txt --smoke-test; echo "exit=$?"
+```
+
+The exit codes are listed in [`../dev-setup.md`](../dev-setup.md#build-run-and-check).
