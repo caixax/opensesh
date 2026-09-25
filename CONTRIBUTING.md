@@ -1,6 +1,6 @@
 # Contributing to OpenSesh
 
-Thanks for your interest! OpenSesh is in an early stage (see [`docs/PLAN.md`](docs/PLAN.md) and [`docs/sprints/`](docs/sprints/)). This guide lists the rules every change follows.
+Thanks for your interest! OpenSesh is in an early stage (see [`docs/sprints/`](docs/sprints/) and [`docs/adr/`](docs/adr/)). This guide lists the rules every change follows.
 
 ## Getting started
 
@@ -16,7 +16,7 @@ Thanks for your interest! OpenSesh is in an early stage (see [`docs/PLAN.md`](do
 - **Errors:** no `unwrap()` or `expect()` in production code paths. Libraries use typed errors (`thiserror`); only binaries use `anyhow`. Tests may unwrap.
 - **GUI thread:** never block it. Long work runs on the core runtime and reports back through events.
 - **QML:** no hardcoded colors (use `Theme` tokens) and no user-visible string without `qsTr()`. `cargo xtask lint-qml` enforces this.
-- **Icons:** never draw, generate or hand-edit SVG paths. Icons come only from the pinned Lucide / Tabler / Simple Icons packages through `cargo xtask icons` (see `docs/PLAN.md` §7).
+- **Icons:** never draw, generate or hand-edit SVG paths. Icons come only from the pinned Lucide / Tabler / Simple Icons packages through `cargo xtask icons`.
 - **Dependencies:** check the latest stable version and its real API on crates.io / docs.rs, and pin it in `[workspace.dependencies]` in the root `Cargo.toml`. Licenses must pass `cargo deny check`.
 - **Decisions:** any relevant architectural decision gets an ADR in `docs/adr/NNNN-title.md` with the sections Context, Options, Decision and Consequences.
 
