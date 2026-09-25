@@ -12,6 +12,7 @@ mod icons;
 mod lint_qml;
 mod notices;
 mod pseudo;
+mod shaders;
 mod vttest;
 
 use std::path::{Path, PathBuf};
@@ -34,6 +35,9 @@ Tasks:
              lrelease. Needs the Qt 6 linguist tools (found through QMAKE or PATH).
              --check: change nothing; fail if the committed .ts or .qm files are out of
              date.
+  shaders    Compile crates/opensesh-app/shaders/*.vert|*.frag to the committed .qsb files with
+             Qt's qsb (Qt Shader Tools, found through QMAKE or PATH).
+             --check: change nothing; fail if a committed .qsb file is out of date.
   lint-qml   Check QML sources for hardcoded colors and strings without qsTr().
              Optional argument: directory to scan (default: crates/opensesh-app/qml).
   conpty     Download the pinned Windows ConPTY package (assets/conpty/conpty.toml), verify its
@@ -109,6 +113,32 @@ fn run() -> Result<ExitCode> {
         Some("vttest") => {
             vttest::run(&root, &vttest::Options::parse(args)?)?;
             Ok(ExitCode::SUCCESS)
+        }
+        Some("shaders") => {
+            let mut check = false;
+            for arg in args {
+                match arg.to_str() {
+                    Some("--check") => check = true,
+                    _ => {
+                        eprintln!(
+                            "unknown shaders argument `{}`
+
+{USAGE}",
+                            arg.to_string_lossy()
+                        );
+                        return Ok(ExitCode::FAILURE);
+                    }
+                }
+            }
+            if shaders::run(&root, check)? {
+                if check {
+                    println!("shaders: compiled shaders are up to date");
+                }
+                Ok(ExitCode::SUCCESS)
+            } else {
+                eprintln!("shaders: run `cargo xtask shaders` and commit the result");
+                Ok(ExitCode::FAILURE)
+            }
         }
         Some("lint-qml") => {
             // Kept as an `OsString`, so directories with non-UTF-8 names work too.

@@ -300,6 +300,10 @@
         <translation>[Övéŕĺáýš ~~~]</translation>
     </message>
     <message>
+        <source>Terminal</source>
+        <translation>[Ťéŕmíñáĺ ~~~]</translation>
+    </message>
+    <message>
         <source>OpenSesh component gallery</source>
         <translation>[ÖþéñŠéšĥ çömþöñéñť ĝáĺĺéŕý ~~~~~~~~]</translation>
     </message>
@@ -1907,6 +1911,81 @@
     <message>
         <source>Paused</source>
         <translation>[Þáüšéď ~~]</translation>
+    </message>
+</context>
+<context>
+    <name>SectionTerminal</name>
+    <message>
+        <source>Block</source>
+        <translation>[Bĺöçķ ~~]</translation>
+    </message>
+    <message>
+        <source>Hollow block</source>
+        <translation>[Ĥöĺĺöŵ bĺöçķ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Beam</source>
+        <translation>[Béám ~~]</translation>
+    </message>
+    <message>
+        <source>Underline</source>
+        <translation>[Üñďéŕĺíñé ~~~]</translation>
+    </message>
+    <message>
+        <source>Hidden</source>
+        <translation>[Ĥíďďéñ ~~]</translation>
+    </message>
+    <message>
+        <source>Terminal renderer</source>
+        <translation>[Ťéŕmíñáĺ ŕéñďéŕéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The terminal grid is drawn by the scene graph with a glyph atlas. This demo frame shows what the renderer supports; a real session replaces it once the engine is connected.</source>
+        <translation>[Ťĥé ťéŕmíñáĺ ĝŕíď íš ďŕáŵñ bý ťĥé šçéñé ĝŕáþĥ ŵíťĥ á ĝĺýþĥ áťĺáš. Ťĥíš ďémö ƒŕámé šĥöŵš ŵĥáť ťĥé ŕéñďéŕéŕ šüþþöŕťš; á ŕéáĺ šéššíöñ ŕéþĺáçéš íť öñçé ťĥé éñĝíñé íš çöññéçťéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Demo frame</source>
+        <translation>[Ďémö ƒŕámé ~~~]</translation>
+    </message>
+    <message>
+        <source>Click the terminal or tab into it: the cursor blinks while it has the focus, unless reduce motion is on.</source>
+        <translation>[Çĺíçķ ťĥé ťéŕmíñáĺ öŕ ťáb íñťö íť: ťĥé çüŕšöŕ bĺíñķš ŵĥíĺé íť ĥáš ťĥé ƒöçüš, üñĺéšš ŕéďüçé möťíöñ íš öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Cursor</source>
+        <translation>[Çüŕšöŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Cursor shape</source>
+        <translation>[Çüŕšöŕ šĥáþé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Font size (points)</source>
+        <translation>[Föñť šížé (þöíñťš) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Font size</source>
+        <translation>[Föñť šížé ~~~]</translation>
+    </message>
+    <message>
+        <source>Benchmark: redraw every row on every frame</source>
+        <translation>[Béñçĥmáŕķ: ŕéďŕáŵ évéŕý ŕöŵ öñ évéŕý ƒŕámé ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal demo</source>
+        <translation>[Ťéŕmíñáĺ ďémö ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 × %2 cells of %3 × %4 px</source>
+        <translation>[%1 × %2 çéĺĺš öƒ %3 × %4 þx ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Cursor shapes</source>
+        <translation>[Çüŕšöŕ šĥáþéš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Block (the character under it is redrawn in the cursor text color), hollow block (unfocused), beam and underline.</source>
+        <translation>[Bĺöçķ (ťĥé çĥáŕáçťéŕ üñďéŕ íť íš ŕéďŕáŵñ íñ ťĥé çüŕšöŕ ťéxť çöĺöŕ), ĥöĺĺöŵ bĺöçķ (üñƒöçüšéď), béám áñď üñďéŕĺíñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>

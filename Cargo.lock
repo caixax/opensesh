@@ -836,6 +836,7 @@ dependencies = [
  "cxx-qt-build",
  "cxx-qt-lib",
  "opensesh-core",
+ "opensesh-term",
  "tempfile",
  "toml",
  "tracing",
