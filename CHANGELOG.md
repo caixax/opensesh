@@ -6,6 +6,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Releases and updates:**
+  - Windows: a portable zip and a per-user NSIS installer (no administrator rights) with Qt, the MSVC runtime and the bundled ConPTY (`cargo xtask dist windows`).
+  - Linux: a `.deb` for Debian 13, an `.rpm` for Fedora and a pacman package for Arch, built against each distribution's Qt (`scripts/linux/build.sh`), and `install.sh` (`curl ... | bash`), which picks the right package, verifies it and installs it with the package manager.
+  - `scripts/release.bat` cuts a release from a Windows machine with the WSL distros in minutes; a manual GitHub Actions workflow is the fallback.
+  - Update checks (off by default, PLAN §6.1): at startup and daily when enabled, or with "Check now". The installed Windows app downloads the new installer, verifies it against `SHA256SUMS.txt` and restarts updated; portable copies and Linux packages link to the download.
 - **Sprint 2: terminal engine and local terminal.**
   - **Engine (`opensesh-term`, [ADR 0012](docs/adr/0012-terminal-engine-and-session-threads.md)):** `alacritty_terminal` behind a `TerminalBackend` trait; a local PTY backend (your shell; PowerShell or cmd on Windows through ConPTY); one engine thread per session that parses in bounded chunks, answers terminal queries at once and sends damage-aware snapshots; OSC 7, X10 mouse, OSC 8 links, regex search; hostile output bounded (OSC strings, combining marks, synchronized updates).
   - **Input:** xterm key encoding (Alt, F1-F24, keypad and cursor modes, Windows AltGr and Alt codes), mouse reporting (X10, normal, button, any; SGR), bracketed paste with filtering, focus reports, URL detection.

@@ -138,6 +138,34 @@ Window {
             screenshots.start();
     }
 
+    // Update checks (only when the user enabled them, never in test runs): 10 s after start,
+    // then once a day.
+    Timer {
+        id: updateTimer
+
+        interval: 10 * 1000
+        repeat: true
+        running: AppSettings.checkForUpdates && window.persistState
+        onTriggered: {
+            interval = 24 * 60 * 60 * 1000;
+            if (Updater.state !== "available")
+                Updater.check();
+        }
+    }
+
+    Connections {
+        target: Updater
+
+        function onUpdateAvailable() {
+            Toasts.show(qsTr("OpenSesh %1 is available.").arg(Updater.latestVersion), "info",
+                        Updater.canInstall ? qsTr("Update") : qsTr("Download"), "app.update");
+        }
+
+        function onQuitForUpdate() {
+            window.close();
+        }
+    }
+
     // The window manager sends a burst of changes while the user moves or resizes.
     Timer {
         id: geometryTimer

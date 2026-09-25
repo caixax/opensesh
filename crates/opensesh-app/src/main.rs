@@ -11,6 +11,7 @@ mod logging;
 mod platform;
 mod services;
 mod terminal;
+mod update;
 
 use std::io::Write as _;
 use std::process::ExitCode;

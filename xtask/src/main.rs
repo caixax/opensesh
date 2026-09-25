@@ -5,6 +5,7 @@
 
 mod common;
 mod conpty;
+mod dist;
 mod fonts;
 mod http;
 mod i18n;
@@ -48,9 +49,12 @@ Tasks:
   vttest     Download the pinned vttest release, verify its sha256 and build it with configure
              and make into target/vttest/vttest, for the terminal harness tests. Linux and other
              Unix systems only (use WSL on Windows). --force: rebuild.
+  dist       `dist windows`: build the Windows release packages into target/dist (portable zip
+             and NSIS installer). Linux packages: scripts/linux/build.sh. Whole releases:
+             scripts/release.bat.
   help       Show this message.
 
-Only `icons`, `fonts`, `conpty` and `vttest` use the network, and downloads are cached in
+Only `icons`, `fonts`, `conpty`, `vttest` and `dist windows` (through conpty) use the network, and downloads are cached in
 target/xtask-cache.";
 
 fn main() -> ExitCode {
@@ -105,6 +109,10 @@ fn run() -> Result<ExitCode> {
                 eprintln!("i18n: run `cargo xtask i18n` and commit the result");
                 Ok(ExitCode::FAILURE)
             }
+        }
+        Some("dist") => {
+            dist::run(&root, args)?;
+            Ok(ExitCode::SUCCESS)
         }
         Some("conpty") => {
             conpty::run(&root, &conpty::Options::parse(args)?)?;

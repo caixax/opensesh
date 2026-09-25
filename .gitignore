@@ -25,3 +25,6 @@ Thumbs.db
 # aqtinstall writes its log to the current directory
 aqtinstall.log
 
+
+# Release packages (scripts/release.ps1, scripts/linux/build.sh)
+/dist/

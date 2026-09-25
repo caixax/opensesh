@@ -8,3 +8,4 @@ pub mod terminal_sessions;
 pub mod terminal_view;
 pub mod theme;
 pub mod ui_state;
+pub mod updater;
