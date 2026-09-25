@@ -4,7 +4,8 @@
 //!   and queue an atomic save on the background writer (the GUI thread never touches disk).
 //! - External edits of `config.toml` are picked up by a file watcher and applied live
 //!   (`reloadedFromDisk`); our own writes are recognised and ignored.
-//! - A file written by a newer OpenSesh is never overwritten (`readOnly`).
+//! - A file written by a newer OpenSesh, or one that can't be read (a syntax error), is never
+//!   overwritten (`readOnly`, `readOnlyReason`); changes still apply in memory.
 
 #[cxx_qt::bridge]
 pub mod qobject {
@@ -42,6 +43,7 @@ pub mod qobject {
         #[qproperty(QString, window_decorations, cxx_name = "windowDecorations", READ = window_decorations, WRITE = set_window_decorations, NOTIFY = settings_changed)]
         #[qproperty(QString, config_path, cxx_name = "configPath", READ = config_path, NOTIFY = status_changed)]
         #[qproperty(bool, read_only, cxx_name = "readOnly", READ = read_only, NOTIFY = status_changed)]
+        #[qproperty(QString, read_only_reason, cxx_name = "readOnlyReason", READ = read_only_reason, NOTIFY = status_changed)]
         #[qproperty(QStringList, warnings, READ = warnings, NOTIFY = status_changed)]
         type AppSettings = super::AppSettingsRust;
 
@@ -50,7 +52,7 @@ pub mod qobject {
         #[cxx_name = "settingsChanged"]
         fn settings_changed(self: Pin<&mut Self>);
 
-        /// `configPath`, `readOnly` or `warnings` changed.
+        /// `configPath`, `readOnly`, `readOnlyReason` or `warnings` changed.
         #[qsignal]
         #[cxx_name = "statusChanged"]
         fn status_changed(self: Pin<&mut Self>);
@@ -101,13 +103,15 @@ pub mod qobject {
         fn set_window_decorations(self: Pin<&mut Self>, value: QString);
         fn config_path(self: &Self) -> QString;
         fn read_only(self: &Self) -> bool;
+        fn read_only_reason(self: &Self) -> QString;
         fn warnings(self: &Self) -> QStringList;
 
         /// Allowed values of a choice setting (e.g. `"density"` -> `["comfortable", "compact"]`).
         #[qinvokable]
         fn choices(self: &Self, key: &QString) -> QStringList;
 
-        /// Restores every setting to its default and saves.
+        /// Restores every setting to its default and saves. This also replaces a file that
+        /// couldn't be read (it is kept as the first backup), but never a newer one.
         #[qinvokable]
         #[cxx_name = "resetToDefaults"]
         fn reset_to_defaults(self: Pin<&mut Self>);
@@ -118,6 +122,7 @@ pub mod qobject {
 }
 
 use core::pin::Pin;
+use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -137,14 +142,26 @@ use crate::services;
 /// How long `config.toml` must be quiet before an external edit is reloaded.
 const RELOAD_DEBOUNCE: Duration = Duration::from_millis(250);
 
+/// Why `config.toml` must not be overwritten.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Protection {
+    /// Saves go through.
+    None,
+    /// Written by a newer OpenSesh: a downgrade must not destroy it.
+    NewerSchema,
+    /// It couldn't be read (usually a syntax error from a hand edit): saving the in-memory
+    /// settings would throw the user's edit away.
+    Unreadable,
+}
+
 /// Rust state behind `AppSettings`.
 pub struct AppSettingsRust {
     config: Config,
     path: Option<PathBuf>,
-    read_only: bool,
+    protection: Protection,
     warnings: Vec<String>,
-    /// Text of the last save we queued, to ignore the watcher's echo of our own writes.
-    last_saved: Arc<Mutex<Option<String>>>,
+    /// Texts of our recent saves, to ignore the watcher's echo of our own writes.
+    recent_saves: Arc<RecentSaves>,
     watcher: Option<FileWatcher>,
 }
 
@@ -153,7 +170,7 @@ impl std::fmt::Debug for AppSettingsRust {
         f.debug_struct("AppSettingsRust")
             .field("config", &self.config)
             .field("path", &self.path)
-            .field("read_only", &self.read_only)
+            .field("protection", &self.protection)
             .finish_non_exhaustive()
     }
 }
@@ -163,9 +180,9 @@ impl Default for AppSettingsRust {
         Self {
             config: Config::default(),
             path: None,
-            read_only: false,
+            protection: Protection::None,
             warnings: Vec::new(),
-            last_saved: Arc::new(Mutex::new(None)),
+            recent_saves: Arc::new(RecentSaves::default()),
             watcher: None,
         }
     }
@@ -238,19 +255,24 @@ impl qobject::AppSettings {
         let Some(path) = self.path.clone() else {
             return;
         };
-        if self.read_only {
-            let message =
-                qstring("config.toml was written by a newer OpenSesh, so changes are not saved.");
-            self.as_mut().problem(message);
+        let blocked = match self.protection {
+            Protection::None => None,
+            Protection::NewerSchema => {
+                Some("config.toml was written by a newer OpenSesh, so changes are not saved.")
+            }
+            Protection::Unreadable => {
+                Some("config.toml has an error, so changes are not saved until it is fixed.")
+            }
+        };
+        if let Some(message) = blocked {
+            self.as_mut().problem(qstring(message));
             return;
         }
         let Some(services) = services::get() else {
             return;
         };
         let text = self.config.to_toml_string();
-        if let Ok(mut last) = self.last_saved.lock() {
-            *last = Some(text.clone());
-        }
+        self.recent_saves.remember(&text);
         let qt_thread = self.qt_thread();
         services.writer.write(
             path,
@@ -268,8 +290,9 @@ impl qobject::AppSettings {
         );
     }
 
-    /// Applies a reload of `config.toml` on the GUI thread.
-    fn apply_reload(mut self: Pin<&mut Self>, reload: Reload) {
+    /// Applies a read of `config.toml` on the GUI thread: the first load at startup, or a reload
+    /// after an external edit (which is logged and announced with `reloadedFromDisk`).
+    fn apply_reload(mut self: Pin<&mut Self>, reload: Reload, initial: bool) {
         match reload {
             Reload::Loaded {
                 config,
@@ -281,18 +304,30 @@ impl qobject::AppSettings {
                     let mut state = self.as_mut().rust_mut();
                     state.config = *config;
                     state.warnings = warnings;
-                    state.read_only = read_only;
+                    state.protection = if read_only {
+                        Protection::NewerSchema
+                    } else {
+                        Protection::None
+                    };
                 }
                 self.as_mut().status_changed();
-                if changed {
+                if changed && !initial {
                     tracing::info!("config.toml changed on disk; settings reloaded");
                     self.as_mut().settings_changed();
                     self.as_mut().reloaded_from_disk();
                 }
             }
             Reload::Failed(message) => {
-                tracing::warn!("ignoring external edit of config.toml: {message}");
-                self.as_mut().rust_mut().warnings = vec![message.clone()];
+                if initial {
+                    tracing::warn!("using the default settings: {message}");
+                } else {
+                    tracing::warn!("ignoring external edit of config.toml: {message}");
+                }
+                {
+                    let mut state = self.as_mut().rust_mut();
+                    state.warnings = vec![message.clone()];
+                    state.protection = Protection::Unreadable;
+                }
                 self.as_mut().status_changed();
                 self.as_mut().problem(QString::from(&message));
             }
@@ -302,19 +337,20 @@ impl qobject::AppSettings {
     /// Starts watching `config.toml` for external edits.
     fn start_watcher(mut self: Pin<&mut Self>, path: PathBuf) {
         let qt_thread = self.qt_thread();
-        let last_saved = Arc::clone(&self.last_saved);
+        let recent_saves = Arc::clone(&self.recent_saves);
         let watched = path.clone();
         let watcher = FileWatcher::spawn(&path, RELOAD_DEBOUNCE, move || {
             let current = std::fs::read_to_string(&watched).ok();
-            let is_echo = last_saved
-                .lock()
-                .map(|last| last.is_some() && *last == current)
-                .unwrap_or(false);
-            if is_echo {
+            // Any of our recent saves may be what's on disk right now (a newer one can still be
+            // waiting in the writer), so only content we never wrote counts as an external edit.
+            if current
+                .as_deref()
+                .is_some_and(|text| recent_saves.contains(text))
+            {
                 return;
             }
             let reload = read_config(&watched);
-            let _ = qt_thread.queue(move |settings| settings.apply_reload(reload));
+            let _ = qt_thread.queue(move |settings| settings.apply_reload(reload, false));
         });
         match watcher {
             Ok(watcher) => self.as_mut().rust_mut().watcher = Some(watcher),
@@ -345,8 +381,22 @@ impl qobject::AppSettings {
 
     /// See the bridge declaration.
     pub fn reset_to_defaults(mut self: Pin<&mut Self>) {
-        self.as_mut()
-            .change(|config| replace(config, Config::default()));
+        // An explicit, confirmed reset may replace a file that couldn't be read; the writer keeps
+        // it as `config.toml.bak.1`. A newer file stays protected.
+        let replace_broken = self.protection == Protection::Unreadable;
+        if replace_broken {
+            {
+                let mut state = self.as_mut().rust_mut();
+                state.protection = Protection::None;
+                state.warnings.clear();
+            }
+            self.as_mut().status_changed();
+        }
+        let changed = replace(&mut self.as_mut().rust_mut().config, Config::default());
+        self.as_mut().settings_changed();
+        if changed || replace_broken {
+            self.save();
+        }
     }
 
     // Getters and setters (see the bridge declaration).
@@ -483,10 +533,45 @@ impl qobject::AppSettings {
             .unwrap_or_default()
     }
     pub fn read_only(&self) -> bool {
-        self.read_only
+        self.protection != Protection::None
+    }
+    pub fn read_only_reason(&self) -> QString {
+        qstring(match self.protection {
+            Protection::None => "",
+            Protection::NewerSchema => "newer",
+            Protection::Unreadable => "unreadable",
+        })
     }
     pub fn warnings(&self) -> QStringList {
         qstring_list(self.warnings.iter().cloned())
+    }
+}
+
+/// The last few `config.toml` texts we queued for writing. The watcher reads the file while
+/// newer saves may still be pending, so comparing only against the latest save would mistake
+/// our own earlier write for an external edit and revert the newer in-memory value.
+#[derive(Debug, Default)]
+struct RecentSaves {
+    texts: Mutex<VecDeque<String>>,
+}
+
+impl RecentSaves {
+    const CAPACITY: usize = 16;
+
+    fn remember(&self, text: &str) {
+        if let Ok(mut texts) = self.texts.lock() {
+            if texts.len() == Self::CAPACITY {
+                texts.pop_front();
+            }
+            texts.push_back(text.to_owned());
+        }
+    }
+
+    fn contains(&self, text: &str) -> bool {
+        self.texts
+            .lock()
+            .map(|texts| texts.iter().any(|saved| saved == text))
+            .unwrap_or(false)
     }
 }
 
@@ -515,7 +600,33 @@ impl cxx_qt::Initialize for qobject::AppSettings {
             }
         }
         self.as_mut().rust_mut().path = Some(path.clone());
-        self.as_mut().apply_reload(reload);
+        self.as_mut().apply_reload(reload, true);
         self.as_mut().start_watcher(path);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_recent_save_is_recognised_as_our_own() {
+        let saves = RecentSaves::default();
+        saves.remember("a = 1");
+        saves.remember("a = 2");
+        // The file may still hold the older write while the newer one is pending.
+        assert!(saves.contains("a = 1"));
+        assert!(saves.contains("a = 2"));
+        assert!(!saves.contains("a = 3"), "an external edit is not an echo");
+    }
+
+    #[test]
+    fn only_the_last_saves_are_kept() {
+        let saves = RecentSaves::default();
+        for i in 0..=RecentSaves::CAPACITY {
+            saves.remember(&format!("v{i}"));
+        }
+        assert!(!saves.contains("v0"));
+        assert!(saves.contains(&format!("v{}", RecentSaves::CAPACITY)));
     }
 }

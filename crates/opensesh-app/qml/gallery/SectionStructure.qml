@@ -1,6 +1,7 @@
 // Gallery section: structure and navigation components (tabs, rail, cards, list rows, tree,
 // tags, badges, section headers, form rows, empty state, splitter, progress) in their states.
-// Give it a width; the height is implicit. `focusDemo()` puts keyboard focus on the rail.
+// Give it a width; the height is implicit.
+// Functions: showFocus()  puts keyboard focus on the second rail entry (screenshots).
 import QtQuick
 import QtQuick.Templates as T
 import cc.caixa.opensesh
@@ -8,28 +9,31 @@ import cc.caixa.opensesh
 Item {
     id: section
 
-    readonly property real blockWidth: Theme.spacingXxl * 16
+    // Two demo blocks per row when they can be at least 384 px (at scale 1) wide, else one.
+    readonly property real blockWidth: width >= Theme.spacingXxl * 24 + Theme.spacingXl
+                                       ? Math.floor((width - Theme.spacingXl) / 2) : width
 
     implicitWidth: Theme.spacingXxl * 34
     implicitHeight: content.implicitHeight
 
     // Shows the keyboard focus ring on the second rail entry.
-    function focusDemo() {
+    function showFocus() {
         iconRail.moveFocus(1, 1);
     }
 
-    Component.onCompleted: Qt.callLater(focusDemo)
-
+    // A titled demo block; `caption` lists the component and the states shown.
     component Demo: Column {
+        id: demo
+
+        property string title
         property string caption
 
-        spacing: Theme.spacingSm
+        spacing: Theme.spacingMd
 
-        OsText {
+        OsSectionHeader {
             width: parent.width
-            text: parent.caption
-            size: "small"
-            muted: true
+            title: demo.title
+            description: demo.caption
         }
     }
 
@@ -44,15 +48,29 @@ Item {
         width: parent.width
         spacing: Theme.spacingXl
 
-        OsSectionHeader {
+        Column {
             width: parent.width
-            title: qsTr("Structure and navigation")
-            description: qsTr("Tabs, rail, cards, lists, tree, tags, badges, headers, forms, empty states, splitter and progress.")
+            spacing: Theme.spacingSm
+
+            OsText {
+                text: qsTr("Structure and navigation")
+                size: "title"
+                Accessible.role: Accessible.Heading
+            }
+
+            OsText {
+                width: parent.width
+                text: qsTr("Tabs, rail, cards, lists, tree, tags, badges, headers, forms, empty states, splitter and progress.")
+                muted: true
+                wrapMode: Text.Wrap
+                elide: Text.ElideNone
+            }
         }
 
         // Tabs.
         Demo {
             width: parent.width
+            title: qsTr("Tabs")
             caption: qsTr("OsTabBar: current, activity dot, elided title, not closable, disabled")
 
             Rectangle {
@@ -104,10 +122,13 @@ Item {
 
             // Rail.
             Demo {
+                width: section.blockWidth
+                title: qsTr("Rail")
                 caption: qsTr("OsRail: icons (keyboard focus on Hosts) and labels")
 
                 Row {
-                    spacing: Theme.spacingXl
+                    // Room for the label tooltip of the focused icon-only entry.
+                    spacing: Theme.spacingXxl * 2.5
 
                     Rectangle {
                         width: iconRail.width + 2 * Theme.borderWidth
@@ -159,10 +180,12 @@ Item {
 
             // Tree.
             Demo {
+                width: section.blockWidth
+                title: qsTr("Tree")
                 caption: qsTr("OsTreeView: expanded, collapsed, current row")
 
                 Rectangle {
-                    width: Theme.spacingXxl * 9
+                    width: parent.width
                     height: Theme.spacingXxl * 10
                     color: Theme.surface
                     radius: Theme.radiusCard
@@ -201,6 +224,7 @@ Item {
             // List rows.
             Demo {
                 width: section.blockWidth
+                title: qsTr("List rows")
                 caption: qsTr("OsListRow: plain, subtitle, trailing text and slot, selected, highlighted, disabled")
 
                 Column {
@@ -259,6 +283,7 @@ Item {
             // Cards.
             Demo {
                 width: section.blockWidth
+                title: qsTr("Cards")
                 caption: qsTr("OsCard: static, clickable, selected, disabled")
 
                 Grid {
@@ -305,9 +330,10 @@ Item {
                 }
             }
 
-            // Tags and badges.
+            // Tags.
             Demo {
                 width: section.blockWidth
+                title: qsTr("Tags")
                 caption: qsTr("OsTag: neutral, accent, icon, removable, disabled")
 
                 Flow {
@@ -341,10 +367,13 @@ Item {
                         enabled: false
                     }
                 }
+            }
 
-                Caption {
-                    text: qsTr("OsBadge: counts, 99+ and dots in accent, info, success, warning, danger")
-                }
+            // Badges.
+            Demo {
+                width: section.blockWidth
+                title: qsTr("Badges")
+                caption: qsTr("OsBadge: counts, 99+ and dots in accent, info, success, warning, danger")
 
                 Row {
                     spacing: Theme.spacingMd
@@ -376,21 +405,41 @@ Item {
             // Section headers.
             Demo {
                 width: section.blockWidth
+                title: qsTr("Section headers")
                 caption: qsTr("OsSectionHeader: title, description, trailing action")
 
-                OsSectionHeader {
+                // Framed, so the samples don't read as headings of this page.
+                Rectangle {
                     width: parent.width
-                    title: qsTr("Appearance")
-                }
-                OsSectionHeader {
-                    width: parent.width
-                    title: qsTr("Terminal")
-                    description: qsTr("Font, cursor and scrollback of new terminal sessions.")
+                    height: headerSamples.implicitHeight + 2 * Theme.spacingLg
+                    color: Theme.surface
+                    radius: Theme.radiusCard
+                    border.width: Theme.borderWidth
+                    border.color: Theme.border
 
-                    OsButton {
-                        text: qsTr("Reset")
-                        variant: "ghost"
-                        iconName: "rotate-ccw"
+                    Column {
+                        id: headerSamples
+
+                        x: Theme.spacingLg
+                        y: Theme.spacingLg
+                        width: parent.width - 2 * Theme.spacingLg
+                        spacing: Theme.spacingLg
+
+                        OsSectionHeader {
+                            width: parent.width
+                            title: qsTr("Appearance")
+                        }
+                        OsSectionHeader {
+                            width: parent.width
+                            title: qsTr("Terminal")
+                            description: qsTr("Font, cursor and scrollback of new terminal sessions.")
+
+                            OsButton {
+                                text: qsTr("Reset")
+                                variant: "ghost"
+                                iconName: "rotate-ccw"
+                            }
+                        }
                     }
                 }
             }
@@ -398,6 +447,7 @@ Item {
             // Form rows.
             Demo {
                 width: section.blockWidth
+                title: qsTr("Form rows")
                 caption: qsTr("OsFormRow: side by side, help, error, stacked when narrow")
 
                 OsFormRow {
@@ -405,9 +455,10 @@ Item {
                     label: qsTr("Theme")
                     helpText: qsTr("Follows the system unless you pick one.")
 
-                    OsButton {
-                        text: qsTr("System")
-                        iconName: "sun-moon"
+                    OsComboBox {
+                        width: parent.width
+                        model: [qsTr("Follow the system"), qsTr("Dark"), qsTr("Light")]
+                        Accessible.name: qsTr("Theme")
                     }
                 }
                 OsFormRow {
@@ -415,21 +466,22 @@ Item {
                     label: qsTr("Scrollback lines")
                     errorText: qsTr("Enter a number between 100 and 100000.")
 
-                    OsButton {
+                    OsTextField {
                         width: parent.width
                         text: qsTr("1000000")
-                        variant: "danger"
+                        error: true
+                        Accessible.name: qsTr("Scrollback lines")
                     }
                 }
                 OsFormRow {
-                    width: section.blockWidth * 0.55
+                    width: Math.round(section.blockWidth * 0.55)
                     label: qsTr("Narrow row label")
                     helpText: qsTr("Stacked because the row is narrow.")
 
-                    OsProgress {
+                    OsTextField {
                         width: parent.width
-                        value: 0.6
-                        Accessible.name: qsTr("Quota")
+                        placeholderText: qsTr("Value")
+                        Accessible.name: qsTr("Narrow row label")
                     }
                 }
             }
@@ -437,6 +489,7 @@ Item {
             // Empty state.
             Demo {
                 width: section.blockWidth
+                title: qsTr("Empty state")
                 caption: qsTr("OsEmptyState: icon, title, body, actions")
 
                 Rectangle {
@@ -471,50 +524,63 @@ Item {
             // Splitter.
             Demo {
                 width: section.blockWidth
+                title: qsTr("Splitter")
                 caption: qsTr("OsSplitter: horizontal with grip, vertical")
 
-                OsSplitter {
+                Item {
                     width: parent.width
                     height: Theme.spacingXxl * 4
-                    showGrip: true
 
-                    Rectangle {
-                        T.SplitView.preferredWidth: Theme.spacingXxl * 5
-                        T.SplitView.minimumWidth: Theme.spacingXxl * 2
-                        color: Theme.surface2
+                    OsSplitter {
+                        anchors.fill: parent
+                        showGrip: true
 
-                        Caption {
-                            anchors.centerIn: parent
-                            text: qsTr("Sidebar")
+                        Rectangle {
+                            T.SplitView.preferredWidth: Theme.spacingXxl * 5
+                            T.SplitView.minimumWidth: Theme.spacingXxl * 2
+                            color: Theme.surface2
+
+                            Caption {
+                                anchors.centerIn: parent
+                                text: qsTr("Sidebar")
+                            }
+                        }
+                        Rectangle {
+                            T.SplitView.fillWidth: true
+                            color: Theme.surface
+
+                            OsSplitter {
+                                anchors.fill: parent
+                                orientation: Qt.Vertical
+
+                                Rectangle {
+                                    T.SplitView.fillHeight: true
+                                    color: Theme.surface
+
+                                    Caption {
+                                        anchors.centerIn: parent
+                                        text: qsTr("Terminal")
+                                    }
+                                }
+                                Rectangle {
+                                    T.SplitView.preferredHeight: Theme.spacingXxl * 1.5
+                                    color: Theme.surface2
+
+                                    Caption {
+                                        anchors.centerIn: parent
+                                        text: qsTr("Panel")
+                                    }
+                                }
+                            }
                         }
                     }
+
+                    // Frame over the panes.
                     Rectangle {
-                        T.SplitView.fillWidth: true
-                        color: Theme.surface
-
-                        OsSplitter {
-                            anchors.fill: parent
-                            orientation: Qt.Vertical
-
-                            Rectangle {
-                                T.SplitView.fillHeight: true
-                                color: Theme.surface
-
-                                Caption {
-                                    anchors.centerIn: parent
-                                    text: qsTr("Terminal")
-                                }
-                            }
-                            Rectangle {
-                                T.SplitView.preferredHeight: Theme.spacingXxl * 1.5
-                                color: Theme.surface2
-
-                                Caption {
-                                    anchors.centerIn: parent
-                                    text: qsTr("Panel")
-                                }
-                            }
-                        }
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.width: Theme.borderWidth
+                        border.color: Theme.border
                     }
                 }
             }
@@ -522,29 +588,44 @@ Item {
             // Progress.
             Demo {
                 width: section.blockWidth
+                title: qsTr("Progress")
                 caption: qsTr("OsProgress: 0 %, 40 %, 100 %, indeterminate, disabled")
 
                 Repeater {
-                    model: [0, 0.4, 1]
+                    model: [
+                        { label: qsTr("0 %"), value: 0, indeterminate: false, enabled: true, name: qsTr("Upload") },
+                        { label: qsTr("40 %"), value: 0.4, indeterminate: false, enabled: true, name: qsTr("Upload") },
+                        { label: qsTr("100 %"), value: 1, indeterminate: false, enabled: true, name: qsTr("Upload") },
+                        { label: qsTr("Indeterminate"), value: 0, indeterminate: true, enabled: true, name: qsTr("Connecting") },
+                        { label: qsTr("Disabled"), value: 0.7, indeterminate: false, enabled: false, name: qsTr("Paused") }
+                    ]
 
-                    OsProgress {
-                        required property real modelData
+                    Row {
+                        id: progressRow
+
+                        required property var modelData
 
                         width: section.blockWidth
-                        value: modelData
-                        Accessible.name: qsTr("Upload")
+                        height: Theme.controlHeightSmall
+                        spacing: Theme.spacingMd
+
+                        Caption {
+                            id: progressLabel
+
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Theme.spacingXxl * 3
+                            text: progressRow.modelData.label
+                        }
+
+                        OsProgress {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - progressLabel.width - parent.spacing
+                            value: progressRow.modelData.value
+                            indeterminate: progressRow.modelData.indeterminate
+                            enabled: progressRow.modelData.enabled
+                            Accessible.name: progressRow.modelData.name
+                        }
                     }
-                }
-                OsProgress {
-                    width: section.blockWidth
-                    indeterminate: true
-                    Accessible.name: qsTr("Connecting")
-                }
-                OsProgress {
-                    width: section.blockWidth
-                    value: 0.7
-                    enabled: false
-                    Accessible.name: qsTr("Paused")
                 }
             }
         }

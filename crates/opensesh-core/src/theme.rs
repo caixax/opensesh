@@ -24,6 +24,18 @@ pub const DEFAULT_ACCENT_DARK: Rgba = Rgba::rgb(0xE6, 0xB4, 0x50);
 /// Default accent for light surfaces (§5.2).
 pub const DEFAULT_ACCENT_LIGHT: Rgba = Rgba::rgb(0xB7, 0x80, 0x0F);
 
+/// Accent presets offered next to the default ("Sesame") accent, in display order: amber,
+/// terracotta, rose, lavender, blue, teal and green. The single source for every accent picker.
+pub const ACCENT_PRESETS: [Rgba; 7] = [
+    Rgba::rgb(0xF2, 0x9E, 0x4C),
+    Rgba::rgb(0xE0, 0x7A, 0x5F),
+    Rgba::rgb(0xD9, 0x66, 0x7B),
+    Rgba::rgb(0xA9, 0x83, 0xD8),
+    Rgba::rgb(0x5B, 0x9B, 0xD5),
+    Rgba::rgb(0x4D, 0xB6, 0xAC),
+    Rgba::rgb(0x7C, 0xB3, 0x42),
+];
+
 /// Dark ink used for text on light fills (§5.2 dark `accentText`).
 const INK_DARK: Rgba = Rgba::rgb(0x1A, 0x14, 0x06);
 

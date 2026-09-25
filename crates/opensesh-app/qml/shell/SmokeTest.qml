@@ -1,5 +1,7 @@
 // `--smoke-test`: after the first frame, runs `steps` (one per ~frame, e.g. open every view so
-// its QML is instantiated), then checks the Rust bridges and the text encoding and exits.
+// its QML is instantiated), then checks the Rust bridges and the text encoding and exits. A step
+// may return an array of further steps; they run next (e.g. the steps of a view that the
+// previous step loaded).
 // Exit codes: 0 ok, 3 no frame rendered, 4 bridge broken, 5 text encoding broken. main.rs turns
 // a clean exit into 6 if our QML logged any warning.
 import QtQuick
@@ -13,7 +15,9 @@ Item {
     property var steps: []
     property int stepInterval: 60
     property bool started: false
+    // Steps run so far.
     property int stepIndex: 0
+    property var queue: []
 
     visible: false
 
@@ -36,7 +40,7 @@ Item {
         console.info("smoke test: first frame rendered on", Qt.platform.pluginName,
                      "- QML/Rust bridge", bridge ? "ok" : "BROKEN",
                      "- text encoding", encoding ? "ok" : "BROKEN",
-                     "- steps", smoke.steps.length);
+                     "- steps", smoke.stepIndex);
         Qt.exit(!bridge ? 4 : !encoding ? 5 : 0);
     }
 
@@ -48,6 +52,7 @@ Item {
             if (smoke.started)
                 return;
             smoke.started = true;
+            smoke.queue = smoke.steps.slice();
             stepTimer.start();
         }
     }
@@ -58,8 +63,12 @@ Item {
         interval: smoke.stepInterval
         repeat: true
         onTriggered: {
-            if (smoke.stepIndex < smoke.steps.length) {
-                smoke.steps[smoke.stepIndex]();
+            if (smoke.queue.length > 0) {
+                const step = smoke.queue[0];
+                smoke.queue = smoke.queue.slice(1);
+                const more = step();
+                if (Array.isArray(more) && more.length > 0)
+                    smoke.queue = more.concat(smoke.queue);
                 smoke.stepIndex += 1;
             } else {
                 stop();

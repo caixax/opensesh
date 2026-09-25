@@ -1,7 +1,6 @@
-// Gallery section: input controls in every state (default, checked/on, error, disabled) plus
-// one control with keyboard focus. Put it in a scrolling column and give it a width; its height
-// is implicit.
-//   focusDemo: bool  give the "Keyboard focus" text field Tab focus once loaded (default true)
+// Gallery section: input controls in every state (default, checked/on, error, disabled). Put it
+// in a scrolling column and give it a width; its height is implicit.
+// Functions: showFocus()  gives the "Keyboard focus" text field Tab focus (screenshots).
 pragma ComponentBehavior: Bound
 
 import QtQuick
@@ -11,9 +10,12 @@ import cc.caixa.opensesh
 Column {
     id: section
 
-    property bool focusDemo: true
+    function showFocus() {
+        focusedField.forceActiveFocus(Qt.TabFocusReason);
+    }
 
-    // A control with a small caption under it.
+    // A control with a small caption under it. A control lower than Theme.controlHeight is
+    // centered in a slot of that height, so the captions of a row line up.
     component Cell: Column {
         property string caption
         default property alias content: holder.data
@@ -23,10 +25,27 @@ Column {
         Item {
             id: holder
 
-            implicitWidth: childrenRect.width
-            implicitHeight: childrenRect.height
+            implicitWidth: {
+                let widest = 0;
+                for (let i = 0; i < children.length; ++i)
+                    widest = Math.max(widest, children[i].width);
+                return widest;
+            }
+            implicitHeight: {
+                let tallest = Theme.controlHeight;
+                for (let i = 0; i < children.length; ++i)
+                    tallest = Math.max(tallest, children[i].height);
+                return tallest;
+            }
             width: implicitWidth
             height: implicitHeight
+
+            Component.onCompleted: {
+                for (let i = 0; i < children.length; ++i) {
+                    const child = children[i];
+                    child.y = Qt.binding(() => Math.round((holder.height - child.height) / 2));
+                }
+            }
         }
 
         OsText {
@@ -38,15 +57,19 @@ Column {
 
     // A titled group of cells that wraps to the available width.
     component Group: Column {
+        id: group
+
         property string title
+        property string description
         default property alias content: flow.data
 
         width: parent ? parent.width : implicitWidth
-        spacing: Theme.spacingSm
+        spacing: Theme.spacingMd
 
-        OsText {
-            text: parent.title
-            font.weight: Font.DemiBold
+        OsSectionHeader {
+            width: parent.width
+            title: group.title
+            description: group.description
         }
 
         Flow {
@@ -59,18 +82,104 @@ Column {
 
     spacing: Theme.spacingXl
 
-    Component.onCompleted: {
-        if (focusDemo)
-            Qt.callLater(() => focusedField.forceActiveFocus(Qt.TabFocusReason));
+    Column {
+        width: parent.width
+        spacing: Theme.spacingSm
+
+        OsText {
+            text: qsTr("Inputs")
+            size: "title"
+            Accessible.role: Accessible.Heading
+        }
+
+        OsText {
+            width: parent.width
+            text: qsTr("Buttons, fields, pickers and toggles in their states: default, on or checked, error, disabled and keyboard focus.")
+            muted: true
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+        }
     }
 
-    OsText {
-        text: qsTr("Inputs")
-        size: "title"
+    Group {
+        title: qsTr("Button")
+        description: qsTr("OsButton variants, with and without an icon, and disabled.")
+
+        Cell {
+            caption: qsTr("Primary")
+
+            OsButton {
+                text: qsTr("Connect")
+                variant: "primary"
+            }
+        }
+        Cell {
+            caption: qsTr("Primary, icon")
+
+            OsButton {
+                text: qsTr("New host")
+                variant: "primary"
+                iconName: "plus"
+            }
+        }
+        Cell {
+            caption: qsTr("Secondary")
+
+            OsButton {
+                text: qsTr("Import")
+                iconName: "import"
+            }
+        }
+        Cell {
+            caption: qsTr("Ghost")
+
+            OsButton {
+                text: qsTr("Cancel")
+                variant: "ghost"
+            }
+        }
+        Cell {
+            caption: qsTr("Danger")
+
+            OsButton {
+                text: qsTr("Delete")
+                variant: "danger"
+                iconName: "trash-2"
+            }
+        }
+        Cell {
+            caption: qsTr("Primary, disabled")
+
+            OsButton {
+                text: qsTr("Connect")
+                variant: "primary"
+                enabled: false
+            }
+        }
+        Cell {
+            caption: qsTr("Secondary, disabled")
+
+            OsButton {
+                text: qsTr("Import")
+                iconName: "import"
+                enabled: false
+            }
+        }
+        Cell {
+            caption: qsTr("Danger, disabled")
+
+            OsButton {
+                text: qsTr("Delete")
+                variant: "danger"
+                iconName: "trash-2"
+                enabled: false
+            }
+        }
     }
 
     Group {
         title: qsTr("Icon button")
+        description: qsTr("Square, icon only; the tooltip is also the accessible name.")
 
         Cell {
             caption: qsTr("Ghost")
@@ -121,6 +230,7 @@ Column {
 
     Group {
         title: qsTr("Text field")
+        description: qsTr("Placeholder, text, keyboard focus, error and disabled.")
 
         Cell {
             caption: qsTr("Placeholder")
@@ -165,6 +275,7 @@ Column {
 
     Group {
         title: qsTr("Search and password fields")
+        description: qsTr("Escape clears the search; the eye button reveals the password.")
 
         Cell {
             caption: qsTr("Search, empty")
@@ -205,6 +316,7 @@ Column {
 
     Group {
         title: qsTr("Combo box and font picker")
+        description: qsTr("Themed popups; the font pickers draw every family in itself.")
 
         Cell {
             caption: qsTr("Strings")
@@ -261,7 +373,8 @@ Column {
     }
 
     Group {
-        title: qsTr("Switch and check box")
+        title: qsTr("Switch")
+        description: qsTr("On/off settings that apply at once.")
 
         Cell {
             caption: qsTr("Off")
@@ -295,6 +408,12 @@ Column {
                 enabled: false
             }
         }
+    }
+
+    Group {
+        title: qsTr("Check box")
+        description: qsTr("Includes the partially checked state of a \"select all\" box.")
+
         Cell {
             caption: qsTr("Unchecked")
 
@@ -340,6 +459,7 @@ Column {
 
     Group {
         title: qsTr("Slider and spin box")
+        description: qsTr("The arrow keys step the value; the spin box also takes typed numbers.")
 
         Cell {
             caption: qsTr("Slider")
@@ -397,7 +517,8 @@ Column {
     }
 
     Group {
-        title: qsTr("Color picker and shortcut")
+        title: qsTr("Color picker")
+        description: qsTr("Preset swatches and a hex field.")
 
         Cell {
             caption: qsTr("Color picker")
@@ -411,6 +532,12 @@ Column {
                 enabled: false
             }
         }
+    }
+
+    Group {
+        title: qsTr("Shortcut capture")
+        description: qsTr("Click, then press a key combination. Escape cancels, Backspace clears.")
+
         Cell {
             caption: qsTr("Shortcut")
 
@@ -436,6 +563,7 @@ Column {
 
     Group {
         title: qsTr("Scroll bar")
+        description: qsTr("Thin, themed bars for any Flickable.")
 
         Cell {
             caption: qsTr("Always on")

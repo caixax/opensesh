@@ -188,6 +188,7 @@ Smoke-test exit codes:
 - If a file named `portable` sits next to the executable, everything goes to `./data/` next to it instead.
 - On Linux, directories the app creates get mode `0700`, the data directory is always kept private, and `config.toml` is written with mode `0600`.
 - You can edit `config.toml` while the app runs: changes apply live. An invalid value is ignored, with a warning that names the key.
+- A `config.toml` with a syntax error, or one written by a newer OpenSesh, is never overwritten: changes made in the app apply but aren't saved until the file is fixed (Settings > General shows why). "Restore defaults" replaces a broken file and keeps it as `config.toml.bak.1`.
 
 ## Checking Wayland and X11
 

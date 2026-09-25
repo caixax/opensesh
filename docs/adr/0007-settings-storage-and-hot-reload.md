@@ -31,7 +31,7 @@ For writing:
 
 **Parsing (`opensesh-core::config`):**
 - Each field is read and validated on its own. An unknown or invalid value falls back to its default and produces a warning with the dotted key (for example `appearance.density: unknown value "huge"`). Unknown keys produce a warning too.
-- A TOML syntax error fails the whole file, with the line and column.
+- A TOML syntax error fails the whole file, with the line and column. The app then runs on the defaults (or keeps its current settings, for an external edit) and **does not overwrite the file** until it parses again, so a typo in a hand edit is never replaced by the in-memory settings. An explicit, confirmed "Restore defaults" is the exception: it replaces the file, and the rotation keeps the broken one as `config.toml.bak.1`.
 
 **Schema versions:**
 - A missing `schema_version` is treated as the current version.
@@ -56,7 +56,7 @@ Writing identical content does nothing, so backups don't churn.
 **Hot reload (`opensesh-core::watch::FileWatcher`):**
 - Uses `notify` 8.2 on the **parent directory**, because atomic replacement by editors and by our own writer ends a watch on the file itself.
 - Events are debounced (250 ms).
-- The watcher ignores the echo of our own writes by comparing the file with the last text we queued.
+- The watcher ignores the echo of our own writes by comparing the file with the **recent** texts we queued (the last 16). Comparing with only the latest one is not enough: when two changes are saved within the debounce, the watcher can read the older write while the newer one is still pending, mistake it for an external edit and revert the newer value in memory.
 - Invalid external edits keep the current settings and report the error.
 
 **UI state:** window geometry, panels and the last view go to a separate `state.toml` in the **data** directory. It is machine-local, disposable and has no backups.

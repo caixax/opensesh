@@ -130,7 +130,7 @@ T.AbstractButton {
         id: tip
 
         parent: control
-        visible: !control.showLabel && control.text.length > 0 && (control.hovered || control.visualFocus)
+        visible: control.visible && !control.showLabel && control.text.length > 0 && (control.hovered || control.visualFocus)
         delay: control.visualFocus ? 0 : 500
         text: control.text
         x: control.mirrored ? control.leftInset - implicitWidth - Theme.spacingSm

@@ -95,6 +95,8 @@ jobs:
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Tests
         run: cargo test --locked --workspace
+      - name: Translations are up to date (lupdate)
+        run: cargo xtask i18n --check
       - name: Build the app
         run: cargo build --locked -p opensesh-app
       - name: GUI smoke test (offscreen)

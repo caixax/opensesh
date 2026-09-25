@@ -71,6 +71,12 @@ T.TabBar {
         highlightRangeMode: ListView.ApplyRange
         preferredHighlightBegin: Theme.spacingXxl
         preferredHighlightEnd: width - Theme.spacingXxl
+
+        // Keep the current tab in view when the strip gets narrower (e.g. the window shrinks).
+        onWidthChanged: {
+            if (currentIndex >= 0)
+                positionViewAtIndex(currentIndex, ListView.Contain);
+        }
     }
 
     background: null

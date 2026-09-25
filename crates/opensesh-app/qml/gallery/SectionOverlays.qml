@@ -1,13 +1,17 @@
 // Gallery section for the overlay components: OsDialog, OsDrawer, OsContextMenu with OsMenuItem
-// and OsMenuSeparator, OsTooltip, OsToast and OsToastHost. Buttons open the real popups; static
+// and OsMenuSeparator, OsCommandPalette (over sample actions), OsTooltip, OsToast and OsToastHost.
+// Buttons open the real popups; static
 // previews show menu items, a tooltip and toasts in their states. The toast buttons go through
 // the `Toasts` singleton, so the window needs an OsToastHost to show them.
 //   pinTooltip: bool     keep the preview tooltip open while the section is visible (default
-//                        true); it lives in the window overlay, so hide it when scrolled away
+//                        true); it lives in the window overlay, so it is also hidden while its
+//                        button is outside visibleTop..visibleBottom
+//   visibleTop, visibleBottom: real  part of the section on screen, in section coordinates
+//                        (bind them to the scroll position; default: the whole section)
 //   lastResult: string   read-only; what the last dialog or menu interaction did
 //   smokeSteps: list     functions that open and close every overlay, for SmokeTest.steps
 // Functions (for screenshot `prepare` hooks): openMenu(showSubMenu), openMenuAt(item), openDialog(),
-// openDrawer(), showSampleToasts(), closeAll().
+// openDrawer(), openPalette(query), showSampleToasts(), closeAll().
 import QtQuick
 import QtQuick.Templates as T
 import cc.caixa.opensesh
@@ -16,6 +20,8 @@ Column {
     id: section
 
     property bool pinTooltip: true
+    property real visibleTop: 0
+    property real visibleBottom: height
     readonly property string lastResult: resultText.result
     readonly property var smokeSteps: [
         () => dialog.open(),
@@ -28,6 +34,13 @@ Column {
         () => leftDrawer.close(),
         () => section.openMenu(true),
         () => contextMenu.dismiss(),
+        () => section.openPalette(""),
+        () => palette.setQuery("conn"),
+        () => {
+            if (palette.resultCount < 1)
+                console.warn("gallery: the palette found no sample action for \"conn\"");
+            palette.runCurrent();
+        },
         () => section.showSampleToasts()
     ]
 
@@ -58,8 +71,12 @@ Column {
         rightDrawer.open();
     }
 
+    function openPalette(query) {
+        palette.openWith(query);
+    }
+
     function closeAll() {
-        for (const popup of [dialog, dangerDialog, rightDrawer, leftDrawer])
+        for (const popup of [dialog, dangerDialog, rightDrawer, leftDrawer, palette])
             popup.close();
         contextMenu.dismiss();
     }
@@ -84,29 +101,95 @@ Column {
         onTriggered: resultText.result = qsTr("Toast action triggered")
     }
 
-    Component.onCompleted: {
-        if (!ActionRegistry.find(toastAction.actionId))
-            ActionRegistry.register(toastAction);
-    }
-    Component.onDestruction: ActionRegistry.unregister(toastAction)
+    // Sample actions for the command palette (the shell's own actions don't exist in the gallery).
+    readonly property list<OsAction> sampleActions: [
+        OsAction {
+            actionId: "gallery.quickConnect"
+            text: qsTr("Quick connect")
+            category: qsTr("Connections")
+            iconName: "zap"
+            shortcut: "Ctrl+Shift+O"
+            onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
+        },
+        OsAction {
+            actionId: "gallery.newTab"
+            text: qsTr("New local terminal")
+            category: qsTr("Tabs")
+            iconName: "square-terminal"
+            shortcut: "Ctrl+Shift+T"
+            onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
+        },
+        OsAction {
+            actionId: "gallery.sftp"
+            text: qsTr("Toggle SFTP panel")
+            category: qsTr("View")
+            iconName: "folder-sync"
+            shortcut: "Ctrl+Shift+E"
+            onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
+        },
+        OsAction {
+            actionId: "gallery.reconnect"
+            text: qsTr("Reconnect all sessions")
+            category: qsTr("Connections")
+            iconName: "refresh-cw"
+            onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
+        },
+        OsAction {
+            actionId: "gallery.settings"
+            text: qsTr("Open settings")
+            category: qsTr("App")
+            iconName: "settings"
+            shortcut: "Ctrl+,"
+            onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
+        },
+        OsAction {
+            actionId: "gallery.disabled"
+            text: qsTr("Disconnect (no session)")
+            category: qsTr("Connections")
+            iconName: "unplug"
+            enabled: false
+        }
+    ]
 
-    OsText {
-        text: qsTr("Overlays")
-        size: "title"
+    Component.onCompleted: {
+        for (const action of [toastAction, ...sampleActions]) {
+            if (!ActionRegistry.find(action.actionId))
+                ActionRegistry.register(action);
+        }
+    }
+    Component.onDestruction: {
+        for (const action of [toastAction, ...sampleActions])
+            ActionRegistry.unregister(action);
+    }
+
+    Column {
+        width: parent.width
+        spacing: Theme.spacingSm
+
+        OsText {
+            text: qsTr("Overlays")
+            size: "title"
+            Accessible.role: Accessible.Heading
+        }
+
+        OsText {
+            width: parent.width
+            text: qsTr("Dialogs, drawers, menus, tooltips and toasts. The buttons open the real popups; the previews show them in place.")
+            muted: true
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+        }
     }
 
     // Dialogs and drawers.
     Column {
-        spacing: Theme.spacingSm
+        width: parent.width
+        spacing: Theme.spacingMd
 
-        OsText {
-            text: qsTr("Dialogs and drawers")
-            size: "large"
-        }
-
-        OsText {
-            text: qsTr("Modal, over a scrim. Escape, the close button or the reject button dismiss them.")
-            muted: true
+        OsSectionHeader {
+            width: parent.width
+            title: qsTr("Dialogs and drawers")
+            description: qsTr("Modal, over a scrim. Escape, the close button or the reject button dismiss them.")
         }
 
         Row {
@@ -149,16 +232,13 @@ Column {
 
     // Menus.
     Column {
-        spacing: Theme.spacingSm
+        width: parent.width
+        spacing: Theme.spacingMd
 
-        OsText {
-            text: qsTr("Context menu")
-            size: "large"
-        }
-
-        OsText {
-            text: qsTr("Live menu with icons, shortcuts, a checkable item, a submenu and a disabled item; static items on the right.")
-            muted: true
+        OsSectionHeader {
+            width: parent.width
+            title: qsTr("Context menu")
+            description: qsTr("Live menu with icons, shortcuts, a checkable item, a submenu and a disabled item; static items on the right.")
         }
 
         Row {
@@ -290,21 +370,50 @@ Column {
         }
     }
 
-    // Tooltips.
+    // Command palette.
     Column {
-        spacing: Theme.spacingSm
+        width: parent.width
+        spacing: Theme.spacingMd
 
-        OsText {
-            text: qsTr("Tooltip")
-            size: "large"
-        }
-
-        OsText {
-            text: qsTr("Shown after 600 ms of hover and hidden after 5 s. The second one stays open.")
-            muted: true
+        OsSectionHeader {
+            width: parent.width
+            title: qsTr("Command palette")
+            description: qsTr("Fuzzy search over the action registry, here with sample actions. Disabled actions are not listed; Enter runs the selected one.")
         }
 
         Row {
+            spacing: Theme.spacingSm
+
+            OsButton {
+                text: qsTr("Open command palette")
+                iconName: "command"
+                onClicked: section.openPalette("")
+            }
+
+            OsButton {
+                text: qsTr("Open with \"conn\"")
+                iconName: "search"
+                onClicked: section.openPalette("conn")
+            }
+        }
+    }
+
+    // Tooltips.
+    Column {
+        id: tooltipGroup
+
+        width: parent.width
+        spacing: Theme.spacingMd
+
+        OsSectionHeader {
+            width: parent.width
+            title: qsTr("Tooltip")
+            description: qsTr("Shown after 600 ms of hover and hidden after 5 s. The second one stays open.")
+        }
+
+        Row {
+            id: tooltipRow
+
             spacing: Theme.spacingSm
 
             OsButton {
@@ -325,9 +434,13 @@ Column {
                 iconName: "info"
 
                 OsTooltip {
+                    // The button's top edge in section coordinates.
+                    readonly property real top: tooltipGroup.y + tooltipRow.y + pinnedButton.y
+
                     x: pinnedButton.width + Theme.spacingSm
                     y: Math.round((pinnedButton.height - height) / 2)
-                    visible: section.pinTooltip && section.visible
+                    visible: section.pinTooltip && section.visible && top >= section.visibleTop
+                             && top + pinnedButton.height <= section.visibleBottom
                     delay: 0
                     timeout: -1
                     closePolicy: T.Popup.NoAutoClose
@@ -339,16 +452,13 @@ Column {
 
     // Toasts.
     Column {
-        spacing: Theme.spacingSm
+        width: parent.width
+        spacing: Theme.spacingMd
 
-        OsText {
-            text: qsTr("Toasts")
-            size: "large"
-        }
-
-        OsText {
-            text: qsTr("Bottom-right stack, at most four, dismissed after 5 s unless hovered.")
-            muted: true
+        OsSectionHeader {
+            width: parent.width
+            title: qsTr("Toasts")
+            description: qsTr("Bottom-right stack, at most four, dismissed after 5 s unless hovered.")
         }
 
         Row {
@@ -408,6 +518,10 @@ Column {
                 actionText: qsTr("Retry")
             }
         }
+    }
+
+    OsCommandPalette {
+        id: palette
     }
 
     OsDialog {

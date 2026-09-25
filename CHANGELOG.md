@@ -6,6 +6,39 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 1: design system and app skeleton.**
+  - **Theme (`opensesh-core::theme`, `Theme` QML singleton):**
+    - Dark and light palettes from PLAN §5.2, following the system color scheme live.
+    - Every text token is checked against WCAG AA in tests, for both schemes and 216 sample accents.
+    - Text on accent and status fills is computed for contrast (`accentText`, `Theme.textOn()`), so any user accent stays readable; low-contrast accents raise a warning.
+    - Comfortable and compact density, UI scale (80-150 %), UI font and reduce motion (all durations become 0).
+  - **Settings (`config.toml`):**
+    - A lenient per-field reader: an invalid value costs only that setting and produces a warning naming the key.
+    - `schema_version` with a migrations hook. A file from a newer OpenSesh, or one with a syntax error, is never overwritten.
+    - Atomic writes (temporary file, fsync, rename) with 5 rotated backups, on a background writer with a 300 ms debounce.
+    - Hot reload with `notify`, which recognises the app's own recent writes.
+    - Window geometry, side panel and last view in a separate `state.toml`.
+  - **Settings > General and Appearance:** every PLAN §6.1 option for them, applied live, with a preview card, language selector, restore defaults and the settings file location. The other sections show what sprint they arrive in.
+  - **Component library:** 41 `Os*` QML files built on Qt Quick Templates, using only `Theme` tokens, with keyboard focus rings and accessible names and roles ([ADR 0008](docs/adr/0008-qml-component-library.md), [contract](docs/design/components.md)).
+  - **Gallery (`--gallery`):** tokens with live contrast figures, typography and spacing, every icon, and every component in its states, with live dark/light, density, accent and reduce-motion switches that never write the user's settings.
+  - **Shell:**
+    - Custom title bar with tabs, and window decoration modes `auto`, `custom`, `native` and `none`. `auto` drops the window buttons on tiling compositors (Hyprland, Sway, niri, i3) ([ADR 0010](docs/adr/0010-window-decorations-and-notifications.md)).
+    - Frameless move and resize through `startSystemMove()` / `startSystemResize()`.
+    - Navigation rail (left, right or hidden, optional labels), placeholder views with empty states, collapsible side panel (left or right), status bar.
+    - Window size, position and maximized state are restored, skipping positions that no longer fit any screen.
+  - **Command palette and shortcuts:** a central action registry drives the palette (Ctrl+Shift+P, fuzzy search, recent actions first) and the PLAN §6.4 default shortcuts, with conflict detection. No shortcut takes a combination terminal programs need.
+  - **Notifications:** in-app toasts plus a notification history in the status bar.
+  - **Icons and fonts:**
+    - Icons are rendered by a `QQuickImageProvider` (`image://icon/<name>?color=&size=`) from the pinned SVGs, recolored and cached.
+    - Operating system logos come from pinned Tabler and Simple Icons packages.
+    - Inter and JetBrains Mono are bundled from their pinned, sha256-verified releases (`cargo xtask fonts`) and set as the UI and monospace fonts.
+  - **i18n ([ADR 0009](docs/adr/0009-i18n-pipeline.md)):** `cargo xtask i18n` runs lupdate and lrelease and generates a pseudo-locale (debug builds only). Changing the language retranslates the running UI. English is the only real language for now.
+  - **Crash dialog** rebuilt with the component library.
+  - **Quality:**
+    - The smoke tests of the main window and the gallery visit every view and overlay, and fail on any QML warning (exit code 6).
+    - `--screenshots <dir>` captures the main window, the gallery and the crash dialog in dark/light × comfortable/compact.
+    - CI runs the gallery smoke tests, uploads the screenshots and checks that translations are up to date.
+  - **Docs:** ADRs 0006-0010, the component contract, developer setup and the manual test matrix.
 - **Sprint 0: foundations.**
   - **Workspace:**
     - Cargo workspace (edition 2024) with the toolchain pinned to the MSRV (Rust 1.88.0).
