@@ -235,6 +235,27 @@ Smoke-test exit codes:
 - You can edit `config.toml` while the app runs: changes apply live. An invalid value is ignored, with a warning that names the key.
 - A `config.toml` with a syntax error, or one written by a newer OpenSesh, is never overwritten: changes made in the app apply but aren't saved until the file is fixed (Settings > General shows why). "Restore defaults" replaces a broken file and keeps it as `config.toml.bak.1`.
 
+## Releasing
+
+Releases are cut from this Windows machine, with the Linux packages built in the WSL distros:
+
+```bat
+scripts\release.bat -Patch        :: or -Minor, -Major, -V 0.3.0; -SkipTests, -NoPublish, -SkipLinux
+```
+
+The script:
+
+1. Checks that `main` is clean.
+2. Sets the version in `Cargo.toml` and moves the `CHANGELOG.md` [Unreleased] section under it.
+3. Runs the tests.
+4. Builds the Windows packages with `cargo xtask dist windows`: `windeployqt`, the MSVC runtime from System32, the bundled ConPTY, the portable zip (with the `portable` marker) and the NSIS installer (`packaging/windows/opensesh.nsi`; NSIS 3 is needed, found in Program Files or through `NSIS_HOME`).
+5. Runs `scripts/linux/build.sh` in `Debian` (.deb), `FedoraLinux-43` (.rpm) and `archlinux` (pacman package) at the same time. Each build copies the tree into the distro's own filesystem and links against the distro's Qt. The distros need the Qt development packages from [Linux](#linux) plus `dpkg-dev`, `rpm-build` or `base-devel`.
+6. Writes `dist/SHA256SUMS.txt`, commits, tags `vX.Y.Z`, pushes and publishes the GitHub release with `gh`, using the version's changelog section as notes.
+
+The **Release (fallback)** workflow in GitHub Actions builds the same packages for an existing tag when this machine isn't available (`gh workflow run release.yml -f tag=v0.1.0`).
+
+Each Linux package asks for the Qt it was built against: the `.deb` targets Debian 13, and Ubuntu needs its own build (not packaged yet). `install.sh` (`curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | bash`) picks the package for the distribution, verifies it and installs it; running it again updates OpenSesh.
+
 ## Checking Wayland and X11
 
 The app sets `QGuiApplication::desktopFileName` to **`cc.caixa.OpenSesh`**. On Wayland, Qt sends it as the xdg-toplevel `app_id`. On X11 it goes into `_GTK_APPLICATION_ID` and `_KDE_NET_WM_DESKTOP_FILE`, and `WM_CLASS` is `"opensesh-app", "OpenSesh"`.

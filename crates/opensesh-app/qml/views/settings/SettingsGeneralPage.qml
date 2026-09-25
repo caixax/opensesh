@@ -110,12 +110,65 @@ SettingsPage {
 
         SettingsRow {
             label: qsTr("Check for updates")
-            helpText: qsTr("Off by default. When enabled, OpenSesh contacts GitHub Releases; nothing else is ever sent. The check itself arrives in Sprint 18.")
+            helpText: qsTr("Off by default. When on, OpenSesh asks GitHub Releases for a newer version at startup and once a day; nothing else is ever sent.")
 
             OsSwitch {
                 checked: AppSettings.checkForUpdates
                 Accessible.name: qsTr("Check for updates")
                 onToggled: AppSettings.checkForUpdates = checked
+            }
+        }
+
+        SettingsRow {
+            label: qsTr("Version")
+            helpText: {
+                switch (Updater.state) {
+                case "checking":
+                    return qsTr("Checking…");
+                case "upToDate":
+                    return qsTr("OpenSesh %1 is the latest version.").arg(Updater.currentVersion);
+                case "available":
+                    return Updater.canInstall
+                        ? qsTr("OpenSesh %1 is available. Updating downloads it, verifies it and restarts OpenSesh.").arg(Updater.latestVersion)
+                        : Updater.installKind === "package"
+                          ? qsTr("OpenSesh %1 is available. Update it with your package manager or run the install script again.").arg(Updater.latestVersion)
+                          : qsTr("OpenSesh %1 is available on the download page.").arg(Updater.latestVersion);
+                case "downloading":
+                    return qsTr("Downloading OpenSesh %1…").arg(Updater.latestVersion);
+                case "installing":
+                    return qsTr("Installing; OpenSesh restarts in a moment.");
+                case "error":
+                    return qsTr("The update check failed: %1").arg(Updater.error);
+                default:
+                    return qsTr("You are running OpenSesh %1.").arg(Updater.currentVersion);
+                }
+            }
+
+            Flow {
+                width: parent.width
+                spacing: Theme.spacingSm
+
+                OsButton {
+                    text: qsTr("Check now")
+                    iconName: "refresh-cw"
+                    enabled: Updater.state !== "checking" && Updater.state !== "downloading"
+                             && Updater.state !== "installing"
+                    onClicked: Updater.check()
+                }
+
+                OsButton {
+                    visible: Updater.state === "available" || Updater.state === "downloading"
+                    variant: "primary"
+                    text: Updater.canInstall ? qsTr("Update and restart") : qsTr("Open the download page")
+                    iconName: Updater.canInstall ? "download" : "external-link"
+                    enabled: Updater.state === "available"
+                    onClicked: {
+                        if (Updater.canInstall)
+                            Updater.install();
+                        else
+                            Qt.openUrlExternally(Updater.releaseUrl);
+                    }
+                }
             }
         }
     }

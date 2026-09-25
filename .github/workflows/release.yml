@@ -1,0 +1,125 @@
+# Fallback release build. Releases are normally cut locally with scripts/release.bat (Windows plus
+# the WSL distros, minutes instead of hours); this workflow builds the same packages on GitHub's
+# runners for an existing tag and attaches them to its release (creating the release if needed).
+name: Release (fallback)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  QT_VERSION: "6.10.3"
+
+jobs:
+  linux:
+    name: ${{ matrix.name }} package
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 13
+            image: debian:trixie
+            setup: >-
+              apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y
+              build-essential dpkg-dev git curl ca-certificates pkg-config lld
+              qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-wayland-dev
+              qml6-module-qtquick qml6-module-qtquick-layouts qml6-module-qtquick-window
+              qml6-module-qtquick-templates qml6-module-qtqml-workerscript qt6-svg-plugins
+          - name: Fedora
+            image: fedora:latest
+            setup: >-
+              dnf install -y
+              gcc-c++ git curl lld pkgconf-pkg-config rpm-build
+              qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg-devel qt6-qtwayland-devel
+          - name: Arch Linux
+            image: archlinux:latest
+            setup: >-
+              pacman -Syu --noconfirm --needed
+              base-devel git curl lld qt6-base qt6-declarative qt6-svg qt6-wayland
+    steps:
+      - name: Install system packages
+        run: ${{ matrix.setup }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Install rustup and the pinned toolchain
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" toolchain install
+      - name: Build the package
+        shell: bash
+        run: bash scripts/linux/build.sh
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-${{ strategy.job-index }}
+          path: dist/*
+          if-no-files-found: error
+
+  windows:
+    name: Windows packages
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Install Qt
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Point cxx-qt at the installed qmake
+        run: echo "QMAKE=$QT_ROOT_DIR/bin/qmake.exe" >> "$GITHUB_ENV"
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - name: Build the portable zip and the installer
+        run: |
+          cargo xtask dist windows
+          mkdir -p dist
+          cp target/dist/*.zip target/dist/*-setup.exe dist/
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-windows
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: package-*
+          path: dist
+          merge-multiple: true
+      - name: Checksums and upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          cd dist
+          sha256sum -- *.exe *.zip *.deb *.rpm *.zst | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "OpenSesh $TAG" --notes "See CHANGELOG.md."
+          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber -- *

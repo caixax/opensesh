@@ -156,6 +156,22 @@
         <translation>[Šĥöŵ ñöťíƒíçáťíöñš ~~~~~~]</translation>
     </message>
     <message>
+        <source>Check for updates</source>
+        <translation>[Çĥéçķ ƒöŕ üþďáťéš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Checking for updates…</source>
+        <translation>[Çĥéçķíñĝ ƒöŕ üþďáťéš… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Update OpenSesh and restart</source>
+        <translation>[Üþďáťé ÖþéñŠéšĥ áñď ŕéšťáŕť ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Open the download page</source>
+        <translation>[Öþéñ ťĥé ďöŵñĺöáď þáĝé ~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Open logs folder</source>
         <translation>[Öþéñ ĺöĝš ƒöĺďéŕ ~~~~~]</translation>
     </message>
@@ -501,6 +517,18 @@
     <message>
         <source>OpenSesh</source>
         <translation>[ÖþéñŠéšĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh %1 is available.</source>
+        <translation>[ÖþéñŠéšĥ %1 íš áváíĺábĺé. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Update</source>
+        <translation>[Üþďáťé ~~]</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>[Ďöŵñĺöáď ~~~]</translation>
     </message>
     <message>
         <source>Settings reloaded from config.toml</source>
@@ -2866,8 +2894,60 @@
         <translation>[Çĥéçķ ƒöŕ üþďáťéš ~~~~~~]</translation>
     </message>
     <message>
-        <source>Off by default. When enabled, OpenSesh contacts GitHub Releases; nothing else is ever sent. The check itself arrives in Sprint 18.</source>
-        <translation>[Öƒƒ bý ďéƒáüĺť. Ŵĥéñ éñábĺéď, ÖþéñŠéšĥ çöñťáçťš ĜíťĤüb Ŕéĺéášéš; ñöťĥíñĝ éĺšé íš évéŕ šéñť. Ťĥé çĥéçķ íťšéĺƒ áŕŕívéš íñ Šþŕíñť 18. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Off by default. When on, OpenSesh asks GitHub Releases for a newer version at startup and once a day; nothing else is ever sent.</source>
+        <translation>[Öƒƒ bý ďéƒáüĺť. Ŵĥéñ öñ, ÖþéñŠéšĥ ášķš ĜíťĤüb Ŕéĺéášéš ƒöŕ á ñéŵéŕ véŕšíöñ áť šťáŕťüþ áñď öñçé á ďáý; ñöťĥíñĝ éĺšé íš évéŕ šéñť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Version</source>
+        <translation>[Véŕšíöñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Checking…</source>
+        <translation>[Çĥéçķíñĝ… ~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh %1 is the latest version.</source>
+        <translation>[ÖþéñŠéšĥ %1 íš ťĥé ĺáťéšť véŕšíöñ. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh %1 is available. Updating downloads it, verifies it and restarts OpenSesh.</source>
+        <translation>[ÖþéñŠéšĥ %1 íš áváíĺábĺé. Üþďáťíñĝ ďöŵñĺöáďš íť, véŕíƒíéš íť áñď ŕéšťáŕťš ÖþéñŠéšĥ. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh %1 is available. Update it with your package manager or run the install script again.</source>
+        <translation>[ÖþéñŠéšĥ %1 íš áváíĺábĺé. Üþďáťé íť ŵíťĥ ýöüŕ þáçķáĝé máñáĝéŕ öŕ ŕüñ ťĥé íñšťáĺĺ šçŕíþť áĝáíñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh %1 is available on the download page.</source>
+        <translation>[ÖþéñŠéšĥ %1 íš áváíĺábĺé öñ ťĥé ďöŵñĺöáď þáĝé. ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Downloading OpenSesh %1…</source>
+        <translation>[Ďöŵñĺöáďíñĝ ÖþéñŠéšĥ %1… ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Installing; OpenSesh restarts in a moment.</source>
+        <translation>[Íñšťáĺĺíñĝ; ÖþéñŠéšĥ ŕéšťáŕťš íñ á möméñť. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The update check failed: %1</source>
+        <translation>[Ťĥé üþďáťé çĥéçķ ƒáíĺéď: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>You are running OpenSesh %1.</source>
+        <translation>[Ýöü áŕé ŕüññíñĝ ÖþéñŠéšĥ %1. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Check now</source>
+        <translation>[Çĥéçķ ñöŵ ~~~]</translation>
+    </message>
+    <message>
+        <source>Update and restart</source>
+        <translation>[Üþďáťé áñď ŕéšťáŕť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Open the download page</source>
+        <translation>[Öþéñ ťĥé ďöŵñĺöáď þáĝé ~~~~~~~]</translation>
     </message>
     <message>
         <source>Settings file</source>

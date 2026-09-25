@@ -264,6 +264,29 @@ QtObject {
             onTriggered: root.shell.toggleNotifications()
         },
         OsAction {
+            actionId: "app.checkForUpdates"
+            text: qsTr("Check for updates")
+            category: root.categoryApp
+            iconName: "refresh-cw"
+            onTriggered: {
+                Updater.check();
+                Toasts.show(qsTr("Checking for updates…"), "info");
+            }
+        },
+        OsAction {
+            actionId: "app.update"
+            text: Updater.canInstall ? qsTr("Update OpenSesh and restart") : qsTr("Open the download page")
+            category: root.categoryApp
+            iconName: "download"
+            enabled: Updater.state === "available"
+            onTriggered: {
+                if (Updater.canInstall)
+                    Updater.install();
+                else
+                    Qt.openUrlExternally(Updater.releaseUrl);
+            }
+        },
+        OsAction {
             actionId: "app.openLogsFolder"
             text: qsTr("Open logs folder")
             category: root.categoryApp
