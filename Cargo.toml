@@ -1,0 +1,74 @@
+[workspace]
+resolver = "3"
+members = ["crates/opensesh-core", "crates/opensesh-app", "xtask"]
+default-members = ["crates/opensesh-core", "crates/opensesh-app"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+# MSRV: see docs/adr/0002-toolchain-and-msrv.md. Keep in sync with rust-toolchain.toml.
+rust-version = "1.88"
+license = "GPL-3.0-or-later"
+authors = ["OpenSesh contributors"]
+homepage = "https://github.com/caixax/opensesh"
+repository = "https://github.com/caixax/opensesh"
+publish = false
+
+# Every third-party version is pinned here (verified on crates.io on 2026-09-25) and locked
+# further by the committed Cargo.lock. Member crates only use `{ workspace = true }`.
+[workspace.dependencies]
+# Internal crates
+opensesh-core = { path = "crates/opensesh-core" }
+
+# Qt bridge (KDAB cxx-qt)
+cxx = "1.0.202"
+cxx-qt = "0.10.0"
+cxx-qt-lib = { version = "0.10.0", default-features = false }
+cxx-qt-build = "0.10.0"
+
+# Errors
+anyhow = "1.0.104"
+thiserror = "2.0.21"
+
+# Logging
+tracing = "0.1.44"
+tracing-appender = "0.2.5"
+tracing-subscriber = { version = "0.3.23", default-features = false }
+
+# Config and platform
+directories = "6.0.0"
+serde = { version = "1.0.229", features = ["derive"] }
+toml = "1.1.6"
+
+# xtask only
+flate2 = "1.1.10"
+regex = "1.13.1"
+sha2 = "0.11.0"
+tar = "0.4.46"
+ureq = "3.4.2"
+
+# Windows only (opensesh-app: console attach and error message box)
+windows-sys = "0.61.2"
+
+# Tests
+tempfile = "3.27.0"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+# PLAN §0 rule 10: no unwrap()/expect() in production code (tests are allowed via clippy.toml).
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "warn"
+todo = "warn"
+dbg_macro = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+large_futures = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

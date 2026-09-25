@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=OpenSesh
+GenericName=Remote Connections Client
+Comment=SSH, SFTP, tunnels, terminals, RDP and VNC in one app
+Exec=opensesh-app
+Icon=cc.caixa.OpenSesh
+Terminal=false
+Categories=Network;RemoteAccess;
+Keywords=ssh;sftp;terminal;tunnel;rdp;vnc;serial;telnet;mosh;
+StartupNotify=true
+StartupWMClass=OpenSesh
