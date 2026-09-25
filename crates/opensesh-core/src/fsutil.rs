@@ -403,14 +403,13 @@ mod tests {
         let target = dotfiles.join("opensesh.toml");
         fs::write(&target, "v0").unwrap();
         let link = config_dir.join("config.toml");
-        // A relative link, as GNU Stow makes them.
-        if !symlink_file(Path::new("../dotfiles/opensesh.toml"), &link) {
+        // A relative link, as GNU Stow makes them. Built with `join`: Windows only follows link
+        // targets written with its own separator.
+        let relative = Path::new("..").join("dotfiles").join("opensesh.toml");
+        if !symlink_file(&relative, &link) {
             return;
         }
-        assert_eq!(
-            resolve_links(&link),
-            config_dir.join("../dotfiles/opensesh.toml")
-        );
+        assert_eq!(resolve_links(&link), config_dir.join(&relative));
 
         atomic_write(&link, b"v1", 5).unwrap();
         atomic_write(&link, b"v2", 5).unwrap();
