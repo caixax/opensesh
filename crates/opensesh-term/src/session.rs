@@ -30,20 +30,42 @@ use alacritty_terminal::term::{
     viewport_to_point,
 };
 use alacritty_terminal::vte::ansi::{
-    CursorShape as EngineCursorShape, CursorStyle, NamedColor, Processor,
+    CursorShape as EngineCursorShape, CursorStyle, NamedColor, Processor, Timeout,
 };
 use crossbeam_channel::{Receiver, Sender, TryRecvError, select};
 
 use crate::backend::{BackendEvent, TermSize, TerminalBackend};
 use crate::input::InputModes;
 use crate::input::paste::encode_focus;
-use crate::osc::SideParser;
+use crate::osc::{OscLimiter, SideParser};
 use crate::palette::{ColorTable, DIM_BLEND, Palette};
 use crate::search::{Search, SearchError};
 use crate::snapshot::{Cell, Cursor, CursorShape, Damage, Frame, Row, flags};
 
 /// Most bytes parsed per `Term` lock hold. Bounds how long `snapshot` can wait for the engine.
 const CHUNK_BYTES: usize = 16 * 1024;
+
+/// How long a synchronized update (DEC mode 2026) may hold the redraw back, as in vte.
+const SYNC_HOLD: Duration = Duration::from_millis(150);
+
+/// A vte synchronized-update timeout that never asks vte to buffer.
+///
+/// With vte's own handler, the content of a synchronized update is buffered (up to 2 MiB) and
+/// then parsed in one call, which would hold the `Term` lock for that whole block. Here vte
+/// parses it like any other output, in [`CHUNK_BYTES`] steps, and the engine only delays the
+/// redraw ([`SYNC_HOLD`]).
+#[derive(Debug, Default)]
+struct NoSyncBuffer;
+
+impl Timeout for NoSyncBuffer {
+    fn set_timeout(&mut self, _duration: Duration) {}
+
+    fn clear_timeout(&mut self) {}
+
+    fn pending_timeout(&self) -> bool {
+        false
+    }
+}
 
 /// The engine stops pulling backend events while this many bytes wait to be parsed, so a fast
 /// producer is slowed down by the backend's bounded channel instead of filling memory.
@@ -201,6 +223,10 @@ struct Shared {
     dirty: AtomicBool,
     modes: AtomicU32,
     x10_mouse: AtomicBool,
+    /// The engine's mouse modes are stale (see [`SideParser::engine_mouse_hidden`]).
+    engine_mouse_hidden: AtomicBool,
+    /// A synchronized update (DEC mode 2026) is open: snapshots keep showing the previous screen.
+    synchronized: AtomicBool,
     closed: AtomicBool,
     notify: Notify,
     search_max_lines: usize,
@@ -341,6 +367,8 @@ impl Session {
             dirty: AtomicBool::new(false),
             modes: AtomicU32::new(TermMode::default().bits()),
             x10_mouse: AtomicBool::new(false),
+            engine_mouse_hidden: AtomicBool::new(false),
+            synchronized: AtomicBool::new(false),
             closed: AtomicBool::new(false),
             notify,
             search_max_lines: config.search_max_lines.max(1),
@@ -353,7 +381,9 @@ impl Session {
             commands: command_rx,
             term_events,
             processor: Processor::new(),
+            sync_hold: None,
             side: SideParser::new(),
+            limiter: OscLimiter::default(),
             pending: Pending::default(),
             size,
             pending_resize: None,
@@ -419,8 +449,12 @@ impl Session {
     #[must_use]
     pub fn modes(&self) -> InputModes {
         let shared = &self.inner.shared;
+        let mut term = TermMode::from_bits_truncate(shared.modes.load(Ordering::Acquire));
+        if shared.engine_mouse_hidden.load(Ordering::Acquire) {
+            term.remove(TermMode::MOUSE_MODE);
+        }
         InputModes {
-            term: TermMode::from_bits_truncate(shared.modes.load(Ordering::Acquire)),
+            term,
             x10_mouse: shared.x10_mouse.load(Ordering::Acquire),
         }
     }
@@ -525,6 +559,8 @@ impl Session {
     pub fn search_clear(&self) {
         let mut state = self.lock();
         let had_search = state.search.take().is_some();
+        // Every row was painted with match colors: the renderer must redraw them all.
+        state.full_redraw |= had_search;
         drop(state);
         if had_search {
             self.redraw();
@@ -550,6 +586,12 @@ impl Session {
     pub fn snapshot(&self, out: &mut Frame) {
         let shared = &self.inner.shared;
         shared.dirty.store(false, Ordering::Release);
+        if shared.synchronized.load(Ordering::Acquire) {
+            // Nothing new until the update ends: the renderer keeps what it has (the damage
+            // stays in the Term for the next frame).
+            out.clear();
+            return;
+        }
         let mut state = shared.state.lock();
         state.fill(out);
     }
@@ -1054,8 +1096,15 @@ struct Engine {
     events: Receiver<BackendEvent>,
     commands: Receiver<Command>,
     term_events: Receiver<Event>,
-    processor: Processor,
+    /// vte never buffers synchronized updates here ([`NoSyncBuffer`]): their content is parsed in
+    /// the usual bounded chunks, and the engine only holds the redraw back.
+    processor: Processor<NoSyncBuffer>,
+    /// When the current synchronized update began (the redraw is held until it ends or
+    /// [`SYNC_HOLD`] passes).
+    sync_hold: Option<Instant>,
     side: SideParser,
+    /// Caps OSC strings before both parsers (hostile titles, ADR 0012).
+    limiter: OscLimiter,
     pending: Pending,
     size: TermSize,
     pending_resize: Option<TermSize>,
@@ -1248,19 +1297,30 @@ impl Engine {
             };
             let available = &front[self.pending.offset..];
             let bytes = &available[..available.len().min(CHUNK_BYTES - processed)];
+            let count = bytes.len();
+            let limited = self.limiter.filter(bytes);
+            let bytes = limited.as_deref().unwrap_or(bytes);
             self.side.advance(bytes);
             self.processor.advance(&mut state.term, bytes);
-            let count = bytes.len();
             processed += count;
             self.pending.consume(count);
         }
         self.after_parse(&mut state);
         drop(state);
         self.publish();
-        // Output that went entirely into a synchronized update (DEC mode 2026) isn't visible
-        // yet: no redraw until the update ends or times out.
-        if self.processor.sync_bytes_count() < processed {
-            self.shared.mark_dirty();
+        // Inside a synchronized update (DEC mode 2026) the screen is not shown until the update
+        // ends or times out.
+        match (self.side.synchronized(), self.sync_hold) {
+            (true, None) => {
+                self.sync_hold = Some(Instant::now());
+                self.shared.synchronized.store(true, Ordering::Release);
+            }
+            (true, Some(_)) => {}
+            (false, _) => {
+                self.sync_hold = None;
+                self.shared.synchronized.store(false, Ordering::Release);
+                self.shared.mark_dirty();
+            }
         }
     }
 
@@ -1313,6 +1373,9 @@ impl Engine {
         self.shared
             .x10_mouse
             .store(self.side.x10_mouse(), Ordering::Release);
+        self.shared
+            .engine_mouse_hidden
+            .store(self.side.engine_mouse_hidden(), Ordering::Release);
         if let Some(directory) = self.side.take_working_directory() {
             self.directory.set(directory);
         }
@@ -1320,7 +1383,7 @@ impl Engine {
 
     fn next_deadline(&self) -> Option<Instant> {
         [
-            self.processor.sync_timeout().sync_timeout(),
+            self.sync_hold.map(|start| start + SYNC_HOLD),
             self.title.due(),
             self.directory.due(),
             self.bell.due(),
@@ -1332,17 +1395,11 @@ impl Engine {
     }
 
     fn timers(&mut self, now: Instant) {
-        if self
-            .processor
-            .sync_timeout()
-            .sync_timeout()
-            .is_some_and(|deadline| now >= deadline)
-        {
-            let shared = Arc::clone(&self.shared);
-            let mut state = shared.state.lock();
-            self.processor.stop_sync(&mut state.term);
-            self.after_parse(&mut state);
-            drop(state);
+        if self.sync_hold.is_some_and(|start| now >= start + SYNC_HOLD) {
+            // The program never ended its synchronized update: show what it drew.
+            self.sync_hold = None;
+            self.side.end_synchronized();
+            self.shared.synchronized.store(false, Ordering::Release);
             self.shared.mark_dirty();
         }
         self.flush_notices(now, false);
@@ -1753,8 +1810,16 @@ mod tests {
             Some("line 2")
         );
         assert_eq!(h.session.search("no such text", true).unwrap(), None);
+        // Take the frame with the matches, so the next one would be partial without a reason.
+        h.session.search("line", true).unwrap();
+        let _ = h.frame();
         h.session.search_clear();
         let frame = h.frame();
+        assert_eq!(
+            frame.damage,
+            Damage::Full,
+            "every highlighted row is redrawn"
+        );
         assert!(
             frame
                 .rows
@@ -1901,17 +1966,41 @@ mod tests {
         std::thread::sleep(Duration::from_millis(20));
         h.frame();
         while h.notices.try_recv().is_ok() {}
-        // Everything in this chunk goes into the update buffer: no redraw.
-        h.feed(b"hidden");
-        std::thread::sleep(Duration::from_millis(40));
-        assert!(!h.session.text_dump().contains("hidden"), "buffered");
+        // The update's content is parsed in the usual bounded chunks (no 2 MiB flush under the
+        // lock later), but no redraw is requested and snapshots show nothing new.
+        h.feed_until(b"hidden", "hidden");
+        std::thread::sleep(Duration::from_millis(20));
         assert!(!h.notices.try_iter().any(|notice| notice == Notice::Dirty));
+        assert!(
+            h.frame().rows.is_empty(),
+            "the renderer keeps the old screen"
+        );
         h.feed(b"\x1b[?2026l");
-        h.wait_for(|session| session.text_dump().contains("hidden"));
         h.wait_notice(|notice| *notice == Notice::Dirty);
-        // An update that never ends is flushed after the 150 ms deadline.
+        let frame = h.frame();
+        assert!(
+            !frame.rows.is_empty(),
+            "the held damage is delivered at the end"
+        );
+        // An update that never ends is shown after the 150 ms deadline.
+        while h.notices.try_recv().is_ok() {}
         h.feed(b"\x1b[?2026hstuck");
-        h.wait_for(|session| session.text_dump().contains("stuck"));
+        h.wait_notice(|notice| *notice == Notice::Dirty);
+        assert!(!h.frame().rows.is_empty());
+    }
+
+    #[test]
+    fn resetting_x10_turns_mouse_reporting_off() {
+        let h = start(20, 2);
+        h.feed_until(b"\x1b[?1000h\x1b[?9hx", "x");
+        assert!(h.session.modes().x10_mouse);
+        h.feed_until(b"\x1b[?9ly", "xy");
+        let modes = h.session.modes();
+        assert!(!modes.x10_mouse);
+        assert!(
+            !modes.term.intersects(TermMode::MOUSE_MODE),
+            "the older 1000 mode doesn't come back"
+        );
     }
 
     #[test]
@@ -2027,5 +2116,24 @@ mod tests {
         let frame = h.frame();
         assert_eq!(frame.background, argb(0xFAF9F5));
         assert_eq!(frame.damage, Damage::Full);
+    }
+    #[test]
+    fn a_huge_title_is_capped_and_later_output_still_arrives() {
+        let harness = start(40, 5);
+        let mut stream = b"\x1b]2;".to_vec();
+        stream.extend(std::iter::repeat_n(b'A', 64 * 1024));
+        stream.push(0x07);
+        // Each push copies the title; with the cap this costs at most 4096 x 8 KiB.
+        for _ in 0..4096 {
+            stream.extend_from_slice(b"\x1b[22t");
+        }
+        stream.extend_from_slice(b"done");
+        harness.feed_until(&stream, "done");
+        let title = harness.wait_notice(|notice| matches!(notice, Notice::Title(_)));
+        let Notice::Title(title) = title else {
+            unreachable!()
+        };
+        assert!(title.chars().count() <= MAX_TITLE_CHARS);
+        assert!(title.starts_with("AAAA"));
     }
 }

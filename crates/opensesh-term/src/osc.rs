@@ -5,7 +5,8 @@
 //! [`alacritty_terminal::vte::Parser`] runs over every byte the engine parses, so tokenization
 //! (string terminators, chunk splits, UTF-8) is exactly the engine's. It costs a few percent of
 //! the parse time and keeps only small state; OSC payloads it stores are capped at
-//! [`MAX_OSC_PAYLOAD`] bytes.
+//! [`MAX_OSC_PAYLOAD`] bytes, and [`OscLimiter`] caps every OSC string before either parser sees
+//! it.
 
 use std::sync::OnceLock;
 
@@ -13,6 +14,68 @@ use alacritty_terminal::vte::{Params, Parser, Perform};
 
 /// Longest OSC 7 payload that is kept (longer ones are ignored).
 pub const MAX_OSC_PAYLOAD: usize = 4096;
+
+/// Longest OSC string payload passed on to the parsers ([`OscLimiter`]); the rest is dropped.
+pub const MAX_OSC_STRING: usize = 8 * 1024;
+
+/// Caps OSC strings (`ESC ] ... BEL|ST`) before any parser sees them.
+///
+/// vte buffers OSC strings without a limit, and `alacritty_terminal` keeps the whole title and
+/// clones it for every `CSI 22 t` (up to 4096 times): a hostile stream of a few MiB could make
+/// the app allocate gigabytes. The limiter follows vte's rules for where an OSC string starts
+/// (`ESC ]`) and ends (BEL, CAN, SUB or ESC) and drops payload bytes past [`MAX_OSC_STRING`], so
+/// the terminators and everything outside OSC strings pass through unchanged.
+#[derive(Debug, Default)]
+pub struct OscLimiter {
+    /// The previous byte was ESC (outside an OSC string).
+    escape: bool,
+    /// Payload bytes of the current OSC string, `None` outside one.
+    osc: Option<usize>,
+}
+
+impl OscLimiter {
+    /// Filters `input`. Returns `None` when every byte passes (the common case), else the bytes
+    /// to parse instead.
+    pub fn filter(&mut self, input: &[u8]) -> Option<Vec<u8>> {
+        let mut out: Option<Vec<u8>> = None;
+        for (index, &byte) in input.iter().enumerate() {
+            let keep = self.keep(byte);
+            match (&mut out, keep) {
+                (Some(out), true) => out.push(byte),
+                (None, false) => out = Some(input[..index].to_vec()),
+                _ => {}
+            }
+        }
+        out
+    }
+
+    fn keep(&mut self, byte: u8) -> bool {
+        match self.osc {
+            Some(length) => match byte {
+                0x07 | 0x18 | 0x1A => {
+                    self.osc = None;
+                    true
+                }
+                0x1B => {
+                    self.osc = None;
+                    self.escape = true;
+                    true
+                }
+                _ => {
+                    self.osc = Some(length.saturating_add(1));
+                    length < MAX_OSC_STRING
+                }
+            },
+            None => {
+                if self.escape && byte == b']' {
+                    self.osc = Some(0);
+                }
+                self.escape = byte == 0x1B;
+                true
+            }
+        }
+    }
+}
 
 /// Extracts OSC 7 and tracks X10 mouse mode from a terminal byte stream.
 #[derive(Default)]
@@ -33,6 +96,11 @@ impl std::fmt::Debug for SideParser {
 struct SideState {
     /// X10 mouse reporting (`CSI ? 9 h`) is the active mouse protocol.
     x10_mouse: bool,
+    /// The engine's mouse modes (1000/1002/1003) are stale: mode 9 replaced them, or turned
+    /// reporting off, after they were set.
+    engine_mouse_hidden: bool,
+    /// Inside a synchronized update (`CSI ? 2026 h` ... `CSI ? 2026 l`).
+    synchronized: bool,
     /// Latest OSC 7 directory that was not taken yet.
     working_directory: Option<String>,
 }
@@ -55,6 +123,25 @@ impl SideParser {
     #[must_use]
     pub fn x10_mouse(&self) -> bool {
         self.state.x10_mouse
+    }
+
+    /// Whether the engine's mouse modes must be ignored: `CSI ? 9 h` or `CSI ? 9 l` came after
+    /// them (xterm keeps a single mouse protocol, so resetting 9 turns reporting off).
+    #[must_use]
+    pub fn engine_mouse_hidden(&self) -> bool {
+        self.state.engine_mouse_hidden
+    }
+
+    /// Whether a synchronized update (DEC mode 2026) is open: the screen should not be shown
+    /// until it ends.
+    #[must_use]
+    pub fn synchronized(&self) -> bool {
+        self.state.synchronized
+    }
+
+    /// Ends a synchronized update that timed out (the program never closed it).
+    pub fn end_synchronized(&mut self) {
+        self.state.synchronized = false;
     }
 
     /// The working directory from the latest local OSC 7 since the previous call, if any.
@@ -89,10 +176,18 @@ impl Perform for SideState {
         let set = action == 'h';
         for param in params {
             match param.first().copied() {
-                Some(9) => self.x10_mouse = set,
+                // Setting or resetting X10 replaces whatever mode the engine still has.
+                Some(9) => {
+                    self.x10_mouse = set;
+                    self.engine_mouse_hidden = true;
+                }
                 // xterm keeps one mouse protocol: enabling another one replaces X10, and
-                // resetting any of them turns mouse reporting off.
-                Some(1000 | 1002 | 1003) => self.x10_mouse = false,
+                // resetting any of them turns mouse reporting off (the engine tracks those).
+                Some(1000 | 1002 | 1003) => {
+                    self.x10_mouse = false;
+                    self.engine_mouse_hidden = false;
+                }
+                Some(2026) => self.synchronized = set,
                 _ => {}
             }
         }
@@ -102,6 +197,8 @@ impl Perform for SideState {
         // RIS (full reset) turns every mouse mode off.
         if intermediates.is_empty() && byte == b'c' {
             self.x10_mouse = false;
+            self.engine_mouse_hidden = false;
+            self.synchronized = false;
         }
     }
 }
@@ -212,6 +309,58 @@ fn local_hostname() -> Option<&'static str> {
 mod tests {
     use super::*;
 
+    fn limit(chunks: &[&[u8]]) -> Vec<u8> {
+        let mut limiter = OscLimiter::default();
+        let mut out = Vec::new();
+        for chunk in chunks {
+            match limiter.filter(chunk) {
+                Some(filtered) => out.extend(filtered),
+                None => out.extend_from_slice(chunk),
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn short_osc_strings_and_other_bytes_pass_unchanged() {
+        let text: &[u8] = b"abc\x1b]0;title\x07\x1b[1mbold\x1b]8;;https://x\x1b\\link";
+        let mut limiter = OscLimiter::default();
+        assert!(limiter.filter(text).is_none());
+    }
+
+    #[test]
+    fn long_osc_payloads_are_cut_but_keep_their_terminator() {
+        let mut stream = b"\x1b]2;".to_vec();
+        stream.extend(std::iter::repeat_n(b'A', MAX_OSC_STRING * 3));
+        stream.extend_from_slice(b"\x07after");
+        let out = limit(&[&stream]);
+        assert_eq!(out.len(), 2 + MAX_OSC_STRING + 1 + 5);
+        assert!(out.ends_with(b"\x07after"));
+    }
+
+    #[test]
+    fn the_cap_holds_across_chunk_splits() {
+        let mut body = vec![b'A'; MAX_OSC_STRING + 100];
+        body.push(0x07);
+        let (first, second) = body.split_at(MAX_OSC_STRING - 10);
+        let out = limit(&[b"\x1b", b"]0;", first, second, b"x"]);
+        assert_eq!(out.len(), 1 + 3 + MAX_OSC_STRING - 2 + 1 + 1);
+        assert!(out.ends_with(b"\x07x"));
+    }
+
+    #[test]
+    fn can_sub_and_escape_end_the_osc_string() {
+        for terminator in [0x18_u8, 0x1A, 0x1B] {
+            let mut stream = b"\x1b]0;".to_vec();
+            stream.extend(std::iter::repeat_n(b'A', MAX_OSC_STRING + 5));
+            stream.push(terminator);
+            stream.extend(std::iter::repeat_n(b'B', MAX_OSC_STRING + 5));
+            let out = limit(&[&stream]);
+            let bs = out.iter().filter(|&&byte| byte == b'B').count();
+            assert_eq!(bs, MAX_OSC_STRING + 5, "terminator {terminator:#x}");
+        }
+    }
+
     #[test]
     fn osc7_local_paths() {
         assert_eq!(
@@ -265,8 +414,8 @@ mod tests {
 
     #[test]
     fn side_parser_extracts_osc7_across_chunks_and_terminators() {
-        let first = b"prompt]7;file:///home/u/a;bmore";
-        let second = b"]7;file:///srv\\";
+        let first = b"prompt\x1b]7;file:///home/u/a;b\x07more";
+        let second = b"\x1b]7;file:///srv\x1b\\";
         for chunk_size in [1, 2, 3, 5, 64] {
             let mut side = SideParser::new();
             for chunk in first.chunks(chunk_size) {
@@ -289,7 +438,7 @@ mod tests {
         }
         // Only the latest directory of a burst is kept.
         let mut side = SideParser::new();
-        side.advance(b"]7;file:///one]7;file:///two");
+        side.advance(b"\x1b]7;file:///one\x07\x1b]7;file:///two\x07");
         assert_eq!(side.take_working_directory().as_deref(), Some("/two"));
     }
 
