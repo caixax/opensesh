@@ -284,8 +284,8 @@
         <translation>[Ťöķéñš ~~]</translation>
     </message>
     <message>
-        <source>Typography &amp; spacing</source>
-        <translation>[Ťýþöĝŕáþĥý &amp; šþáçíñĝ ~~~~~~]</translation>
+        <source>Typography and spacing</source>
+        <translation>[Ťýþöĝŕáþĥý áñď šþáçíñĝ ~~~~~~~]</translation>
     </message>
     <message>
         <source>Inputs</source>
@@ -325,6 +325,10 @@
     <message>
         <source>Lavender</source>
         <translation>[Ĺávéñďéŕ ~~~]</translation>
+    </message>
+    <message>
+        <source>Amber</source>
+        <translation>[Åmbéŕ ~~]</translation>
     </message>
     <message>
         <source>Blue</source>
@@ -478,6 +482,38 @@
         <source>Settings reloaded from config.toml</source>
         <translation>[Šéťťíñĝš ŕéĺöáďéď ƒŕöm çöñƒíĝ.ťömĺ ~~~~~~~~~~~]</translation>
     </message>
+    <message>
+        <source>config.toml could not be read, so OpenSesh uses the default settings. The file is left as it is until you fix it.</source>
+        <translation>[çöñƒíĝ.ťömĺ çöüĺď ñöť bé ŕéáď, šö ÖþéñŠéšĥ üšéš ťĥé ďéƒáüĺť šéťťíñĝš. Ťĥé ƒíĺé íš ĺéƒť áš íť íš üñťíĺ ýöü ƒíx íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>config.toml was written by a newer version of OpenSesh. Your changes apply but are not saved.</source>
+        <translation>[çöñƒíĝ.ťömĺ ŵáš ŵŕíťťéñ bý á ñéŵéŕ véŕšíöñ öƒ ÖþéñŠéšĥ. Ýöüŕ çĥáñĝéš áþþĺý büť áŕé ñöť šávéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Some settings in config.toml were not valid and use their default values. See Settings &gt; General.</source>
+        <translation>[Šömé šéťťíñĝš íñ çöñƒíĝ.ťömĺ ŵéŕé ñöť váĺíď áñď üšé ťĥéíŕ ďéƒáüĺť váĺüéš. Šéé Šéťťíñĝš &gt; Ĝéñéŕáĺ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Your edit of config.toml could not be applied, so the current settings stay. Fix the file to apply it.</source>
+        <translation>[Ýöüŕ éďíť öƒ çöñƒíĝ.ťömĺ çöüĺď ñöť bé áþþĺíéď, šö ťĥé çüŕŕéñť šéťťíñĝš šťáý. Fíx ťĥé ƒíĺé ťö áþþĺý íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Changes are not saved, because config.toml was written by a newer version of OpenSesh.</source>
+        <translation>[Çĥáñĝéš áŕé ñöť šávéď, béçáüšé çöñƒíĝ.ťömĺ ŵáš ŵŕíťťéñ bý á ñéŵéŕ véŕšíöñ öƒ ÖþéñŠéšĥ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Changes are not saved until config.toml is fixed.</source>
+        <translation>[Çĥáñĝéš áŕé ñöť šávéď üñťíĺ çöñƒíĝ.ťömĺ íš ƒíxéď. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the settings: %1</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé šéťťíñĝš: %1 ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>There is a problem with config.toml. The log has the details.</source>
+        <translation>[Ťĥéŕé íš á þŕöbĺém ŵíťĥ çöñƒíĝ.ťömĺ. Ťĥé ĺöĝ ĥáš ťĥé ďéťáíĺš. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
 </context>
 <context>
     <name>NotificationsPanel</name>
@@ -485,12 +521,10 @@
         <source>Notifications</source>
         <translation>[Ñöťíƒíçáťíöñš ~~~~]</translation>
     </message>
-    <message numerus="yes">
-        <source>%n notification(s)</source>
-        <translation>
-            <numerusform>[%n ñöťíƒíçáťíöñ(š) ~~~~~~]</numerusform>
-            <numerusform>[%n ñöťíƒíçáťíöñ(š) ~~~~~~]</numerusform>
-        </translation>
+    <message>
+        <source>This session: %1</source>
+        <extracomment>Number of notifications in the history, which only covers this session</extracomment>
+        <translation>[Ťĥíš šéššíöñ: %1 ~~~~~]</translation>
     </message>
     <message>
         <source>Clear all</source>
@@ -519,10 +553,6 @@
 <context>
     <name>OsColorPicker</name>
     <message>
-        <source>Sesame</source>
-        <translation>[Šéšámé ~~]</translation>
-    </message>
-    <message>
         <source>Amber</source>
         <translation>[Åmbéŕ ~~]</translation>
     </message>
@@ -549,6 +579,10 @@
     <message>
         <source>Green</source>
         <translation>[Ĝŕééñ ~~]</translation>
+    </message>
+    <message>
+        <source>Sesame (default)</source>
+        <translation>[Šéšámé (ďéƒáüĺť) ~~~~~]</translation>
     </message>
     <message>
         <source>Color</source>
@@ -638,12 +672,36 @@
         <translation>[Ñöť šéť ~~~]</translation>
     </message>
     <message>
+        <source>Recording. Press the key combination.</source>
+        <translation>[Ŕéçöŕďíñĝ. Þŕéšš ťĥé ķéý çömbíñáťíöñ. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Recording cancelled.</source>
+        <translation>[Ŕéçöŕďíñĝ çáñçéĺĺéď. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Shortcut set to %1.</source>
+        <translation>[Šĥöŕťçüť šéť ťö %1. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Shortcut cleared.</source>
+        <translation>[Šĥöŕťçüť çĺéáŕéď. ~~~~~~]</translation>
+    </message>
+    <message>
         <source>Press a key combination…</source>
         <translation>[Þŕéšš á ķéý çömbíñáťíöñ… ~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Keyboard shortcut. Press Enter or Space to record a new one, then press the key combination. Escape cancels, Backspace clears.</source>
-        <translation>[Ķéýböáŕď šĥöŕťçüť. Þŕéšš Éñťéŕ öŕ Šþáçé ťö ŕéçöŕď á ñéŵ öñé, ťĥéñ þŕéšš ťĥé ķéý çömbíñáťíöñ. Éšçáþé çáñçéĺš, Báçķšþáçé çĺéáŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Recording a keyboard shortcut: press the key combination. Escape cancels, Backspace clears.</source>
+        <translation>[Ŕéçöŕďíñĝ á ķéýböáŕď šĥöŕťçüť: þŕéšš ťĥé ķéý çömbíñáťíöñ. Éšçáþé çáñçéĺš, Báçķšþáçé çĺéáŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keyboard shortcut: %1. Press Enter or Space to record a new one, then press the key combination. Backspace clears it.</source>
+        <translation>[Ķéýböáŕď šĥöŕťçüť: %1. Þŕéšš Éñťéŕ öŕ Šþáçé ťö ŕéçöŕď á ñéŵ öñé, ťĥéñ þŕéšš ťĥé ķéý çömbíñáťíöñ. Báçķšþáçé çĺéáŕš íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keyboard shortcut: not set. Press Enter or Space to record one, then press the key combination.</source>
+        <translation>[Ķéýböáŕď šĥöŕťçüť: ñöť šéť. Þŕéšš Éñťéŕ öŕ Šþáçé ťö ŕéçöŕď öñé, ťĥéñ þŕéšš ťĥé ķéý çömbíñáťíöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -1059,6 +1117,10 @@
     <message>
         <source>Preset swatches and a hex field.</source>
         <translation>[Þŕéšéť šŵáťçĥéš áñď á ĥéx ƒíéĺď. ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Color picker, with a default swatch</source>
+        <translation>[Çöĺöŕ þíçķéŕ, ŵíťĥ á ďéƒáüĺť šŵáťçĥ ~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Color picker, disabled</source>
@@ -2294,8 +2356,8 @@
         <translation>[Šímþĺé Íçöñš ~~~~]</translation>
     </message>
     <message>
-        <source>CC0 1.0 (the logos are trademarks of their owners)</source>
-        <translation>[ÇÇ0 1.0 (ťĥé ĺöĝöš áŕé ťŕáďémáŕķš öƒ ťĥéíŕ öŵñéŕš) ~~~~~~~~~~~~~~~]</translation>
+        <source>CC0 1.0, except the Debian (CC BY-SA 3.0), Fedora (custom license), Gentoo (CC BY-SA 2.5), NixOS (CC BY 4.0) and Rocky Linux (CC BY-SA 4.0) logos. The logos are trademarks of their owners.</source>
+        <translation>[ÇÇ0 1.0, éxçéþť ťĥé Ďébíáñ (ÇÇ BÝ-ŠÅ 3.0), Féďöŕá (çüšťöm ĺíçéñšé), Ĝéñťöö (ÇÇ BÝ-ŠÅ 2.5), ÑíxÖŠ (ÇÇ BÝ 4.0) áñď Ŕöçķý Ĺíñüx (ÇÇ BÝ-ŠÅ 4.0) ĺöĝöš. Ťĥé ĺöĝöš áŕé ťŕáďémáŕķš öƒ ťĥéíŕ öŵñéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Inter</source>
@@ -2410,8 +2472,8 @@
         <translation>[Ťĥíŕď-þáŕťý ñöťíçéš ~~~~~~]</translation>
     </message>
     <message>
-        <source>OpenSesh bundles these works, each under its own license. The full texts are in THIRD_PARTY_NOTICES.md and the LICENSES folders that ship with OpenSesh.</source>
-        <translation>[ÖþéñŠéšĥ büñďĺéš ťĥéšé ŵöŕķš, éáçĥ üñďéŕ íťš öŵñ ĺíçéñšé. Ťĥé ƒüĺĺ ťéxťš áŕé íñ ŤĤÍŔĎ_ÞÅŔŤÝ_ÑÖŤÍÇÉŠ.mď áñď ťĥé ĹÍÇÉÑŠÉŠ ƒöĺďéŕš ťĥáť šĥíþ ŵíťĥ ÖþéñŠéšĥ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>OpenSesh bundles these works, each under its own license. THIRD_PARTY_NOTICES.md and the LICENSES folders that ship with OpenSesh have the details and the license texts or links to them.</source>
+        <translation>[ÖþéñŠéšĥ büñďĺéš ťĥéšé ŵöŕķš, éáçĥ üñďéŕ íťš öŵñ ĺíçéñšé. ŤĤÍŔĎ_ÞÅŔŤÝ_ÑÖŤÍÇÉŠ.mď áñď ťĥé ĹÍÇÉÑŠÉŠ ƒöĺďéŕš ťĥáť šĥíþ ŵíťĥ ÖþéñŠéšĥ ĥávé ťĥé ďéťáíĺš áñď ťĥé ĺíçéñšé ťéxťš öŕ ĺíñķš ťö ťĥém. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -2929,8 +2991,8 @@
         <translation>[Ťĥé váüĺť: mášťéŕ þáššŵöŕď, áüťömáťíç ĺöçķíñĝ áñď ŵĥéŕé šéçŕéťš áŕé ķéþť. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Data &amp; sync</source>
-        <translation>[Ďáťá &amp; šýñç ~~~~]</translation>
+        <source>Data and sync</source>
+        <translation>[Ďáťá áñď šýñç ~~~~]</translation>
     </message>
     <message>
         <source>Import from other clients, export your data and sync it between devices.</source>

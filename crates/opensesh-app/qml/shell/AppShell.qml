@@ -10,7 +10,8 @@ pragma ComponentBehavior: Bound
 // session is open.
 //
 // Keyboard: Tab follows the regions in order (title bar, rail, content, side panel, status bar),
-// and F6 / Shift+F6 jump between them.
+// and F6 / Shift+F6 (or Ctrl+F6 / Ctrl+Shift+F6, ADR 0011) jump between them. When a view, tab
+// or region is hidden, the keyboard focus moves off it to the content shown now.
 //
 //   window: Window          the main window
 //   persistState: bool      remember the view and side panel in UiState (off in smoke and
@@ -95,6 +96,7 @@ Item {
         currentTab = 0;
         setActiveView(id);
         tabsUpdated();
+        moveFocusOffHiddenItem();
     }
 
     function selectTab(index) {
@@ -107,6 +109,7 @@ Item {
             setActiveView(homeView);
         }
         tabsUpdated();
+        moveFocusOffHiddenItem();
     }
 
     // The tab bar's current index changed (a click or the arrow keys).
@@ -153,6 +156,7 @@ Item {
         }
         if (focusInTabs && !isInside(window.activeFocusItem, titleRegion))
             focusRegion(titleRegion);
+        moveFocusOffHiddenItem();
         // "Keep the window" shows Home; "quit" closes it (never in test runs).
         if (sessionModel.count === 0 && AppSettings.onLastTabClosed === "quit" && persistState)
             window.close();
@@ -269,11 +273,25 @@ Item {
         return next && next !== region && isInside(next, region) ? next : null;
     }
 
-    function focusRegion(region) {
+    function focusRegion(region, reason) {
         const target = firstFocusable(region);
         if (target)
-            target.forceActiveFocus(Qt.TabFocusReason);
+            target.forceActiveFocus(reason ?? Qt.TabFocusReason);
         return target !== null;
+    }
+
+    // Hiding an item doesn't take its keyboard focus away, and key events still reach it (a
+    // hidden button would still press, a hidden slider would still change its setting). Call this
+    // after the visible content changed: it moves the focus from a hidden item to the content
+    // shown now, else to the rail or the title bar. The focus reason is kept, so the focus ring
+    // shows for keyboard users but not after a click.
+    function moveFocusOffHiddenItem() {
+        const focused = window.activeFocusItem;
+        if (!focused || focused.visible)
+            return;
+        const reason = focused.focusReason ?? Qt.OtherFocusReason;
+        if (!focusRegion(contentArea, reason) && !focusRegion(rail, reason))
+            focusRegion(titleRegion, reason);
     }
 
     function cycleRegion(step) {
@@ -299,6 +317,11 @@ Item {
     function smokeSteps() {
         const steps = [];
         let initialView = "hosts";
+        const expectVisibleFocus = what => {
+            const focused = shell.window.activeFocusItem;
+            if (focused && !focused.visible)
+                console.warn("AppShell: the keyboard focus stayed on a hidden item after", what);
+        };
         steps.push(() => initialView = shell.activeView);
         for (const id of viewIds)
             steps.push(() => shell.showView(id));
@@ -327,6 +350,15 @@ Item {
         steps.push(() => shell.cycleRegion(1));
         steps.push(() => shell.cycleRegion(1));
         steps.push(() => shell.cycleRegion(-1));
+        // The focus never stays on a hidden view, tab or region.
+        steps.push(() => shell.focusRegion(contentArea));
+        steps.push(() => shell.showView("history"));
+        steps.push(() => expectVisibleFocus("a view switch"));
+        steps.push(() => shell.newTab());
+        steps.push(() => expectVisibleFocus("opening a tab"));
+        steps.push(() => shell.closeTab(shell.currentTab));
+        steps.push(() => expectVisibleFocus("closing the last tab"));
+        steps.push(() => shell.focusRegion(statusBar));
         steps.push(() => shell.layoutOverride = {
             tabsPosition: "below_title_bar",
             railPosition: "right",
@@ -334,6 +366,7 @@ Item {
             sidePanelPosition: "left",
             showStatusBar: false
         });
+        steps.push(() => expectVisibleFocus("hiding the status bar"));
         steps.push(() => shell.toggleSidePanel());
         steps.push(() => shell.toggleSidePanel());
         steps.push(() => shell.layoutOverride = {});
@@ -465,6 +498,10 @@ Item {
                 ]
 
                 onActivated: id => shell.showView(id)
+                onVisibleChanged: {
+                    if (!visible)
+                        shell.moveFocusOffHiddenItem();
+                }
 
                 // OsRail assigns currentId itself when activated; keep it following the shell.
                 Binding on currentId {
@@ -586,6 +623,11 @@ Item {
 
             Layout.fillWidth: true
             visible: shell.showStatusBar
+
+            onVisibleChanged: {
+                if (!visible)
+                    shell.moveFocusOffHiddenItem();
+            }
         }
     }
 

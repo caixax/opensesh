@@ -30,7 +30,8 @@ Tasks:
   i18n       Update the .ts files with lupdate for every language in assets/i18n/languages.toml
              plus the pseudo-locale, fill the pseudo-locale and compile the .qm files with
              lrelease. Needs the Qt 6 linguist tools (found through QMAKE or PATH).
-             --check: change nothing; fail if the committed .ts files are out of date.
+             --check: change nothing; fail if the committed .ts or .qm files are out of
+             date.
   lint-qml   Check QML sources for hardcoded colors and strings without qsTr().
              Optional argument: directory to scan (default: crates/opensesh-app/qml).
   help       Show this message.

@@ -92,14 +92,27 @@ pub fn qml_warning_count() -> usize {
     QML_WARNINGS.load(Ordering::SeqCst)
 }
 
+/// Qt Quick warnings that our QML causes but that Qt logs without a QML location, in the
+/// `default` category (layout and polish loops, for example).
+const QT_QUICK_PREFIXES: &[&str] = &[
+    "Qt Quick Layouts:",
+    "QQuickItem",
+    "QQuickWindow",
+    "possible QQuickItem::polish() loop",
+];
+
 /// Whether a Qt message is about our own QML module or assets (not environment noise such as
 /// missing system fonts on the offscreen platform).
 fn is_about_our_ui(category: &str, message: &str) -> bool {
     category == "qml"
         || category == "js"
         || category.starts_with("qt.qml")
+        || category.starts_with("qt.quick")
         || message.contains("qrc:/qt/qml/cc/caixa/opensesh/")
         || message.starts_with("OsIcon:")
+        || QT_QUICK_PREFIXES
+            .iter()
+            .any(|prefix| message.starts_with(prefix))
 }
 
 fn forward_qt_message(level: i32, category: &QString, message: &QString) {
@@ -140,5 +153,18 @@ mod tests {
             "default",
             "QFontDatabase: Cannot find font directory"
         ));
+    }
+
+    #[test]
+    fn qt_quick_warnings_without_a_location_count_too() {
+        assert!(is_about_our_ui(
+            "default",
+            "Qt Quick Layouts: Detected recursive rearrange. Aborting after two iterations."
+        ));
+        assert!(is_about_our_ui(
+            "default",
+            "possible QQuickItem::polish() loop"
+        ));
+        assert!(is_about_our_ui("qt.quick.dirty", "anything"));
     }
 }

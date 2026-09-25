@@ -1,5 +1,5 @@
 // Component gallery (`--gallery`): every Os* component in its states, in five sections (Tokens,
-// Typography & spacing, Inputs, Structure, Overlays) behind a navigation rail. The toolbar
+// Typography and spacing, Inputs, Structure, Overlays) behind a navigation rail. The toolbar
 // switches the gallery's own theme, density, accent and reduce motion through the ThemeBinder
 // overrides; the user's settings are never written.
 // `--smoke-test` visits every section, opens and closes every overlay and flips each switch.
@@ -18,7 +18,7 @@ Window {
     readonly property bool screenshotMode: AppInfo.screenshotDir.length > 0
     readonly property var sections: [
         { id: "tokens", text: qsTr("Tokens"), iconName: "palette" },
-        { id: "typography", text: qsTr("Typography & spacing"), iconName: "type" },
+        { id: "typography", text: qsTr("Typography and spacing"), iconName: "type" },
         { id: "inputs", text: qsTr("Inputs"), iconName: "sliders-horizontal" },
         { id: "structure", text: qsTr("Structure"), iconName: "columns-2" },
         { id: "overlays", text: qsTr("Overlays"), iconName: "app-window" }
@@ -50,6 +50,27 @@ Window {
         const focused = window.activeFocusItem;
         if (focused && !focused.visible)
             nav.forceActiveFocus(Qt.OtherFocusReason);
+    }
+
+    // Scrolls the section so that the item with the keyboard focus is visible (Tab into a control
+    // below the fold), as SettingsView does.
+    function revealFocusedItem() {
+        const item = window.activeFocusItem;
+        if (!item)
+            return;
+        let ancestor = item.parent;
+        while (ancestor && ancestor !== page)
+            ancestor = ancestor.parent;
+        if (!ancestor)
+            return;
+        const margin = Theme.spacingLg;
+        const top = item.mapToItem(flick.contentItem, 0, 0).y;
+        const bottom = top + item.height;
+        const maxY = Math.max(0, flick.contentHeight - flick.height);
+        if (top - margin < flick.contentY)
+            flick.contentY = Math.max(0, top - margin);
+        else if (bottom + margin > flick.contentY + flick.height)
+            flick.contentY = Math.min(maxY, bottom + margin - flick.height);
     }
 
     // Screenshot pages: a section id, optionally followed by an overlay to open ("overlays-menu").
@@ -98,6 +119,8 @@ Window {
     title: qsTr("OpenSesh component gallery")
     color: Theme.bg
 
+    onActiveFocusItemChanged: revealFocusedItem()
+
     Component.onCompleted: {
         // Start from the user's current look, then keep every change local to the gallery.
         themeBinder.overrideMode = Theme.dark ? "dark" : "light";
@@ -138,8 +161,8 @@ Window {
 
             anchors.top: toolbar.bottom
             anchors.bottom: parent.bottom
-            // Wider than a shell rail so "Typography & spacing" is not elided.
-            width: Theme.railWidthLabels + Theme.spacingXxl + Theme.spacingSm
+            // Wider than a shell rail so "Typography and spacing" is not elided.
+            width: Theme.railWidthLabels + Theme.spacingXxl + Theme.spacingXl
             showLabels: true
             model: window.sections
             currentId: window.currentSection
@@ -235,7 +258,7 @@ Window {
             () => toastHost.clear(),
             () => toolbar.setMode(Theme.dark ? "light" : "dark"),
             () => toolbar.setDensity(Theme.compact ? "comfortable" : "compact"),
-            () => toolbar.setAccent("#5B9BD5"), // lint-qml: allow (sample accent)
+            () => toolbar.setAccent(Theme.accentPresets[4]),
             () => toolbar.openAccentDialog(),
             () => toolbar.closeAccentDialog(),
             () => toolbar.setReduceMotion(true),
@@ -252,6 +275,6 @@ Window {
         pages: ["tokens", "typography", "inputs", "structure", "overlays", "overlays-dialog",
             "overlays-menu", "overlays-drawer", "overlays-palette", "overlays-toasts", "tokens-accent"]
         prepare: (mode, density, page) => window.preparePage(page)
-        onFinished: Qt.exit(0)
+        onFinished: Qt.exit(screenshots.failures > 0 ? 7 : 0)
     }
 }

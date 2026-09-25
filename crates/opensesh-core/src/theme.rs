@@ -7,7 +7,10 @@
 //! - text tokens (`text`, `text_muted`, `accent_fg`) reach 4.5:1 on `bg`, `surface` and `surface2`;
 //! - text on filled accent / status colors is computed per color ([`best_text_on`]) instead of
 //!   fixed, so any user accent stays readable;
-//! - non-text UI indicators (`focus_ring`, `border_strong`, status colors) reach 3:1 on `surface`.
+//! - the translucent `selection` keeps `text` and `text_muted` at 4.5:1 and `accent_fg` (the
+//!   icon of a selected item) at 3:1 when it is composited on `bg`, `surface` or `surface2`;
+//! - non-text UI indicators reach 3:1: `focus_ring` and the status colors on `bg`, `surface` and
+//!   `surface2`, `border_strong` on `surface` and `surface2`.
 
 use std::fmt;
 use std::str::FromStr;
@@ -111,6 +114,13 @@ impl Rgba {
             lerp(self.b, other.b),
         )
     }
+
+    /// The opaque color seen when this (possibly translucent) color is drawn over `background`:
+    /// source-over compositing in 8-bit sRGB, as Qt Quick blends.
+    #[must_use]
+    pub fn over(self, background: Self) -> Self {
+        background.mix(self, f64::from(self.a) / 255.0)
+    }
 }
 
 impl FromStr for Rgba {
@@ -174,6 +184,47 @@ fn ensure_contrast(color: Rgba, target: Rgba, against: &[Rgba], min_ratio: f64) 
                 .all(|&bg| contrast_ratio(*candidate, bg) >= min_ratio)
         })
         .unwrap_or(target)
+}
+
+/// Whether `ink` reaches `min_ratio` on the opaque `fill` produced by compositing. Qt's 8-bit
+/// blending may round each channel one unit away from [`Rgba::over`], so the check uses `fill`
+/// moved one unit towards `ink` (the direction that lowers the contrast).
+fn readable_on_composite(ink: Rgba, fill: Rgba, min_ratio: f64) -> bool {
+    let towards_ink = |channel: u8| {
+        if ink.relative_luminance() > fill.relative_luminance() {
+            channel.saturating_add(1)
+        } else {
+            channel.saturating_sub(1)
+        }
+    };
+    let worst = Rgba::rgb(
+        towards_ink(fill.r),
+        towards_ink(fill.g),
+        towards_ink(fill.b),
+    );
+    contrast_ratio(ink, worst) >= min_ratio
+}
+
+/// Alpha of the `selection` fill: the scheme's `base_alpha`, lowered until every ink drawn on a
+/// selected item stays readable over the fill composited on each of `surfaces`: `text` and
+/// `text_muted` at [`AA_TEXT`], and `accent_fg` (the icon of a selected row) at [`AA_UI`].
+fn selection_alpha(palette: &Palette, base_alpha: u8, surfaces: &[Rgba]) -> u8 {
+    let inks = [
+        (palette.text, AA_TEXT),
+        (palette.text_muted, AA_TEXT),
+        (palette.accent_fg, AA_UI),
+    ];
+    (0..=base_alpha)
+        .rev()
+        .find(|&alpha| {
+            surfaces.iter().all(|&surface| {
+                let fill = palette.accent.with_alpha(alpha).over(surface);
+                inks.iter()
+                    .all(|&(ink, min_ratio)| readable_on_composite(ink, fill, min_ratio))
+            })
+        })
+        // Alpha 0 leaves the surfaces themselves, which every ink is already readable on.
+        .unwrap_or(0)
 }
 
 /// Light or dark appearance.
@@ -351,7 +402,8 @@ pub struct Palette {
     pub hover: Rgba,
     /// Overlay drawn on pressed items.
     pub pressed: Rgba,
-    /// Text selection and selected rows.
+    /// Text selection and selected rows: the accent, translucent. Its alpha keeps `text`,
+    /// `text_muted` and `accent_fg` (as an icon) readable on it over every surface.
     pub selection: Rgba,
     /// Dimming layer behind modal dialogs.
     pub scrim: Rgba,
@@ -489,7 +541,9 @@ pub fn resolve(inputs: &ThemeInputs) -> ResolvedTheme {
     palette.accent_text = best_text_on(palette.accent);
     palette.accent_fg = ensure_contrast(palette.accent, readable_target, &surfaces, AA_TEXT);
     palette.focus_ring = palette.accent_fg;
-    palette.selection = palette.accent.with_alpha(palette.selection.a);
+    // The base palette's selection alpha is the strongest tint allowed.
+    let alpha = selection_alpha(&palette, palette.selection.a, &surfaces);
+    palette.selection = palette.accent.with_alpha(alpha);
     palette.border_strong = ensure_contrast(
         palette.border,
         readable_target,
@@ -503,7 +557,8 @@ pub fn resolve(inputs: &ThemeInputs) -> ResolvedTheme {
         &mut palette.danger,
         &mut palette.info,
     ] {
-        *status = ensure_contrast(*status, readable_target, &[palette.surface], AA_UI);
+        // Status icons and outlines are drawn on any surface (e.g. notices on `surface2`).
+        *status = ensure_contrast(*status, readable_target, &surfaces, AA_UI);
     }
 
     let accent_low_contrast = contrast_ratio(palette.accent, palette.bg) < AA_UI;
@@ -584,6 +639,35 @@ mod tests {
         );
     }
 
+    /// Every ink drawn on a selected item stays readable on the selection composited over each
+    /// surface, even if the compositor rounds any channel one unit away from `Rgba::over`.
+    fn assert_selection_readable(p: &Palette, what: &str) {
+        let inks = [
+            ("text", p.text, AA_TEXT),
+            ("text_muted", p.text_muted, AA_TEXT),
+            ("accent_fg", p.accent_fg, AA_UI),
+        ];
+        for surface in [p.bg, p.surface, p.surface2] {
+            let fill = p.selection.over(surface);
+            let nudge = |channel: u8, delta: i16| {
+                u8::try_from((i16::from(channel) + delta).clamp(0, 255)).unwrap()
+            };
+            for (dr, dg, db) in
+                (-1..=1).flat_map(|r| (-1..=1).flat_map(move |g| (-1..=1).map(move |b| (r, g, b))))
+            {
+                let rounded = Rgba::rgb(nudge(fill.r, dr), nudge(fill.g, dg), nudge(fill.b, db));
+                for (name, ink, min) in inks {
+                    assert_contrast(
+                        ink,
+                        rounded,
+                        min,
+                        &format!("{what}: {name} on selection over {surface}"),
+                    );
+                }
+            }
+        }
+    }
+
     #[test]
     fn contrast_matches_known_values() {
         let black = Rgba::rgb(0, 0, 0);
@@ -617,6 +701,30 @@ mod tests {
                 assert_contrast(p.accent_fg, surface, AA_TEXT, "accent_fg");
             }
             assert_contrast(p.accent_text, p.accent, AA_TEXT, "accent_text");
+            assert_selection_readable(&p, "default accent");
+        }
+    }
+
+    #[test]
+    fn default_selection_is_readable_and_still_visible() {
+        // The alphas documented in ADR 0006.
+        for (mode, base, alpha) in [
+            (ThemeMode::Dark, dark_base(), 0x28),
+            (ThemeMode::Light, light_base(), 0x1D),
+        ] {
+            let p = resolve(&ThemeInputs {
+                mode,
+                ..ThemeInputs::default()
+            })
+            .palette;
+            assert_eq!(p.selection.with_alpha(255), p.accent);
+            assert_eq!(p.selection.a, alpha, "{mode:?}");
+            assert!(p.selection.a <= base.selection.a, "{mode:?}");
+            // The review case: muted text on the selected row of a card was 3.24:1 in dark mode.
+            let fill = p.selection.over(p.surface);
+            assert_contrast(p.text_muted, fill, AA_TEXT, "text_muted on selection");
+            // Still a visible tint.
+            assert_ne!(fill, p.surface);
         }
     }
 
@@ -627,18 +735,42 @@ mod tests {
             for surface in [p.surface, p.surface2] {
                 assert_contrast(p.border_strong, surface, AA_UI, "border_strong");
             }
-            for surface in [p.bg, p.surface] {
+            for surface in [p.bg, p.surface, p.surface2] {
                 assert_contrast(p.focus_ring, surface, AA_UI, "focus_ring");
+                for (name, status) in [
+                    ("success", p.success),
+                    ("warning", p.warning),
+                    ("danger", p.danger),
+                    ("info", p.info),
+                ] {
+                    assert_contrast(status, surface, AA_UI, name);
+                    assert_contrast(best_text_on(status), status, AA_TEXT, name);
+                }
             }
-            for (name, status) in [
-                ("success", p.success),
-                ("warning", p.warning),
-                ("danger", p.danger),
-                ("info", p.info),
-            ] {
-                assert_contrast(status, p.surface, AA_UI, name);
-                assert_contrast(best_text_on(status), status, AA_TEXT, name);
-            }
+        }
+    }
+
+    #[test]
+    fn status_colors_keep_the_plan_values_except_the_light_warning() {
+        // As documented in ADR 0006: only the light warning is too light for `surface2`.
+        for (mode, base) in [
+            (ThemeMode::Dark, dark_base()),
+            (ThemeMode::Light, light_base()),
+        ] {
+            let p = resolve(&ThemeInputs {
+                mode,
+                ..ThemeInputs::default()
+            })
+            .palette;
+            assert_eq!(p.success, base.success, "{mode:?}");
+            assert_eq!(p.danger, base.danger, "{mode:?}");
+            assert_eq!(p.info, base.info, "{mode:?}");
+            let warning = if mode == ThemeMode::Light {
+                "#B37E0F"
+            } else {
+                "#F2C14E"
+            };
+            assert_eq!(p.warning.to_hex(), warning, "{mode:?}");
         }
     }
 
@@ -672,28 +804,37 @@ mod tests {
 
     #[test]
     fn any_custom_accent_stays_readable() {
+        // 216 samples of the RGB cube, plus every preset of the accent pickers.
+        let steps = || (0..=255).step_by(51);
+        let grid = steps()
+            .flat_map(|r| steps().flat_map(move |g| steps().map(move |b| Rgba::rgb(r, g, b))));
+        let accents: Vec<Rgba> = grid.chain(ACCENT_PRESETS).collect();
+        assert_eq!(accents.len(), 216 + ACCENT_PRESETS.len());
         for mode in [ThemeMode::Dark, ThemeMode::Light] {
-            for r in (0..=255).step_by(51) {
-                for g in (0..=255).step_by(51) {
-                    for b in (0..=255).step_by(51) {
-                        let accent = Rgba::rgb(r, g, b);
-                        let theme = resolve(&ThemeInputs {
-                            mode,
-                            accent: Some(accent),
-                            ..ThemeInputs::default()
-                        });
-                        let p = theme.palette;
-                        assert_eq!(p.accent, accent);
-                        assert_contrast(p.accent_text, accent, AA_TEXT, "accent_text");
-                        for surface in [p.bg, p.surface, p.surface2] {
-                            assert_contrast(p.accent_fg, surface, AA_TEXT, "accent_fg");
-                        }
-                        assert_eq!(
-                            theme.accent_low_contrast,
-                            contrast_ratio(accent, p.bg) < AA_UI
-                        );
-                    }
+            for &accent in &accents {
+                let theme = resolve(&ThemeInputs {
+                    mode,
+                    accent: Some(accent),
+                    ..ThemeInputs::default()
+                });
+                let p = theme.palette;
+                assert_eq!(p.accent, accent);
+                assert_contrast(p.accent_text, accent, AA_TEXT, "accent_text");
+                for surface in [p.bg, p.surface, p.surface2] {
+                    assert_contrast(p.accent_fg, surface, AA_TEXT, "accent_fg");
                 }
+                assert_selection_readable(&p, &format!("{mode:?} accent {accent}"));
+                // Lowered as needed, but never to nothing.
+                assert_eq!(p.selection.with_alpha(255), accent);
+                assert!(
+                    p.selection.a >= 0x0C,
+                    "{mode:?} {accent}: {:#04X}",
+                    p.selection.a
+                );
+                assert_eq!(
+                    theme.accent_low_contrast,
+                    contrast_ratio(accent, p.bg) < AA_UI
+                );
             }
         }
     }

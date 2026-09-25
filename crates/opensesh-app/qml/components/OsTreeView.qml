@@ -2,6 +2,7 @@
 // as nodes expand and collapse, so the view keeps its delegates and scroll position.
 // Keyboard: Up/Down/Home/End/PageUp/PageDown move the current row; Right expands, or moves to
 // the first child; Left collapses, or moves to the parent (mirrored in RTL); Enter activates.
+// The focus ring is on the current row, or around the view while there is no current row.
 // Mouse: click selects, double-click toggles and activates, the chevron toggles.
 //   nodes: var            [{ id, text, iconName, children: [...] }]; texts already translated
 //   currentId: string     id of the current (selected) row; "" for none
@@ -395,7 +396,8 @@ ListView {
                 anchors.fill: parent
                 radius: parent.radius
                 visible: row.enabled
-                color: row.down ? Theme.pressed : row.hovered ? Theme.hover : "transparent"
+                // No hover on the current row: it would pull muted text under AA (ADR 0006).
+                color: row.down ? Theme.pressed : row.hovered && !row.current ? Theme.hover : "transparent"
 
                 Behavior on color {
                     ColorAnimation {
@@ -411,6 +413,16 @@ ListView {
                 visible: tree.showFocus && row.current
             }
         }
+    }
+
+    // With no current row (none chosen yet, or it is hidden under a collapsed node), the ring goes
+    // around the whole view; inset, as the view clips.
+    OsFocusRing {
+        parent: tree
+        anchors.margins: 0
+        target: tree
+        baseRadius: Theme.radiusControl - Theme.focusRingWidth - gap
+        visible: tree.showFocus && tree.currentIndex < 0
     }
 
     T.ScrollBar.vertical: T.ScrollBar {

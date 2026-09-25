@@ -5,7 +5,9 @@ pragma ComponentBehavior: Bound
 // the last child of the window content so it stays on top. Toasts dismiss themselves after
 // `timeout` unless the pointer is over them or one of their buttons has keyboard focus; the
 // action button runs `ActionRegistry.trigger(actionId)` and then dismisses the toast. Screen
-// readers get each new message through Accessible.announce().
+// readers get each new message through Accessible.announce(). When a toast holding the focus
+// goes away, a keyboard user moves on to the next toast; otherwise, or when none is left, the
+// focus goes back to where it was before it entered the toasts.
 //   maxVisible: int   toasts shown at once (default 4); the oldest is dropped first
 //   timeout: int      auto-dismiss delay in ms (default 5000); 0 keeps toasts until closed
 //   count: int        read-only; toasts currently shown
@@ -29,20 +31,62 @@ Item {
             toastActionId: toast.actionId || ""
         });
         while (toastModel.count > Math.max(1, maxVisible))
-            toastModel.remove(toastModel.count - 1);
+            removeAt(toastModel.count - 1);
     }
 
     function dismiss(toastId) {
         for (let i = 0; i < toastModel.count; ++i) {
             if (toastModel.get(i).toastId === toastId) {
-                toastModel.remove(i);
+                removeAt(i);
                 return;
             }
         }
     }
 
     function clear() {
+        for (let i = 0; i < toastModel.count; ++i) {
+            const row = list.itemAtIndex(i);
+            if (row && row.focusInside) {
+                restoreFocus();
+                break;
+            }
+        }
         toastModel.clear();
+    }
+
+    function isInside(item) {
+        for (let at = item; at; at = at.parent) {
+            if (at === host)
+                return true;
+        }
+        return false;
+    }
+
+    // Gives the focus back to where it was before it entered the toasts.
+    function restoreFocus() {
+        const window = host.Window.window;
+        const back = focusMemory.item;
+        if (back && back.visible && back.enabled && !isInside(back))
+            back.forceActiveFocus(focusMemory.reason);
+        else if (window)
+            window.contentItem.forceActiveFocus(Qt.OtherFocusReason);
+    }
+
+    // Removes a toast without dropping the focus on the invisible list: a keyboard user moves on
+    // to the next toast (the older one above, else the newer one below).
+    function removeAt(index) {
+        const row = list.itemAtIndex(index);
+        if (row && row.focusInside) {
+            const window = host.Window.window;
+            const focused = window ? window.activeFocusItem : null;
+            const next = focused && focused.visualFocus === true
+                       ? list.itemAtIndex(index + 1) || list.itemAtIndex(index - 1) : null;
+            if (next)
+                next.focusButton(Qt.TabFocusReason);
+            else
+                restoreFocus();
+        }
+        toastModel.remove(index);
     }
 
     anchors.right: parent ? parent.right : undefined
@@ -67,12 +111,37 @@ Item {
         }
     }
 
+    // The last item outside the toasts that had the active focus, and how it got it.
+    QtObject {
+        id: focusMemory
+
+        property Item item: null
+        property int reason: Qt.OtherFocusReason
+    }
+
+    Connections {
+        target: host.Window.window
+
+        function onActiveFocusItemChanged() {
+            const window = host.Window.window;
+            const item = window ? window.activeFocusItem : null;
+            if (!item || host.isInside(item))
+                return;
+            focusMemory.item = item;
+            // Controls know how they got the focus: keep the focus ring if it came from the keyboard.
+            focusMemory.reason = item.focusReason !== undefined ? item.focusReason : Qt.OtherFocusReason;
+        }
+    }
+
     ListView {
         id: list
 
         anchors.fill: parent
         verticalLayoutDirection: ListView.BottomToTop
         interactive: false
+        // No current item: when rows come and go, the view would move the focus to the new current
+        // delegate (an invisible Item), taking it from the toast button that has it.
+        currentIndex: -1
         spacing: Theme.spacingSm
         model: toastModel
 
@@ -88,6 +157,11 @@ Item {
 
             // Horizontal slide used by the add and remove transitions.
             property real slide: 0
+            readonly property bool focusInside: toastItem.focusInside
+
+            function focusButton(reason) {
+                toastItem.focusButton(reason);
+            }
 
             width: ListView.view.width
             height: toastItem.height

@@ -45,7 +45,14 @@ fn main() {
         &["ttf", "otf"],
         false,
     ));
-    resources.extend(files_with_extensions(Path::new("i18n"), &["qm"], false));
+    // The pseudo-locale is a debug tool (ADR 0009): release builds don't bundle it, so a
+    // `language = "pseudo"` left in a shared config.toml falls back to English there.
+    let release = std::env::var("PROFILE").is_ok_and(|profile| profile == "release");
+    resources.extend(
+        files_with_extensions(Path::new("i18n"), &["qm"], false)
+            .into_iter()
+            .filter(|file| !(release && file.ends_with("opensesh_pseudo.qm"))),
+    );
 
     let module = QmlModule::new("cc.caixa.opensesh")
         .version(1, 0)

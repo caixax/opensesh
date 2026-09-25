@@ -296,6 +296,9 @@ Column {
                     OsFocusRing {
                         target: menuArea
                         baseRadius: Theme.radiusCard
+                        // A click doesn't focus the area: its focus comes from Tab, or back
+                        // from the menu it opened.
+                        keyboardFocus: true
                     }
                 }
             }

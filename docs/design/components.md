@@ -4,7 +4,7 @@ This document is the contract for every QML file under `crates/opensesh-app/qml/
 
 ## 1. `Theme` (QML singleton, implemented in Rust)
 
-`import cc.caixa.opensesh` gives you `Theme`. **Never write a color literal, `Qt.rgba()`, `Qt.darker()`, `Qt.lighter()`, `Qt.alpha()` or a named color in QML.** `cargo xtask lint-qml` fails the build on them. If you need a color that doesn't exist, add a token in `opensesh-core::theme`.
+`import cc.caixa.opensesh` gives you `Theme`. **Never write a color literal, `Qt.rgba()`, `Qt.darker()`, `Qt.lighter()`, `Qt.alpha()` or a named color in QML.** `cargo xtask lint-qml` (run in CI) rejects them. If you need a color that doesn't exist, add a token in `opensesh-core::theme`.
 
 ### Inputs
 
@@ -27,12 +27,15 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 | `accent` | Accent fills: primary buttons, selected indicators, checked states, progress |
 | `accentText` | Text and icons **on** an `accent` fill (≥ 4.5:1, computed) |
 | `accentFg` | Accent used **as** text or icon color on `bg`/`surface`/`surface2` (links, active rail icon) |
+| `defaultAccent` | The default ("Sesame") accent of the current scheme, whatever accent is chosen: the first swatch of accent pickers |
 | `success`, `warning`, `danger`, `info` | Status fills, borders and icons (≥ 3:1 on `surface`) |
 | `focusRing` | Keyboard focus indicator |
 | `hover` | Translucent overlay for hovered items (draw on top of the item's own fill) |
 | `pressed` | Translucent overlay for pressed items |
 | `selection` | Text selection and selected rows (translucent accent) |
 | `scrim` | Dimming layer behind modal dialogs and drawers |
+
+**Accent presets:** `accentPresets` (constant list of `"#RRGGBB"` strings: amber, terracotta, rose, lavender, blue, teal, green) is the only source of preset accents; never repeat the hex codes in QML.
 
 **Text on a status fill:** use `Theme.textOn(Theme.danger)`. `textOn(color)` returns the readable ink for any fill.
 
@@ -60,7 +63,7 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 - **Fallback style:** the app forces the Qt Quick Controls **Basic** style, so any stock control that slips in (for example a `ScrollBar` inside a `ScrollView`) is light and predictable. Prefer our own `OsScrollBar` where it is visible.
 - **Text:** use `OsText` (a `Text` with `Theme.fontFamily`, `Theme.fontSize` and `Theme.text` defaults) for labels. Every user-visible literal goes through `qsTr()`. Identifiers, icon names and object names don't.
 - **Icons:** use `OsIcon { name: "search"; color: Theme.text; size: Theme.iconSize }` with a name from `assets/icons/icons.toml`. Never use a file path, never inline SVG.
-- **Focus:** every interactive component shows a visible focus ring when it has **keyboard** focus (`visualFocus` on templates, `activeFocus` plus the last input being the keyboard for custom items). Use `OsFocusRing { target: control }`: a rounded outline in `Theme.focusRing`, `Theme.focusRingWidth` thick, drawn outside the control. Tab order follows the visual order; `activeFocusOnTab: true` on custom interactive items.
+- **Focus:** every interactive component shows a visible focus ring when it has **keyboard** focus (`visualFocus` on templates; for custom items, `activeFocus` plus the last input being the keyboard, which they pass to `OsFocusRing` as `keyboardFocus`). Use `OsFocusRing { target: control }`: a rounded outline in `Theme.focusRing`, `Theme.focusRingWidth` thick, drawn outside the control. Tab order follows the visual order; `activeFocusOnTab: true` on custom interactive items.
 - **Keyboard:** buttons activate with Space/Enter; lists and rails move with the arrow keys and Home/End; popups close with Escape; menus open with the Menu key and Shift+F10 where it applies.
 - **Accessibility:** set `Accessible.name` (translated) on every interactive component. Icon-only buttons **must** take a `text`/`toolTip` used as the name. Set `Accessible.role` whenever the template doesn't already set the right one, and `Accessible.description` for extra hints.
 - **States:** hover and pressed use the `Theme.hover` / `Theme.pressed` overlays. Disabled uses `Theme.textDisabled` and no hover. Every state change animates with `Theme.durationFast` (a `Behavior on color` is fine).
@@ -74,7 +77,8 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 |---|---|---|
 | `OsText` | `Text` | Theme font and color defaults; `muted: bool`, `size: "small" \| "normal" \| "large" \| "title"` |
 | `OsIcon` | `Image` | `name`, `color`, `size`; loads `image://icon/<name>?color=..&size=..` |
-| `OsFocusRing` | `Rectangle` | Visible only on keyboard focus of `target` |
+| `OsFocusRing` | `Rectangle` | Visible only on keyboard focus of `target`; for a plain `Item` target (no focus reason), set `keyboardFocus` when its focus came from the keyboard |
+| `OsFocusReturn` | `QtObject` | Popup helper: `save()` on `aboutToShow`, `restore()` on `closed` gives the focus back to the opener with its focus reason (so its ring stays) |
 | `OsButton` | `T.Button` | `variant: "primary" \| "secondary" \| "ghost" \| "danger"`, optional `iconName` |
 | `OsIconButton` | `T.Button` | Square, icon only; `iconName`, `toolTip` (also the accessible name), optional `checkable` |
 | `OsTextField` | `T.TextField` | Placeholder in `textMuted`, `borderStrong` outline, accent focus |
@@ -85,7 +89,7 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 | `OsCheckBox` | `T.CheckBox` | Also the partially-checked state |
 | `OsSlider` | `T.Slider` | |
 | `OsSpinBox` | `T.SpinBox` | |
-| `OsColorPicker` | `Item` | Preset swatches plus a `#RRGGBB` field, `color` property, `accepted` signal |
+| `OsColorPicker` | `Item` | Preset swatches (`Theme.accentPresets`) plus a `#RRGGBB` field, `value` property, `accepted` signal; optional default swatch (`showDefault`, `defaultSelected`, `defaultPicked` signal) in `Theme.defaultAccent`, so a setting can store `"default"` |
 | `OsFontPicker` | `OsComboBox`-like | Families from `Platform.fontFamilies(monospaceOnly)` with a live preview |
 | `OsKeybindCapture` | `Item` | Records a key combination and shows it as text (`Platform.keySequenceText`); Escape cancels, Backspace clears |
 | `OsTabBar` / `OsTabButton` | `T.TabBar` / `T.TabButton` | Title-bar tabs: icon, title, close button, activity dot |
@@ -95,11 +99,11 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 | `OsTreeView` | `ListView` | Flattened tree (`nodes: [{id, text, iconName, children: [...]}]`); arrows expand and collapse |
 | `OsTag` | `Rectangle` | Small pill, optional remove button |
 | `OsBadge` | `Rectangle` | Count or dot; `variant` uses the status colors with `Theme.textOn(...)` |
-| `OsDialog` | `T.Dialog` | Modal over a `scrim`; title, content, footer buttons |
-| `OsDrawer` | `T.Drawer` | Side sheet |
-| `OsContextMenu` / `OsMenuItem` | `T.Menu` / `T.MenuItem` | Icons and shortcut text |
+| `OsDialog` | `T.Dialog` | Modal over a `scrim`; title, content, footer buttons; gives the focus back on close (`OsFocusReturn`) |
+| `OsDrawer` | `T.Drawer` | Side sheet; gives the focus back on close (`OsFocusReturn`) |
+| `OsContextMenu` / `OsMenuItem` | `T.Menu` / `T.MenuItem` | Icons and shortcut text; a top-level menu gives the focus back on close (`OsFocusReturn`) |
 | `OsTooltip` | `T.ToolTip` | Short delay, `surface2` background |
-| `OsToast` | `Rectangle` | Transient message with `kind` (`info`/`success`/`warning`/`danger`) and an optional action |
+| `OsToast` | `Rectangle` | Transient message with `kind` (`info`/`success`/`warning`/`danger`) and an optional action; `focusButton(reason)` |
 | `OsEmptyState` | `Item` | Icon, title, body and action buttons |
 | `OsSplitter` | `T.SplitView` | Themed handle, keyboard resizable |
 | `OsCommandPalette` | `T.Popup` | Search field and fuzzy-filtered action list (see `ActionRegistry`) |

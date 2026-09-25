@@ -64,7 +64,8 @@ T.Button {
             anchors.fill: parent
             radius: parent.radius
             visible: control.enabled
-            color: control.down ? Theme.pressed : control.hovered ? Theme.hover : "transparent"
+            // No hover on the checked state: it would pull muted text under AA (ADR 0006).
+            color: control.down ? Theme.pressed : control.hovered && !control.checked ? Theme.hover : "transparent"
 
             Behavior on color {
                 ColorAnimation {

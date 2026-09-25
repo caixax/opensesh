@@ -3,12 +3,19 @@
 //! The **parent directory** is watched, not the file: editors and our own [`crate::fsutil`]
 //! replace files by renaming a temporary file over them, which would silently end a watch on
 //! the old file. Events are debounced so a burst (write + rename + chmod) gives one callback.
+//!
+//! When the file is a symbolic link (a dotfiles setup), the directory of the file it points to
+//! is watched as well, since edits there (a `git pull` in the dotfiles repository) don't touch
+//! the link's directory. The link is resolved once, when the watch starts.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::time::Duration;
 
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher as _};
+
+use crate::fsutil;
 
 /// Keeps the watch alive; dropping it stops watching (the callback thread exits too).
 pub struct FileWatcher {
@@ -23,22 +30,29 @@ impl std::fmt::Debug for FileWatcher {
 
 impl FileWatcher {
     /// Calls `on_change` (on a background thread) after `path` was created, modified, renamed
-    /// or removed, once no new event arrived for `debounce`.
+    /// or removed, once no new event arrived for `debounce`. If `path` is a symbolic link,
+    /// changes to the file it points to are reported too.
     ///
     /// # Errors
     ///
-    /// Fails if the directory can't be watched or the callback thread can't start.
+    /// Fails if the directory of `path` can't be watched or the callback thread can't start. A
+    /// link target's directory that can't be watched is only logged.
     pub fn spawn(
         path: &Path,
         debounce: Duration,
         on_change: impl Fn() + Send + 'static,
     ) -> Result<Self, WatchError> {
-        let dir = path
-            .parent()
-            .filter(|dir| !dir.as_os_str().is_empty())
-            .ok_or(WatchError::NoParent)?
-            .to_path_buf();
-        let file_name = path.file_name().ok_or(WatchError::NoParent)?.to_os_string();
+        let (dir, file_name) = split(path).ok_or(WatchError::NoParent)?;
+        let mut names = vec![file_name];
+        let mut target_dir = None;
+        if let Some((link_dir, link_name)) = split(&fsutil::resolve_links(path)) {
+            if !names.contains(&link_name) {
+                names.push(link_name);
+            }
+            if link_dir != dir {
+                target_dir = Some(link_dir);
+            }
+        }
 
         let (sender, receiver) = mpsc::channel::<()>();
         let mut watcher =
@@ -47,16 +61,29 @@ impl FileWatcher {
                 if matches!(event.kind, EventKind::Access(_)) {
                     return;
                 }
-                let concerns_file = event
-                    .paths
-                    .iter()
-                    .any(|changed: &PathBuf| changed.file_name() == Some(file_name.as_os_str()));
+                // File names only: event paths may be spelled differently from the watched ones
+                // (e.g. canonical paths on macOS). A same-named file in the other directory only
+                // costs a harmless extra reload.
+                let concerns_file = event.paths.iter().any(|changed: &PathBuf| {
+                    changed
+                        .file_name()
+                        .is_some_and(|name| names.iter().any(|watched| watched == name))
+                });
                 if concerns_file {
                     // The receiver only disappears when the watcher is being dropped.
                     let _ = sender.send(());
                 }
             })?;
         watcher.watch(&dir, RecursiveMode::NonRecursive)?;
+        if let Some(target_dir) = target_dir {
+            if let Err(error) = watcher.watch(&target_dir, RecursiveMode::NonRecursive) {
+                tracing::warn!(
+                    dir = %target_dir.display(),
+                    "edits to the link target of {} won't be noticed: {error}",
+                    path.display()
+                );
+            }
+        }
 
         std::thread::Builder::new()
             .name("opensesh-watch".to_owned())
@@ -77,6 +104,12 @@ impl FileWatcher {
 
         Ok(Self { _watcher: watcher })
     }
+}
+
+/// The directory to watch and the file name to look for.
+fn split(path: &Path) -> Option<(PathBuf, OsString)> {
+    let dir = path.parent().filter(|dir| !dir.as_os_str().is_empty())?;
+    Some((dir.to_path_buf(), path.file_name()?.to_os_string()))
 }
 
 /// Errors from [`FileWatcher::spawn`].
@@ -142,6 +175,36 @@ mod tests {
         changes
             .recv_timeout(Duration::from_secs(10))
             .expect("a change notification");
+    }
+
+    #[test]
+    fn edits_to_a_link_target_in_another_directory_are_reported() {
+        let dir = tempfile::tempdir().unwrap();
+        let dotfiles = dir.path().join("dotfiles");
+        let config_dir = dir.path().join("config");
+        std::fs::create_dir_all(&dotfiles).unwrap();
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let target = dotfiles.join("opensesh.toml");
+        std::fs::write(&target, "a = 1").unwrap();
+        let link = config_dir.join("config.toml");
+        #[cfg(unix)]
+        let linked = std::os::unix::fs::symlink(&target, &link);
+        #[cfg(windows)]
+        let linked = std::os::windows::fs::symlink_file(&target, &link);
+        if let Err(error) = linked {
+            eprintln!("skipped: can't create a symbolic link here: {error}");
+            return;
+        }
+        let (_watcher, changes) = watch(&link);
+
+        // E.g. a `git pull` in the dotfiles repository.
+        std::fs::write(&target, "a = 2").unwrap();
+        changes
+            .recv_timeout(Duration::from_secs(10))
+            .expect("a change notification");
+        // Other files next to the target are still ignored.
+        std::fs::write(dotfiles.join("README.md"), "x").unwrap();
+        assert!(changes.recv_timeout(Duration::from_millis(400)).is_err());
     }
 
     #[test]

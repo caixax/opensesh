@@ -9,6 +9,7 @@
 //   hovered: bool        read-only; the pointer is over the card
 //   focusInside: bool    read-only; one of its buttons has keyboard focus
 // Signals: actionClicked(), closeClicked().
+// Functions: focusButton(reason) gives the focus to the action button, else the dismiss button.
 import QtQuick
 import cc.caixa.opensesh
 
@@ -59,6 +60,13 @@ Rectangle {
 
     signal actionClicked
     signal closeClicked
+
+    function focusButton(reason) {
+        if (hasAction)
+            actionButton.forceActiveFocus(reason);
+        else if (showClose)
+            closeButton.forceActiveFocus(reason);
+    }
 
     implicitWidth: Math.min(maxWidth, chromeWidth + Math.ceil(message.implicitWidth))
     implicitHeight: Math.max(Theme.controlHeightSmall + 2 * Theme.spacingSm, message.height + 2 * Theme.spacingMd)

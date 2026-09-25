@@ -1,6 +1,7 @@
 // Title-bar session tab strip holding OsTabButton items. Tabs keep their natural width and the
 // strip scrolls horizontally when they overflow. Left/Right (mirrored in RTL) move the current
-// tab and the focus, Home/End jump to the first/last tab. No background: the title bar paints it.
+// tab and the focus, Home/End jump to the first/last tab; disabled tabs are skipped. No
+// background: the title bar paints it.
 import QtQuick
 import QtQuick.Templates as T
 import cc.caixa.opensesh
@@ -27,12 +28,23 @@ T.TabBar {
         currentItem.focusReason = Qt.TabFocusReason;
     }
 
+    // Makes the first enabled tab from `index` in the direction of `step` (+1 or -1) current and
+    // focuses it; nothing happens if there is none. A disabled tab can't take the focus, and as
+    // the current tab it would leave the bar without a Tab stop.
+    function selectEnabled(index, step) {
+        for (let i = index; i >= 0 && i < count; i += step) {
+            const item = itemAt(i);
+            if (item && item.enabled) {
+                setCurrentIndex(i);
+                focusCurrent();
+                return;
+            }
+        }
+    }
+
     function moveCurrent(step) {
-        const next = currentIndex + (mirrored ? -step : step);
-        if (next < 0 || next >= count)
-            return;
-        setCurrentIndex(next);
-        focusCurrent();
+        const direction = mirrored ? -step : step;
+        selectEnabled(currentIndex + direction, direction);
     }
 
     Keys.onLeftPressed: event => {
@@ -47,12 +59,10 @@ T.TabBar {
         if (count === 0)
             return;
         if (event.key === Qt.Key_Home) {
-            setCurrentIndex(0);
-            focusCurrent();
+            selectEnabled(0, 1);
             event.accepted = true;
         } else if (event.key === Qt.Key_End) {
-            setCurrentIndex(count - 1);
-            focusCurrent();
+            selectEnabled(count - 1, -1);
             event.accepted = true;
         }
     }

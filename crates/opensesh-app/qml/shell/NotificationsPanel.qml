@@ -2,8 +2,8 @@ pragma ComponentBehavior: Bound
 
 // Notification history (the `Toasts` singleton): a side sheet listing every toast of this
 // session, newest first, with its action button and a "Clear all" button. Opening it marks
-// everything as read, and so does any toast that arrives while it is open. Closing it gives the
-// focus back to where it was.
+// everything as read, and so does any toast that arrives while it is open. Like every OsDrawer,
+// closing it gives the focus back to where it was.
 import QtQuick
 import QtQuick.Templates as T
 import cc.caixa.opensesh
@@ -11,23 +11,10 @@ import cc.caixa.opensesh
 OsDrawer {
     id: drawer
 
-    property Item focusBeforeOpen: null
-    property int focusReasonBeforeOpen: Qt.OtherFocusReason
-
     title: qsTr("Notifications")
     edge: Qt.RightEdge
 
-    onAboutToShow: {
-        focusBeforeOpen = parent && parent.Window.window ? parent.Window.window.activeFocusItem : null;
-        focusReasonBeforeOpen = focusBeforeOpen && focusBeforeOpen.focusReason !== undefined
-                                ? focusBeforeOpen.focusReason : Qt.OtherFocusReason;
-    }
     onOpened: Toasts.markAllRead()
-    onClosed: {
-        if (focusBeforeOpen && focusBeforeOpen.visible && focusBeforeOpen.enabled)
-            focusBeforeOpen.forceActiveFocus(focusReasonBeforeOpen);
-        focusBeforeOpen = null;
-    }
 
     Connections {
         target: Toasts
@@ -52,7 +39,9 @@ OsDrawer {
                 anchors.right: clearButton.left
                 anchors.rightMargin: Theme.spacingSm
                 anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("%n notification(s)", "", Toasts.history.length)
+                // Not "%n notification(s)": English has no translation file to pick the plural.
+                //: Number of notifications in the history, which only covers this session
+                text: qsTr("This session: %1").arg(Toasts.history.length)
                 muted: true
             }
 
@@ -94,7 +83,7 @@ OsDrawer {
 
                 OsText {
                     width: parent.width
-                    text: Qt.formatTime(entry.modelData.time, Locale.ShortFormat)
+                    text: Qt.formatTime(entry.modelData.time, Qt.locale(), Locale.ShortFormat)
                     size: "small"
                     muted: true
                 }

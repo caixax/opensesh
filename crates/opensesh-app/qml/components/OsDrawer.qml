@@ -6,7 +6,8 @@
 //   preferredWidth: real   sheet width (360 logical px at scale 1), capped to the window
 // Children go into the body under the header, inset by Theme.spacingXl; size them against the
 // body (`width: parent.width`, `anchors.fill: parent`). Escape, a click on the scrim and the
-// close button close it. Swiping from the window edge is disabled (`dragMargin: 0`).
+// close button close it. Swiping from the window edge is disabled (`dragMargin: 0`). Closing
+// gives the focus back to where it was, with its focus ring (OsFocusReturn).
 import QtQuick
 import QtQuick.Templates as T
 import cc.caixa.opensesh
@@ -20,6 +21,9 @@ T.Drawer {
     default property alias body: bodyItem.data
 
     readonly property bool headerShown: title.length > 0 || showClose
+    readonly property OsFocusReturn focusReturn: OsFocusReturn {
+        popup: control
+    }
 
     parent: T.Overlay.overlay
     edge: Qt.RightEdge
@@ -41,6 +45,9 @@ T.Drawer {
 
     font.family: Theme.fontFamily
     font.pixelSize: Theme.fontSize
+
+    onAboutToShow: focusReturn.save()
+    onClosed: focusReturn.restore()
 
     // T.Drawer animates its `position` with these; the scrim follows the position.
     enter: Transition {

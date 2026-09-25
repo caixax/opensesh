@@ -131,8 +131,9 @@ T.ItemDelegate {
             anchors.fill: parent
             radius: parent.radius
             visible: control.enabled
+            // No hover on a selected row: it would pull muted text under AA (ADR 0006).
             color: control.down ? Theme.pressed
-                 : control.hovered || control.highlighted ? Theme.hover
+                 : (control.hovered || control.highlighted) && !control.selected ? Theme.hover
                  : "transparent"
 
             Behavior on color {

@@ -82,8 +82,13 @@ SettingsPage {
                 OsColorPicker {
                     id: accentPicker
 
+                    // The first swatch is the default accent of the current mode: picking it
+                    // stores "default", so the accent keeps following the light or dark mode.
+                    showDefault: true
+                    defaultSelected: AppSettings.accent === "default"
                     Accessible.name: qsTr("Accent color")
                     onAccepted: picked => AppSettings.accent = accentPicker.hexOf(picked)
+                    onDefaultPicked: AppSettings.accent = "default"
                 }
 
                 OsButton {

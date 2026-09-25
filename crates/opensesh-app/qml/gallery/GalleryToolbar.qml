@@ -15,16 +15,17 @@ Rectangle {
 
     required property ThemeBinder binder
 
-    // Accent presets: "default" is the §5.2 sesame amber of the current mode.
-    readonly property var accents: [
-        { value: "default", name: qsTr("Sesame (default)"), dark: "#E6B450", light: "#B7800F" }, // lint-qml: allow (preset data)
-        { value: "#E07A5F", name: qsTr("Terracotta") }, // lint-qml: allow (preset data)
-        { value: "#D9667B", name: qsTr("Rose") }, // lint-qml: allow (preset data)
-        { value: "#A983D8", name: qsTr("Lavender") }, // lint-qml: allow (preset data)
-        { value: "#5B9BD5", name: qsTr("Blue") }, // lint-qml: allow (preset data)
-        { value: "#4DB6AC", name: qsTr("Teal") }, // lint-qml: allow (preset data)
-        { value: "#7CB342", name: qsTr("Green") } // lint-qml: allow (preset data)
-    ]
+    // Accent swatches: "default" (the §5.2 sesame amber of the current mode, drawn in
+    // Theme.defaultAccent), then Theme.accentPresets. The names are index for index with them.
+    readonly property var presetNames: [qsTr("Amber"), qsTr("Terracotta"), qsTr("Rose"), qsTr("Lavender"),
+        qsTr("Blue"), qsTr("Teal"), qsTr("Green")]
+    readonly property var accents: {
+        const list = [{ value: "default", name: qsTr("Sesame (default)") }];
+        const presets = Theme.accentPresets;
+        for (let i = 0; i < presets.length; ++i)
+            list.push({ value: presets[i], name: i < presetNames.length ? presetNames[i] : presets[i] });
+        return list;
+    }
     readonly property string currentAccent: binder.overrideAccent.length > 0 ? binder.overrideAccent
                                                                              : AppSettings.accent
     // Preset matching the current accent ("#rrggbb" in any case), or -1 for a custom color.
@@ -226,8 +227,8 @@ Rectangle {
                     required property int index
 
                     readonly property bool selected: toolbar.accentIndex === index
-                    readonly property string swatchColor: modelData.value !== "default" ? modelData.value
-                                                          : Theme.dark ? modelData.dark : modelData.light
+                    readonly property color swatchColor: modelData.value !== "default" ? modelData.value
+                                                                                       : Theme.defaultAccent
 
                     function moveTo(target: int) {
                         const count = swatchRepeater.count;
@@ -346,8 +347,10 @@ Rectangle {
             OsColorPicker {
                 id: accentPicker
 
-                value: Theme.accent
+                showDefault: true
+                defaultSelected: toolbar.currentAccent === "default"
                 onAccepted: value => toolbar.setAccent(accentPicker.hexOf(value))
+                onDefaultPicked: toolbar.setAccent("default")
             }
 
             Row {
@@ -368,5 +371,13 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // A pick sets the picker's value itself, which would break a plain binding: this keeps it in
+    // step with the accent the toolbar swatches choose.
+    Binding {
+        target: accentPicker
+        property: "value"
+        value: Theme.accent
     }
 }

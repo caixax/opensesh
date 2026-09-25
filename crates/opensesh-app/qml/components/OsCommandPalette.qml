@@ -31,9 +31,10 @@ T.Popup {
 
     // Action ids, most recently run first (this session only).
     property var recent: []
-    property Item focusBeforeOpen: null
-    property int focusReasonBeforeOpen: Qt.OtherFocusReason
     property string pendingActionId: ""
+    readonly property OsFocusReturn focusReturn: OsFocusReturn {
+        popup: control
+    }
 
     readonly property var results: {
         const found = ActionRegistry.search(field.text).filter(entry => entry.action.enabled);
@@ -88,19 +89,14 @@ T.Popup {
     font.pixelSize: Theme.fontSize
 
     onAboutToShow: {
-        focusBeforeOpen = parent && parent.Window.window ? parent.Window.window.activeFocusItem : null;
-        // Controls know how they got the focus: keep the focus ring if it came from the keyboard.
-        focusReasonBeforeOpen = focusBeforeOpen && focusBeforeOpen.focusReason !== undefined
-                                ? focusBeforeOpen.focusReason : Qt.OtherFocusReason;
+        focusReturn.save();
         pendingActionId = "";
         field.clear();
         list.currentIndex = 0;
     }
     onOpened: field.forceActiveFocus(Qt.PopupFocusReason)
     onClosed: {
-        if (focusBeforeOpen && focusBeforeOpen.visible && focusBeforeOpen.enabled)
-            focusBeforeOpen.forceActiveFocus(focusReasonBeforeOpen);
-        focusBeforeOpen = null;
+        focusReturn.restore();
         const actionId = pendingActionId;
         pendingActionId = "";
         if (actionId.length > 0)
