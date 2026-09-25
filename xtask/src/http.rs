@@ -1,5 +1,5 @@
-//! Minimal HTTPS download helper. Only `cargo xtask icons` and `cargo xtask fonts` use the
-//! network, and only when the developer runs them explicitly.
+//! Minimal HTTPS download helper. Only `cargo xtask icons`, `fonts`, `conpty` and `vttest` use
+//! the network, and only when the developer runs them explicitly.
 
 use std::sync::LazyLock;
 use std::time::Duration;

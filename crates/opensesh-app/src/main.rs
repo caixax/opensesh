@@ -23,6 +23,8 @@ use crate::crash::DialogPolicy;
 use crate::logging::LogGuard;
 
 fn main() -> ExitCode {
+    // First, while this is the only thread: it changes the process environment.
+    gui::enable_windows_altgr();
     platform::attach_parent_console();
 
     // Write errors are ignored on purpose: a closed pipe must not turn `--version` into a panic.

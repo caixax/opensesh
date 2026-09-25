@@ -4,7 +4,8 @@
 #   checks  - fmt, QML lint, icon pipeline reproducibility, cargo-deny, cargo-audit
 #   linux   - Ubuntu 24.04 with Qt from aqtinstall: clippy, tests, build, offscreen smoke test
 #   distro  - Arch, Fedora and Debian 13 containers with their own Qt packages
-#   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, offscreen smoke test
+#   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, bundled ConPTY, offscreen
+#             smoke test
 name: CI
 
 on:
@@ -226,6 +227,16 @@ jobs:
         run: cargo test --locked --workspace
       - name: Build the app
         run: cargo build --locked -p opensesh-app
+      # conpty.dll and OpenConsole.exe next to the app, as shipped (ADR 0014).
+      - name: Bundle the ConPTY host
+        timeout-minutes: 5
+        run: |
+          cargo xtask conpty
+          test -f target/debug/conpty.dll && test -f target/debug/OpenConsole.exe
+          # The license copy and the notices are committed: the task must not change them.
+          paths=(assets/conpty THIRD_PARTY_NOTICES.md)
+          out=$(git status --porcelain --untracked-files=all -- "${paths[@]}")
+          if [ -n "$out" ]; then echo "$out"; git diff -- "${paths[@]}"; exit 1; fi
       - name: GUI smoke test (offscreen)
         timeout-minutes: 3
         run: target/debug/opensesh-app.exe --smoke-test
