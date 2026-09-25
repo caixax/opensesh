@@ -375,8 +375,32 @@ impl KeyInput {
     }
 }
 
+/// Whether a Qt key event is one digit of a Windows Alt code (Alt held, a numeric keypad
+/// digit: Alt+0233 types "é"). Windows sends the composed character by itself when Alt is
+/// released, so the digits must neither reach the program (as Alt+digit, which shells bind to
+/// digit arguments) nor trigger the app's Alt+1..9 shortcuts.
+#[must_use]
+pub fn is_windows_alt_code(qt_key: i32, qt_modifiers: u32) -> bool {
+    alt_code_digit(qt_key, qt_modifiers, cfg!(windows))
+}
+
+fn alt_code_digit(qt_key: i32, qt_modifiers: u32, windows: bool) -> bool {
+    windows
+        && (qt::KEY_0..=qt::KEY_9).contains(&qt_key)
+        && qt_modifiers & qt::KEYPAD_MODIFIER != 0
+        && qt_modifiers & qt::ALT_MODIFIER != 0
+        && qt_modifiers & (qt::CONTROL_MODIFIER | qt::GROUP_SWITCH_MODIFIER) == 0
+}
+
 /// [`KeyInput::from_qt`] with the platform as a parameter, so both paths are unit-tested.
 fn translate_qt(qt_key: i32, qt_modifiers: u32, text: &str, windows: bool) -> KeyInput {
+    if alt_code_digit(qt_key, qt_modifiers, windows) {
+        return KeyInput {
+            key: Key::Ignored,
+            mods: modifiers_from_qt(qt_modifiers),
+            text: String::new(),
+        };
+    }
     let key = Key::from_qt(qt_key, qt_modifiers & qt::KEYPAD_MODIFIER != 0);
     let mut mods = modifiers_from_qt(qt_modifiers);
     let mut text = text.to_owned();
@@ -1376,5 +1400,31 @@ mod tests {
             push_decimal(&mut out, value);
             assert_eq!(out, text.as_bytes());
         }
+    }
+    #[test]
+    fn windows_alt_codes_send_nothing_until_the_composed_character() {
+        let alt_keypad = qt::ALT_MODIFIER | qt::KEYPAD_MODIFIER;
+        let modes = InputModes::default();
+        let options = KeyOptions::default();
+        // Windows: the digits of Alt+0233 are swallowed; the "é" arrives afterwards as text.
+        for digit in 0..10 {
+            let input = translate_qt(qt::KEY_0 + digit, alt_keypad, "", true);
+            assert_eq!(input.key, Key::Ignored);
+            assert_eq!(encode_key(&input, &modes, &options), None);
+            assert!(alt_code_digit(qt::KEY_0 + digit, alt_keypad, true));
+        }
+        // Main-row Alt+digit, Ctrl+Alt and other platforms keep their meaning.
+        assert!(!alt_code_digit(qt::KEY_0 + 2, qt::ALT_MODIFIER, true));
+        assert!(!alt_code_digit(
+            qt::KEY_0 + 2,
+            alt_keypad | qt::CONTROL_MODIFIER,
+            true
+        ));
+        assert!(!alt_code_digit(qt::KEY_0 + 2, alt_keypad, false));
+        let linux = translate_qt(qt::KEY_0 + 2, alt_keypad, "", false);
+        assert_eq!(
+            encode_key(&linux, &modes, &options).as_deref(),
+            Some(&b"\x1b2"[..])
+        );
     }
 }

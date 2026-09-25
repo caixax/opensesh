@@ -377,6 +377,10 @@ GlyphAtlas::Glyph GlyphAtlas::glyph(char32_t ch, int style, int span)
     const auto found = m_fast.constFind(key);
     if (found != m_fast.constEnd())
         return *found;
+    if (m_frameNs >= kFrameBudgetNs) {
+        ++m_deferred;
+        return Glyph();
+    }
     const Glyph result = rasterize(QString::fromUcs4(&ch, 1), ch, style, span);
     m_fast.insert(key, result);
     return result;
@@ -390,6 +394,10 @@ GlyphAtlas::Glyph GlyphAtlas::cluster(const QString &text, int style, int span)
     const auto found = m_clusters.constFind(key);
     if (found != m_clusters.constEnd())
         return *found;
+    if (m_frameNs >= kFrameBudgetNs) {
+        ++m_deferred;
+        return Glyph();
+    }
     const Glyph result = rasterize(text, 0, style, span);
     m_clusters.insert(key, result);
     return result;
@@ -543,6 +551,7 @@ GlyphAtlas::Glyph GlyphAtlas::rasterize(const QString &text, char32_t single, in
     }
     const qint64 elapsed = timer.nsecsElapsed();
     rasterNs += elapsed;
+    m_frameNs += elapsed;
     if (single == 0 || single > 0x7E)
         qCDebug(lcTerminal).nospace()
                 << "glyph " << text << " (U+" << Qt::hex << uint(text.toUcs4().value(0))
@@ -749,8 +758,10 @@ void RootNode::sync(QQuickWindow *window, const RenderInput &input, RenderStats 
         for (int row = 0; row < m_lines; ++row) {
             if (!m_rowDirty[std::size_t(row)])
                 continue;
+            const int deferredBefore = m_atlas.deferred();
             buildRow(row, input);
-            m_rowDirty[std::size_t(row)] = 0;
+            // A row with glyphs left for later is built again next frame.
+            m_rowDirty[std::size_t(row)] = m_atlas.deferred() > deferredBefore ? 1 : 0;
             ++stats.rowsBuilt;
         }
         buildOverlay(input);

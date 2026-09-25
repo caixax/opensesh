@@ -59,11 +59,16 @@ Item {
     // Last view other than Terminal: what Home shows while sessions are open.
     property string homeView: "hosts"
     property int currentTab: 0
+    // The tab id of currentTab (0 for Home). Tabs compare against this stable id, not the
+    // index: removing a row renumbers the delegates before currentTab is adjusted.
+    property int currentTabId: 0
     property int lastSessionTab: 1
     property alias sessionModel: sessionModel
     readonly property int sessionCount: sessionModel.count
     property int nextTabId: 1
     property Item currentTerminal: null
+
+    onCurrentTabChanged: syncCurrentTabId()
     // Set while the tab model changes, so the tab bar's own index adjustments are ignored.
     property bool updatingTabs: false
 
@@ -109,9 +114,17 @@ Item {
         moveFocusOffHiddenItem();
     }
 
+    function syncCurrentTabId() {
+        currentTabId = currentTab > 0 && currentTab <= sessionModel.count
+                       ? sessionModel.get(currentTab - 1).tabId : 0;
+    }
+
     function selectTab(index) {
         index = Math.max(0, Math.min(index, sessionModel.count));
         currentTab = index;
+        // Also when the index didn't change (the current tab was closed and the next one moved
+        // into its place).
+        syncCurrentTabId();
         if (index > 0) {
             lastSessionTab = index;
             setActiveView("terminal");
