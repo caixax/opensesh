@@ -44,6 +44,24 @@ impl Rgb {
         u32::from_be_bytes([0xFF, self.r, self.g, self.b])
     }
 
+    /// WCAG 2 contrast ratio between two opaque colors, from 1.0 to 21.0.
+    #[must_use]
+    pub fn contrast(self, other: Self) -> f64 {
+        fn luminance(color: Rgb) -> f64 {
+            let linear = |channel: u8| {
+                let c = f64::from(channel) / 255.0;
+                if c <= 0.04045 {
+                    c / 12.92
+                } else {
+                    ((c + 0.055) / 1.055).powf(2.4)
+                }
+            };
+            0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b)
+        }
+        let (a, b) = (luminance(self), luminance(other));
+        (a.max(b) + 0.05) / (a.min(b) + 0.05)
+    }
+
     /// Linear interpolation in sRGB: `t = 0` gives `self`, `t = 1` gives `other`.
     #[must_use]
     pub fn mix(self, other: Self, t: f32) -> Self {
