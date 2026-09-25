@@ -1,0 +1,217 @@
+# OpenSesh CI (PLAN §10). The Rust toolchain comes from rust-toolchain.toml (the MSRV).
+#
+# Jobs:
+#   checks  - fmt, QML lint, icon pipeline reproducibility, cargo-deny, cargo-audit
+#   linux   - Ubuntu 24.04 with Qt from aqtinstall: clippy, tests, build, offscreen smoke test
+#   distro  - Arch, Fedora and Debian 13 containers with their own Qt packages
+#   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, offscreen smoke test
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: "1"
+  # Qt used by the Ubuntu and Windows jobs (aqtinstall). Distro jobs use their own Qt.
+  QT_VERSION: "6.10.3"
+  # Headless GUI smoke test (see `opensesh-app --smoke-test`).
+  QT_QPA_PLATFORM: offscreen
+  QT_QUICK_BACKEND: software
+  OPENSESH_NO_CRASH_DIALOG: "1"
+
+jobs:
+  checks:
+    name: Format, lints, licenses and advisories
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
+        with:
+          tool: cargo-deny@0.20.2,cargo-audit@0.22.2
+      # The `cargo xtask` alias is not --locked: fail fast here on a stale Cargo.lock.
+      - name: Fetch dependencies (Cargo.lock is up to date)
+        run: cargo fetch --locked
+      - name: rustfmt
+        run: cargo fmt --all --check
+      - name: QML lint (hardcoded colors, strings without qsTr)
+        run: cargo xtask lint-qml
+      - name: Icon pipeline is reproducible
+        timeout-minutes: 10
+        run: |
+          cargo xtask icons
+          # `git status` (unlike `git diff`) also catches new untracked files.
+          paths=(crates/opensesh-app/qml/icons crates/opensesh-app/data/icons assets/icons THIRD_PARTY_NOTICES.md)
+          out=$(git status --porcelain --untracked-files=all -- "${paths[@]}")
+          if [ -n "$out" ]; then echo "$out"; git diff -- "${paths[@]}"; exit 1; fi
+      - name: xtask tests
+        run: cargo test --locked -p xtask
+      - name: cargo-deny (licenses, bans, sources, advisories)
+        run: cargo deny --locked check
+      # Vulnerabilities only: deny.toml owns the unmaintained/unsound/yanked policy.
+      - name: cargo-audit
+        run: cargo audit
+
+  linux:
+    name: Ubuntu 24.04 (aqtinstall Qt)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libvulkan-dev libxkbcommon-dev pkg-config lld
+      - name: Install Qt
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+      # The versioned qmake path makes cxx-qt's build scripts rerun when Qt changes.
+      - name: Point cxx-qt at the installed qmake
+        run: echo "QMAKE=$QT_ROOT_DIR/bin/qmake" >> "$GITHUB_ENV"
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: qt-${{ env.QT_VERSION }}
+      - name: Clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --locked --workspace
+      - name: Build the app
+        run: cargo build --locked -p opensesh-app
+      - name: GUI smoke test (offscreen)
+        timeout-minutes: 3
+        run: target/debug/opensesh-app --smoke-test
+      - name: Crash dialog smoke test (offscreen)
+        timeout-minutes: 3
+        run: |
+          report="$RUNNER_TEMP/opensesh-crash-smoke.txt"
+          printf 'OpenSesh crash report (CI smoke test)\n' > "$report"
+          target/debug/opensesh-app --crash-report "$report" --smoke-test
+
+  distro:
+    name: ${{ matrix.name }} (distro Qt)
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Arch Linux
+            image: archlinux:latest
+            setup: >-
+              pacman -Syu --noconfirm --needed
+              base-devel git curl lld
+              qt6-base qt6-declarative qt6-svg qt6-wayland qt6-tools
+          - name: Fedora
+            image: fedora:latest
+            setup: >-
+              dnf install -y
+              gcc-c++ git curl lld pkgconf-pkg-config
+              qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg-devel qt6-qtwayland-devel qt6-qttools-devel
+          # Debian 13 ships Qt 6.8.2: our minimum tested Qt version.
+          - name: Debian 13
+            image: debian:trixie
+            setup: >-
+              apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y
+              build-essential git curl ca-certificates pkg-config lld
+              qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-wayland-dev qt6-wayland qt6-tools-dev
+              qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts
+              qml6-module-qtquick-window qml6-module-qtquick-templates qml6-module-qtqml-workerscript
+              fonts-dejavu-core
+    steps:
+      - name: Install system packages
+        run: ${{ matrix.setup }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install rustup and the pinned toolchain
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" toolchain install
+      # Rolling images update Qt and the C++ compiler: key the cache on both.
+      - name: Qt and compiler versions
+        id: qt
+        shell: bash
+        run: |
+          qt=$(qmake6 -query QT_VERSION)
+          cxx=$(c++ -dumpfullversion)
+          echo "version=$qt-$cxx" >> "$GITHUB_OUTPUT"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: ${{ matrix.image }}-qt${{ steps.qt.outputs.version }}
+      - name: Tests
+        shell: bash
+        run: cargo test --locked --workspace
+      - name: Build the app
+        shell: bash
+        run: cargo build --locked -p opensesh-app
+      - name: GUI smoke test (offscreen)
+        shell: bash
+        timeout-minutes: 3
+        run: target/debug/opensesh-app --smoke-test
+      - name: Crash dialog smoke test (offscreen)
+        shell: bash
+        timeout-minutes: 3
+        run: |
+          report="$RUNNER_TEMP/opensesh-crash-smoke.txt"
+          printf 'OpenSesh crash report (CI smoke test)\n' > "$report"
+          target/debug/opensesh-app --crash-report "$report" --smoke-test
+
+  windows:
+    name: Windows (MSVC, aqtinstall Qt)
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Qt
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+      # The versioned qmake path makes cxx-qt's build scripts rerun when Qt changes.
+      - name: Point cxx-qt at the installed qmake
+        run: echo "QMAKE=$QT_ROOT_DIR/bin/qmake.exe" >> "$GITHUB_ENV"
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: qt-${{ env.QT_VERSION }}
+      - name: Clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --locked --workspace
+      - name: Build the app
+        run: cargo build --locked -p opensesh-app
+      - name: GUI smoke test (offscreen)
+        timeout-minutes: 3
+        run: target/debug/opensesh-app.exe --smoke-test
+      - name: Crash dialog smoke test (offscreen)
+        timeout-minutes: 3
+        run: |
+          report="$RUNNER_TEMP/opensesh-crash-smoke.txt"
+          printf 'OpenSesh crash report (CI smoke test)\n' > "$report"
+          target/debug/opensesh-app.exe --crash-report "$report" --smoke-test
