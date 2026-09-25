@@ -1,6 +1,8 @@
 //! `AppInfo` QML singleton: read-only startup data for the QML side (version, run mode, crash
-//! report). The values are fixed by `main` before the QML engine starts, through [`set_startup`].
+//! report, folders). The values are fixed by `main` before the QML engine starts, through
+//! [`set_startup`].
 
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 #[cxx_qt::bridge]
@@ -23,6 +25,8 @@ pub mod qobject {
         #[qproperty(QString, version, READ, CONSTANT)]
         #[qproperty(QString, app_id, cxx_name = "appId", READ, CONSTANT)]
         #[qproperty(bool, smoke_test, cxx_name = "smokeTest", READ, CONSTANT)]
+        #[qproperty(bool, gallery, READ, CONSTANT)]
+        #[qproperty(QString, screenshot_dir, cxx_name = "screenshotDir", READ, CONSTANT)]
         #[qproperty(QString, crash_report, cxx_name = "crashReport", READ, CONSTANT)]
         #[qproperty(
             QString,
@@ -32,6 +36,7 @@ pub mod qobject {
             CONSTANT
         )]
         #[qproperty(QUrl, logs_folder, cxx_name = "logsFolder", READ, CONSTANT)]
+        #[qproperty(QUrl, config_folder, cxx_name = "configFolder", READ, CONSTANT)]
         type AppInfo = super::AppInfoRust;
     }
 }
@@ -42,12 +47,18 @@ use opensesh_core::identity;
 /// Data captured at startup and shown by QML.
 #[derive(Debug, Clone, Default)]
 pub struct Startup {
-    /// Whether the app runs as an automated smoke test (quit after the first frame).
+    /// Automated smoke test: run the built-in checks after the first frame, then quit.
     pub smoke_test: bool,
+    /// Show the component gallery instead of the main window.
+    pub gallery: bool,
+    /// Save screenshots of every theme/density combination here, then quit.
+    pub screenshot_dir: Option<PathBuf>,
     /// Directory that holds the log files.
-    pub logs_dir: std::path::PathBuf,
+    pub logs_dir: PathBuf,
+    /// Directory that holds `config.toml`.
+    pub config_dir: PathBuf,
     /// Crash report shown by the crash dialog, with the file it was read from.
-    pub crash_report: Option<(std::path::PathBuf, String)>,
+    pub crash_report: Option<(PathBuf, String)>,
 }
 
 static STARTUP: OnceLock<Startup> = OnceLock::new();
@@ -66,9 +77,16 @@ pub struct AppInfoRust {
     version: QString,
     app_id: QString,
     smoke_test: bool,
+    gallery: bool,
+    screenshot_dir: QString,
     crash_report: QString,
     crash_report_path: QString,
     logs_folder: QUrl,
+    config_folder: QUrl,
+}
+
+fn folder_url(path: &Path) -> QUrl {
+    QUrl::from_local_file(&QString::from(&path.display().to_string()))
 }
 
 impl Default for AppInfoRust {
@@ -82,11 +100,15 @@ impl Default for AppInfoRust {
             version: QString::from(identity::VERSION),
             app_id: QString::from(identity::APP_ID),
             smoke_test: startup.smoke_test,
+            gallery: startup.gallery,
+            screenshot_dir: startup
+                .screenshot_dir
+                .map(|dir| QString::from(&dir.display().to_string()))
+                .unwrap_or_default(),
             crash_report: QString::from(&report),
             crash_report_path: QString::from(&report_path),
-            logs_folder: QUrl::from_local_file(&QString::from(
-                &startup.logs_dir.display().to_string(),
-            )),
+            logs_folder: folder_url(&startup.logs_dir),
+            config_folder: folder_url(&startup.config_dir),
         }
     }
 }

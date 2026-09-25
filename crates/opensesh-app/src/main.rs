@@ -9,6 +9,7 @@ mod crash;
 mod gui;
 mod logging;
 mod platform;
+mod services;
 
 use std::io::Write as _;
 use std::process::ExitCode;
@@ -46,7 +47,7 @@ fn main() -> ExitCode {
             let _ = writeln!(std::io::stdout(), "{}", cli::USAGE);
             return ExitCode::SUCCESS;
         }
-        Mode::App | Mode::CrashReport(_) => {}
+        Mode::App | Mode::Gallery | Mode::CrashReport(_) => {}
     }
 
     // Owned here, not inside `run`, so the file log is still alive when an error from `run` is
@@ -74,11 +75,12 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
     let logs_dir = paths.logs_dir();
     *log_guard = Some(logging::init(&logs_dir)?);
 
-    let dialog = if options.mode == Mode::App && !options.smoke_test {
-        DialogPolicy::Spawn
-    } else {
-        DialogPolicy::Never
-    };
+    let dialog =
+        if options.mode == Mode::App && !options.smoke_test && options.screenshot_dir.is_none() {
+            DialogPolicy::Spawn
+        } else {
+            DialogPolicy::Never
+        };
     crash::install(logs_dir.clone(), dialog);
 
     tracing::info!(
@@ -91,24 +93,56 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
         identity::APP_NAME
     );
 
+    let initial_language = opensesh_core::config::load_file(
+        &paths.config_dir().join(opensesh_core::config::CONFIG_FILE),
+    )
+    .map(|loaded| loaded.config.general.language)
+    .unwrap_or_else(|_| "system".to_owned());
+
+    let gallery = options.mode == Mode::Gallery;
     let (qml, crash_report) = match options.mode {
         Mode::CrashReport(report) => {
             let text = crash::read_report(&report)?;
             (gui::CRASH_DIALOG_QML, Some((report, text)))
         }
         Mode::App => (gui::MAIN_QML, None),
+        Mode::Gallery => (gui::GALLERY_QML, None),
         Mode::Version | Mode::Help => return Ok(ExitCode::SUCCESS),
     };
+    if let Some(dir) = &options.screenshot_dir {
+        std::fs::create_dir_all(dir)?;
+    }
     app_info::set_startup(Startup {
         smoke_test: options.smoke_test,
+        gallery,
+        screenshot_dir: options.screenshot_dir.clone(),
         logs_dir,
+        config_dir: paths.config_dir().to_path_buf(),
         crash_report,
     });
+    services::init(paths)?;
 
-    let code = gui::run(qml)?;
+    let result = gui::run(qml, &initial_language);
+    // Settings and UI state may still be waiting in the writer's debounce window.
+    services::flush();
+    let code = result?;
     tracing::info!(code, "event loop finished");
+
+    if code == 0 && options.smoke_test {
+        let warnings = bridge::shim::qml_warning_count();
+        if warnings > 0 {
+            tracing::error!(
+                warnings,
+                "smoke test: QML produced warnings (see the log above)"
+            );
+            return Ok(ExitCode::from(SMOKE_QML_WARNINGS));
+        }
+    }
     Ok(exit_code(code))
 }
+
+/// Smoke-test exit code when the QML ran but logged warnings.
+const SMOKE_QML_WARNINGS: u8 = 6;
 
 /// Maps the Qt event loop result to a process exit code.
 fn exit_code(code: i32) -> ExitCode {

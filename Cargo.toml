@@ -37,6 +37,7 @@ tracing-subscriber = { version = "0.3.23", default-features = false }
 
 # Config and platform
 directories = "6.0.0"
+notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.1.6"
 

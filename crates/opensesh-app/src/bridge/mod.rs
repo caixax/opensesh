@@ -1,5 +1,8 @@
-//! cxx-qt bridges between Rust and C++/QML. Each file is listed in `build.rs`.
+//! cxx-qt bridges between Rust and C++/QML. `build.rs` compiles every file in this folder.
 
 pub mod app_info;
-pub mod sesame;
+pub mod platform;
+pub mod settings;
 pub mod shim;
+pub mod theme;
+pub mod ui_state;
