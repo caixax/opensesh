@@ -45,6 +45,10 @@ use crate::snapshot::{Cell, Cursor, CursorShape, Damage, Frame, Row, flags};
 /// Most bytes parsed per `Term` lock hold. Bounds how long `snapshot` can wait for the engine.
 const CHUNK_BYTES: usize = 16 * 1024;
 
+/// Least contrast between selected text and the selection color; below it the text is drawn in
+/// the palette's foreground.
+const MIN_SELECTED_CONTRAST: f64 = 3.0;
+
 /// Most combining marks per cell copied into a snapshot (the engine may store more).
 const MAX_COMBINING_MARKS: usize = 8;
 
@@ -913,9 +917,15 @@ impl Painter<'_> {
         let mut underline = underline.unwrap_or(fg);
 
         let mut out_flags = map_flags(engine_flags);
-        let selected = self
-            .selection
-            .is_some_and(|selection| selection.contains(point));
+        // Both halves of a wide character share the selection state.
+        let selected = self.selection.is_some_and(|selection| {
+            selection.contains(point)
+                || (engine_flags.contains(Flags::WIDE_CHAR)
+                    && selection.contains(Point::new(point.line, point.column + 1)))
+                || (engine_flags.contains(Flags::WIDE_CHAR_SPACER)
+                    && point.column.0 > 0
+                    && selection.contains(Point::new(point.line, point.column - 1)))
+        });
         while self
             .matches
             .get(*next_match)
@@ -933,6 +943,10 @@ impl Painter<'_> {
             if let Some(color) = self.palette.selection_foreground {
                 fg = color;
                 underline = color;
+            } else if fg.contrast(bg) < MIN_SELECTED_CONTRAST {
+                // Reverse video and dark text would vanish on the selection color.
+                fg = self.palette.foreground;
+                underline = fg;
             }
         } else if let Some(found) = in_match {
             out_flags |= flags::MATCH;
@@ -2162,5 +2176,34 @@ mod tests {
         // vim, less and tmux switch screens: the engine drops the selection by itself.
         h.feed_until(b"\x1b[?1049halt", "alt");
         assert!(!h.session.has_selection());
+    }
+    #[test]
+    fn selected_text_stays_readable_and_wide_characters_select_whole() {
+        let h = start(20, 2);
+        // Reverse video, then a wide character (two cells).
+        h.feed_until(b"\x1b[7mrev\x1b[0m \xe4\xb8\xad!", "rev");
+        let at = |column| ViewportPoint { row: 0, column };
+        h.session
+            .selection_start(at(0), Side::Left, SelectionKind::Simple);
+        // Ends inside the wide character: its left half (column 4) only.
+        h.session.selection_update(at(4), Side::Right);
+        let frame = h.frame();
+        let palette = Palette::OPENSESH_DARK;
+        let reverse = cell_at(&frame, 0, 0);
+        assert_eq!(reverse.flags & flags::SELECTED, flags::SELECTED);
+        let fg = Rgb::new(
+            u8::try_from((reverse.fg >> 16) & 0xFF).unwrap(),
+            u8::try_from((reverse.fg >> 8) & 0xFF).unwrap(),
+            u8::try_from(reverse.fg & 0xFF).unwrap(),
+        );
+        assert!(fg.contrast(palette.selection_background) >= 3.0);
+        let left = cell_at(&frame, 0, 4);
+        let right = cell_at(&frame, 0, 5);
+        assert_eq!(left.flags & flags::SELECTED, flags::SELECTED);
+        assert_eq!(
+            right.flags & flags::SELECTED,
+            flags::SELECTED,
+            "the spacer too"
+        );
     }
 }
