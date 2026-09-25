@@ -1,0 +1,48 @@
+# cargo-deny configuration (https://embarkstudios.github.io/cargo-deny/), checked in CI.
+# Written for cargo-deny 0.20. Run locally with `cargo deny check`.
+
+[graph]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
+all-features = false
+
+[advisories]
+# RustSec advisories (the same database cargo-audit uses).
+yanked = "deny"
+unmaintained = "workspace"
+ignore = []
+
+[licenses]
+# Allowlist of licenses compatible with GPL-3.0-or-later (ADR 0001). Anything else fails CI
+# and needs a review before being added here.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.93
+
+[licenses.private]
+# Our own crates are GPL-3.0-or-later and `publish = false`; they don't need to be allowlisted.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

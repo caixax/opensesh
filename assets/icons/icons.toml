@@ -1,0 +1,32 @@
+# Icon manifest (PLAN §7). Consumed by `cargo xtask icons`.
+#
+# Hard rule: icons are never drawn, generated or hand-edited. They are extracted byte-for-byte
+# from the pinned upstream npm tarballs below (the sha256 is verified before extraction). Only the
+# root `stroke` / `fill` attributes are normalized to `currentColor`.
+schema_version = 1
+
+# Pinned upstream packages. `sha256` is the digest of the npm tarball
+# (https://registry.npmjs.org/<package>/-/<name>-<version>.tgz).
+[sources.lucide]
+package = "lucide-static"
+version = "1.48.0"
+sha256 = "3c2ecda3d25f6a9692d83f8036d9a526f7da584a51af74cd16eda4498c5c33d8"
+license = "ISC (plus MIT for the Feather-derived icons listed in the license file)"
+license_file = "package/LICENSE"
+icon_path = "package/icons/{name}.svg"
+homepage = "https://lucide.dev"
+
+# Internal icon name = "<source>:<upstream name>". Written to crates/opensesh-app/qml/icons/<internal name>.svg.
+# Sprint 0 only needs the placeholder app logo; Sprint 1 adds the full UI set.
+[icons]
+door-open = "lucide:door-open"
+
+# Placeholder application logo (until a human-made design exists): the `door-open` glyph in white
+# on a rounded square filled with the dark-theme accent color (PLAN §5.2 / §7).
+[app_icon]
+glyph = "door-open"
+background = "#E6B450"
+foreground = "#FFFFFF"
+size = 256
+corner_radius = 56
+padding = 48
