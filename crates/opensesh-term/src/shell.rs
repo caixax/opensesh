@@ -34,7 +34,7 @@ pub const TERM_PROGRAM_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// (`XDG_ACTIVATION_TOKEN`, `DESKTOP_STARTUP_ID`), AppImage runtime variables (`APPIMAGE`,
 /// `APPDIR`, `OWD`), stale sizes that override the real one in ncurses (`LINES`, `COLUMNS`) and
 /// OpenSesh's own debug switches.
-pub const REMOVED_VARIABLES: [&str; 10] = [
+pub const REMOVED_VARIABLES: [&str; 11] = [
     "XDG_ACTIVATION_TOKEN",
     "DESKTOP_STARTUP_ID",
     "APPIMAGE",
@@ -45,6 +45,7 @@ pub const REMOVED_VARIABLES: [&str; 10] = [
     "OPENSESH_DEBUG_PANIC",
     "OPENSESH_NO_CRASH_DIALOG",
     "OPENSESH_LOG",
+    "OPENSESH_TERMINAL_STATS",
 ];
 
 /// The variables shared with WSL through `WSLENV` on Windows.

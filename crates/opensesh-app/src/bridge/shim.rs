@@ -42,6 +42,10 @@ pub mod ffi {
         #[namespace = "opensesh"]
         fn set_application_font_family(family: &QString);
 
+        /// Stops Qt Quick from writing its shader pipeline cache to the per-user cache folder.
+        #[namespace = "opensesh"]
+        fn disable_shader_disk_cache();
+
         /// Installed font families, optionally only fixed-pitch ones.
         #[namespace = "opensesh"]
         fn font_families(monospace_only: bool) -> QStringList;

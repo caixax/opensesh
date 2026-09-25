@@ -206,6 +206,7 @@ Smoke-test exit codes:
 | 5 | Non-ASCII text mangled by the build (e.g. MSVC without `/utf-8`) |
 | 6 | The UI ran, but our QML logged a warning (binding error, unknown icon, layout loop, ...); see the log. Applies to `--screenshots` runs too. |
 | 7 | `--screenshots`: a capture could not be taken or saved |
+| 8 | The terminal smoke steps failed (no shell output, the echoed marker never came back, or a closed session stayed open); the log has a `smoke test: FAILED:` line |
 | 134 / `0xC0000409` | Abort: a Qt fatal error (e.g. no usable display for `QT_QPA_PLATFORM`) or a panic across FFI. A `crash-*.txt` report is written. |
 
 ### Useful environment variables

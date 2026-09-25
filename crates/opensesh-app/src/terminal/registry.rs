@@ -277,9 +277,26 @@ pub struct LocalOptions {
     pub palette: Palette,
 }
 
+/// A shell that reads no startup files and keeps no history, for the smoke test: it must not
+/// depend on the user's rc files or write to their shell history.
+fn hermetic_shell() -> ShellCommand {
+    if cfg!(windows) {
+        ShellCommand::program("cmd.exe").arg("/d").arg("/q")
+    } else {
+        ShellCommand::program("/bin/sh")
+            .env("ENV", "")
+            .env("HISTFILE", "/dev/null")
+    }
+}
+
 /// Starts a local shell with the engine defaults (ADR 0012) and the given size and colors.
 fn start_local(options: LocalOptions, notify: Notify) -> Result<Session, StartError> {
-    let (backend, events) = pty::spawn(ShellCommand::user_shell(), options.size)?;
+    let command = if crate::bridge::app_info::is_smoke_test() {
+        hermetic_shell()
+    } else {
+        ShellCommand::user_shell()
+    };
+    let (backend, events) = pty::spawn(command, options.size)?;
     let config = SessionConfig {
         size: options.size,
         palette: options.palette,

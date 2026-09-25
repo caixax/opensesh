@@ -28,7 +28,7 @@ This document is for code that uses `opensesh-term`: the GUI bridge, the termina
  └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- Nothing on the GUI thread waits for the program. The methods that lock take the fair lock, and the engine holds it for at most one 16 KiB chunk (well under 1 ms at about 110 MB/s).
+- Nothing on the GUI thread waits for the program. The methods that lock take the fair lock, and the engine holds it for at most one 16 KiB chunk (well under 1 ms at about 110 MB/s), synchronized updates included. The exception is a resize, which reflows the whole scrollback in one hold.
 - The engine calls `notify` from its own thread and never while the `Term` is locked. The callback must not block; the usual implementation queues onto the GUI thread (`CxxQtThread::queue`). Calling `Session` methods from it is allowed.
 
 ## 2. Starting a local terminal

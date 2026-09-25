@@ -212,6 +212,8 @@ jobs:
           host: windows
           target: desktop
           arch: win64_msvc2022_64
+          # qsb, for `cargo xtask shaders --check` (the committed .qsb were built on Windows).
+          modules: qtshadertools
           cache: true
       # The versioned qmake path makes cxx-qt's build scripts rerun when Qt changes.
       - name: Point cxx-qt at the installed qmake
@@ -232,11 +234,15 @@ jobs:
         timeout-minutes: 5
         run: |
           cargo xtask conpty
-          test -f target/debug/conpty.dll && test -f target/debug/OpenConsole.exe
+          # Separate commands: `bash -e` ignores a failure on the left of `&&`.
+          test -f target/debug/conpty.dll
+          test -f target/debug/OpenConsole.exe
           # The license copy and the notices are committed: the task must not change them.
           paths=(assets/conpty THIRD_PARTY_NOTICES.md)
           out=$(git status --porcelain --untracked-files=all -- "${paths[@]}")
           if [ -n "$out" ]; then echo "$out"; git diff -- "${paths[@]}"; exit 1; fi
+      - name: Compiled shaders are up to date
+        run: cargo xtask shaders --check
       - name: GUI smoke test (offscreen)
         timeout-minutes: 3
         run: target/debug/opensesh-app.exe --smoke-test
