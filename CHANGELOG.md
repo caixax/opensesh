@@ -6,6 +6,14 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 2: terminal engine and local terminal.**
+  - **Engine (`opensesh-term`, [ADR 0012](docs/adr/0012-terminal-engine-and-session-threads.md)):** `alacritty_terminal` behind a `TerminalBackend` trait; a local PTY backend (your shell; PowerShell or cmd on Windows through ConPTY); one engine thread per session that parses in bounded chunks, answers terminal queries at once and sends damage-aware snapshots; OSC 7, X10 mouse, OSC 8 links, regex search; hostile output bounded (OSC strings, combining marks, synchronized updates).
+  - **Input:** xterm key encoding (Alt, F1-F24, keypad and cursor modes, Windows AltGr and Alt codes), mouse reporting (X10, normal, button, any; SGR), bracketed paste with filtering, focus reports, URL detection.
+  - **Renderer ([ADR 0013](docs/adr/0013-terminal-rendering.md)):** a scene-graph `QQuickItem` with a glyph atlas and custom shaders; truecolor, every underline style, wide and combining characters, emoji, box drawing and Powerline, all cursor shapes; only damaged rows are rebuilt, and new glyphs are rasterized within a per-frame budget.
+  - **Local terminal tabs:** selection (character, word, line, block), copy and paste (Ctrl+Shift+C/V, Shift+Insert, context menu, primary selection on Linux), scrollback with a thin scrollbar, regex search (Ctrl+Shift+F), Ctrl+click links, titles from OSC 0/2, activity and bell indicators, the working directory in the status bar, an exit banner with Restart.
+  - **Windows:** the modern ConPTY bundled by `cargo xtask conpty` ([ADR 0014](docs/adr/0014-bundled-conpty.md)), AltGr through Qt's `windows:altgr` option, a hardened DLL search order.
+  - **Quality:** real-PTY tests, tmux/htop/less/nvim/mc/fzf tests, vttest goldens ([vttest.md](docs/testing/vttest.md)), performance against PLAN §9 ([perf.md](docs/perf.md)), IME notes ([ime.md](docs/testing/ime.md)); the smoke test runs a real shell.
+  - **Project:** published at [github.com/caixax/opensesh](https://github.com/caixax/opensesh) with CI on every push.
 - **Sprint 1: design system and app skeleton.**
   - **Theme (`opensesh-core::theme`, `Theme` QML singleton):**
     - Dark and light palettes from PLAN §5.2, following the system color scheme live.
