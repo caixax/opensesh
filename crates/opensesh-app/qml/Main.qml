@@ -388,6 +388,21 @@ Window {
         }
     }
 
+    // Locks a vault protected by a master password after Settings > Security's idle time (no
+    // key, click or mouse move in any OpenSesh window).
+    Timer {
+        interval: 15000
+        repeat: true
+        running: Keychain.vaultStatus === "unlocked" && Keychain.protection === "password" && !Keychain.remembered
+                 && AppSettings.lockAfterMinutes > 0
+        onTriggered: {
+            if (Platform.idleSeconds() >= AppSettings.lockAfterMinutes * 60) {
+                Keychain.lock();
+                Toasts.show(qsTr("The vault locked after %n minute(s) without use.", "", AppSettings.lockAfterMinutes), "info");
+            }
+        }
+    }
+
     // One set of actions for every window: they act on the window in use.
     AppActions {
         shell: WindowRegistry.activeShell ?? shell
@@ -401,8 +416,8 @@ Window {
         steps: shell.smokeSteps(smoke)
     }
 
-    // Four series: the shell on the Hosts view, the Settings pages, split terminal tabs, then the
-    // Hosts view with generated hosts.
+    // Five series: the shell on the Hosts view, the Settings pages, split terminal tabs, the Hosts
+    // view with generated hosts, then the Keychain with sample entries.
     ScreenshotRunner {
         id: screenshots
 
@@ -419,7 +434,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "settings"
-        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts"]
+        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts", "security"]
         prepare: (mode, density, page) => shell.prepareSettingsScreenshot(page)
         onFinished: terminalScreenshots.start()
     }
@@ -443,8 +458,19 @@ Window {
         prefix: "hosts"
         pages: ["cards", "list", "editor", "quickconnect"]
         prepare: (mode, density, page) => shell.prepareHostsScreenshot(page)
+        onFinished: keychainScreenshots.start()
+    }
+
+    ScreenshotRunner {
+        id: keychainScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "keychain"
+        pages: ["identities", "keys", "agents", "known", "unlock"]
+        prepare: (mode, density, page) => shell.prepareKeychainScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
-                            + hostsScreenshots.failures > 0 ? 7 : 0)
+                            + hostsScreenshots.failures + keychainScreenshots.failures > 0 ? 7 : 0)
     }
 }

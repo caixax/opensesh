@@ -7,6 +7,9 @@
 //   dangerous: bool      destructive action: the accept button uses the "danger" variant
 //   acceptEnabled: bool  enable the accept button (e.g. false while a form is invalid)
 //   showClose: bool      show the header close button (default true)
+//   closeOnAccept: bool  the accept button calls `accept()`, which closes (default true); set it
+//                        to false for work that finishes later: the button then emits
+//                        `acceptClicked` and the dialog stays open until it calls `accept()`
 //   maxWidth, maxHeight: real  the window size minus a margin; the dialog never grows past them
 // The body goes in as children (like any Popup) and sizes the dialog through its implicit size
 // (at least 400 px wide at scale 1). Wrap text in a fixed-width Column: a wrapped Text alone
@@ -26,6 +29,9 @@ T.Dialog {
     property bool dangerous: false
     property bool acceptEnabled: true
     property bool showClose: true
+    property bool closeOnAccept: true
+
+    signal acceptClicked
 
     readonly property real maxWidth: T.Overlay.overlay ? T.Overlay.overlay.width - 2 * Theme.spacingXl
                                                        : implicitWidth
@@ -179,7 +185,12 @@ T.Dialog {
                 enabled: control.acceptEnabled
                 variant: control.dangerous ? "danger" : "primary"
                 text: control.acceptText
-                onClicked: control.accept()
+                onClicked: {
+                    if (control.closeOnAccept)
+                        control.accept();
+                    else
+                        control.acceptClicked();
+                }
             }
         }
     }

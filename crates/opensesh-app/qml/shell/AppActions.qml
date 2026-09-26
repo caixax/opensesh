@@ -28,6 +28,7 @@ QtObject {
     readonly property string categoryTerminal: qsTr("Terminal")
     readonly property string categoryPanes: qsTr("Panes")
     readonly property string categoryWorkspaces: qsTr("Workspaces")
+    readonly property string categoryKeychain: qsTr("Keychain")
     readonly property string categoryDebug: qsTr("Debug")
 
     // The terminal tab shown in the window in use, or null.
@@ -74,6 +75,46 @@ QtObject {
             category: root.categorySessions
             iconName: "import"
             onTriggered: root.shell.showSshImport("")
+        },
+        OsAction {
+            actionId: "keychain.newIdentity"
+            text: qsTr("New identity…")
+            category: root.categoryKeychain
+            iconName: "user"
+            enabled: !Keychain.readOnly
+            onTriggered: root.shell.newIdentity()
+        },
+        OsAction {
+            actionId: "keychain.generateKey"
+            text: qsTr("Generate SSH key…")
+            category: root.categoryKeychain
+            iconName: "key-round"
+            enabled: !Keychain.readOnly
+            onTriggered: root.shell.generateKey()
+        },
+        OsAction {
+            actionId: "keychain.importKey"
+            text: qsTr("Import SSH key…")
+            category: root.categoryKeychain
+            iconName: "import"
+            enabled: !Keychain.readOnly
+            onTriggered: root.shell.importKey("")
+        },
+        OsAction {
+            actionId: "vault.lock"
+            text: qsTr("Lock the vault")
+            category: root.categoryKeychain
+            iconName: "lock"
+            enabled: Keychain.vaultStatus === "unlocked" && Keychain.protection === "password" && !Keychain.remembered
+            onTriggered: Keychain.lock()
+        },
+        OsAction {
+            actionId: "vault.unlock"
+            text: qsTr("Unlock the vault…")
+            category: root.categoryKeychain
+            iconName: "lock-open"
+            enabled: Keychain.vaultStatus === "locked"
+            onTriggered: root.shell.unlockVault(null)
         },
         OsAction {
             actionId: "tab.newLocal"

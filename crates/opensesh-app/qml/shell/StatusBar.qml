@@ -1,8 +1,8 @@
 // Status bar (PLAN §5.3). Left: the session status: the current terminal's working directory
 // when the shell reports it (OSC 7), else its title (a live monitor arrives in Sprint 11), and
 // while the tab broadcasts, how many panes receive the input (click to stop).
-// Right: the notifications button with the unread count, a theme quick switch
-// (System -> Dark -> Light) and the version.
+// Right: with a master password, the vault's lock (click to lock or unlock), the notifications
+// button with the unread count, a theme quick switch (System -> Dark -> Light) and the version.
 //   terminal: TerminalItem   the focused terminal of the current tab, or null
 //   workspace: TabWorkspace  the current tab, or null
 import QtQuick
@@ -95,6 +95,22 @@ Rectangle {
         anchors.rightMargin: Theme.spacingMd
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacingXs
+
+        OsIconButton {
+            id: vaultButton
+
+            readonly property bool locked: Keychain.vaultStatus === "locked"
+
+            anchors.verticalCenter: parent.verticalCenter
+            // Only a master password can lock; the keyring (or a remembered key) opens it anyway.
+            visible: Keychain.protection === "password" && !Keychain.remembered
+                     && (locked || Keychain.vaultStatus === "unlocked")
+            implicitWidth: bar.buttonSize
+            implicitHeight: bar.buttonSize
+            iconName: locked ? "lock" : "lock-open"
+            toolTip: locked ? qsTr("The vault is locked: click to unlock") : qsTr("The vault is unlocked: click to lock")
+            onClicked: ActionRegistry.trigger(locked ? "vault.unlock" : "vault.lock")
+        }
 
         OsIconButton {
             id: bellButton

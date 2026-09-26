@@ -19,6 +19,7 @@ OsDialog {
     readonly property bool readOnly: false
     property int revision: 0
     readonly property var groupList: JSON.parse(Hosts.groups || "[]")
+    readonly property var identityList: JSON.parse(Keychain.identities || "[]")
     readonly property var profileList: JSON.parse(TerminalProfiles.profiles || "[]")
     readonly property var onOff: [{ text: qsTr("On"), value: true }, { text: qsTr("Off"), value: false }]
 
@@ -190,6 +191,18 @@ OsDialog {
                     width: parent.width
                     title: qsTr("Defaults for its hosts")
                     description: qsTr("Hosts and subgroups use these unless they set their own.")
+                }
+
+                EditorChoiceRow {
+                    editor: dialog
+                    path: "defaults.identity"
+                    inheritKey: "identity"
+                    field: "identity"
+                    label: qsTr("Identity")
+                    options: [{ text: qsTr("None"), value: "none" }].concat(dialog.identityList.map(identity => ({
+                        text: identity.user.length > 0 ? qsTr("%1 (%2)").arg(identity.name).arg(identity.user) : identity.name,
+                        value: identity.id
+                    })))
                 }
 
                 EditorTextRow {

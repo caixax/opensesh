@@ -27,6 +27,7 @@ OsDialog {
     readonly property var sections: [qsTr("Basic"), qsTr("Authentication"), qsTr("Advanced"), qsTr("Terminal"),
         qsTr("SFTP"), qsTr("Notes")]
     readonly property var groupList: JSON.parse(Hosts.groups || "[]")
+    readonly property var identityList: JSON.parse(Keychain.identities || "[]")
     readonly property var profileList: JSON.parse(TerminalProfiles.profiles || "[]")
     readonly property var themeList: JSON.parse(TerminalProfiles.themes || "[]")
     readonly property string protocol: revision >= 0 ? (draft.protocol ?? "ssh") : "ssh"
@@ -380,11 +381,22 @@ OsDialog {
                         width: parent.width
                         spacing: Theme.spacingMd
 
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "identity"
+                            label: qsTr("Identity")
+                            options: [{ text: qsTr("None"), value: "none" }].concat(dialog.identityList.map(identity => ({
+                                text: identity.user.length > 0 ? qsTr("%1 (%2)").arg(identity.name).arg(identity.user) : identity.name,
+                                value: identity.id
+                            })))
+                            helpText: qsTr("A user name with a password and/or a key from the keychain. OpenSSH uses its user name until the built-in client arrives.")
+                        }
+
                         EditorTextRow {
                             editor: dialog
                             path: "user"
                             label: qsTr("User")
-                            placeholder: qsTr("the local user name")
+                            placeholder: qsTr("the identity's, else the local user name")
                         }
 
                         EditorTextRow {
@@ -408,7 +420,7 @@ OsDialog {
                         }
 
                         Note {
-                            text: qsTr("Passwords, passphrases and keys kept in OpenSesh's encrypted vault arrive with the keychain. Nothing secret is written to hosts.toml.")
+                            text: qsTr("Passwords and keys stay in the encrypted vault; hosts.toml only names the identity.")
                         }
                     }
                 }
