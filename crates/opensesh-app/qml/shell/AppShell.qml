@@ -103,6 +103,8 @@ Item {
     readonly property real contentMinimumWidth: Theme.spacingXxl * 8
 
     property bool restoreMaximized: false
+    // --screenshots: the keychain's sample entries were loaded.
+    property bool keychainSampleLoaded: false
 
     readonly property alias commandPalette: palette
 
@@ -701,6 +703,55 @@ Item {
         quickConnect.close();
     }
 
+    // Runs `then` (if any) once the vault is open: at once when it isn't locked, else after the
+    // master password is typed.
+    function unlockVault(then) {
+        if (Keychain.vaultStatus !== "locked") {
+            if (then)
+                then();
+            return;
+        }
+        unlockDialog.show(then);
+    }
+
+    function showMasterPassword(mode) {
+        masterPasswordDialog.show(mode);
+    }
+
+    function showVaultReset() {
+        vaultResetDialog.show();
+    }
+
+    function newIdentity() {
+        identityEditor.create();
+    }
+
+    function editIdentity(id) {
+        identityEditor.edit(id);
+    }
+
+    function generateKey() {
+        keyGenerateDialog.show();
+    }
+
+    function importKey(path) {
+        keyImportDialog.show(path ?? "");
+    }
+
+    function exportKey(id, which) {
+        keyExportDialog.show(id, which);
+    }
+
+    function closeKeychainDialogs() {
+        unlockDialog.close();
+        masterPasswordDialog.close();
+        vaultResetDialog.close();
+        identityEditor.close();
+        keyGenerateDialog.close();
+        keyImportDialog.close();
+        keyExportDialog.close();
+    }
+
     // Command palette entries for the saved hosts that match `query`.
     function hostPaletteEntries(query) {
         const found = JSON.parse(Hosts.search(query, "all", "", "", "recent") || "[]").slice(0, 6);
@@ -1266,6 +1317,11 @@ Item {
                 palette.close();
                 quickConnect.close();
             });
+            steps.push(() => shell.showView("keychain"));
+            steps.push(() => {
+                const keychain = keychainLoader.item;
+                return keychain && typeof keychain.smokeSteps === "function" ? keychain.smokeSteps(smoke) : [];
+            });
             steps.push(() => shell.togglePalette());
             steps.push(() => palette.setQuery("web-01"));
             steps.push(() => {
@@ -1378,6 +1434,23 @@ Item {
             editHost("H00001");
         else if (page === "quickconnect")
             showQuickConnect("deploy@web-0");
+    }
+
+    // --screenshots: the Keychain view with sample entries at section `page`, or the unlock
+    // dialog over it.
+    function prepareKeychainScreenshot(page) {
+        closeHostDialogs();
+        closeKeychainDialogs();
+        if (!keychainSampleLoaded) {
+            keychainSampleLoaded = true;
+            Keychain.loadSample();
+        }
+        showView("keychain");
+        const keychain = keychainLoader.item;
+        if (keychain)
+            keychain.showSection(page === "unlock" ? "identities" : page);
+        if (page === "unlock")
+            unlockDialog.show(null);
     }
 
     // Shows Settings at `section` (e.g. "terminal").
@@ -1583,6 +1656,8 @@ Item {
                             sourceComponent: SnippetsView {}
                         }
                         ViewLoader {
+                            id: keychainLoader
+
                             viewId: "keychain"
                             currentView: shell.activeView
                             sourceComponent: KeychainView {}
@@ -1736,6 +1811,44 @@ Item {
 
     SshConfigImportDialog {
         id: sshImport
+    }
+
+    UnlockDialog {
+        id: unlockDialog
+
+        onResetRequested: vaultResetDialog.show()
+    }
+
+    MasterPasswordDialog {
+        id: masterPasswordDialog
+    }
+
+    VaultResetDialog {
+        id: vaultResetDialog
+    }
+
+    IdentityEditorDialog {
+        id: identityEditor
+
+        shell: shell
+    }
+
+    KeyGenerateDialog {
+        id: keyGenerateDialog
+
+        shell: shell
+    }
+
+    KeyImportDialog {
+        id: keyImportDialog
+
+        shell: shell
+    }
+
+    KeyExportDialog {
+        id: keyExportDialog
+
+        shell: shell
     }
 
     ShortcutHost {

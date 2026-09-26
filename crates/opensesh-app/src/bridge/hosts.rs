@@ -424,10 +424,19 @@ fn inherited_json(file: &HostsFile, group: Option<&str>, protocol: Protocol) -> 
             ),
             Origin::Host => ("host", String::new(), String::new()),
         };
+        let mut value = field
+            .value
+            .as_ref()
+            .and_then(|value| serde_json::to_value(value).ok())
+            .unwrap_or(Json::Null);
+        // A group that turns its parent's identity off: the editors' "none".
+        if key == "identity" && value.as_str() == Some("") {
+            value = Json::String(IDENTITY_NONE.to_owned());
+        }
         out.insert(
             key.to_owned(),
             json!({
-                "value": field.value.as_ref().and_then(|value| serde_json::to_value(value).ok()).unwrap_or(Json::Null),
+                "value": value,
                 "origin": origin,
                 "group": group_id,
                 "groupName": group_name,

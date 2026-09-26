@@ -99,7 +99,7 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 | `OsTreeView` | `ListView` | Flattened tree (`nodes: [{id, text, iconName, children: [...]}]`); arrows expand and collapse |
 | `OsTag` | `Rectangle` | Small pill, optional remove button |
 | `OsBadge` | `Rectangle` | Count or dot; `variant` uses the status colors with `Theme.textOn(...)` |
-| `OsDialog` | `T.Dialog` | Modal over a `scrim`; title, content, footer buttons; gives the focus back on close (`OsFocusReturn`) |
+| `OsDialog` | `T.Dialog` | Modal over a `scrim`; title, content, footer buttons; gives the focus back on close (`OsFocusReturn`); `closeOnAccept: false` keeps it open (`acceptClicked`) for work that finishes later |
 | `OsDrawer` | `T.Drawer` | Side sheet; gives the focus back on close (`OsFocusReturn`) |
 | `OsContextMenu` / `OsMenuItem` | `T.Menu` / `T.MenuItem` | Icons and shortcut text; a top-level menu gives the focus back on close (`OsFocusReturn`) |
 | `OsTooltip` | `T.ToolTip` | Short delay, `surface2` background |

@@ -498,7 +498,7 @@ impl Worker {
                         "algorithm": key.algorithm,
                         "label": label,
                         "bits": key.bits,
-                        "public": key.public,
+                        "publicKey": key.public,
                         "fingerprint": key.fingerprint,
                         "comment": comment,
                         "origin": key.origin,
@@ -541,7 +541,7 @@ impl Worker {
                             "bits": key.bits,
                             "fingerprint": key.fingerprint,
                             "comment": key.comment,
-                            "public": key.public,
+                            "publicKey": key.public,
                         })).collect::<Vec<_>>(),
                     })
                 })
@@ -652,7 +652,7 @@ fn sample_agents() -> Vec<Json> {
                 "bits": info.bits,
                 "fingerprint": info.fingerprint,
                 "comment": info.comment,
-                "public": info.public,
+                "publicKey": info.public,
             })
         })
     };

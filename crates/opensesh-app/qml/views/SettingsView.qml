@@ -1,6 +1,6 @@
 // Settings (PLAN §5.4, §6.1): the list of sections on the left and the selected page on the
-// right, in a scrolling area. General, Appearance and About work; the other sections say which
-// sprint brings them. The section list is one Tab stop: Up/Down and Home/End move between the
+// right, in a scrolling area. SSH, SFTP and Data and sync say which sprint brings them; the other
+// sections work. The section list is one Tab stop: Up/Down and Home/End move between the
 // sections, Enter/Return or Space opens the focused one.
 //   section: string   id of the selected section: "general", "appearance", "terminal",
 //                     "profiles", "themes", "shortcuts", "ssh", "sftp", "security", "data" or
@@ -73,8 +73,7 @@ FocusScope {
             id: "security",
             text: qsTr("Security"),
             iconName: "shield-check",
-            description: qsTr("The vault: master password, automatic locking and where secrets are kept."),
-            sprint: 6
+            description: qsTr("The vault: master password, automatic locking and where secrets are kept.")
         },
         {
             id: "data",
@@ -337,6 +336,8 @@ FocusScope {
                     return themesPage;
                 case "shortcuts":
                     return shortcutsPage;
+                case "security":
+                    return securityPage;
                 case "about":
                     return aboutPage;
                 default:
@@ -390,6 +391,12 @@ FocusScope {
         id: shortcutsPage
 
         SettingsShortcutsPage {}
+    }
+
+    Component {
+        id: securityPage
+
+        SettingsSecurityPage {}
     }
 
     Component {
