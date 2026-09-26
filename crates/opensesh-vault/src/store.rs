@@ -239,8 +239,9 @@ mod tests {
     }
 
     /// The real keyring, with a throwaway entry that is removed again. Run by hand once per
-    /// platform (`cargo test -p opensesh-vault -- --ignored system_keyring`); CI and normal
-    /// test runs never touch the user's keyring.
+    /// platform (`cargo test -p opensesh-vault --lib system_keyring -- --ignored`, which also runs
+    /// `manager::tests::system_keyring_vault`); CI and normal test runs never touch the user's
+    /// keyring.
     #[test]
     #[ignore = "touches the system keyring"]
     fn system_keyring() {

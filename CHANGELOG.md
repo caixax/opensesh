@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **Sprint 6: keychain and vault.**
+  - **Vault ([ADR 0023](docs/adr/0023-vault-and-key-holders.md), [format](docs/vault-format.md)):** passwords and private keys are encrypted in `vault.bin` (XChaCha20-Poly1305). Its key is held by the system keyring (Credential Manager on Windows, the Secret Service on Linux) or by an optional master password (Argon2id, 64 MiB). "Remember on this computer" opens a password-protected vault without typing it. The master password can be set, changed or removed at any time without re-entering secrets. A vault whose password is lost can be reset.
+  - **Locking:** a vault with a master password locks after a chosen time without using OpenSesh (15 minutes by default) or on request, from the status bar, the command palette or Settings. After three wrong passwords each attempt waits longer (5 seconds, doubling to 5 minutes), also after a restart.
+  - **Identities:** a user name with a password and/or a key, given to hosts and groups (inherited like the other fields). With OpenSSH, a host without its own user uses its identity's.
+  - **SSH keys ([ADR 0024](docs/adr/0024-crypto-crates-and-ssh-keys.md)):** generate Ed25519, ECDSA (P-256, P-384, P-521) or RSA-4096; import OpenSSH keys and PuTTY `.ppk` files (versions 2 and 3), with their passphrase; copy the public key; export the public or the private key (optionally with a new passphrase).
+  - **Agents ([ADR 0025](docs/adr/0025-ssh-agents.md)):** the keys of `SSH_AUTH_SOCK`, the Windows OpenSSH agent and Pageant.
+  - **Keychain view:** identities, keys, agent keys and known hosts (`~/.ssh/known_hosts`, read-only until the SSH client), with search and the vault's state. **Settings > Security** gathers the vault's options.
+  - **Documentation:** a [threat model](docs/threat-model.md) and the [vault format](docs/vault-format.md).
+  - A test exercises every kind of secret and then searches the data and config folders for each one in clear (raw, hex, base64, UTF-16).
+
+### Changed
+
+- The host and group editors have an Identity field.
+- `deny.toml` and `.cargo/audit.toml` accept RUSTSEC-2023-0071 (the `rsa` crate, no fixed release) with its reason: RSA is only used locally so far (ADR 0024).
+
 ## [0.1.2] - 2026-09-26
 
 ### Added

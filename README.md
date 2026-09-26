@@ -4,7 +4,7 @@
 
 OpenSesh is an open source, cross-platform and lightweight remote connections client. It is planned to cover SSH, SFTP, tunnels, local terminal, serial, telnet, mosh, RDP and VNC in a single native app built with **Rust** and **Qt 6 / QML** (through [cxx-qt](https://github.com/KDAB/cxx-qt)).
 
-> **Status: pre-alpha** ([latest release](https://github.com/caixax/opensesh/releases/latest)). The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work, and the terminal is customizable: profiles, themes (with importers from other terminals), fonts, keyword highlighting and shortcuts. Tabs split into panes, move between windows and broadcast input; layouts save as workspaces. Saved hosts have groups, fuzzy search, quick connect and `~/.ssh/config` import, and SSH hosts connect through the system's OpenSSH until the built-in client arrives. SFTP and the other protocols are still to come. Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
+> **Status: pre-alpha** ([latest release](https://github.com/caixax/opensesh/releases/latest)). The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work, and the terminal is customizable: profiles, themes (with importers from other terminals), fonts, keyword highlighting and shortcuts. Tabs split into panes, move between windows and broadcast input; layouts save as workspaces. Saved hosts have groups, fuzzy search, quick connect and `~/.ssh/config` import, and SSH hosts connect through the system's OpenSSH until the built-in client arrives. The keychain keeps identities, passwords and SSH keys (generated, or imported from OpenSSH and PuTTY) in an encrypted vault, and lists the keys of the running SSH agents. SFTP and the other protocols are still to come. Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Install
 
@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | b
 | Fedora | `.rpm` (dnf) |
 | Arch Linux and derivatives (Manjaro, EndeavourOS, CachyOS) | `.pkg.tar.zst` (pacman) |
 
-On a Wayland session the script also installs Qt's Wayland plugin. Ubuntu and other distributions aren't packaged yet: the `.deb` is built against Debian 13's Qt, so [build from source](#building-from-source) there.
+On a Wayland session the script also installs Qt's Wayland plugin. Saved passwords and keys use the desktop's keyring (GNOME Keyring, or KWallet with its Secret Service interface on); without one, set a master password in **Settings > Security**. Ubuntu and other distributions aren't packaged yet: the `.deb` is built against Debian 13's Qt, so [build from source](#building-from-source) there.
 
 Running the script again updates OpenSesh. It asks before installing anything; to pass options through the pipe, add them after `bash -s --`:
 

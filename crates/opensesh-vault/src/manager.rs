@@ -746,6 +746,35 @@ mod tests {
         assert_eq!(keychain.vault.len(), 0);
     }
 
+    /// The whole flow with the real keyring, under a throwaway service name; the reset at the end
+    /// removes the entry. Run by hand like `store::tests::system_keyring`.
+    #[test]
+    #[ignore = "touches the system keyring"]
+    fn system_keyring_vault() {
+        let dir = tempfile::tempdir().unwrap();
+        let store: Arc<dyn KeyStore> = Arc::new(crate::store::SystemKeyring::new(
+            "cc.caixa.OpenSesh.selftest",
+        ));
+        let mut keychain = Keychain::open(Some((dir.path(), dir.path())), Arc::clone(&store));
+        let id = keychain
+            .save_identity(IdentityEdit {
+                password: set("selftest password"),
+                ..IdentityEdit::default()
+            })
+            .unwrap();
+        let name = keychain.vault.keyring_name().unwrap();
+        assert!(store.get(&name).unwrap().is_some());
+        // A restart opens the vault from the keyring.
+        let mut again = Keychain::open(Some((dir.path(), dir.path())), Arc::clone(&store));
+        assert!(again.vault.unlock_with_keyring().unwrap());
+        assert_eq!(
+            again.identity_password(&id).unwrap().as_str(),
+            "selftest password"
+        );
+        again.reset_vault().unwrap();
+        assert_eq!(store.get(&name).unwrap(), None);
+    }
+
     #[test]
     fn a_reset_clears_the_references() {
         let store = Arc::new(MemoryKeyStore::new());
