@@ -108,6 +108,10 @@
         <translation>[Šŵíťçĥ ťö ťĥé þŕévíöüšĺý üšéď ťáb ~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>Keychain</source>
+        <translation>[Ķéýçĥáíñ ~~~]</translation>
+    </message>
+    <message>
         <source>New host…</source>
         <translation>[Ñéŵ ĥöšť… ~~~]</translation>
     </message>
@@ -118,6 +122,26 @@
     <message>
         <source>Import ~/.ssh/config…</source>
         <translation>[Ímþöŕť ~/.ššĥ/çöñƒíĝ… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New identity…</source>
+        <translation>[Ñéŵ íďéñťíťý… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Generate SSH key…</source>
+        <translation>[Ĝéñéŕáťé ŠŠĤ ķéý… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import SSH key…</source>
+        <translation>[Ímþöŕť ŠŠĤ ķéý… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Lock the vault</source>
+        <translation>[Ĺöçķ ťĥé váüĺť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Unlock the vault…</source>
+        <translation>[Üñĺöçķ ťĥé váüĺť… ~~~~~~]</translation>
     </message>
     <message>
         <source>Switch to the least recently used tab</source>
@@ -792,6 +816,14 @@
         <translation>[Ĥöšťš áñď šübĝŕöüþš üšé ťĥéšé üñĺéšš ťĥéý šéť ťĥéíŕ öŵñ. ~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>Identity</source>
+        <translation>[Íďéñťíťý ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>[%1 (%2) ~~~]</translation>
+    </message>
+    <message>
         <source>User</source>
         <translation>[Üšéŕ ~~]</translation>
     </message>
@@ -1373,12 +1405,28 @@
         <translation>[Fávöŕíťé ~~~]</translation>
     </message>
     <message>
+        <source>Identity</source>
+        <translation>[Íďéñťíťý ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>[%1 (%2) ~~~]</translation>
+    </message>
+    <message>
+        <source>A user name with a password and/or a key from the keychain. OpenSSH uses its user name until the built-in client arrives.</source>
+        <translation>[Å üšéŕ ñámé ŵíťĥ á þáššŵöŕď áñď/öŕ á ķéý ƒŕöm ťĥé ķéýçĥáíñ. ÖþéñŠŠĤ üšéš íťš üšéŕ ñámé üñťíĺ ťĥé büíĺť-íñ çĺíéñť áŕŕívéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>User</source>
         <translation>[Üšéŕ ~~]</translation>
     </message>
     <message>
-        <source>the local user name</source>
-        <translation>[ťĥé ĺöçáĺ üšéŕ ñámé ~~~~~~]</translation>
+        <source>the identity&apos;s, else the local user name</source>
+        <translation>[ťĥé íďéñťíťý&apos;š, éĺšé ťĥé ĺöçáĺ üšéŕ ñámé ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passwords and keys stay in the encrypted vault; hosts.toml only names the identity.</source>
+        <translation>[Þáššŵöŕďš áñď ķéýš šťáý íñ ťĥé éñçŕýþťéď váüĺť; ĥöšťš.ťömĺ öñĺý ñáméš ťĥé íďéñťíťý. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Private key file</source>
@@ -1391,10 +1439,6 @@
     <message>
         <source>Choose a key file…</source>
         <translation>[Çĥööšé á ķéý ƒíĺé… ~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Passwords, passphrases and keys kept in OpenSesh&apos;s encrypted vault arrive with the keychain. Nothing secret is written to hosts.toml.</source>
-        <translation>[Þáššŵöŕďš, þáššþĥŕášéš áñď ķéýš ķéþť íñ ÖþéñŠéšĥ&apos;š éñçŕýþťéď váüĺť áŕŕívé ŵíťĥ ťĥé ķéýçĥáíñ. Ñöťĥíñĝ šéçŕéť íš ŵŕíťťéñ ťö ĥöšťš.ťömĺ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Jump hosts</source>
@@ -1896,15 +1940,416 @@
     </message>
 </context>
 <context>
+    <name>IdentityEditorDialog</name>
+    <message>
+        <source>No key</source>
+        <translation>[Ñö ķéý ~~]</translation>
+    </message>
+    <message>
+        <source>%1 · %2</source>
+        <translation>[%1 · %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Edit identity</source>
+        <translation>[Éďíť íďéñťíťý ~~~~]</translation>
+    </message>
+    <message>
+        <source>New identity</source>
+        <translation>[Ñéŵ íďéñťíťý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>[Šávé ~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>e.g. deploy on production</source>
+        <translation>[é.ĝ. ďéþĺöý öñ þŕöďüçťíöñ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>User name</source>
+        <translation>[Üšéŕ ñámé ~~~]</translation>
+    </message>
+    <message>
+        <source>e.g. deploy</source>
+        <translation>[é.ĝ. ďéþĺöý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation>[Þáššŵöŕď ~~~]</translation>
+    </message>
+    <message>
+        <source>Saved in the encrypted vault.</source>
+        <translation>[Šávéď íñ ťĥé éñçŕýþťéď váüĺť. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The saved password will be removed.</source>
+        <translation>[Ťĥé šávéď þáššŵöŕď ŵíĺĺ bé ŕémövéď. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A password is saved in the vault. Type a new one to replace it.</source>
+        <translation>[Å þáššŵöŕď íš šávéď íñ ťĥé váüĺť. Ťýþé á ñéŵ öñé ťö ŕéþĺáçé íť. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Optional. Kept in the encrypted vault, never in a file in clear.</source>
+        <translation>[Öþťíöñáĺ. Ķéþť íñ ťĥé éñçŕýþťéď váüĺť, ñévéŕ íñ á ƒíĺé íñ çĺéáŕ. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved (unchanged)</source>
+        <translation>[Šávéď (üñçĥáñĝéď) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keep</source>
+        <translation>[Ķééþ ~~]</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>[Ŕémövé ~~]</translation>
+    </message>
+    <message>
+        <source>Key</source>
+        <translation>[Ķéý ~]</translation>
+    </message>
+    <message>
+        <source>Generate or import keys in the Keys section of the keychain.</source>
+        <translation>[Ĝéñéŕáťé öŕ ímþöŕť ķéýš íñ ťĥé Ķéýš šéçťíöñ öƒ ťĥé ķéýçĥáíñ. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>[Ñöťéš ~~]</translation>
+    </message>
+    <message>
+        <source>Set a master password…</source>
+        <translation>[Šéť á mášťéŕ þáššŵöŕď… ~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>KeyExportDialog</name>
+    <message>
+        <source>Saved to %1.</source>
+        <translation>[Šávéď ťö %1. ~~~~]</translation>
+    </message>
+    <message>
+        <source>Export the private key</source>
+        <translation>[Éxþöŕť ťĥé þŕíváťé ķéý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Export the public key</source>
+        <translation>[Éxþöŕť ťĥé þübĺíç ķéý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>[Éxþöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>“%1” is written as an OpenSSH private key. Anyone with the file can use the key, so give it a passphrase unless the file stays somewhere safe.</source>
+        <translation>[“%1” íš ŵŕíťťéñ áš áñ ÖþéñŠŠĤ þŕíváťé ķéý. Åñýöñé ŵíťĥ ťĥé ƒíĺé çáñ üšé ťĥé ķéý, šö ĝívé íť á þáššþĥŕášé üñĺéšš ťĥé ƒíĺé šťáýš šöméŵĥéŕé šáƒé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>“%1” is written as one line, ready for authorized_keys.</source>
+        <translation>[“%1” íš ŵŕíťťéñ áš öñé ĺíñé, ŕéáďý ƒöŕ áüťĥöŕížéď_ķéýš. ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>[Fíĺé ~~]</translation>
+    </message>
+    <message>
+        <source>File to write</source>
+        <translation>[Fíĺé ťö ŵŕíťé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose…</source>
+        <translation>[Çĥööšé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Passphrase</source>
+        <translation>[Þáššþĥŕášé ~~~]</translation>
+    </message>
+    <message>
+        <source>Optional. Empty writes the key without one.</source>
+        <translation>[Öþťíöñáĺ. Émþťý ŵŕíťéš ťĥé ķéý ŵíťĥöüť öñé. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New passphrase</source>
+        <translation>[Ñéŵ þáššþĥŕášé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passphrase for the file</source>
+        <translation>[Þáššþĥŕášé ƒöŕ ťĥé ƒíĺé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Repeat it</source>
+        <translation>[Ŕéþéáť íť ~~~]</translation>
+    </message>
+    <message>
+        <source>The passphrases don&apos;t match.</source>
+        <translation>[Ťĥé þáššþĥŕášéš ďöñ&apos;ť máťçĥ. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The same passphrase again</source>
+        <translation>[Ťĥé šámé þáššþĥŕášé áĝáíñ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Repeat the passphrase</source>
+        <translation>[Ŕéþéáť ťĥé þáššþĥŕášé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Save the private key</source>
+        <translation>[Šávé ťĥé þŕíváťé ķéý ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Save the public key</source>
+        <translation>[Šávé ťĥé þübĺíç ķéý ~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>KeyGenerateDialog</name>
+    <message>
+        <source>Ed25519 (recommended)</source>
+        <translation>[Éď25519 (ŕéçömméñďéď) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>ECDSA P-256</source>
+        <translation>[ÉÇĎŠÅ Þ-256 ~~~~]</translation>
+    </message>
+    <message>
+        <source>ECDSA P-384</source>
+        <translation>[ÉÇĎŠÅ Þ-384 ~~~~]</translation>
+    </message>
+    <message>
+        <source>ECDSA P-521</source>
+        <translation>[ÉÇĎŠÅ Þ-521 ~~~~]</translation>
+    </message>
+    <message>
+        <source>RSA 4096</source>
+        <translation>[ŔŠÅ 4096 ~~~]</translation>
+    </message>
+    <message>
+        <source>Key generated.</source>
+        <translation>[Ķéý ĝéñéŕáťéď. ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Generate a key</source>
+        <translation>[Ĝéñéŕáťé á ķéý ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Generate</source>
+        <translation>[Ĝéñéŕáťé ~~~]</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>[Ťýþé ~~]</translation>
+    </message>
+    <message>
+        <source>RSA keys take a few seconds to generate. Prefer Ed25519 unless a server needs RSA.</source>
+        <translation>[ŔŠÅ ķéýš ťáķé á ƒéŵ šéçöñďš ťö ĝéñéŕáťé. Þŕéƒéŕ Éď25519 üñĺéšš á šéŕvéŕ ñééďš ŔŠÅ. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Key type</source>
+        <translation>[Ķéý ťýþé ~~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>e.g. Laptop</source>
+        <translation>[é.ĝ. Ĺáþťöþ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation>[Çömméñť ~~~]</translation>
+    </message>
+    <message>
+        <source>Written into the public key, e.g. you@this-computer.</source>
+        <translation>[Ŵŕíťťéñ íñťö ťĥé þübĺíç ķéý, é.ĝ. ýöü@ťĥíš-çömþüťéŕ. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Set a master password…</source>
+        <translation>[Šéť á mášťéŕ þáššŵöŕď… ~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>KeyImportDialog</name>
+    <message>
+        <source>Key imported.</source>
+        <translation>[Ķéý ímþöŕťéď. ~~~~]</translation>
+    </message>
+    <message>
+        <source>Import a key</source>
+        <translation>[Ímþöŕť á ķéý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>[Ímþöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>OpenSSH private keys and PuTTY .ppk files (versions 2 and 3) are supported.</source>
+        <translation>[ÖþéñŠŠĤ þŕíváťé ķéýš áñď ÞüŤŤÝ .þþķ ƒíĺéš (véŕšíöñš 2 áñď 3) áŕé šüþþöŕťéď. ~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Paste the key instead of choosing a file</source>
+        <translation>[Þášťé ťĥé ķéý íñšťéáď öƒ çĥööšíñĝ á ƒíĺé ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Key file</source>
+        <translation>[Ķéý ƒíĺé ~~~]</translation>
+    </message>
+    <message>
+        <source>Choose…</source>
+        <translation>[Çĥööšé… ~~~]</translation>
+    </message>
+    <message>
+        <source>-----BEGIN OPENSSH PRIVATE KEY-----</source>
+        <translation>[-----BÉĜÍÑ ÖÞÉÑŠŠĤ ÞŔÍVÅŤÉ ĶÉÝ----- ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Private key</source>
+        <translation>[Þŕíváťé ķéý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>The key&apos;s comment</source>
+        <translation>[Ťĥé ķéý&apos;š çömméñť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passphrase</source>
+        <translation>[Þáššþĥŕášé ~~~]</translation>
+    </message>
+    <message>
+        <source>Only if the key has one.</source>
+        <translation>[Öñĺý íƒ ťĥé ķéý ĥáš öñé. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passphrase of the key</source>
+        <translation>[Þáššþĥŕášé öƒ ťĥé ķéý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Set a master password…</source>
+        <translation>[Šéť á mášťéŕ þáššŵöŕď… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a private key</source>
+        <translation>[Çĥööšé á þŕíváťé ķéý ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Private keys (id_* *.pem *.key *.ppk)</source>
+        <translation>[Þŕíváťé ķéýš (íď_* *.þém *.ķéý *.þþķ) ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>All files (*)</source>
+        <translation>[Åĺĺ ƒíĺéš (*) ~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>KeychainTasks</name>
+    <message numerus="yes">
+        <source>Wrong master password. Wait %n second(s) before the next try.</source>
+        <translation>
+            <numerusform>[Ŵŕöñĝ mášťéŕ þáššŵöŕď. Ŵáíť %n šéçöñď(š) béƒöŕé ťĥé ñéxť ťŕý. ~~~~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Ŵŕöñĝ mášťéŕ þáššŵöŕď. Ŵáíť %n šéçöñď(š) béƒöŕé ťĥé ñéxť ťŕý. ~~~~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Wrong master password.</source>
+        <translation>[Ŵŕöñĝ mášťéŕ þáššŵöŕď. ~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Too many wrong passwords. Try again in %n second(s).</source>
+        <translation>
+            <numerusform>[Ťöö máñý ŵŕöñĝ þáššŵöŕďš. Ťŕý áĝáíñ íñ %n šéçöñď(š). ~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Ťöö máñý ŵŕöñĝ þáššŵöŕďš. Ťŕý áĝáíñ íñ %n šéçöñď(š). ~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>The vault is locked.</source>
+        <translation>[Ťĥé váüĺť íš ĺöçķéď. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>There is no vault yet.</source>
+        <translation>[Ťĥéŕé íš ñö váüĺť ýéť. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This system has no keyring to keep secrets in: set a master password first.</source>
+        <translation>[Ťĥíš šýšťém ĥáš ñö ķéýŕíñĝ ťö ķééþ šéçŕéťš íñ: šéť á mášťéŕ þáššŵöŕď ƒíŕšť. ~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The system keyring failed: %1</source>
+        <translation>[Ťĥé šýšťém ķéýŕíñĝ ƒáíĺéď: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The vault can&apos;t be read.</source>
+        <translation>[Ťĥé váüĺť çáñ&apos;ť bé ŕéáď. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The file could not be read: %1</source>
+        <translation>[Ťĥé ƒíĺé çöüĺď ñöť bé ŕéáď: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save: %1</source>
+        <translation>[Çöüĺď ñöť šávé: %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>keychain.toml is read-only (it could not be read, or a newer OpenSesh wrote it).</source>
+        <translation>[ķéýçĥáíñ.ťömĺ íš ŕéáď-öñĺý (íť çöüĺď ñöť bé ŕéáď, öŕ á ñéŵéŕ ÖþéñŠéšĥ ŵŕöťé íť). ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This key is protected by a passphrase: type it and import again.</source>
+        <translation>[Ťĥíš ķéý íš þŕöťéçťéď bý á þáššþĥŕášé: ťýþé íť áñď ímþöŕť áĝáíñ. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Wrong passphrase.</source>
+        <translation>[Ŵŕöñĝ þáššþĥŕášé. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This key is in the old PEM format. Convert it with “ssh-keygen -p -f &lt;file&gt;” and import it again.</source>
+        <translation>[Ťĥíš ķéý íš íñ ťĥé öĺď ÞÉM ƒöŕmáť. Çöñvéŕť íť ŵíťĥ “ššĥ-ķéýĝéñ -þ -ƒ &lt;file&gt;” áñď ímþöŕť íť áĝáíñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This key can&apos;t be used: %1</source>
+        <translation>[Ťĥíš ķéý çáñ&apos;ť bé üšéď: %1 ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This isn&apos;t an OpenSSH or PuTTY private key.</source>
+        <translation>[Ťĥíš íšñ&apos;ť áñ ÖþéñŠŠĤ öŕ ÞüŤŤÝ þŕíváťé ķéý. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The key is damaged: %1</source>
+        <translation>[Ťĥé ķéý íš ďámáĝéď: %1 ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The key could not be generated: %1</source>
+        <translation>[Ťĥé ķéý çöüĺď ñöť bé ĝéñéŕáťéď: %1 ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This key is already in the keychain.</source>
+        <translation>[Ťĥíš ķéý íš áĺŕéáďý íñ ťĥé ķéýçĥáíñ. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>It isn&apos;t in the keychain any more.</source>
+        <translation>[Íť íšñ&apos;ť íñ ťĥé ķéýçĥáíñ áñý möŕé. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Test runs don&apos;t write files.</source>
+        <translation>[Ťéšť ŕüñš ďöñ&apos;ť ŵŕíťé ƒíĺéš. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The keychain isn&apos;t available.</source>
+        <translation>[Ťĥé ķéýçĥáíñ íšñ&apos;ť áváíĺábĺé. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Something went wrong.</source>
+        <translation>[Šöméťĥíñĝ ŵéñť ŵŕöñĝ. ~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>KeychainView</name>
-    <message>
-        <source>Your keychain is empty</source>
-        <translation>[Ýöüŕ ķéýçĥáíñ íš émþťý ~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Identities, SSH keys and known hosts, protected by the vault or your system keyring. The keychain arrives in Sprint 6.</source>
-        <translation>[Íďéñťíťíéš, ŠŠĤ ķéýš áñď ķñöŵñ ĥöšťš, þŕöťéçťéď bý ťĥé váüĺť öŕ ýöüŕ šýšťém ķéýŕíñĝ. Ťĥé ķéýçĥáíñ áŕŕívéš íñ Šþŕíñť 6. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
     <message>
         <source>New identity</source>
         <translation>[Ñéŵ íďéñťíťý ~~~~]</translation>
@@ -1914,12 +2359,268 @@
         <translation>[Íďéñťíťíéš ~~~]</translation>
     </message>
     <message>
+        <source>Keys</source>
+        <translation>[Ķéýš ~~]</translation>
+    </message>
+    <message>
+        <source>Agents</source>
+        <translation>[Åĝéñťš ~~]</translation>
+    </message>
+    <message>
+        <source>Known hosts</source>
+        <translation>[Ķñöŵñ ĥöšťš ~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSSH agent (Windows)</source>
+        <translation>[ÖþéñŠŠĤ áĝéñť (Ŵíñďöŵš) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pageant</source>
+        <translation>[Þáĝéáñť ~~~]</translation>
+    </message>
+    <message>
+        <source>SSH agent (SSH_AUTH_SOCK)</source>
+        <translation>[ŠŠĤ áĝéñť (ŠŠĤ_ÅÜŤĤ_ŠÖÇĶ) ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not running</source>
+        <translation>[Ñöť ŕüññíñĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Did not answer</source>
+        <translation>[Ďíď ñöť áñšŵéŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Refused to list its keys</source>
+        <translation>[Ŕéƒüšéď ťö ĺíšť íťš ķéýš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not be reached</source>
+        <translation>[Çöüĺď ñöť bé ŕéáçĥéď ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Public key of “%1” copied.</source>
+        <translation>[Þübĺíç ķéý öƒ “%1” çöþíéď. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>No vault yet</source>
+        <translation>[Ñö váüĺť ýéť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Vault can&apos;t be read</source>
+        <translation>[Váüĺť çáñ&apos;ť bé ŕéáď ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Vault locked</source>
+        <translation>[Váüĺť ĺöçķéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>Vault unlocked</source>
+        <translation>[Váüĺť üñĺöçķéď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Created with your first password or key.</source>
+        <translation>[Çŕéáťéď ŵíťĥ ýöüŕ ƒíŕšť þáššŵöŕď öŕ ķéý. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Held by your system keyring.</source>
+        <translation>[Ĥéĺď bý ýöüŕ šýšťém ķéýŕíñĝ. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Master password, remembered on this computer.</source>
+        <translation>[Mášťéŕ þáššŵöŕď, ŕémémbéŕéď öñ ťĥíš çömþüťéŕ. ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Protected by your master password.</source>
+        <translation>[Þŕöťéçťéď bý ýöüŕ mášťéŕ þáššŵöŕď. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Unlock…</source>
+        <translation>[Üñĺöçķ… ~~~]</translation>
+    </message>
+    <message>
+        <source>Lock</source>
+        <translation>[Ĺöçķ ~~]</translation>
+    </message>
+    <message>
+        <source>Reset…</source>
+        <translation>[Ŕéšéť… ~~]</translation>
+    </message>
+    <message>
+        <source>Security settings</source>
+        <translation>[Šéçüŕíťý šéťťíñĝš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keychain sections</source>
+        <translation>[Ķéýçĥáíñ šéçťíöñš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Search identities</source>
+        <translation>[Šéáŕçĥ íďéñťíťíéš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Search keys</source>
+        <translation>[Šéáŕçĥ ķéýš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Search agent keys</source>
+        <translation>[Šéáŕçĥ áĝéñť ķéýš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Search known hosts</source>
+        <translation>[Šéáŕçĥ ķñöŵñ ĥöšťš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import…</source>
+        <translation>[Ímþöŕť… ~~~]</translation>
+    </message>
+    <message>
         <source>Generate key</source>
         <translation>[Ĝéñéŕáťé ķéý ~~~~]</translation>
     </message>
     <message>
-        <source>SSH key generation</source>
-        <translation>[ŠŠĤ ķéý ĝéñéŕáťíöñ ~~~~~~]</translation>
+        <source>Refresh</source>
+        <translation>[Ŕéƒŕéšĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>keychain.toml is read-only</source>
+        <translation>[ķéýçĥáíñ.ťömĺ íš ŕéáď-öñĺý ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Some entries of keychain.toml were fixed or skipped</source>
+        <translation>[Šömé éñťŕíéš öƒ ķéýçĥáíñ.ťömĺ ŵéŕé ƒíxéď öŕ šķíþþéď ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Read-only for now</source>
+        <translation>[Ŕéáď-öñĺý ƒöŕ ñöŵ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Checking host keys, and adding or removing them, arrive with the built-in SSH client (Sprint 7).</source>
+        <translation>[Çĥéçķíñĝ ĥöšť ķéýš, áñď áďďíñĝ öŕ ŕémövíñĝ ťĥém, áŕŕívé ŵíťĥ ťĥé büíĺť-íñ ŠŠĤ çĺíéñť (Šþŕíñť 7). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Hashed host name</source>
+        <translation>[Ĥášĥéď ĥöšť ñámé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>key %1</source>
+        <translation>[ķéý %1 ~~]</translation>
+    </message>
+    <message>
+        <source>password saved</source>
+        <translation>[þáššŵöŕď šávéď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Used by %1</source>
+        <translation>[Üšéď bý %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>Public only</source>
+        <translation>[Þübĺíç öñĺý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Revoked</source>
+        <translation>[Ŕévöķéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Certificate authority</source>
+        <translation>[Çéŕťíƒíçáťé áüťĥöŕíťý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy the public key</source>
+        <translation>[Çöþý ťĥé þübĺíç ķéý ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Public key copied.</source>
+        <translation>[Þübĺíç ķéý çöþíéď. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation>[Möŕé áçťíöñš ~~~~]</translation>
+    </message>
+    <message>
+        <source>No identities yet</source>
+        <translation>[Ñö íďéñťíťíéš ýéť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>No SSH keys yet</source>
+        <translation>[Ñö ŠŠĤ ķéýš ýéť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>No agent keys</source>
+        <translation>[Ñö áĝéñť ķéýš ~~~~]</translation>
+    </message>
+    <message>
+        <source>No known hosts</source>
+        <translation>[Ñö ķñöŵñ ĥöšťš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>An identity is a user name with a password and/or a key, ready to give to hosts and groups. Passwords are kept in the encrypted vault.</source>
+        <translation>[Åñ íďéñťíťý íš á üšéŕ ñámé ŵíťĥ á þáššŵöŕď áñď/öŕ á ķéý, ŕéáďý ťö ĝívé ťö ĥöšťš áñď ĝŕöüþš. Þáššŵöŕďš áŕé ķéþť íñ ťĥé éñçŕýþťéď váüĺť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Generate a new key, or import one made by ssh-keygen or PuTTY. Private keys are kept in the encrypted vault.</source>
+        <translation>[Ĝéñéŕáťé á ñéŵ ķéý, öŕ ímþöŕť öñé máďé bý ššĥ-ķéýĝéñ öŕ ÞüŤŤÝ. Þŕíváťé ķéýš áŕé ķéþť íñ ťĥé éñçŕýþťéď váüĺť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>No running SSH agent holds keys. OpenSesh asks SSH_AUTH_SOCK on Linux, and the Windows OpenSSH agent and Pageant on Windows.</source>
+        <translation>[Ñö ŕüññíñĝ ŠŠĤ áĝéñť ĥöĺďš ķéýš. ÖþéñŠéšĥ ášķš ŠŠĤ_ÅÜŤĤ_ŠÖÇĶ öñ Ĺíñüx, áñď ťĥé Ŵíñďöŵš ÖþéñŠŠĤ áĝéñť áñď Þáĝéáñť öñ Ŵíñďöŵš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>~/.ssh/known_hosts is empty or missing.</source>
+        <translation>[~/.ššĥ/ķñöŵñ_ĥöšťš íš émþťý öŕ míššíñĝ. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Edit…</source>
+        <translation>[Éďíť… ~~]</translation>
+    </message>
+    <message>
+        <source>Delete…</source>
+        <translation>[Ďéĺéťé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Export the public key…</source>
+        <translation>[Éxþöŕť ťĥé þübĺíç ķéý… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Export the private key…</source>
+        <translation>[Éxþöŕť ťĥé þŕíváťé ķéý… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation>[Ŕéñámé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Rename key</source>
+        <translation>[Ŕéñámé ķéý ~~~]</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>[Ŕéñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Delete key?</source>
+        <translation>[Ďéĺéťé ķéý? ~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete identity?</source>
+        <translation>[Ďéĺéťé íďéñťíťý? ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
+    </message>
+    <message>
+        <source>“%1” and its private key are deleted from the vault. Servers that trust it keep its public key until you remove it there.</source>
+        <translation>[“%1” áñď íťš þŕíváťé ķéý áŕé ďéĺéťéď ƒŕöm ťĥé váüĺť. Šéŕvéŕš ťĥáť ťŕüšť íť ķééþ íťš þübĺíç ķéý üñťíĺ ýöü ŕémövé íť ťĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>“%1” and its saved password are deleted. Hosts and groups that use it are left without an identity.</source>
+        <translation>[“%1” áñď íťš šávéď þáššŵöŕď áŕé ďéĺéťéď. Ĥöšťš áñď ĝŕöüþš ťĥáť üšé íť áŕé ĺéƒť ŵíťĥöüť áñ íďéñťíťý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -2023,6 +2724,118 @@
     <message>
         <source>Could not save the shortcuts: %1</source>
         <translation>[Çöüĺď ñöť šávé ťĥé šĥöŕťçüťš: %1 ~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>The vault locked after %n minute(s) without use.</source>
+        <translation>
+            <numerusform>[Ťĥé váüĺť ĺöçķéď áƒťéŕ %n míñüťé(š) ŵíťĥöüť üšé. ~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Ťĥé váüĺť ĺöçķéď áƒťéŕ %n míñüťé(š) ŵíťĥöüť üšé. ~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>MasterPasswordDialog</name>
+    <message>
+        <source>The master password was removed: the system keyring holds the vault key.</source>
+        <translation>[Ťĥé mášťéŕ þáššŵöŕď ŵáš ŕémövéď: ťĥé šýšťém ķéýŕíñĝ ĥöĺďš ťĥé váüĺť ķéý. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The master password was changed.</source>
+        <translation>[Ťĥé mášťéŕ þáššŵöŕď ŵáš çĥáñĝéď. ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The vault is protected by your master password.</source>
+        <translation>[Ťĥé váüĺť íš þŕöťéçťéď bý ýöüŕ mášťéŕ þáššŵöŕď. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Create the vault</source>
+        <translation>[Çŕéáťé ťĥé váüĺť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Set a master password</source>
+        <translation>[Šéť á mášťéŕ þáššŵöŕď ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Change the master password</source>
+        <translation>[Çĥáñĝé ťĥé mášťéŕ þáššŵöŕď ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remove the master password</source>
+        <translation>[Ŕémövé ťĥé mášťéŕ þáššŵöŕď ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>[Ŕémövé ~~]</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>[Çĥáñĝé ~~]</translation>
+    </message>
+    <message>
+        <source>Set password</source>
+        <translation>[Šéť þáššŵöŕď ~~~~]</translation>
+    </message>
+    <message>
+        <source>Without a master password, the system keyring holds the key of the vault: anyone who can use your account on this computer can use your saved passwords and keys.</source>
+        <translation>[Ŵíťĥöüť á mášťéŕ þáššŵöŕď, ťĥé šýšťém ķéýŕíñĝ ĥöĺďš ťĥé ķéý öƒ ťĥé váüĺť: áñýöñé ŵĥö çáñ üšé ýöüŕ áççöüñť öñ ťĥíš çömþüťéŕ çáñ üšé ýöüŕ šávéď þáššŵöŕďš áñď ķéýš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The vault is encrypted again with the new password.</source>
+        <translation>[Ťĥé váüĺť íš éñçŕýþťéď áĝáíñ ŵíťĥ ťĥé ñéŵ þáššŵöŕď. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Your passwords and keys are encrypted with a key derived from this password (Argon2id). If you forget it, they can&apos;t be recovered.</source>
+        <translation>[Ýöüŕ þáššŵöŕďš áñď ķéýš áŕé éñçŕýþťéď ŵíťĥ á ķéý ďéŕívéď ƒŕöm ťĥíš þáššŵöŕď (Åŕĝöñ2íď). Íƒ ýöü ƒöŕĝéť íť, ťĥéý çáñ&apos;ť bé ŕéçövéŕéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Current password</source>
+        <translation>[Çüŕŕéñť þáššŵöŕď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Current master password</source>
+        <translation>[Çüŕŕéñť mášťéŕ þáššŵöŕď ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New password</source>
+        <translation>[Ñéŵ þáššŵöŕď ~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Use at least %n character(s).</source>
+        <translation>
+            <numerusform>[Üšé áť ĺéášť %n çĥáŕáçťéŕ(š). ~~~~~~~~~]</numerusform>
+            <numerusform>[Üšé áť ĺéášť %n çĥáŕáçťéŕ(š). ~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>New master password</source>
+        <translation>[Ñéŵ mášťéŕ þáššŵöŕď ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Repeat it</source>
+        <translation>[Ŕéþéáť íť ~~~]</translation>
+    </message>
+    <message>
+        <source>The passwords don&apos;t match.</source>
+        <translation>[Ťĥé þáššŵöŕďš ďöñ&apos;ť máťçĥ. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The same password again</source>
+        <translation>[Ťĥé šámé þáššŵöŕď áĝáíñ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Repeat the new master password</source>
+        <translation>[Ŕéþéáť ťĥé ñéŵ mášťéŕ þáššŵöŕď ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remember on this computer (the system keyring keeps the vault key)</source>
+        <translation>[Ŕémémbéŕ öñ ťĥíš çömþüťéŕ (ťĥé šýšťém ķéýŕíñĝ ķééþš ťĥé váüĺť ķéý) ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Too many wrong passwords. Try again in %n second(s).</source>
+        <translation>
+            <numerusform>[Ťöö máñý ŵŕöñĝ þáššŵöŕďš. Ťŕý áĝáíñ íñ %n šéçöñď(š). ~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Ťöö máñý ŵŕöñĝ þáššŵöŕďš. Ťŕý áĝáíñ íñ %n šéçöñď(š). ~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
     </message>
 </context>
 <context>
@@ -4781,6 +5594,176 @@
     </message>
 </context>
 <context>
+    <name>SettingsSecurityPage</name>
+    <message>
+        <source>Never</source>
+        <translation>[Ñévéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>After 5 minutes</source>
+        <translation>[Åƒťéŕ 5 míñüťéš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>After 15 minutes</source>
+        <translation>[Åƒťéŕ 15 míñüťéš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>After 30 minutes</source>
+        <translation>[Åƒťéŕ 30 míñüťéš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>After 1 hour</source>
+        <translation>[Åƒťéŕ 1 ĥöüŕ ~~~~]</translation>
+    </message>
+    <message>
+        <source>After 4 hours</source>
+        <translation>[Åƒťéŕ 4 ĥöüŕš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Security</source>
+        <translation>[Šéçüŕíťý ~~~]</translation>
+    </message>
+    <message>
+        <source>The vault keeps your passwords and private keys encrypted. Its key is held by your system keyring or by a master password.</source>
+        <translation>[Ťĥé váüĺť ķééþš ýöüŕ þáššŵöŕďš áñď þŕíváťé ķéýš éñçŕýþťéď. Íťš ķéý íš ĥéĺď bý ýöüŕ šýšťém ķéýŕíñĝ öŕ bý á mášťéŕ þáššŵöŕď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The vault can&apos;t be read</source>
+        <translation>[Ťĥé váüĺť çáñ&apos;ť bé ŕéáď ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>It is left as it is. Reset it to start a new one.</source>
+        <translation>[Íť íš ĺéƒť áš íť íš. Ŕéšéť íť ťö šťáŕť á ñéŵ öñé. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>No system keyring</source>
+        <translation>[Ñö šýšťém ķéýŕíñĝ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Secrets can only be kept with a master password on this system.</source>
+        <translation>[Šéçŕéťš çáñ öñĺý bé ķéþť ŵíťĥ á mášťéŕ þáššŵöŕď öñ ťĥíš šýšťém. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Vault</source>
+        <translation>[Váüĺť ~~]</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>[Šťáťüš ~~]</translation>
+    </message>
+    <message>
+        <source>Damaged or from a newer OpenSesh</source>
+        <translation>[Ďámáĝéď öŕ ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>No vault yet: one is created when you first save a secret.</source>
+        <translation>[Ñö váüĺť ýéť: öñé íš çŕéáťéď ŵĥéñ ýöü ƒíŕšť šávé á šéçŕéť. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Unlocked by your system keyring</source>
+        <translation>[Üñĺöçķéď bý ýöüŕ šýšťém ķéýŕíñĝ ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Protected by a master password, remembered on this computer</source>
+        <translation>[Þŕöťéçťéď bý á mášťéŕ þáššŵöŕď, ŕémémbéŕéď öñ ťĥíš çömþüťéŕ ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Protected by a master password, unlocked</source>
+        <translation>[Þŕöťéçťéď bý á mášťéŕ þáššŵöŕď, üñĺöçķéď ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Protected by a master password, locked</source>
+        <translation>[Þŕöťéçťéď bý á mášťéŕ þáššŵöŕď, ĺöçķéď ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Master password</source>
+        <translation>[Mášťéŕ þáššŵöŕď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Removing it gives the key back to the system keyring.</source>
+        <translation>[Ŕémövíñĝ íť ĝívéš ťĥé ķéý báçķ ťö ťĥé šýšťém ķéýŕíñĝ. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>With a master password, the vault can&apos;t be opened without it, even from your account.</source>
+        <translation>[Ŵíťĥ á mášťéŕ þáššŵöŕď, ťĥé váüĺť çáñ&apos;ť bé öþéñéď ŵíťĥöüť íť, évéñ ƒŕöm ýöüŕ áççöüñť. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Set a master password…</source>
+        <translation>[Šéť á mášťéŕ þáššŵöŕď… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Change…</source>
+        <translation>[Çĥáñĝé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Remove…</source>
+        <translation>[Ŕémövé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Remember on this computer</source>
+        <translation>[Ŕémémbéŕ öñ ťĥíš çömþüťéŕ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The system keyring keeps the vault key, so the vault opens without the master password here.</source>
+        <translation>[Ťĥé šýšťém ķéýŕíñĝ ķééþš ťĥé váüĺť ķéý, šö ťĥé váüĺť öþéñš ŵíťĥöüť ťĥé mášťéŕ þáššŵöŕď ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Lock automatically</source>
+        <translation>[Ĺöçķ áüťömáťíçáĺĺý ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>When OpenSesh isn&apos;t used for this long, the vault locks and asks for the master password again.</source>
+        <translation>[Ŵĥéñ ÖþéñŠéšĥ íšñ&apos;ť üšéď ƒöŕ ťĥíš ĺöñĝ, ťĥé váüĺť ĺöçķš áñď ášķš ƒöŕ ťĥé mášťéŕ þáššŵöŕď áĝáíñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>After %n minute(s)</source>
+        <translation>
+            <numerusform>[Åƒťéŕ %n míñüťé(š) ~~~~~~]</numerusform>
+            <numerusform>[Åƒťéŕ %n míñüťé(š) ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Lock now</source>
+        <translation>[Ĺöçķ ñöŵ ~~~]</translation>
+    </message>
+    <message>
+        <source>Lock the vault</source>
+        <translation>[Ĺöçķ ťĥé váüĺť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Unlock…</source>
+        <translation>[Üñĺöçķ… ~~~]</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>[Ŕéšéť ~~]</translation>
+    </message>
+    <message>
+        <source>For a forgotten master password or a damaged vault: deletes every saved password and private key.</source>
+        <translation>[Föŕ á ƒöŕĝöťťéñ mášťéŕ þáššŵöŕď öŕ á ďámáĝéď váüĺť: ďéĺéťéš évéŕý šávéď þáššŵöŕď áñď þŕíváťé ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reset the vault</source>
+        <translation>[Ŕéšéť ťĥé váüĺť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reset…</source>
+        <translation>[Ŕéšéť… ~~]</translation>
+    </message>
+    <message>
+        <source>Files</source>
+        <translation>[Fíĺéš ~~]</translation>
+    </message>
+    <message>
+        <source>Keychain</source>
+        <translation>[Ķéýçĥáíñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Identities and public keys, readable; secrets are only references into the vault.</source>
+        <translation>[Íďéñťíťíéš áñď þübĺíç ķéýš, ŕéáďábĺé; šéçŕéťš áŕé öñĺý ŕéƒéŕéñçéš íñťö ťĥé váüĺť. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>SettingsShortcutsPage</name>
     <message>
         <source>Shortcuts</source>
@@ -5924,6 +6907,14 @@
         <source>Stop broadcasting (%1)</source>
         <translation>[Šťöþ bŕöáďçášťíñĝ (%1) ~~~~~~~]</translation>
     </message>
+    <message>
+        <source>The vault is locked: click to unlock</source>
+        <translation>[Ťĥé váüĺť íš ĺöçķéď: çĺíçķ ťö üñĺöçķ ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The vault is unlocked: click to lock</source>
+        <translation>[Ťĥé váüĺť íš üñĺöçķéď: çĺíçķ ťö ĺöçķ ~~~~~~~~~~~]</translation>
+    </message>
     <message numerus="yes">
         <source>Notifications (%n unread)</source>
         <translation>
@@ -6420,6 +7411,59 @@
     <message>
         <source>Tunnels</source>
         <translation>[Ťüññéĺš ~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>UnlockDialog</name>
+    <message>
+        <source>Unlock the vault</source>
+        <translation>[Üñĺöçķ ťĥé váüĺť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Unlock</source>
+        <translation>[Üñĺöçķ ~~]</translation>
+    </message>
+    <message>
+        <source>Your passwords and keys are encrypted with your master password.</source>
+        <translation>[Ýöüŕ þáššŵöŕďš áñď ķéýš áŕé éñçŕýþťéď ŵíťĥ ýöüŕ mášťéŕ þáššŵöŕď. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Master password</source>
+        <translation>[Mášťéŕ þáššŵöŕď ~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Too many wrong passwords. Try again in %n second(s).</source>
+        <translation>
+            <numerusform>[Ťöö máñý ŵŕöñĝ þáššŵöŕďš. Ťŕý áĝáíñ íñ %n šéçöñď(š). ~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Ťöö máñý ŵŕöñĝ þáššŵöŕďš. Ťŕý áĝáíñ íñ %n šéçöñď(š). ~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Forgot it? Reset the vault…</source>
+        <translation>[Föŕĝöť íť? Ŕéšéť ťĥé váüĺť… ~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>VaultResetDialog</name>
+    <message>
+        <source>Reset the vault?</source>
+        <translation>[Ŕéšéť ťĥé váüĺť? ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete every secret</source>
+        <translation>[Ďéĺéťé évéŕý šéçŕéť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The vault was reset. Its passwords and private keys are gone.</source>
+        <translation>[Ťĥé váüĺť ŵáš ŕéšéť. Íťš þáššŵöŕďš áñď þŕíváťé ķéýš áŕé ĝöñé. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Nobody can open the vault without its master password, not even OpenSesh. Resetting deletes it: every saved password and private key is lost. Identities, hosts and public keys stay.</source>
+        <translation>[Ñöböďý çáñ öþéñ ťĥé váüĺť ŵíťĥöüť íťš mášťéŕ þáššŵöŕď, ñöť évéñ ÖþéñŠéšĥ. Ŕéšéťťíñĝ ďéĺéťéš íť: évéŕý šávéď þáššŵöŕď áñď þŕíváťé ķéý íš ĺöšť. Íďéñťíťíéš, ĥöšťš áñď þübĺíç ķéýš šťáý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>I understand that my saved passwords and private keys will be deleted</source>
+        <translation>[Í üñďéŕšťáñď ťĥáť mý šávéď þáššŵöŕďš áñď þŕíváťé ķéýš ŵíĺĺ bé ďéĺéťéď ~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>

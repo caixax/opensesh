@@ -62,6 +62,6 @@ The RustCrypto crates come in generations that don't mix (`rand_core`, `digest`,
 ## Consequences
 
 - One copy of each primitive in the build. Moving to `ssh-key` 0.7 later moves the whole group together.
-- PuTTY users can import their keys without PuTTYgen. The reader is about 400 lines of our own code, so it has its own tests and real fixtures.
+- PuTTY users can import their keys without PuTTYgen. The reader is a few hundred lines of our own code, so it has its own tests and real fixtures.
 - Old PEM keys need a one-time conversion; the error message says how.
 - The RSA advisory stays visible in the configuration until a fixed release exists.
