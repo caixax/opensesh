@@ -1,0 +1,6 @@
+# cargo audit: the advisories deny.toml also accepts, with the same reasons.
+[advisories]
+# rsa (through ssh-key), the Marvin timing attack: no fixed version exists. OpenSesh only uses RSA
+# locally so far (generating, reading and writing keys), which the advisory says is fine
+# (ADR 0024). Revisit with the SSH client (Sprint 7), which signs with RSA keys.
+ignore = ["RUSTSEC-2023-0071"]

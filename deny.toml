@@ -15,7 +15,12 @@ all-features = false
 # RustSec advisories (the same database cargo-audit uses).
 yanked = "deny"
 unmaintained = "workspace"
-ignore = []
+ignore = [
+    # rsa (through ssh-key), the Marvin timing attack: no fixed version exists. OpenSesh only
+    # uses RSA locally so far (generating, reading and writing keys), which the advisory says is
+    # fine (ADR 0024). Revisit with the SSH client (Sprint 7), which signs with RSA keys.
+    { id = "RUSTSEC-2023-0071", reason = "RSA is only used locally; revisit in Sprint 7 (ADR 0024)" },
+]
 
 [licenses]
 # Allowlist of licenses compatible with GPL-3.0-or-later (ADR 0001). Anything else fails CI
