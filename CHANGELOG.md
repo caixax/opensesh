@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 4: tabs, splits and workspaces.**
+  - **Split panes ([ADR 0017](docs/adr/0017-tabs-panes-and-windows.md)):** a tab holds a tree of panes of any depth, each with its own shell. Split right or down (Alt+Shift+= / Alt+Shift+-), close a pane (Ctrl+Shift+W, the tab with its last pane), move the focus (Alt+arrows) and resize (Alt+Shift+arrows) while a tab has several panes, drag the dividers (double click centers one), swap panes, make them all the same size, and maximize one (Ctrl+Shift+Z). A new pane starts with the profile, directory and zoom of the one it splits.
+  - **Tabs:** rename, eight colors that stay readable in dark and light, pin (pinned tabs come first), duplicate (Ctrl+Shift+D), close others, to the left or to the right, reopen closed tabs (Ctrl+Alt+Shift+T), drag to reorder or Ctrl+Shift+PgUp / PgDn, all from the tab's menu too. Activity and bell indicators cover every pane of a tab.
+  - **Ctrl+Tab** switches to the tab used before; holding Ctrl shows the tabs in the order they were used. Ctrl+PgUp / PgDn keep the strip's order.
+  - **Windows:** drag a tab out of the window, or use "Move to a new window", to give it its own window, and move it back from its menu or by dropping it on another window. Its shells keep running. Detached windows have the tabs and the status bar; the views open in the main window.
+  - **Broadcast input (MultiExec, Ctrl+Shift+B):** what is typed in a receiving pane goes to every receiving pane of the tab, each key encoded for the program in that pane. Receiving panes, and only those, get a red border and a chip to leave or rejoin; the tab and the status bar show it too. A paste into several panes asks once per broadcast, and scrolling can follow along.
+  - **Workspaces ([ADR 0018](docs/adr/0018-workspace-files.md)):** save the tabs of every window, with their layouts, profiles and directories, in `workspaces/*.toml`, and open, rename or delete them (the palette, or the Terminal view). "Restore sessions at startup" (Settings > General) now brings back the last session, with new shells in the same folders.
 - **Sprint 3: terminal customization.**
   - **Profiles ([ADR 0016](docs/adr/0016-terminal-profiles-and-settings-files.md)):** every terminal option of PLAN §6.2 lives in profiles (`profiles/*.toml`) that inherit from the default one; the chain global, group, host, tab is in `opensesh-core` (groups and hosts use it once they exist). Each tab can switch profile from its menu, and new tabs use the profile chosen in Settings > Profiles. Every change reaches open terminals at once; files edited outside the app apply live too.
   - **Fonts:** family (monospaced fonts listed, all on request), fallback fonts, size, normal and bold weight, italics on or off, line height, letter spacing, antialiasing, hinting, and per-tab zoom (Ctrl+= / Ctrl+- / Ctrl+0). Programming ligatures are experimental and off by default ([ADR 0015](docs/adr/0015-programming-ligatures.md), with a spike in `spikes/ligatures/`).
@@ -17,6 +24,9 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
+- Ctrl+Shift+W closes the focused pane (PLAN §6.4); "Close tab" has no default shortcut. Ctrl+Tab and Ctrl+Shift+Tab follow the order tabs were used in.
+- The tab strip scrolls with the wheel instead of flicking, so tabs can be dragged.
+- Screenshot runs add split terminal tabs with and without broadcast.
 - Smoke tests and screenshot runs never write profiles, themes, rules or shortcuts.
 - README: how to install OpenSesh (the Linux install script and its options, the Windows installer and portable zip), how updates work, how to check a download and how releases are made.
 
