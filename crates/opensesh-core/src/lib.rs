@@ -15,6 +15,7 @@ pub mod state;
 pub mod terminal;
 pub mod theme;
 pub mod watch;
+pub mod workspace;
 pub mod writer;
 
 pub use paths::{AppPaths, PathsError};
