@@ -108,6 +108,18 @@
         <translation>[Šŵíťçĥ ťö ťĥé þŕévíöüšĺý üšéď ťáb ~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>New host…</source>
+        <translation>[Ñéŵ ĥöšť… ~~~]</translation>
+    </message>
+    <message>
+        <source>New host group…</source>
+        <translation>[Ñéŵ ĥöšť ĝŕöüþ… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import ~/.ssh/config…</source>
+        <translation>[Ímþöŕť ~/.ššĥ/çöñƒíĝ… ~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Switch to the least recently used tab</source>
         <translation>[Šŵíťçĥ ťö ťĥé ĺéášť ŕéçéñťĺý üšéď ťáb ~~~~~~~~~~~~]</translation>
     </message>
@@ -431,6 +443,26 @@
         <translation>[Ĥöšťš ~~]</translation>
     </message>
     <message>
+        <source>Connecting over %1 arrives in Sprint %2.</source>
+        <translation>[Çöññéçťíñĝ övéŕ %1 áŕŕívéš íñ Šþŕíñť %2. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>That host no longer exists.</source>
+        <translation>[Ťĥáť ĥöšť ñö ĺöñĝéŕ éxíšťš. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 can&apos;t be connected to as it is: check its address, user and jump hosts.</source>
+        <translation>[%1 çáñ&apos;ť bé çöññéçťéď ťö áš íť íš: çĥéçķ íťš áďďŕéšš, üšéŕ áñď ĵümþ ĥöšťš. ~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Can&apos;t connect to %1: %2</source>
+        <translation>[Çáñ&apos;ť çöññéçť ťö %1: %2 ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connect to %1</source>
+        <translation>[Çöññéçť ťö %1 ~~~~]</translation>
+    </message>
+    <message>
         <source>Terminal</source>
         <translation>[Ťéŕmíñáĺ ~~~]</translation>
     </message>
@@ -526,6 +558,21 @@
     <message>
         <source>OpenSesh</source>
         <translation>[ÖþéñŠéšĥ ~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>EditorChoiceRow</name>
+    <message>
+        <source>Inherit</source>
+        <translation>[Íñĥéŕíť ~~~]</translation>
+    </message>
+    <message>
+        <source>Inherit: %1 (from %2)</source>
+        <translation>[Íñĥéŕíť: %1 (ƒŕöm %2) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Inherit: %1</source>
+        <translation>[Íñĥéŕíť: %1 ~~~~]</translation>
     </message>
 </context>
 <context>
@@ -648,6 +695,165 @@
     <message>
         <source>Low contrast: this accent is under 3:1 against the background.</source>
         <translation>[Ĺöŵ çöñťŕášť: ťĥíš áççéñť íš üñďéŕ 3:1 áĝáíñšť ťĥé báçķĝŕöüñď. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>GroupEditorDialog</name>
+    <message>
+        <source>On</source>
+        <translation>[Öñ ~]</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>[Öƒƒ ~]</translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation>[ñöñé ~~]</translation>
+    </message>
+    <message>
+        <source>%1 (from %2)</source>
+        <translation>[%1 (ƒŕöm %2) ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (default)</source>
+        <translation>[%1 (ďéƒáüĺť) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Required.</source>
+        <translation>[Ŕéqüíŕéď. ~~~]</translation>
+    </message>
+    <message>
+        <source>A group can&apos;t go inside itself or one of its subgroups.</source>
+        <translation>[Å ĝŕöüþ çáñ&apos;ť ĝö íñšíďé íťšéĺƒ öŕ öñé öƒ íťš šübĝŕöüþš. ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not a user name (no spaces, and not starting with -).</source>
+        <translation>[Ñöť á üšéŕ ñámé (ñö šþáçéš, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use a port from 1 to 65535.</source>
+        <translation>[Üšé á þöŕť ƒŕöm 1 ťö 65535. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Each jump host is a saved host or user@host:port, separated by commas.</source>
+        <translation>[Éáçĥ ĵümþ ĥöšť íš á šávéď ĥöšť öŕ üšéŕ@ĥöšť:þöŕť, šéþáŕáťéď bý çömmáš. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This group can&apos;t be saved as it is.</source>
+        <translation>[Ťĥíš ĝŕöüþ çáñ&apos;ť bé šávéď áš íť íš. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New group</source>
+        <translation>[Ñéŵ ĝŕöüþ ~~~]</translation>
+    </message>
+    <message>
+        <source>Edit group</source>
+        <translation>[Éďíť ĝŕöüþ ~~~]</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>[Šávé ~~]</translation>
+    </message>
+    <message>
+        <source>The group could not be saved.</source>
+        <translation>[Ťĥé ĝŕöüþ çöüĺď ñöť bé šávéď. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Production</source>
+        <translation>[Þŕöďüçťíöñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Inside</source>
+        <translation>[Íñšíďé ~~]</translation>
+    </message>
+    <message>
+        <source>No group (top level)</source>
+        <translation>[Ñö ĝŕöüþ (ťöþ ĺévéĺ) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Color</source>
+        <translation>[Çöĺöŕ ~~]</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>[Ñöñé ~~]</translation>
+    </message>
+    <message>
+        <source>Defaults for its hosts</source>
+        <translation>[Ďéƒáüĺťš ƒöŕ íťš ĥöšťš ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Hosts and subgroups use these unless they set their own.</source>
+        <translation>[Ĥöšťš áñď šübĝŕöüþš üšé ťĥéšé üñĺéšš ťĥéý šéť ťĥéíŕ öŵñ. ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>User</source>
+        <translation>[Üšéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation>[Þöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>Jump hosts</source>
+        <translation>[Ĵümþ ĥöšťš ~~~]</translation>
+    </message>
+    <message>
+        <source>bastion</source>
+        <translation>[bášťíöñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Private key file</source>
+        <translation>[Þŕíváťé ķéý ƒíĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal profile</source>
+        <translation>[Ťéŕmíñáĺ þŕöƒíĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keepalive (seconds)</source>
+        <translation>[Ķééþáĺívé (šéçöñďš) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Compression</source>
+        <translation>[Çömþŕéššíöñ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Agent forwarding</source>
+        <translation>[Åĝéñť ƒöŕŵáŕďíñĝ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Anyone with root on these hosts can use your keys while you are connected.</source>
+        <translation>[Åñýöñé ŵíťĥ ŕööť öñ ťĥéšé ĥöšťš çáñ üšé ýöüŕ ķéýš ŵĥíĺé ýöü áŕé çöññéçťéď. ~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>X11 forwarding</source>
+        <translation>[X11 ƒöŕŵáŕďíñĝ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Untrusted</source>
+        <translation>[Üñťŕüšťéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Trusted</source>
+        <translation>[Ťŕüšťéď ~~~]</translation>
+    </message>
+    <message>
+        <source>SFTP follows the terminal</source>
+        <translation>[ŠFŤÞ ƒöĺĺöŵš ťĥé ťéŕmíñáĺ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>SFTP start folder</source>
+        <translation>[ŠFŤÞ šťáŕť ƒöĺďéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>[Ñöťéš ~~]</translation>
     </message>
 </context>
 <context>
@@ -841,22 +1047,613 @@
     </message>
 </context>
 <context>
-    <name>HostsView</name>
+    <name>HostEditorDialog</name>
     <message>
-        <source>No hosts yet</source>
-        <translation>[Ñö ĥöšťš ýéť ~~~~]</translation>
+        <source>Basic</source>
+        <translation>[Bášíç ~~]</translation>
     </message>
     <message>
-        <source>Save the servers you connect to and open them with one click. Host management arrives in Sprint 5.</source>
-        <translation>[Šávé ťĥé šéŕvéŕš ýöü çöññéçť ťö áñď öþéñ ťĥém ŵíťĥ öñé çĺíçķ. Ĥöšť máñáĝéméñť áŕŕívéš íñ Šþŕíñť 5. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Authentication</source>
+        <translation>[Åüťĥéñťíçáťíöñ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Advanced</source>
+        <translation>[Åďváñçéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal</source>
+        <translation>[Ťéŕmíñáĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>SFTP</source>
+        <translation>[ŠFŤÞ ~~]</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>[Ñöťéš ~~]</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>[Öñ ~]</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>[Öƒƒ ~]</translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation>[ñöñé ~~]</translation>
+    </message>
+    <message>
+        <source>%1 (from %2)</source>
+        <translation>[%1 (ƒŕöm %2) ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (default)</source>
+        <translation>[%1 (ďéƒáüĺť) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Required.</source>
+        <translation>[Ŕéqüíŕéď. ~~~]</translation>
+    </message>
+    <message>
+        <source>Not a device name.</source>
+        <translation>[Ñöť á ďévíçé ñámé. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not a host name or address (no spaces, @ or /, and not starting with -).</source>
+        <translation>[Ñöť á ĥöšť ñámé öŕ áďďŕéšš (ñö šþáçéš, @ öŕ /, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not a user name (no spaces, and not starting with -).</source>
+        <translation>[Ñöť á üšéŕ ñámé (ñö šþáçéš, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use a port from 1 to 65535.</source>
+        <translation>[Üšé á þöŕť ƒŕöm 1 ťö 65535. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A file path, not an option.</source>
+        <translation>[Å ƒíĺé þáťĥ, ñöť áñ öþťíöñ. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Each jump host is a saved host or user@host:port, separated by commas.</source>
+        <translation>[Éáçĥ ĵümþ ĥöšť íš á šávéď ĥöšť öŕ üšéŕ@ĥöšť:þöŕť, šéþáŕáťéď bý çömmáš. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>That group no longer exists.</source>
+        <translation>[Ťĥáť ĝŕöüþ ñö ĺöñĝéŕ éxíšťš. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This host can&apos;t be saved as it is.</source>
+        <translation>[Ťĥíš ĥöšť çáñ&apos;ť bé šávéď áš íť íš. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The host could not be saved.</source>
+        <translation>[Ťĥé ĥöšť çöüĺď ñöť bé šávéď. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>SSH</source>
+        <translation>[ŠŠĤ ~]</translation>
+    </message>
+    <message>
+        <source>Telnet</source>
+        <translation>[Ťéĺñéť ~~]</translation>
+    </message>
+    <message>
+        <source>Serial port</source>
+        <translation>[Šéŕíáĺ þöŕť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Mosh</source>
+        <translation>[Möšĥ ~~]</translation>
+    </message>
+    <message>
+        <source>RDP (remote desktop)</source>
+        <translation>[ŔĎÞ (ŕémöťé ďéšķťöþ) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>VNC</source>
+        <translation>[VÑÇ ~]</translation>
+    </message>
+    <message>
+        <source>Local shell</source>
+        <translation>[Ĺöçáĺ šĥéĺĺ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Docker container</source>
+        <translation>[Ďöçķéŕ çöñťáíñéŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Kubernetes pod</source>
+        <translation>[Ķübéŕñéťéš þöď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>[Ñöñé ~~]</translation>
+    </message>
+    <message>
+        <source>Automatic</source>
+        <translation>[Åüťömáťíç ~~~]</translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation>[Šéŕvéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Linux</source>
+        <translation>[Ĺíñüx ~~]</translation>
+    </message>
+    <message>
+        <source>Debian</source>
+        <translation>[Ďébíáñ ~~]</translation>
+    </message>
+    <message>
+        <source>Ubuntu</source>
+        <translation>[Übüñťü ~~]</translation>
+    </message>
+    <message>
+        <source>Fedora</source>
+        <translation>[Féďöŕá ~~]</translation>
+    </message>
+    <message>
+        <source>Arch Linux</source>
+        <translation>[Åŕçĥ Ĺíñüx ~~~]</translation>
+    </message>
+    <message>
+        <source>Red Hat</source>
+        <translation>[Ŕéď Ĥáť ~~~]</translation>
+    </message>
+    <message>
+        <source>Rocky Linux</source>
+        <translation>[Ŕöçķý Ĺíñüx ~~~~]</translation>
+    </message>
+    <message>
+        <source>AlmaLinux</source>
+        <translation>[ÅĺmáĹíñüx ~~~]</translation>
+    </message>
+    <message>
+        <source>Alpine Linux</source>
+        <translation>[Åĺþíñé Ĺíñüx ~~~~]</translation>
+    </message>
+    <message>
+        <source>openSUSE</source>
+        <translation>[öþéñŠÜŠÉ ~~~]</translation>
+    </message>
+    <message>
+        <source>NixOS</source>
+        <translation>[ÑíxÖŠ ~~]</translation>
+    </message>
+    <message>
+        <source>Raspberry Pi</source>
+        <translation>[Ŕášþbéŕŕý Þí ~~~~]</translation>
+    </message>
+    <message>
+        <source>FreeBSD</source>
+        <translation>[FŕééBŠĎ ~~~]</translation>
+    </message>
+    <message>
+        <source>Windows</source>
+        <translation>[Ŵíñďöŵš ~~~]</translation>
+    </message>
+    <message>
+        <source>macOS</source>
+        <translation>[máçÖŠ ~~]</translation>
+    </message>
+    <message>
+        <source>Docker</source>
+        <translation>[Ďöçķéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Kubernetes</source>
+        <translation>[Ķübéŕñéťéš ~~~]</translation>
+    </message>
+    <message>
+        <source>Host from ~/.ssh/config</source>
+        <translation>[Ĥöšť ƒŕöm ~/.ššĥ/çöñƒíĝ ~~~~~~~]</translation>
     </message>
     <message>
         <source>New host</source>
         <translation>[Ñéŵ ĥöšť ~~~]</translation>
     </message>
     <message>
-        <source>Host management</source>
-        <translation>[Ĥöšť máñáĝéméñť ~~~~~]</translation>
+        <source>Edit host</source>
+        <translation>[Éďíť ĥöšť ~~~]</translation>
+    </message>
+    <message>
+        <source>Duplicate to edit</source>
+        <translation>[Ďüþĺíçáťé ťö éďíť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>[Šávé ~~]</translation>
+    </message>
+    <message>
+        <source>Sections</source>
+        <translation>[Šéçťíöñš ~~~]</translation>
+    </message>
+    <message>
+        <source>Read-only</source>
+        <translation>[Ŕéáď-öñĺý ~~~]</translation>
+    </message>
+    <message>
+        <source>This host comes from ~/.ssh/config, which OpenSesh follows but never changes. Duplicate it to edit a copy.</source>
+        <translation>[Ťĥíš ĥöšť çöméš ƒŕöm ~/.ššĥ/çöñƒíĝ, ŵĥíçĥ ÖþéñŠéšĥ ƒöĺĺöŵš büť ñévéŕ çĥáñĝéš. Ďüþĺíçáťé íť ťö éďíť á çöþý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>web-01</source>
+        <translation>[ŵéb-01 ~~]</translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation>[Þŕöťöçöĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Connects with the system&apos;s OpenSSH client until the built-in one arrives.</source>
+        <translation>[Çöññéçťš ŵíťĥ ťĥé šýšťém&apos;š ÖþéñŠŠĤ çĺíéñť üñťíĺ ťĥé büíĺť-íñ öñé áŕŕívéš. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved now; the file browser arrives in Sprint 8.</source>
+        <translation>[Šávéď ñöŵ; ťĥé ƒíĺé bŕöŵšéŕ áŕŕívéš íñ Šþŕíñť 8. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved now; remote desktop arrives in Sprint 13.</source>
+        <translation>[Šávéď ñöŵ; ŕémöťé ďéšķťöþ áŕŕívéš íñ Šþŕíñť 13. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved now; VNC arrives in Sprint 14.</source>
+        <translation>[Šávéď ñöŵ; VÑÇ áŕŕívéš íñ Šþŕíñť 14. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved now; connecting arrives in Sprint 12.</source>
+        <translation>[Šávéď ñöŵ; çöññéçťíñĝ áŕŕívéš íñ Šþŕíñť 12. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Device</source>
+        <translation>[Ďévíçé ~~]</translation>
+    </message>
+    <message>
+        <source>Container</source>
+        <translation>[Çöñťáíñéŕ ~~~]</translation>
+    </message>
+    <message>
+        <source>Pod</source>
+        <translation>[Þöď ~]</translation>
+    </message>
+    <message>
+        <source>Address</source>
+        <translation>[Åďďŕéšš ~~~]</translation>
+    </message>
+    <message>
+        <source>/dev/ttyUSB0 or COM3</source>
+        <translation>[/ďév/ťťýÜŠB0 öŕ ÇÖM3 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>host name or IP address</source>
+        <translation>[ĥöšť ñámé öŕ ÍÞ áďďŕéšš ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation>[Þöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>Group</source>
+        <translation>[Ĝŕöüþ ~~]</translation>
+    </message>
+    <message>
+        <source>No group</source>
+        <translation>[Ñö ĝŕöüþ ~~~]</translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation>[Ťáĝš ~~]</translation>
+    </message>
+    <message>
+        <source>web, nginx</source>
+        <translation>[ŵéb, ñĝíñx ~~~]</translation>
+    </message>
+    <message>
+        <source>Separated by commas.</source>
+        <translation>[Šéþáŕáťéď bý çömmáš. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Color</source>
+        <translation>[Çöĺöŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Icon</source>
+        <translation>[Íçöñ ~~]</translation>
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation>[Fávöŕíťé ~~~]</translation>
+    </message>
+    <message>
+        <source>User</source>
+        <translation>[Üšéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>the local user name</source>
+        <translation>[ťĥé ĺöçáĺ üšéŕ ñámé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Private key file</source>
+        <translation>[Þŕíváťé ķéý ƒíĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>the keys OpenSSH tries by itself</source>
+        <translation>[ťĥé ķéýš ÖþéñŠŠĤ ťŕíéš bý íťšéĺƒ ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a key file…</source>
+        <translation>[Çĥööšé á ķéý ƒíĺé… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passwords, passphrases and keys kept in OpenSesh&apos;s encrypted vault arrive with the keychain. Nothing secret is written to hosts.toml.</source>
+        <translation>[Þáššŵöŕďš, þáššþĥŕášéš áñď ķéýš ķéþť íñ ÖþéñŠéšĥ&apos;š éñçŕýþťéď váüĺť áŕŕívé ŵíťĥ ťĥé ķéýçĥáíñ. Ñöťĥíñĝ šéçŕéť íš ŵŕíťťéñ ťö ĥöšťš.ťömĺ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Jump hosts</source>
+        <translation>[Ĵümþ ĥöšťš ~~~]</translation>
+    </message>
+    <message>
+        <source>bastion, ops@hop:2222</source>
+        <translation>[bášťíöñ, öþš@ĥöþ:2222 ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved hosts or user@host:port, first hop first. &quot;none&quot; connects directly even if the group has jump hosts.</source>
+        <translation>[Šávéď ĥöšťš öŕ üšéŕ@ĥöšť:þöŕť, ƒíŕšť ĥöþ ƒíŕšť. &quot;ñöñé&quot; çöññéçťš ďíŕéçťĺý évéñ íƒ ťĥé ĝŕöüþ ĥáš ĵümþ ĥöšťš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>SSH client</source>
+        <translation>[ŠŠĤ çĺíéñť ~~~]</translation>
+    </message>
+    <message>
+        <source>Built-in</source>
+        <translation>[Büíĺť-íñ ~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSSH</source>
+        <translation>[ÖþéñŠŠĤ ~~~]</translation>
+    </message>
+    <message>
+        <source>Until the built-in client arrives, OpenSesh connects with OpenSSH either way.</source>
+        <translation>[Üñťíĺ ťĥé büíĺť-íñ çĺíéñť áŕŕívéš, ÖþéñŠéšĥ çöññéçťš ŵíťĥ ÖþéñŠŠĤ éíťĥéŕ ŵáý. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keepalive (seconds)</source>
+        <translation>[Ķééþáĺívé (šéçöñďš) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>0 turns it off.</source>
+        <translation>[0 ťüŕñš íť öƒƒ. ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Compression</source>
+        <translation>[Çömþŕéššíöñ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Agent forwarding</source>
+        <translation>[Åĝéñť ƒöŕŵáŕďíñĝ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Anyone with root on this host can use your keys while you are connected.</source>
+        <translation>[Åñýöñé ŵíťĥ ŕööť öñ ťĥíš ĥöšť çáñ üšé ýöüŕ ķéýš ŵĥíĺé ýöü áŕé çöññéçťéď. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>X11 forwarding</source>
+        <translation>[X11 ƒöŕŵáŕďíñĝ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Untrusted</source>
+        <translation>[Üñťŕüšťéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Trusted</source>
+        <translation>[Ťŕüšťéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Trusted forwarding gives remote programs full access to your display.</source>
+        <translation>[Ťŕüšťéď ƒöŕŵáŕďíñĝ ĝívéš ŕémöťé þŕöĝŕámš ƒüĺĺ áççéšš ťö ýöüŕ ďíšþĺáý. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Startup snippet</source>
+        <translation>[Šťáŕťüþ šñíþþéť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Runs once the shell is ready; snippets arrive in Sprint 10.</source>
+        <translation>[Ŕüñš öñçé ťĥé šĥéĺĺ íš ŕéáďý; šñíþþéťš áŕŕívé íñ Šþŕíñť 10. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Speed (baud)</source>
+        <translation>[Šþééď (báüď) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Data bits</source>
+        <translation>[Ďáťá bíťš ~~~]</translation>
+    </message>
+    <message>
+        <source>Default (8)</source>
+        <translation>[Ďéƒáüĺť (8) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Parity</source>
+        <translation>[Þáŕíťý ~~]</translation>
+    </message>
+    <message>
+        <source>Default (none)</source>
+        <translation>[Ďéƒáüĺť (ñöñé) ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Even</source>
+        <translation>[Évéñ ~~]</translation>
+    </message>
+    <message>
+        <source>Odd</source>
+        <translation>[Öďď ~]</translation>
+    </message>
+    <message>
+        <source>Stop bits</source>
+        <translation>[Šťöþ bíťš ~~~]</translation>
+    </message>
+    <message>
+        <source>Default (1)</source>
+        <translation>[Ďéƒáüĺť (1) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Flow control</source>
+        <translation>[Fĺöŵ çöñťŕöĺ ~~~~]</translation>
+    </message>
+    <message>
+        <source>XON/XOFF</source>
+        <translation>[XÖÑ/XÖFF ~~~]</translation>
+    </message>
+    <message>
+        <source>RTS/CTS</source>
+        <translation>[ŔŤŠ/ÇŤŠ ~~~]</translation>
+    </message>
+    <message>
+        <source>No advanced options for this protocol yet.</source>
+        <translation>[Ñö áďváñçéď öþťíöñš ƒöŕ ťĥíš þŕöťöçöĺ ýéť. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal profile</source>
+        <translation>[Ťéŕmíñáĺ þŕöƒíĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Font size</source>
+        <translation>[Föñť šížé ~~~]</translation>
+    </message>
+    <message>
+        <source>from the profile</source>
+        <translation>[ƒŕöm ťĥé þŕöƒíĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Theme (dark mode)</source>
+        <translation>[Ťĥémé (ďáŕķ möďé) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>From the profile</source>
+        <translation>[Fŕöm ťĥé þŕöƒíĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Theme (light mode)</source>
+        <translation>[Ťĥémé (ĺíĝĥť möďé) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Every other terminal option comes from the profile. Hosts can override any of them in [host.terminal] in hosts.toml.</source>
+        <translation>[Évéŕý öťĥéŕ ťéŕmíñáĺ öþťíöñ çöméš ƒŕöm ťĥé þŕöƒíĺé. Ĥöšťš çáñ övéŕŕíďé áñý öƒ ťĥém íñ [ĥöšť.ťéŕmíñáĺ] íñ ĥöšťš.ťömĺ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Follow the terminal&apos;s folder</source>
+        <translation>[Föĺĺöŵ ťĥé ťéŕmíñáĺ&apos;š ƒöĺďéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Start folder</source>
+        <translation>[Šťáŕť ƒöĺďéŕ ~~~~]</translation>
+    </message>
+    <message>
+        <source>The SFTP browser arrives in Sprint 8; these settings are kept for it.</source>
+        <translation>[Ťĥé ŠFŤÞ bŕöŵšéŕ áŕŕívéš íñ Šþŕíñť 8; ťĥéšé šéťťíñĝš áŕé ķéþť ƒöŕ íť. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Markdown</source>
+        <translation>[Máŕķďöŵñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>[Þŕévíéŵ ~~~]</translation>
+    </message>
+    <message>
+        <source>Anything worth remembering about this host.</source>
+        <translation>[Åñýťĥíñĝ ŵöŕťĥ ŕémémbéŕíñĝ áböüť ťĥíš ĥöšť. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a private key</source>
+        <translation>[Çĥööšé á þŕíváťé ķéý ~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>HostsView</name>
+    <message>
+        <source>No hosts yet</source>
+        <translation>[Ñö ĥöšťš ýéť ~~~~]</translation>
+    </message>
+    <message>
+        <source>New host</source>
+        <translation>[Ñéŵ ĥöšť ~~~]</translation>
+    </message>
+    <message>
+        <source>All hosts</source>
+        <translation>[Åĺĺ ĥöšťš ~~~]</translation>
+    </message>
+    <message>
+        <source>Favorites</source>
+        <translation>[Fávöŕíťéš ~~~]</translation>
+    </message>
+    <message>
+        <source>Recent</source>
+        <translation>[Ŕéçéñť ~~]</translation>
+    </message>
+    <message>
+        <source>~/.ssh/config</source>
+        <translation>[~/.ššĥ/çöñƒíĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Groups</source>
+        <translation>[Ĝŕöüþš ~~]</translation>
+    </message>
+    <message>
+        <source>No group</source>
+        <translation>[Ñö ĝŕöüþ ~~~]</translation>
+    </message>
+    <message>
+        <source>SSH</source>
+        <translation>[ŠŠĤ ~]</translation>
+    </message>
+    <message>
+        <source>SFTP</source>
+        <translation>[ŠFŤÞ ~~]</translation>
+    </message>
+    <message>
+        <source>Telnet</source>
+        <translation>[Ťéĺñéť ~~]</translation>
+    </message>
+    <message>
+        <source>Serial</source>
+        <translation>[Šéŕíáĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Mosh</source>
+        <translation>[Möšĥ ~~]</translation>
+    </message>
+    <message>
+        <source>RDP</source>
+        <translation>[ŔĎÞ ~]</translation>
+    </message>
+    <message>
+        <source>VNC</source>
+        <translation>[VÑÇ ~]</translation>
+    </message>
+    <message>
+        <source>Local</source>
+        <translation>[Ĺöçáĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Docker</source>
+        <translation>[Ďöçķéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Kubernetes</source>
+        <translation>[Ķübéŕñéťéš ~~~]</translation>
+    </message>
+    <message>
+        <source>Save the servers you connect to and open them with one click, or bring in the ones in ~/.ssh/config.</source>
+        <translation>[Šávé ťĥé šéŕvéŕš ýöü çöññéçť ťö áñď öþéñ ťĥém ŵíťĥ öñé çĺíçķ, öŕ bŕíñĝ íñ ťĥé öñéš íñ ~/.ššĥ/çöñƒíĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Quick connect</source>
@@ -871,8 +1668,231 @@
         <translation>[Ímþöŕť ~~]</translation>
     </message>
     <message>
-        <source>Importing ~/.ssh/config</source>
-        <translation>[Ímþöŕťíñĝ ~/.ššĥ/çöñƒíĝ ~~~~~~~]</translation>
+        <source>Host lists and groups</source>
+        <translation>[Ĥöšť ĺíšťš áñď ĝŕöüþš ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New group</source>
+        <translation>[Ñéŵ ĝŕöüþ ~~~]</translation>
+    </message>
+    <message>
+        <source>A group can&apos;t go inside itself or one of its subgroups.</source>
+        <translation>[Å ĝŕöüþ çáñ&apos;ť ĝö íñšíďé íťšéĺƒ öŕ öñé öƒ íťš šübĝŕöüþš. ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Search by name, address, user, tag or group</source>
+        <translation>[Šéáŕçĥ bý ñámé, áďďŕéšš, üšéŕ, ťáĝ öŕ ĝŕöüþ ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Search hosts</source>
+        <translation>[Šéáŕçĥ ĥöšťš ~~~~]</translation>
+    </message>
+    <message>
+        <source>All protocols</source>
+        <translation>[Åĺĺ þŕöťöçöĺš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation>[Þŕöťöçöĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>All tags</source>
+        <translation>[Åĺĺ ťáĝš ~~~]</translation>
+    </message>
+    <message>
+        <source>Tag</source>
+        <translation>[Ťáĝ ~]</translation>
+    </message>
+    <message>
+        <source>By name</source>
+        <translation>[Bý ñámé ~~~]</translation>
+    </message>
+    <message>
+        <source>By address</source>
+        <translation>[Bý áďďŕéšš ~~~]</translation>
+    </message>
+    <message>
+        <source>Recently used</source>
+        <translation>[Ŕéçéñťĺý üšéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>By group</source>
+        <translation>[Bý ĝŕöüþ ~~~]</translation>
+    </message>
+    <message>
+        <source>Order</source>
+        <translation>[Öŕďéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Cards</source>
+        <translation>[Çáŕďš ~~]</translation>
+    </message>
+    <message>
+        <source>List</source>
+        <translation>[Ĺíšť ~~]</translation>
+    </message>
+    <message>
+        <source>Host</source>
+        <translation>[Ĥöšť ~~]</translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation>[Möŕé ~~]</translation>
+    </message>
+    <message>
+        <source>hosts.toml is read-only</source>
+        <translation>[ĥöšťš.ťömĺ íš ŕéáď-öñĺý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>It could not be read, or a newer OpenSesh wrote it. Changes are not saved until it is fixed.</source>
+        <translation>[Íť çöüĺď ñöť bé ŕéáď, öŕ á ñéŵéŕ ÖþéñŠéšĥ ŵŕöťé íť. Çĥáñĝéš áŕé ñöť šávéď üñťíĺ íť íš ƒíxéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Hosts</source>
+        <translation>[Ĥöšťš ~~]</translation>
+    </message>
+    <message>
+        <source>No hosts here</source>
+        <translation>[Ñö ĥöšťš ĥéŕé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Nothing matches the search and filters.</source>
+        <translation>[Ñöťĥíñĝ máťçĥéš ťĥé šéáŕçĥ áñď ƒíĺťéŕš. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This list is empty.</source>
+        <translation>[Ťĥíš ĺíšť íš émþťý. ~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s), %1 selected</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š), %1 šéĺéçťéď ~~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š), %1 šéĺéçťéď ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s)</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation>[Çöññéçť ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Connect to %n host(s)</source>
+        <translation>
+            <numerusform>[Çöññéçť ťö %n ĥöšť(š) ~~~~~~~]</numerusform>
+            <numerusform>[Çöññéçť ťö %n ĥöšť(š) ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Connect in a split</source>
+        <translation>[Çöññéçť íñ á šþĺíť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>To the right</source>
+        <translation>[Ťö ťĥé ŕíĝĥť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Below</source>
+        <translation>[Béĺöŵ ~~]</translation>
+    </message>
+    <message>
+        <source>Edit…</source>
+        <translation>[Éďíť… ~~]</translation>
+    </message>
+    <message>
+        <source>Duplicate</source>
+        <translation>[Ďüþĺíçáťé ~~~]</translation>
+    </message>
+    <message>
+        <source>Copy the ssh command</source>
+        <translation>[Çöþý ťĥé ššĥ çömmáñď ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copied: %1</source>
+        <translation>[Çöþíéď: %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>Remove from Favorites</source>
+        <translation>[Ŕémövé ƒŕöm Fávöŕíťéš ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Add to Favorites</source>
+        <translation>[Åďď ťö Fávöŕíťéš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Move to group</source>
+        <translation>[Mövé ťö ĝŕöüþ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Delete %n host(s)</source>
+        <translation>
+            <numerusform>[Ďéĺéťé %n ĥöšť(š) ~~~~~~]</numerusform>
+            <numerusform>[Ďéĺéťé %n ĥöšť(š) ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>New group…</source>
+        <translation>[Ñéŵ ĝŕöüþ… ~~~]</translation>
+    </message>
+    <message>
+        <source>Import ~/.ssh/config…</source>
+        <translation>[Ímþöŕť ~/.ššĥ/çöñƒíĝ… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Quick connect…</source>
+        <translation>[Qüíçķ çöññéçť… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Stop following %1</source>
+        <translation>[Šťöþ ƒöĺĺöŵíñĝ %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New host here…</source>
+        <translation>[Ñéŵ ĥöšť ĥéŕé… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>New subgroup…</source>
+        <translation>[Ñéŵ šübĝŕöüþ… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete group</source>
+        <translation>[Ďéĺéťé ĝŕöüþ ~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Delete %n host(s)?</source>
+        <translation>
+            <numerusform>[Ďéĺéťé %n ĥöšť(š)? ~~~~~~]</numerusform>
+            <numerusform>[Ďéĺéťé %n ĥöšť(š)? ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>They are removed from hosts.toml (a backup of the file is kept). Open sessions stay open.</source>
+        <translation>[Ťĥéý áŕé ŕémövéď ƒŕöm ĥöšťš.ťömĺ (á báçķüþ öƒ ťĥé ƒíĺé íš ķéþť). Öþéñ šéššíöñš šťáý öþéñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete this group?</source>
+        <translation>[Ďéĺéťé ťĥíš ĝŕöüþ? ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Its hosts and subgroups move to the group it is in. No host is deleted.</source>
+        <translation>[Íťš ĥöšťš áñď šübĝŕöüþš mövé ťö ťĥé ĝŕöüþ íť íš íñ. Ñö ĥöšť íš ďéĺéťéď. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 · Sprint %2</source>
+        <translation>[%1 · Šþŕíñť %2 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>ssh_config</source>
+        <translation>[ššĥ_çöñƒíĝ ~~~]</translation>
     </message>
 </context>
 <context>
@@ -955,6 +1975,34 @@
     <message>
         <source>There is a problem with config.toml. The log has the details.</source>
         <translation>[Ťĥéŕé íš á þŕöbĺém ŵíťĥ çöñƒíĝ.ťömĺ. Ťĥé ĺöĝ ĥáš ťĥé ďéťáíĺš. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>No saved host is called %1.</source>
+        <translation>[Ñö šávéď ĥöšť íš çáĺĺéď %1. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>hosts.toml can&apos;t be saved (it could not be read, or a newer OpenSesh wrote it), so this change is not kept.</source>
+        <translation>[ĥöšťš.ťömĺ çáñ&apos;ť bé šávéď (íť çöüĺď ñöť bé ŕéáď, öŕ á ñéŵéŕ ÖþéñŠéšĥ ŵŕöťé íť), šö ťĥíš çĥáñĝé íš ñöť ķéþť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the hosts: %1</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé ĥöšťš: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connect to %1?</source>
+        <translation>[Çöññéçť ťö %1? ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation>[Çöññéçť ~~~]</translation>
+    </message>
+    <message>
+        <source>Another program asked OpenSesh to connect to %1 over %2. Continue only if you started it.</source>
+        <translation>[Åñöťĥéŕ þŕöĝŕám ášķéď ÖþéñŠéšĥ ťö çöññéçť ťö %1 övéŕ %2. Çöñťíñüé öñĺý íƒ ýöü šťáŕťéď íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Another program asked OpenSesh to connect to %1, which can&apos;t be used: %2</source>
+        <translation>[Åñöťĥéŕ þŕöĝŕám ášķéď ÖþéñŠéšĥ ťö çöññéçť ťö %1, ŵĥíçĥ çáñ&apos;ť bé üšéď: %2 ~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Could not save the workspace: %1</source>
@@ -1248,6 +2296,45 @@
     <message>
         <source>Collapsed</source>
         <translation>[Çöĺĺáþšéď ~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>QuickConnectPopup</name>
+    <message>
+        <source>Quick connect</source>
+        <translation>[Qüíçķ çöññéçť ~~~~]</translation>
+    </message>
+    <message>
+        <source>user@host:port, ssh://…, rdp://…, serial:///dev/ttyUSB0</source>
+        <translation>[üšéŕ@ĥöšť:þöŕť, ššĥ://…, ŕďþ://…, šéŕíáĺ:///ďév/ťťýÜŠB0 ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Where to connect</source>
+        <translation>[Ŵĥéŕé ťö çöññéçť ~~~~~]</translation>
+    </message>
+    <message>
+        <source> through %1</source>
+        <translation>[ ťĥŕöüĝĥ %1 ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 to %2: arrives in Sprint %3</source>
+        <translation>[%1 ťö %2: áŕŕívéš íñ Šþŕíñť %3 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 to %2%3</source>
+        <translation>[%1 ťö %2%3 ~~~]</translation>
+    </message>
+    <message>
+        <source>Suggestions</source>
+        <translation>[Šüĝĝéšťíöñš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Recent</source>
+        <translation>[Ŕéçéñť ~~]</translation>
+    </message>
+    <message>
+        <source>Enter: new tab · Shift+Enter: split right · Ctrl+Enter: split down</source>
+        <translation>[Éñťéŕ: ñéŵ ťáb · Šĥíƒť+Éñťéŕ: šþĺíť ŕíĝĥť · Çťŕĺ+Éñťéŕ: šþĺíť ďöŵñ ~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -4683,6 +5770,112 @@
     </message>
 </context>
 <context>
+    <name>SshConfigImportDialog</name>
+    <message>
+        <source>Import ~/.ssh/config</source>
+        <translation>[Ímþöŕť ~/.ššĥ/çöñƒíĝ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Link</source>
+        <translation>[Ĺíñķ ~~]</translation>
+    </message>
+    <message>
+        <source>Import copies</source>
+        <translation>[Ímþöŕť çöþíéš ~~~~]</translation>
+    </message>
+    <message>
+        <source>The hosts could not be imported.</source>
+        <translation>[Ťĥé ĥöšťš çöüĺď ñöť bé ímþöŕťéď. ~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s) linked from %1.</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ĺíñķéď ƒŕöm %1. ~~~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ĺíñķéď ƒŕöm %1. ~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s) imported; %1 already saved were skipped.</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ímþöŕťéď; %1 áĺŕéáďý šávéď ŵéŕé šķíþþéď. ~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ímþöŕťéď; %1 áĺŕéáďý šávéď ŵéŕé šķíþþéď. ~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s) imported.</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ímþöŕťéď. ~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ímþöŕťéď. ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>[Fíĺé ~~]</translation>
+    </message>
+    <message>
+        <source>Choose…</source>
+        <translation>[Çĥööšé… ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s) found.</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ƒöüñď. ~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ƒöüñď. ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No hosts found in this file.</source>
+        <translation>[Ñö ĥöšťš ƒöüñď íñ ťĥíš ƒíĺé. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Hosts in the file</source>
+        <translation>[Ĥöšťš íñ ťĥé ƒíĺé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 through %2</source>
+        <translation>[%1 ťĥŕöüĝĥ %2 ~~~~]</translation>
+    </message>
+    <message>
+        <source>Already saved</source>
+        <translation>[Åĺŕéáďý šávéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>[Šķíþþéď ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>…and %n more.</source>
+        <translation>
+            <numerusform>[…áñď %n möŕé. ~~~~]</numerusform>
+            <numerusform>[…áñď %n möŕé. ~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Link the file: its hosts show read-only and follow it as it changes</source>
+        <translation>[Ĺíñķ ťĥé ƒíĺé: íťš ĥöšťš šĥöŵ ŕéáď-öñĺý áñď ƒöĺĺöŵ íť áš íť çĥáñĝéš ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This file is already linked.</source>
+        <translation>[Ťĥíš ƒíĺé íš áĺŕéáďý ĺíñķéď. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New group</source>
+        <translation>[Ñéŵ ĝŕöüþ ~~~]</translation>
+    </message>
+    <message>
+        <source>~/.ssh/config</source>
+        <translation>[~/.ššĥ/çöñƒíĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Name of the group for the copies</source>
+        <translation>[Ñámé öƒ ťĥé ĝŕöüþ ƒöŕ ťĥé çöþíéš ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose an OpenSSH config file</source>
+        <translation>[Çĥööšé áñ ÖþéñŠŠĤ çöñƒíĝ ƒíĺé ~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>StatusBar</name>
     <message>
         <source>System</source>
@@ -4749,6 +5942,41 @@
     <message>
         <source>v%1</source>
         <translation>[v%1 ~]</translation>
+    </message>
+</context>
+<context>
+    <name>TabColors</name>
+    <message>
+        <source>Red</source>
+        <translation>[Ŕéď ~]</translation>
+    </message>
+    <message>
+        <source>Orange</source>
+        <translation>[Öŕáñĝé ~~]</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>[Ýéĺĺöŵ ~~]</translation>
+    </message>
+    <message>
+        <source>Green</source>
+        <translation>[Ĝŕééñ ~~]</translation>
+    </message>
+    <message>
+        <source>Teal</source>
+        <translation>[Ťéáĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Blue</source>
+        <translation>[Bĺüé ~~]</translation>
+    </message>
+    <message>
+        <source>Purple</source>
+        <translation>[Þüŕþĺé ~~]</translation>
+    </message>
+    <message>
+        <source>Pink</source>
+        <translation>[Þíñķ ~~]</translation>
     </message>
 </context>
 <context>
@@ -4885,6 +6113,22 @@
         <translation>[Çĺöšé šéáŕçĥ (Éšçáþé) ~~~~~~~]</translation>
     </message>
     <message>
+        <source>ssh could not start: %1. Install the OpenSSH client; the built-in one arrives in a later version.</source>
+        <translation>[ššĥ çöüĺď ñöť šťáŕť: %1. Íñšťáĺĺ ťĥé ÖþéñŠŠĤ çĺíéñť; ťĥé büíĺť-íñ öñé áŕŕívéš íñ á ĺáťéŕ véŕšíöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The shell could not start: %1</source>
+        <translation>[Ťĥé šĥéĺĺ çöüĺď ñöť šťáŕť: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The connection to %1 ended (code %2).</source>
+        <translation>[Ťĥé çöññéçťíöñ ťö %1 éñďéď (çöďé %2). ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The connection to %1 was ended.</source>
+        <translation>[Ťĥé çöññéçťíöñ ťö %1 ŵáš éñďéď. ~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>The shell exited with code %1.</source>
         <translation>[Ťĥé šĥéĺĺ éxíťéď ŵíťĥ çöďé %1. ~~~~~~~~~]</translation>
     </message>
@@ -4895,6 +6139,10 @@
     <message>
         <source>Restart</source>
         <translation>[Ŕéšťáŕť ~~~]</translation>
+    </message>
+    <message>
+        <source>Reconnect</source>
+        <translation>[Ŕéçöññéçť ~~~]</translation>
     </message>
     <message>
         <source>Close pane</source>

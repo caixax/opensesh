@@ -14,7 +14,12 @@ pragma ComponentBehavior: Bound
 //   workspace: Item        the TabWorkspace (shell, participants, pasteConfirmed, closePane(),
 //                          setFocusedPane(), paneActivity(), paneBell(), confirmPaste())
 //   paneId: int            the pane's id, which is also its session id
-//   profile: string        the pane's profile id (model role)
+//   kind: string           `local` or `ssh` (model role)
+//   host: string           the saved host it connects to, if any (model role)
+//   target: string         the quick-connect target it connects to, if any (model role)
+//   commandJson: string    the program and arguments to run instead of a shell, as a JSON list
+//   label: string          what it connects to, for titles (the host's name or the target)
+//   profile: string        the pane's profile id (model role; empty lets a host decide)
 //   directory: string      where a new shell starts (model role; empty for home)
 //   startSession: bool     false: no shell, the renderer's demo frame instead (screenshot runs)
 //   edgeInset: real        room kept free at the right edge (a frameless window's resize grip)
@@ -36,6 +41,11 @@ Item {
 
     required property Item workspace
     required property int paneId
+    required property string kind
+    required property string host
+    required property string target
+    required property string commandJson
+    required property string label
     required property string profile
     required property string directory
     required property bool startSession
@@ -167,6 +177,15 @@ Item {
         return code < 0 || code > 255 ? "0x" + (code >>> 0).toString(16).toUpperCase() : String(code);
     }
 
+    Component.onCompleted: {
+        if (host.length > 0)
+            WindowRegistry.hostOpened(host);
+    }
+    Component.onDestruction: {
+        if (host.length > 0)
+            WindowRegistry.hostClosed(host);
+    }
+
     // The profile's background image, under the terminal, dimmed with the theme's background.
     Item {
         anchors.fill: terminal
@@ -208,11 +227,13 @@ Item {
 
         anchors.fill: parent
         sessionId: pane.startSession ? pane.paneId : 0
+        hostId: pane.host
+        command: JSON.parse(pane.commandJson || "[]")
         demo: !pane.startSession
         demoDark: Theme.dark
         dark: Theme.dark
         profileId: pane.profile
-        settingsRevision: TerminalProfiles.revision
+        settingsRevision: TerminalProfiles.revision + Hosts.revision
         fontZoom: pane.fontZoom
         highlightEnabled: pane.highlightOn
         reduceMotion: Theme.reduceMotion
@@ -222,7 +243,7 @@ Item {
         scrollSyncTargets: pane.receiving && pane.workspace.syncScroll ? pane.workspace.participants : []
         pasteGuard: pane.receiving && !pane.workspace.pasteConfirmed
         Accessible.role: Accessible.Terminal
-        Accessible.name: title.length > 0 ? title : qsTr("Local terminal")
+        Accessible.name: title.length > 0 ? title : pane.label.length > 0 ? pane.label : qsTr("Local terminal")
         Accessible.description: pane.receiving ? qsTr("Broadcasting input to %n panes", "", pane.workspace.participants.length) : ""
 
         onActivity: {
@@ -573,16 +594,23 @@ Item {
                 id: bannerText
 
                 Layout.fillWidth: true
-                text: terminal.exitCodeKnown
-                      ? qsTr("The shell exited with code %1.").arg(pane.exitCodeText(terminal.exitCode))
-                      : qsTr("The shell was ended or could not start.")
+                text: {
+                    if (terminal.startError.length > 0)
+                        return pane.kind === "ssh" ? qsTr("ssh could not start: %1. Install the OpenSSH client; the built-in one arrives in a later version.").arg(terminal.startError)
+                                                   : qsTr("The shell could not start: %1").arg(terminal.startError);
+                    if (pane.kind === "ssh")
+                        return terminal.exitCodeKnown ? qsTr("The connection to %1 ended (code %2).").arg(pane.label).arg(pane.exitCodeText(terminal.exitCode))
+                                                      : qsTr("The connection to %1 was ended.").arg(pane.label);
+                    return terminal.exitCodeKnown ? qsTr("The shell exited with code %1.").arg(pane.exitCodeText(terminal.exitCode))
+                                                  : qsTr("The shell was ended or could not start.");
+                }
                 wrapMode: Text.WordWrap
             }
 
             OsButton {
                 id: restartButton
 
-                text: qsTr("Restart")
+                text: pane.kind === "ssh" ? qsTr("Reconnect") : qsTr("Restart")
                 iconName: "refresh-cw"
                 variant: "primary"
                 onClicked: pane.restart()

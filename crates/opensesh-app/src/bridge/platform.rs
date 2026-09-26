@@ -49,6 +49,11 @@ pub mod qobject {
         #[cxx_name = "keyboardModifiers"]
         fn keyboard_modifiers(self: &Self) -> i32;
 
+        /// Puts `text` on the clipboard (e.g. a host's `ssh` command).
+        #[qinvokable]
+        #[cxx_name = "copyText"]
+        fn copy_text(self: &Self, text: &QString);
+
         /// The local path of a `file:` URL from a file dialog (empty for other URLs).
         #[qinvokable]
         #[cxx_name = "localPath"]
@@ -132,6 +137,11 @@ impl qobject::Platform {
     /// See the bridge declaration.
     pub fn keyboard_modifiers(&self) -> i32 {
         shim::keyboard_modifiers()
+    }
+
+    /// See the bridge declaration.
+    pub fn copy_text(&self, text: &QString) {
+        shim::clipboard_set_text(text);
     }
 
     /// See the bridge declaration.

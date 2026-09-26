@@ -262,6 +262,9 @@ pub mod qobject {
         #[qproperty(i32, session_id, cxx_name = "sessionId", READ, WRITE = set_session_id, NOTIFY = session_id_changed)]
         #[qproperty(bool, dark, READ, WRITE = set_dark, NOTIFY = dark_changed)]
         #[qproperty(QString, profile_id, cxx_name = "profileId", READ, WRITE = set_profile_id, NOTIFY = inputs_changed)]
+        #[qproperty(QString, host_id, cxx_name = "hostId", READ, WRITE = set_host_id, NOTIFY = inputs_changed)]
+        #[qproperty(QStringList, command, READ, WRITE, NOTIFY)]
+        #[qproperty(QString, start_error, cxx_name = "startError", READ, NOTIFY = session_info_changed)]
         #[qproperty(i32, settings_revision, cxx_name = "settingsRevision", READ, WRITE = set_settings_revision, NOTIFY = inputs_changed)]
         #[qproperty(f64, font_zoom, cxx_name = "fontZoom", READ, WRITE = set_font_zoom, NOTIFY = inputs_changed)]
         #[qproperty(bool, highlight_enabled, cxx_name = "highlightEnabled", READ, WRITE = set_highlight_enabled, NOTIFY = inputs_changed)]
@@ -398,6 +401,9 @@ pub mod qobject {
         fn set_dark(self: Pin<&mut TerminalItem>, value: bool);
         /// The tab's profile (empty for the default one).
         fn set_profile_id(self: Pin<&mut TerminalItem>, value: QString);
+        /// The saved host the session connects to: its groups' and its own terminal levels come
+        /// before the tab's profile (empty for none).
+        fn set_host_id(self: Pin<&mut TerminalItem>, value: QString);
         /// Bound to `TerminalProfiles.revision`: a new value re-applies the profile.
         fn set_settings_revision(self: Pin<&mut TerminalItem>, value: i32);
         /// Points added to the profile's font size (per tab).
@@ -754,6 +760,9 @@ pub struct TerminalItemRust {
     session_id: i32,
     dark: bool,
     profile_id: QString,
+    host_id: QString,
+    command: QStringList,
+    start_error: QString,
     settings_revision: i32,
     font_zoom: f64,
     highlight_enabled: bool,
@@ -853,6 +862,9 @@ impl Default for TerminalItemRust {
             session_id: 0,
             dark: true,
             profile_id: QString::default(),
+            host_id: QString::default(),
+            command: QStringList::default(),
+            start_error: QString::default(),
             settings_revision: 0,
             font_zoom: 0.0,
             highlight_enabled: true,
@@ -918,6 +930,24 @@ impl Drop for TerminalItemRust {
 }
 
 impl TerminalItemRust {
+    /// The profile chain of this terminal: its host's levels, then its own profile.
+    fn resolve_profile(&self) -> profiles::Resolved {
+        let host = self.host_id.to_string();
+        let levels = if host.is_empty() {
+            Vec::new()
+        } else {
+            crate::hosts::current().terminal_levels(&host)
+        };
+        let profile = self.profile_id.to_string();
+        // Without a host, an empty profile means the global one; with a host, the chain decides.
+        let profile = if profile.is_empty() && levels.is_empty() {
+            opensesh_core::terminal::profile::DEFAULT_PROFILE.to_owned()
+        } else {
+            profile
+        };
+        profiles::current().resolve_with(&levels, &profile, self.dark)
+    }
+
     /// Renderer callback (see `fillFrame` in the C++ base). Returns whether a frame was written.
     fn fill(
         &mut self,
@@ -1040,13 +1070,7 @@ impl TerminalItemRust {
     /// Options for a new session of this item: from the resolved profile.
     fn local_options(&mut self, size: TermSize) -> LocalOptions {
         if self.resolved.is_none() {
-            let profile = self.profile_id.to_string();
-            let profile = if profile.is_empty() {
-                opensesh_core::terminal::profile::DEFAULT_PROFILE
-            } else {
-                profile.as_str()
-            };
-            self.resolved = Some(profiles::current().resolve(profile, self.dark));
+            self.resolved = Some(self.resolve_profile());
         }
         let resolved = self.resolved.as_ref();
         LocalOptions {
@@ -1058,6 +1082,13 @@ impl TerminalItemRust {
                 |r| r.settings.term.clone(),
             ),
             directory: self.start_directory.to_string(),
+            program: {
+                let mut words = self.command.iter().map(ToString::to_string);
+                words
+                    .next()
+                    .filter(|program| !program.trim().is_empty())
+                    .map(|program| (program, words.collect()))
+            },
         }
     }
 
@@ -1304,6 +1335,16 @@ impl qobject::TerminalItem {
     }
 
     /// See the bridge declaration.
+    pub fn set_host_id(mut self: Pin<&mut Self>, value: QString) {
+        if self.host_id == value {
+            return;
+        }
+        self.as_mut().rust_mut().host_id = value;
+        self.as_mut().apply_settings();
+        self.as_mut().inputs_changed();
+    }
+
+    /// See the bridge declaration.
     pub fn set_settings_revision(mut self: Pin<&mut Self>, value: i32) {
         if self.settings_revision == value {
             return;
@@ -1369,14 +1410,7 @@ impl qobject::TerminalItem {
         if self.demo {
             return;
         }
-        let library = profiles::current();
-        let profile = self.profile_id.to_string();
-        let profile = if profile.is_empty() {
-            opensesh_core::terminal::profile::DEFAULT_PROFILE
-        } else {
-            profile.as_str()
-        };
-        let resolved = library.resolve(profile, self.dark);
+        let resolved = self.resolve_profile();
         let settings = &resolved.settings;
 
         // Fonts and layout (the C++ side ignores values that didn't change).
@@ -1508,6 +1542,7 @@ impl qobject::TerminalItem {
                     Ok(entry) => entry,
                     Err(error) => {
                         tracing::error!(id, %error, "could not start a local terminal");
+                        self.as_mut().rust_mut().start_error = QString::from(&error.to_string());
                         self.as_mut().publish_info(
                             &SessionInfo {
                                 exit: Some(None),
@@ -2014,11 +2049,14 @@ impl qobject::TerminalItem {
         let options = self.as_mut().rust_mut().local_options(size);
         match registry::restart_local(id, options) {
             Ok(entry) => {
+                self.as_mut().rust_mut().start_error = QString::default();
                 self.as_mut().attach(entry);
                 true
             }
             Err(error) => {
                 tracing::error!(id, %error, "could not restart a local terminal");
+                self.as_mut().rust_mut().start_error = QString::from(&error.to_string());
+                self.as_mut().session_info_changed();
                 false
             }
         }

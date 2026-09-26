@@ -21,6 +21,10 @@ use crate::conpty;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// The GUI executable Cargo builds.
 const BINARY: &str = "opensesh-app";
+
+/// The command-line tool shipped next to the app (`opensesh-cli`, ADR 0021).
+const CLI_PACKAGE: &str = "opensesh-cli";
+const CLI_BINARY: &str = "opensesh";
 /// Its name in the Windows packages.
 const WINDOWS_EXE: &str = "OpenSesh.exe";
 /// The MSVC runtime DLLs the executable and Qt link against (redistributable, from System32).
@@ -51,18 +55,27 @@ pub fn run(root: &Path, args: impl IntoIterator<Item = OsString>) -> Result<()> 
     }
 }
 
-/// Builds the release app and returns the path of the executable.
-fn build_release(root: &Path) -> Result<PathBuf> {
+/// Builds the release app and the CLI and returns the paths of both executables.
+fn build_release(root: &Path) -> Result<(PathBuf, PathBuf)> {
     run_command(
         Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
             .current_dir(root)
-            .args(["build", "--release", "--locked", "-p", BINARY]),
+            .args([
+                "build",
+                "--release",
+                "--locked",
+                "-p",
+                BINARY,
+                "-p",
+                CLI_PACKAGE,
+            ]),
     )?;
-    let exe = conpty::cargo_target_dir(root)?
-        .join("release")
-        .join(format!("{BINARY}{}", std::env::consts::EXE_SUFFIX));
+    let dir = conpty::cargo_target_dir(root)?.join("release");
+    let exe = dir.join(format!("{BINARY}{}", std::env::consts::EXE_SUFFIX));
+    let cli = dir.join(format!("{CLI_BINARY}{}", std::env::consts::EXE_SUFFIX));
     ensure!(exe.is_file(), "{} was not built", exe.display());
-    Ok(exe)
+    ensure!(cli.is_file(), "{} was not built", cli.display());
+    Ok((exe, cli))
 }
 
 fn run_command(command: &mut Command) -> Result<()> {
@@ -110,11 +123,12 @@ fn qt_bin_dir() -> Result<PathBuf> {
 
 fn windows(root: &Path, dist: &Path) -> Result<()> {
     ensure!(cfg!(windows), "`dist windows` runs on Windows");
-    let exe = build_release(root)?;
+    let (exe, cli) = build_release(root)?;
     let name = format!("OpenSesh-{VERSION}-windows-x64");
     let stage = dist.join(&name);
     fresh_dir(&stage)?;
     copy(&exe, &stage.join(WINDOWS_EXE))?;
+    copy(&cli, &stage.join(format!("{CLI_BINARY}.exe")))?;
 
     let windeployqt = qt_bin_dir()?.join("windeployqt.exe");
     ensure!(windeployqt.is_file(), "{} not found", windeployqt.display());

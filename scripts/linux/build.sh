@@ -32,14 +32,15 @@ cd "$work"
 
 version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
 echo "== building OpenSesh $version with $("$QMAKE" -query QT_VERSION) ($QMAKE)"
-cargo build --release --locked -p opensesh-app
-strip target/release/opensesh-app
+cargo build --release --locked -p opensesh-app -p opensesh-cli
+strip target/release/opensesh-app target/release/opensesh
 
 # The installed tree, shared by every format.
 stage="$work/target/package/root"
 rm -rf "$work/target/package"
 data=crates/opensesh-app/data
 install -Dm755 target/release/opensesh-app "$stage/usr/bin/opensesh-app"
+install -Dm755 target/release/opensesh "$stage/usr/bin/opensesh"
 install -Dm644 "$data/cc.caixa.OpenSesh.desktop" "$stage/usr/share/applications/cc.caixa.OpenSesh.desktop"
 install -Dm644 "$data/icons/cc.caixa.OpenSesh.svg" "$stage/usr/share/icons/hicolor/scalable/apps/cc.caixa.OpenSesh.svg"
 install -Dm644 LICENSE "$stage/usr/share/licenses/opensesh/LICENSE"
@@ -120,6 +121,7 @@ cp -a "$stage/." %{buildroot}/
 
 %files
 /usr/bin/opensesh-app
+/usr/bin/opensesh
 /usr/share/applications/cc.caixa.OpenSesh.desktop
 /usr/share/icons/hicolor/scalable/apps/cc.caixa.OpenSesh.svg
 %license /usr/share/licenses/opensesh/LICENSE

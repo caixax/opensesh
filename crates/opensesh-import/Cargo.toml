@@ -1,0 +1,22 @@
+[package]
+name = "opensesh-import"
+description = "OpenSesh importers: ~/.ssh/config (Sprint 5), and later other clients' session files"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+opensesh-core.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

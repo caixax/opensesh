@@ -62,6 +62,10 @@ pub mod ffi {
         #[namespace = "opensesh"]
         fn keyboard_modifiers() -> i32;
 
+        /// Puts text on the clipboard.
+        #[namespace = "opensesh"]
+        fn clipboard_set_text(text: &QString);
+
         /// Portable text of a key combination (e.g. `Ctrl+Shift+P`).
         #[namespace = "opensesh"]
         fn key_sequence_text(key: i32, modifiers: i32) -> QString;

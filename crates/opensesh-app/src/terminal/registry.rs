@@ -286,6 +286,8 @@ pub struct LocalOptions {
     pub term: String,
     /// Working directory to start in; empty for the home directory.
     pub directory: String,
+    /// A program and its arguments to run instead of the user's shell (`ssh` for a host).
+    pub program: Option<(String, Vec<String>)>,
 }
 
 /// A shell that reads no startup files and keeps no history, for the smoke test: it must not
@@ -302,8 +304,14 @@ fn hermetic_shell() -> ShellCommand {
 
 /// Starts a local shell with the engine defaults (ADR 0012) and the given size and colors.
 fn start_local(options: LocalOptions, notify: Notify) -> Result<Session, StartError> {
+    // The smoke test never runs a host's program (no network): the hermetic shell stands in.
     let command = if crate::bridge::app_info::is_smoke_test() {
         hermetic_shell()
+    } else if let Some((program, args)) = &options.program {
+        args.iter()
+            .fold(ShellCommand::program(program), |command, arg| {
+                command.arg(arg)
+            })
     } else {
         ShellCommand::user_shell()
     };

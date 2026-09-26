@@ -17,6 +17,7 @@
 #include <QtCore/QTranslator>
 #include <QtCore/QUrlQuery>
 #include <QtCore/QtLogging>
+#include <QtGui/QClipboard>
 #include <QtGui/QColor>
 #include <QtGui/QFont>
 #include <QtGui/QFontDatabase>
@@ -220,6 +221,12 @@ void set_application_font_family(const QString& family)
 void enable_window_alpha()
 {
     QQuickWindow::setDefaultAlphaBuffer(true);
+}
+
+void clipboard_set_text(const QString& text)
+{
+    if (QClipboard *clipboard = QGuiApplication::clipboard())
+        clipboard->setText(text);
 }
 
 std::int32_t keyboard_modifiers()

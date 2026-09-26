@@ -42,9 +42,15 @@ fn local() -> String {
 /// What runs in a pane.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PaneState {
-    /// `local` for a local terminal (the only kind until SSH arrives).
+    /// `local` for a local terminal, `ssh` for a connection.
     #[serde(default = "local")]
     pub kind: String,
+    /// The saved host it is connected to (its id), if any.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub host: String,
+    /// The quick-connect target it is connected to, for a host that isn't saved.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub target: String,
     /// Terminal profile id; empty for the default one.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub profile: String,
@@ -57,6 +63,8 @@ impl Default for PaneState {
     fn default() -> Self {
         Self {
             kind: local(),
+            host: String::new(),
+            target: String::new(),
             profile: String::new(),
             directory: String::new(),
         }
@@ -355,9 +363,11 @@ mod tests {
             layout: layout.root().clone(),
             panes: vec![
                 PaneState {
-                    kind: LOCAL.into(),
+                    kind: "ssh".into(),
+                    host: "01J9ZK0000WEB01".into(),
                     profile: "ops".into(),
                     directory: "/srv/api".into(),
+                    ..PaneState::default()
                 },
                 PaneState::default(),
                 PaneState {

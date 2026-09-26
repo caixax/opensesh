@@ -7,6 +7,7 @@ mod bridge;
 mod cli;
 mod crash;
 mod gui;
+mod hosts;
 mod logging;
 mod platform;
 mod saves;
@@ -16,10 +17,11 @@ mod update;
 
 use std::io::Write as _;
 use std::process::ExitCode;
+use std::time::Duration;
 
 use anyhow::Result;
 use cli::{Mode, Options};
-use opensesh_core::{AppPaths, identity};
+use opensesh_core::{AppPaths, identity, ipc};
 
 use crate::bridge::app_info::{self, Startup};
 use crate::crash::DialogPolicy;
@@ -80,6 +82,42 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
     paths.ensure_dirs()?;
     let logs_dir = paths.logs_dir();
     *log_guard = Some(logging::init(&logs_dir)?);
+
+    // One running instance (ADR 0021): a second start hands its request to the first. Test runs
+    // and the other modes stay on their own.
+    let single =
+        options.mode == Mode::App && !options.smoke_test && options.screenshot_dir.is_none();
+    if single {
+        let endpoint = ipc::Endpoint::for_paths(&paths);
+        let request = options.request.clone().unwrap_or(ipc::Request::Activate);
+        match ipc::send(&endpoint, &request, Duration::from_secs(3)) {
+            Ok(ipc::Reply::Ok) => {
+                tracing::info!(?request, "handed over to the running OpenSesh");
+                return Ok(ExitCode::SUCCESS);
+            }
+            Ok(ipc::Reply::Error { message }) => {
+                tracing::warn!(
+                    ?request,
+                    "the running OpenSesh refused the request: {message}"
+                );
+                return Ok(ExitCode::FAILURE);
+            }
+            Err(ipc::IpcError::NotRunning(_)) => {}
+            Err(error) => {
+                tracing::warn!("the running OpenSesh didn't answer ({error}); starting another one")
+            }
+        }
+        match ipc::serve(endpoint, bridge::instance::handle) {
+            Ok(server) => {
+                bridge::instance::set_listening();
+                tracing::info!(endpoint = ?server.endpoint(), "listening for other OpenSesh starts");
+            }
+            Err(error) => tracing::warn!("could not listen for other OpenSesh starts: {error}"),
+        }
+    }
+    if let Some(request) = options.request.clone() {
+        bridge::instance::push(request);
+    }
 
     let dialog =
         if options.mode == Mode::App && !options.smoke_test && options.screenshot_dir.is_none() {

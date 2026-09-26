@@ -1,7 +1,20 @@
 [workspace]
 resolver = "3"
-members = ["crates/opensesh-core", "crates/opensesh-term", "crates/opensesh-app", "xtask"]
-default-members = ["crates/opensesh-core", "crates/opensesh-term", "crates/opensesh-app"]
+members = [
+    "crates/opensesh-core",
+    "crates/opensesh-term",
+    "crates/opensesh-import",
+    "crates/opensesh-cli",
+    "crates/opensesh-app",
+    "xtask",
+]
+default-members = [
+    "crates/opensesh-core",
+    "crates/opensesh-term",
+    "crates/opensesh-import",
+    "crates/opensesh-cli",
+    "crates/opensesh-app",
+]
 
 [workspace.package]
 version = "0.1.1"
@@ -19,6 +32,7 @@ publish = false
 [workspace.dependencies]
 # Internal crates
 opensesh-core = { path = "crates/opensesh-core" }
+opensesh-import = { path = "crates/opensesh-import" }
 opensesh-term = { path = "crates/opensesh-term" }
 
 # Qt bridge (KDAB cxx-qt)
@@ -55,6 +69,13 @@ serde_json = "1.0.151"
 toml = "1.1.6"
 # iTerm2 `.itermcolors` theme import (an XML property list; opensesh-core).
 quick-xml = "0.42.0"
+
+# Hosts (Sprint 5, opensesh-core). nucleo-matcher is the matcher of `nucleo` (PLAN §2) without
+# its background worker (ADR 0019); ulid gives host and group ids.
+nucleo-matcher = "0.3.1"
+ulid = "3.0.0"
+# One running instance and the `opensesh` CLI: local sockets (ADR 0021).
+interprocess = "2.4.4"
 
 # xtask only (regex is also used by opensesh-term)
 flate2 = "1.1.10"
