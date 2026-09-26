@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-26
+
 ### Added
 
 - **Sprint 5: hosts and sessions.**
