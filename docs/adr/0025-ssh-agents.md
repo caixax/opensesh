@@ -44,7 +44,7 @@ Option 2, in `opensesh_vault::agent`.
 
 - A stand-in agent on a Unix socket (tests on Linux) and on a named pipe (tests on Windows, through `interprocess`).
 - Parser tests: short answers, failures, unknown key types.
-- By hand: Pageant 0.83 (the official build, checked against PuTTY's published SHA-256) holding a fixture key, and `ssh-agent` with `ssh-add` in the WSL distros. Each listed the key with the fingerprint `ssh-keygen -l` prints.
+- By hand: Pageant 0.83 (the official build, checked against PuTTY's published SHA-256) holding a fixture key, and `ssh-agent` with `ssh-add` in the Debian and Fedora WSL distros. Each listed the key with the fingerprint OpenSSH prints for it (`ssh-add -l`).
 
 ## Consequences
 
