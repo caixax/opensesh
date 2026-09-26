@@ -92,7 +92,7 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 | `OsColorPicker` | `Item` | Preset swatches (`Theme.accentPresets`) plus a `#RRGGBB` field, `value` property, `accepted` signal; optional default swatch (`showDefault`, `defaultSelected`, `defaultPicked` signal) in `Theme.defaultAccent`, so a setting can store `"default"` |
 | `OsFontPicker` | `OsComboBox`-like | Families from `Platform.fontFamilies(monospaceOnly)` with a live preview |
 | `OsKeybindCapture` | `Item` | Records a key combination and shows it as text (`Platform.keySequenceText`); Escape cancels, Backspace clears |
-| `OsTabBar` / `OsTabButton` | `T.TabBar` / `T.TabButton` | Title-bar tabs: icon, title, close button, activity dot |
+| `OsTabBar` / `OsTabButton` | `T.TabBar` / `T.TabButton` | Title-bar tabs: icon, title, close button, activity dot, a color mark along the top (`markColor`). The strip doesn't flick, so tabs can be dragged; the wheel scrolls it when the tabs overflow. `tabAt(index)` |
 | `OsRail` / `OsRailItem` | `Item` / `T.AbstractButton` | Vertical icon navigation, optional labels, arrow-key navigation |
 | `OsCard` | `Rectangle`/`Item` | `surface`, `radiusCard`, 1 px `border`; optional hover and click |
 | `OsListRow` | `T.ItemDelegate` | Icon, title, subtitle, trailing content, selected state |
@@ -119,7 +119,10 @@ Every component appears in the Gallery (`opensesh-app --gallery`) in every state
 | Name | Kind | Responsibility |
 |---|---|---|
 | `Theme`, `AppSettings`, `AppInfo`, `Platform`, `UiState` | Rust | Tokens, persisted settings, startup info, OS helpers, remembered UI state |
-| `TerminalSessions` | Rust | The terminal sessions of the main window, by tab id (`src/terminal/registry.rs`): `close(id)` ends the session of a closed tab, `isOpen(id)`, `count()`. A session outlives the `TerminalItem` that shows it; only closing its tab ends it. |
+| `TerminalSessions` | Rust | The terminal sessions of every window, by pane id (`src/terminal/registry.rs`): `allocateId()` gives a new tab or pane id, `close(id)` ends the session of a closed pane, `isOpen(id)`, `count()`. A session outlives the `TerminalItem` that shows it; only closing its pane or tab ends it, so panes and tabs can move without restarting their shells. |
+| `Layouts` | Rust | Split-tree operations on a tab's layout, JSON in and out (ADR 0017): `single`, `split`, `close`, `neighbor`, `resize`, `setRatio`, `swap`, `equalize`, `geometry` (pane rectangles and dividers), `panes`, `remap` |
+| `Workspaces` | Rust | Saved workspaces and the last session (ADR 0018): `workspaces` (JSON list), `save(id, name, workspace)`, `open(id)`, `rename`, `remove`, `saveLastSession`, `lastSession`, `roundTrip` (tests) |
+| `WindowRegistry` | QML singleton | The main window's shell and the detached ones: `activeShell` (actions act on it), `openWindow(entries, point)`, `shellAt(point)`, `openWorkspace(workspace, shell)`, `capture()`, and the recently closed tabs (`rememberClosed`, `takeClosed`) |
 | `ActionRegistry` | QML singleton | The single list of user actions. Each is an `OsAction` (`actionId`, `text`, `shortcut`, `category`, `iconName`, `enabled`, `showInPalette`, signal `triggered`) declared next to its handler and added with `register(action)`. `find(id)`, `trigger(id)`, `search(query)` (fuzzy, for the palette) and `conflicts()` (duplicate shortcuts). The shell's `ShortcutHost` creates one `Shortcut` per action. |
 | `Toasts` | QML singleton | `show(text, kind, actionText, actionId)` plus the history (`history`, `unread`) used by the notifications panel |
 
@@ -129,11 +132,13 @@ Every component appears in the Gallery (`opensesh-app --gallery`) in every state
 
 | File | Responsibility |
 |---|---|
-| `AppShell.qml` | The main window's content: title bar, rail, views, side panel, status bar, command palette, notifications, toasts |
+| `AppShell.qml` | A window's content: title bar, rail, views, side panel, status bar, command palette, notifications, toasts, tab switcher. The tab functions (insert, move, pin, color, rename, duplicate, close others, reopen, move to another window) live here. With `detached: true` (in `DetachedWindow.qml`) it has only terminal tabs |
 | `TitleBar.qml`, `SessionTabStrip.qml`, `WindowButtons.qml`, `WindowResizeHandles.qml` | Custom title bar with tabs, window buttons for the `custom` decoration mode, and frameless move/resize through `startSystemMove()` / `startSystemResize()` |
 | `StatusBar.qml`, `SidePanel.qml`, `NotificationsPanel.qml` | Bottom bar, collapsible side panel, notification history drawer |
-| `AppActions.qml`, `ShortcutHost.qml` | The shell's `OsAction`s (PLAN §6.4 defaults) and one `Shortcut` per action |
+| `AppActions.qml`, `ShortcutHost.qml` | The app's `OsAction`s (PLAN §6.4 defaults), created once in `Main.qml` and acting on the window in use, and one `Shortcut` per action in each window |
 | `ThemeBinder.qml` | Feeds `Theme` (see §1) |
-| `TerminalTab.qml` | One local terminal tab: the `TerminalItem` attached to the tab's session, its scroll bar, search bar (Ctrl+Shift+F), context menu, visual bell and the banner shown when the shell ends with an error. `AppShell` creates one per `sessionModel` row and keeps them all alive; only the current one is visible |
+| `TabWorkspace.qml` | One terminal tab: its split tree of panes (ADR 0017), laid out flat by pane id, the dividers, the focused and maximized pane, broadcast and the paste confirmation. `AppShell` creates one per `sessionModel` row and keeps them all alive; only the current one is visible |
+| `TerminalPane.qml` | One pane: the `TerminalItem` attached to the pane's session, its scroll bar, search bar (Ctrl+Shift+F), context menu, visual bell, the broadcast border and chip, and the banner shown when the shell ends with an error |
+| `TabSwitcher.qml`, `WorkspacesDialog.qml`, `DetachedWindow.qml` | The Ctrl+Tab most-recently-used switcher, the saved workspaces dialog, and a secondary window for tabs moved out of a window |
 | `SmokeTest.qml` | `--smoke-test`: first frame, bridge and encoding checks, then runs `steps` (functions; a step may return more steps, or itself to poll) and exits; `fail(reason)` ends the run with exit code 8. The main window's steps open a local terminal, type into it and check its output |
 | `ScreenshotRunner.qml` | `--screenshots <dir>`: every page in dark/light × comfortable/compact |

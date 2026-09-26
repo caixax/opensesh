@@ -4,6 +4,33 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 4 (2026-09-26)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 102 to 105 steps):** as before, plus the workspaces dialog and the tab rename dialog. In real terminals it splits a tab into three panes, moves the focus in every direction, resizes, swaps and maximizes; broadcasts from one pane to a second while the third has left, and checks that the text reaches exactly the two receiving panes, that the third's own input stays there, and that a paste asks first; saves a tab (name, color, ratios, focused pane, profiles) through `Workspaces.roundTrip()`, opens it and compares it; moves the tab to a new window and back and checks that its sessions never ended; then duplicates, pins, closes, reopens and switches tabs (Ctrl+Tab) and closes the others. Nothing is written.
+- **Gallery (`--gallery --smoke-test`):** unchanged.
+- **Screenshots:** a new series, `terminal-splits-*` and `terminal-broadcast-*`, reviewed on Windows with the real renderer (the panes show the renderer's demo frame; offscreen captures leave terminals blank, as in the gallery).
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) |
+|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ | ✅ / ✅ | ✅ `windows` |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ (GCC 16 warnings from Qt headers and cxx's generated code, as before) | ✅ / ✅ | ✅ Wayland, ✅ X11 |
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| Alt+Shift+= and Alt+Shift+- split on US, Spanish and German keyboard layouts | ⏳ | ⏳ |
+| Alt+arrows reach the shell (word movement) while a tab has one pane, and move the focus with several | ⏳ | ⏳ |
+| Dragging a divider, and the pane's terminal size following it (`stty size`) | ⏳ | ⏳ |
+| Dragging a tab along the strip, onto another window, and out of every window (X11 places the new window at the pointer; Wayland lets the compositor place it) | ⏳ | ⏳ X11, ⏳ Wayland |
+| Ctrl+Tab with Ctrl held shows the list; a quick press switches at once; releasing Ctrl outside the window switches | ⏳ | ⏳ |
+| Broadcast to vim in one pane and a shell in another: arrows work in both (application cursor mode) | ⏳ | ⏳ |
+| "Restore sessions at startup": quit with split tabs in two windows, start again, same layouts and folders (a shell that reports its directory with OSC 7) | ⏳ | ⏳ |
+
 ## Sprint 3 (2026-09-26)
 
 ### Automated checks
