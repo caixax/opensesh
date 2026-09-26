@@ -150,10 +150,15 @@ Window {
         if (screenshotMode) {
             screenshots.start();
         } else if (persistState && AppSettings.restoreSessions) {
-            const last = Workspaces.lastSession();
-            if (last.length > 0)
-                WindowRegistry.openWorkspace(JSON.parse(last), shell);
+            // After every onCompleted handler, so the shell has read its own state first.
+            Qt.callLater(window.restoreLastSession);
         }
+    }
+
+    function restoreLastSession() {
+        const last = Workspaces.lastSession();
+        if (last.length > 0)
+            WindowRegistry.openWorkspace(JSON.parse(last), shell);
     }
 
     // Update checks (only when the user enabled them, never in test runs): 10 s after start,

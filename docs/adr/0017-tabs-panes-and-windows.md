@@ -29,7 +29,7 @@ Option 2.
 
 ## Consequences
 
-- The tree and its geometry have unit tests; the smoke test splits a tab, moves the focus and resizes, swaps, maximizes, broadcasts to two of three panes and checks the third never gets the text, restores a saved workspace and compares it, and moves a tab to a new window and back without ending its sessions.
+- The tree and its geometry have unit tests; the smoke test splits a tab, moves the focus and resizes, swaps, maximizes, broadcasts to two of three panes and checks the third never gets the text, restores a saved workspace and compares it, moves a tab to a new window and back without ending its sessions, and opens a workspace with two windows.
 - Terminal items are never re-parented, so a split or a move between windows keeps scrollback, selection state in the session and the running program.
 - The layout is plain data, which the workspace files (ADR 0018) store as they are.
 - Dragging tabs uses an internal drag, not the platform's drag and drop: nothing can be dropped from or to other applications, and the tab strip no longer flicks (the wheel scrolls it).

@@ -251,8 +251,14 @@ Item {
         return at + 1;
     }
 
-    // The Terminal rail entry: the last session tab, or a new local terminal.
+    // The Terminal rail entry: the last session tab, or a new local terminal. A detached
+    // window stays on its own tabs.
     function openTerminal() {
+        if (detached) {
+            if (currentWorkspace)
+                currentWorkspace.focusTerminal();
+            return;
+        }
         if (sessionModel.count > 0)
             showView("terminal");
         else
@@ -1004,6 +1010,31 @@ Item {
                 deadline = Date.now() + timeout;
                 return [waitFor("the detached window to close", () => WindowRegistry.shells.length === 1,
                                 () => console.info("smoke test: a tab moved to a new window and back"))];
+            },
+            () => {
+                // A workspace with two windows (as the last session is restored): the first
+                // window's tabs open here, the second window opens on its own.
+                const entry = shell.tabEntry(shell.currentTab, false);
+                const text = Workspaces.roundTrip(JSON.stringify({
+                    name: "Two windows",
+                    windows: [{ currentTab: 0, tabs: [entry] }, { currentTab: 0, tabs: [entry] }]
+                }));
+                if (!expect(text.length > 0, "the two-window round trip failed"))
+                    return [];
+                const before = shell.sessionCount;
+                WindowRegistry.openWorkspace(JSON.parse(text), shell);
+                expect(shell.sessionCount === before + 1, "the first window's tab did not open in this window");
+                const other = WindowRegistry.shells.find(candidate => candidate !== shell);
+                if (!expect(other !== undefined && other.sessionCount === 1, "the second window did not open with its tab"))
+                    return [];
+                // Closing a window ends the sessions of its tabs.
+                const ids = other.currentWorkspace ? other.currentWorkspace.paneIds.slice() : [];
+                expect(ids.length === 3, "the second window's tab doesn't have its three panes");
+                other.window.close();
+                deadline = Date.now() + timeout;
+                return [waitFor("the second window to close and end its sessions",
+                                () => WindowRegistry.shells.length === 1 && ids.every(id => !TerminalSessions.isOpen(id)),
+                                () => console.info("smoke test: a two-window workspace opened, and closing a window ended its sessions"))];
             },
             () => {
                 // Tab strip operations.
