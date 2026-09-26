@@ -19,6 +19,12 @@ All notable changes to this project are documented in this file. The format is b
 
 - Quick connect (Ctrl+Shift+O) and the Hosts view's Import button work now instead of announcing their sprint.
 - `deny.toml` allows the 0BSD license (two small dependencies of `interprocess`).
+- On Windows the `opensesh` command is `bin\opensesh.exe` in the install or portable folder.
+
+### Fixed
+
+- The Windows packages kept the app: the command-line tool, copied as `opensesh.exe` next to `OpenSesh.exe`, replaced it on a case-insensitive file system.
+- The release script no longer garbles the non-ASCII characters of `Cargo.toml` when it sets the version.
 
 ## [0.1.1] - 2026-09-26
 
