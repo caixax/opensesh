@@ -28,6 +28,7 @@ Item {
     }
 
     function sync() {
+        nativeTexts = ({});
         boundActions = ActionRegistry.actions.filter(action => action.shortcut.length > 0);
     }
 
@@ -39,6 +40,15 @@ Item {
         target: ActionRegistry
 
         function onActionsChanged() {
+            Qt.callLater(host.sync);
+        }
+    }
+
+    // A shortcut changed in Settings > Shortcuts or in keybindings.toml.
+    Connections {
+        target: Keybindings
+
+        function onChanged() {
             Qt.callLater(host.sync);
         }
     }

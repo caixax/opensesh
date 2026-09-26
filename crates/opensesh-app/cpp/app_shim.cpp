@@ -27,7 +27,20 @@
 #include <QtGui/QPainter>
 #include <QtGui/QPixmap>
 #include <QtQuick/QQuickImageProvider>
+#include <QtQuick/QQuickWindow>
 #include <QtSvg/QSvgRenderer>
+
+#if defined(Q_OS_WIN)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#elif defined(Q_OS_LINUX) && QT_CONFIG(xcb)
+#include <dlfcn.h>
+#endif
 
 namespace opensesh {
 
@@ -202,6 +215,42 @@ void set_application_font_family(const QString& family)
     QFont font = QGuiApplication::font();
     font.setFamilies({ family });
     QGuiApplication::setFont(font);
+}
+
+void enable_window_alpha()
+{
+    QQuickWindow::setDefaultAlphaBuffer(true);
+}
+
+bool platform_beep()
+{
+#if defined(Q_OS_WIN)
+    return MessageBeep(MB_OK) != 0;
+#elif defined(Q_OS_LINUX) && QT_CONFIG(xcb)
+    auto *x11 = qGuiApp ? qGuiApp->nativeInterface<QNativeInterface::QX11Application>() : nullptr;
+    if (!x11 || !x11->connection())
+        return false;
+    // libxcb is loaded by Qt's xcb plugin already; resolving the two calls at run time keeps it
+    // out of the link (and out of the Wayland-only case).
+    static void *library = dlopen("libxcb.so.1", RTLD_LAZY | RTLD_LOCAL);
+    if (!library)
+        return false;
+    struct Cookie
+    {
+        unsigned int sequence;
+    };
+    using Bell = Cookie (*)(xcb_connection_t *, std::int8_t);
+    using Flush = int (*)(xcb_connection_t *);
+    static const auto bell = reinterpret_cast<Bell>(dlsym(library, "xcb_bell"));
+    static const auto flush = reinterpret_cast<Flush>(dlsym(library, "xcb_flush"));
+    if (!bell || !flush)
+        return false;
+    bell(x11->connection(), 0);
+    flush(x11->connection());
+    return true;
+#else
+    return false;
+#endif
 }
 
 QStringList font_families(bool monospace_only)

@@ -92,6 +92,26 @@
         <translation>[Çĺéáŕ šçŕöĺĺbáçķ ~~~~~]</translation>
     </message>
     <message>
+        <source>Make the terminal text bigger</source>
+        <translation>[Máķé ťĥé ťéŕmíñáĺ ťéxť bíĝĝéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Make the terminal text smaller</source>
+        <translation>[Máķé ťĥé ťéŕmíñáĺ ťéxť šmáĺĺéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reset the terminal text size</source>
+        <translation>[Ŕéšéť ťĥé ťéŕmíñáĺ ťéxť šížé ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Toggle keyword highlighting in this tab</source>
+        <translation>[Ťöĝĝĺé ķéýŵöŕď ĥíĝĥĺíĝĥťíñĝ íñ ťĥíš ťáb ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal settings</source>
+        <translation>[Ťéŕmíñáĺ šéťťíñĝš ~~~~~~]</translation>
+    </message>
+    <message>
         <source>Toggle side panel</source>
         <translation>[Ťöĝĝĺé šíďé þáñéĺ ~~~~~~]</translation>
     </message>
@@ -436,6 +456,181 @@
     </message>
 </context>
 <context>
+    <name>HighlightRulesDialog</name>
+    <message>
+        <source>Unchanged</source>
+        <translation>[Üñçĥáñĝéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>[Bĺáçķ ~~]</translation>
+    </message>
+    <message>
+        <source>Red</source>
+        <translation>[Ŕéď ~]</translation>
+    </message>
+    <message>
+        <source>Green</source>
+        <translation>[Ĝŕééñ ~~]</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>[Ýéĺĺöŵ ~~]</translation>
+    </message>
+    <message>
+        <source>Blue</source>
+        <translation>[Bĺüé ~~]</translation>
+    </message>
+    <message>
+        <source>Magenta</source>
+        <translation>[Máĝéñťá ~~~]</translation>
+    </message>
+    <message>
+        <source>Cyan</source>
+        <translation>[Çýáñ ~~]</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>[Ŵĥíťé ~~]</translation>
+    </message>
+    <message>
+        <source>Bright black</source>
+        <translation>[Bŕíĝĥť bĺáçķ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Bright red</source>
+        <translation>[Bŕíĝĥť ŕéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Bright green</source>
+        <translation>[Bŕíĝĥť ĝŕééñ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Bright yellow</source>
+        <translation>[Bŕíĝĥť ýéĺĺöŵ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Bright blue</source>
+        <translation>[Bŕíĝĥť bĺüé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Bright magenta</source>
+        <translation>[Bŕíĝĥť máĝéñťá ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Bright cyan</source>
+        <translation>[Bŕíĝĥť çýáñ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Bright white</source>
+        <translation>[Bŕíĝĥť ŵĥíťé ~~~~]</translation>
+    </message>
+    <message>
+        <source>My rules</source>
+        <translation>[Mý ŕüĺéš ~~~]</translation>
+    </message>
+    <message>
+        <source>Built-in rule set</source>
+        <translation>[Büíĺť-íñ ŕüĺé šéť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Edit rule set</source>
+        <translation>[Éďíť ŕüĺé šéť ~~~~]</translation>
+    </message>
+    <message>
+        <source>New rule set</source>
+        <translation>[Ñéŵ ŕüĺé šéť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>[Šávé ~~]</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>[Çĺöšé ~~]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çáñçéĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the rules: %1</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé ŕüĺéš: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Built-in sets can&apos;t be changed. Make a copy to adjust it.</source>
+        <translation>[Büíĺť-íñ šéťš çáñ&apos;ť bé çĥáñĝéď. Máķé á çöþý ťö áďĵüšť íť. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Rule set name</source>
+        <translation>[Ŕüĺé šéť ñámé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Each rule is a regular expression. With a group in parentheses, only the group is styled. Later rules win where rules overlap.</source>
+        <translation>[Éáçĥ ŕüĺé íš á ŕéĝüĺáŕ éxþŕéššíöñ. Ŵíťĥ á ĝŕöüþ íñ þáŕéñťĥéšéš, öñĺý ťĥé ĝŕöüþ íš šťýĺéď. Ĺáťéŕ ŕüĺéš ŵíñ ŵĥéŕé ŕüĺéš övéŕĺáþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Regular expression, e.g. <byte value="x8"/>ERROR<byte value="x8"/></source>
+        <translation>[Ŕéĝüĺáŕ éxþŕéššíöñ, é.ĝ. <byte value="x8"/>ÉŔŔÖŔ<byte value="x8"/> ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pattern of rule %1</source>
+        <translation>[Þáťťéŕñ öƒ ŕüĺé %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remove this rule</source>
+        <translation>[Ŕémövé ťĥíš ŕüĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Invalid pattern: %1</source>
+        <translation>[Íñváĺíď þáťťéŕñ: %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Text: %1</source>
+        <translation>[Ťéxť: %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>Text color of rule %1</source>
+        <translation>[Ťéxť çöĺöŕ öƒ ŕüĺé %1 ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Background: %1</source>
+        <translation>[Báçķĝŕöüñď: %1 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Background color of rule %1</source>
+        <translation>[Báçķĝŕöüñď çöĺöŕ öƒ ŕüĺé %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Bold</source>
+        <translation>[Böĺď ~~]</translation>
+    </message>
+    <message>
+        <source>Underline</source>
+        <translation>[Üñďéŕĺíñé ~~~]</translation>
+    </message>
+    <message>
+        <source>Ignore case</source>
+        <translation>[Íĝñöŕé çášé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Add rule</source>
+        <translation>[Åďď ŕüĺé ~~~]</translation>
+    </message>
+    <message>
+        <source>Make a copy</source>
+        <translation>[Máķé á çöþý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete set</source>
+        <translation>[Ďéĺéťé šéť ~~~]</translation>
+    </message>
+</context>
+<context>
     <name>HistoryView</name>
     <message>
         <source>No history yet</source>
@@ -565,6 +760,22 @@
     <message>
         <source>There is a problem with config.toml. The log has the details.</source>
         <translation>[Ťĥéŕé íš á þŕöbĺém ŵíťĥ çöñƒíĝ.ťömĺ. Ťĥé ĺöĝ ĥáš ťĥé ďéťáíĺš. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 comes from a newer OpenSesh or can&apos;t be read, so this change is not saved.</source>
+        <translation>[%1 çöméš ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ öŕ çáñ&apos;ť bé ŕéáď, šö ťĥíš çĥáñĝé íš ñöť šávéď. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the terminal settings: %1</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé ťéŕmíñáĺ šéťťíñĝš: %1 ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 comes from a newer OpenSesh or can&apos;t be read, so shortcut changes are not saved.</source>
+        <translation>[%1 çöméš ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ öŕ çáñ&apos;ť bé ŕéáď, šö šĥöŕťçüť çĥáñĝéš áŕé ñöť šávéď. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the shortcuts: %1</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé šĥöŕťçüťš: %1 ~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -3097,6 +3308,922 @@
     </message>
 </context>
 <context>
+    <name>SettingsProfilesPage</name>
+    <message>
+        <source>Profiles</source>
+        <translation>[Þŕöƒíĺéš ~~~]</translation>
+    </message>
+    <message>
+        <source>A profile is a set of terminal settings. The default profile applies everywhere; other profiles only change what they set, and tabs can switch profile from their menu.</source>
+        <translation>[Å þŕöƒíĺé íš á šéť öƒ ťéŕmíñáĺ šéťťíñĝš. Ťĥé ďéƒáüĺť þŕöƒíĺé áþþĺíéš évéŕýŵĥéŕé; öťĥéŕ þŕöƒíĺéš öñĺý çĥáñĝé ŵĥáť ťĥéý šéť, áñď ťábš çáñ šŵíťçĥ þŕöƒíĺé ƒŕöm ťĥéíŕ méñü. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Your profiles</source>
+        <translation>[Ýöüŕ þŕöƒíĺéš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Applies to every terminal</source>
+        <translation>[Åþþĺíéš ťö évéŕý ťéŕmíñáĺ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Changes only what it sets</source>
+        <translation>[Çĥáñĝéš öñĺý ŵĥáť íť šéťš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New tabs</source>
+        <translation>[Ñéŵ ťábš ~~~]</translation>
+    </message>
+    <message>
+        <source>Edit in Terminal settings</source>
+        <translation>[Éďíť íñ Ťéŕmíñáĺ šéťťíñĝš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use for new tabs</source>
+        <translation>[Üšé ƒöŕ ñéŵ ťábš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>New profile</source>
+        <translation>[Ñéŵ þŕöƒíĺé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>[Çöþý ~~]</translation>
+    </message>
+    <message>
+        <source>%1 (copy)</source>
+        <translation>[%1 (çöþý) ~~~]</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>[Ŕéñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
+    </message>
+    <message>
+        <source>Files</source>
+        <translation>[Fíĺéš ~~]</translation>
+    </message>
+    <message>
+        <source>Profiles are TOML files in the profiles folder of %1. You can edit them in any editor; changes apply at once.</source>
+        <translation>[Þŕöƒíĺéš áŕé ŤÖMĹ ƒíĺéš íñ ťĥé þŕöƒíĺéš ƒöĺďéŕ öƒ %1. Ýöü çáñ éďíť ťĥém íñ áñý éďíťöŕ; çĥáñĝéš áþþĺý áť öñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Rename profile</source>
+        <translation>[Ŕéñámé þŕöƒíĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy profile</source>
+        <translation>[Çöþý þŕöƒíĺé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Create</source>
+        <translation>[Çŕéáťé ~~]</translation>
+    </message>
+    <message>
+        <source>Profile name</source>
+        <translation>[Þŕöƒíĺé ñámé ~~~~]</translation>
+    </message>
+    <message>
+        <source>A new profile starts with everything inherited from the default profile.</source>
+        <translation>[Å ñéŵ þŕöƒíĺé šťáŕťš ŵíťĥ évéŕýťĥíñĝ íñĥéŕíťéď ƒŕöm ťĥé ďéƒáüĺť þŕöƒíĺé. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete this profile?</source>
+        <translation>[Ďéĺéťé ťĥíš þŕöƒíĺé? ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Tabs that use %1 go back to the default profile.</source>
+        <translation>[Ťábš ťĥáť üšé %1 ĝö báçķ ťö ťĥé ďéƒáüĺť þŕöƒíĺé. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>SettingsShortcutsPage</name>
+    <message>
+        <source>Shortcuts</source>
+        <translation>[Šĥöŕťçüťš ~~~]</translation>
+    </message>
+    <message>
+        <source>Every command and its keyboard shortcut. App shortcuts use Shift or Alt so terminal programs keep keys like Ctrl+A, Ctrl+R or Ctrl+K.</source>
+        <translation>[Évéŕý çömmáñď áñď íťš ķéýböáŕď šĥöŕťçüť. Åþþ šĥöŕťçüťš üšé Šĥíƒť öŕ Åĺť šö ťéŕmíñáĺ þŕöĝŕámš ķééþ ķéýš ĺíķé Çťŕĺ+Å, Çťŕĺ+Ŕ öŕ Çťŕĺ+Ķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Find a command or a shortcut</source>
+        <translation>[Fíñď á çömmáñď öŕ á šĥöŕťçüť ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Restore all defaults</source>
+        <translation>[Ŕéšťöŕé áĺĺ ďéƒáüĺťš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Some shortcuts are used by more than one command: only one of them works.</source>
+        <translation>[Šömé šĥöŕťçüťš áŕé üšéď bý möŕé ťĥáñ öñé çömmáñď: öñĺý öñé öƒ ťĥém ŵöŕķš. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 comes from a newer OpenSesh or can&apos;t be read, so shortcuts can&apos;t be changed here.</source>
+        <translation>[%1 çöméš ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ öŕ çáñ&apos;ť bé ŕéáď, šö šĥöŕťçüťš çáñ&apos;ť bé çĥáñĝéď ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Also used by another command</source>
+        <translation>[Åĺšö üšéď bý áñöťĥéŕ çömmáñď ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal programs use this key too</source>
+        <translation>[Ťéŕmíñáĺ þŕöĝŕámš üšé ťĥíš ķéý ťöö ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Shortcut for %1</source>
+        <translation>[Šĥöŕťçüť ƒöŕ %1 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Back to the default (%1)</source>
+        <translation>[Báçķ ťö ťĥé ďéƒáüĺť (%1) ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Back to the default (none)</source>
+        <translation>[Báçķ ťö ťĥé ďéƒáüĺť (ñöñé) ~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>SettingsTerminalPage</name>
+    <message>
+        <source>Thin</source>
+        <translation>[Ťĥíñ ~~]</translation>
+    </message>
+    <message>
+        <source>Extra light</source>
+        <translation>[Éxťŕá ĺíĝĥť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>[Ĺíĝĥť ~~]</translation>
+    </message>
+    <message>
+        <source>Regular</source>
+        <translation>[Ŕéĝüĺáŕ ~~~]</translation>
+    </message>
+    <message>
+        <source>Medium</source>
+        <translation>[Méďíüm ~~]</translation>
+    </message>
+    <message>
+        <source>Semibold</source>
+        <translation>[Šémíböĺď ~~~]</translation>
+    </message>
+    <message>
+        <source>Bold</source>
+        <translation>[Böĺď ~~]</translation>
+    </message>
+    <message>
+        <source>Extra bold</source>
+        <translation>[Éxťŕá böĺď ~~~]</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>[Bĺáçķ ~~]</translation>
+    </message>
+    <message>
+        <source>Could not change this setting: %1</source>
+        <translation>[Çöüĺď ñöť çĥáñĝé ťĥíš šéťťíñĝ: %1 ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>[%1 (%2) ~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal</source>
+        <translation>[Ťéŕmíñáĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Font, colors, cursor, scrollback, clipboard and behavior of the terminal. Settings belong to a profile: the default profile applies everywhere, and other profiles change only what they set.</source>
+        <translation>[Föñť, çöĺöŕš, çüŕšöŕ, šçŕöĺĺbáçķ, çĺíþböáŕď áñď béĥávíöŕ öƒ ťĥé ťéŕmíñáĺ. Šéťťíñĝš béĺöñĝ ťö á þŕöƒíĺé: ťĥé ďéƒáüĺť þŕöƒíĺé áþþĺíéš évéŕýŵĥéŕé, áñď öťĥéŕ þŕöƒíĺéš çĥáñĝé öñĺý ŵĥáť ťĥéý šéť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Profile</source>
+        <translation>[Þŕöƒíĺé ~~~]</translation>
+    </message>
+    <message>
+        <source>Editing</source>
+        <translation>[Éďíťíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>This profile&apos;s file comes from a newer OpenSesh or can&apos;t be read, so it can&apos;t be changed here.</source>
+        <translation>[Ťĥíš þŕöƒíĺé&apos;š ƒíĺé çöméš ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ öŕ çáñ&apos;ť bé ŕéáď, šö íť çáñ&apos;ť bé çĥáñĝéď ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New terminal tabs use the profile chosen in Settings &gt; Profiles.</source>
+        <translation>[Ñéŵ ťéŕmíñáĺ ťábš üšé ťĥé þŕöƒíĺé çĥöšéñ íñ Šéťťíñĝš &gt; Þŕöƒíĺéš. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Profile to edit</source>
+        <translation>[Þŕöƒíĺé ťö éďíť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Profiles…</source>
+        <translation>[Þŕöƒíĺéš… ~~~]</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>[Þŕévíéŵ ~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal preview</source>
+        <translation>[Ťéŕmíñáĺ þŕévíéŵ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Font</source>
+        <translation>[Föñť ~~]</translation>
+    </message>
+    <message>
+        <source>Monospaced fonts are listed unless you show all fonts. Empty uses the bundled JetBrains Mono.</source>
+        <translation>[Möñöšþáçéď ƒöñťš áŕé ĺíšťéď üñĺéšš ýöü šĥöŵ áĺĺ ƒöñťš. Émþťý üšéš ťĥé büñďĺéď ĴéťBŕáíñš Möñö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Show all fonts</source>
+        <translation>[Šĥöŵ áĺĺ ƒöñťš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Fallback fonts</source>
+        <translation>[Fáĺĺbáçķ ƒöñťš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Tried in order for characters the font lacks, such as a Nerd Font for icons or a CJK font. Separate them with commas.</source>
+        <translation>[Ťŕíéď íñ öŕďéŕ ƒöŕ çĥáŕáçťéŕš ťĥé ƒöñť ĺáçķš, šüçĥ áš á Ñéŕď Föñť ƒöŕ íçöñš öŕ á ÇĴĶ ƒöñť. Šéþáŕáťé ťĥém ŵíťĥ çömmáš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>e.g. Symbols Nerd Font Mono, Noto Sans CJK JP</source>
+        <translation>[é.ĝ. Šýmböĺš Ñéŕď Föñť Möñö, Ñöťö Šáñš ÇĴĶ ĴÞ ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>[Šížé ~~]</translation>
+    </message>
+    <message>
+        <source>Ctrl+= and Ctrl+- change the size of one tab.</source>
+        <translation>[Çťŕĺ+= áñď Çťŕĺ+- çĥáñĝé ťĥé šížé öƒ öñé ťáb. ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Font size in points</source>
+        <translation>[Föñť šížé íñ þöíñťš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Weight</source>
+        <translation>[Ŵéíĝĥť ~~]</translation>
+    </message>
+    <message>
+        <source>Weight of normal text</source>
+        <translation>[Ŵéíĝĥť öƒ ñöŕmáĺ ťéxť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Bold weight</source>
+        <translation>[Böĺď ŵéíĝĥť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Weight of bold text</source>
+        <translation>[Ŵéíĝĥť öƒ böĺď ťéxť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Italic</source>
+        <translation>[Íťáĺíç ~~]</translation>
+    </message>
+    <message>
+        <source>Draw italic text in italics</source>
+        <translation>[Ďŕáŵ íťáĺíç ťéxť íñ íťáĺíçš ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Line height</source>
+        <translation>[Ĺíñé ĥéíĝĥť ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1%</source>
+        <translation>[%1% ~]</translation>
+    </message>
+    <message>
+        <source>Letter spacing</source>
+        <translation>[Ĺéťťéŕ šþáçíñĝ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 px</source>
+        <translation>[%1 þx ~~]</translation>
+    </message>
+    <message>
+        <source>Letter spacing in pixels</source>
+        <translation>[Ĺéťťéŕ šþáçíñĝ íñ þíxéĺš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Smoothing</source>
+        <translation>[Šmööťĥíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Smooth the edges of letters (antialiasing)</source>
+        <translation>[Šmööťĥ ťĥé éďĝéš öƒ ĺéťťéŕš (áñťíáĺíášíñĝ) ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Hinting</source>
+        <translation>[Ĥíñťíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>How much letters are fitted to the pixel grid.</source>
+        <translation>[Ĥöŵ müçĥ ĺéťťéŕš áŕé ƒíťťéď ťö ťĥé þíxéĺ ĝŕíď. ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>System</source>
+        <translation>[Šýšťém ~~]</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>[Ñöñé ~~]</translation>
+    </message>
+    <message>
+        <source>Vertical</source>
+        <translation>[Véŕťíçáĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Full</source>
+        <translation>[Füĺĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Ligatures</source>
+        <translation>[Ĺíĝáťüŕéš ~~~]</translation>
+    </message>
+    <message>
+        <source>Experimental. Joins character pairs such as -&gt; and != in fonts that have them.</source>
+        <translation>[Éxþéŕíméñťáĺ. Ĵöíñš çĥáŕáçťéŕ þáíŕš šüçĥ áš -&gt; áñď != íñ ƒöñťš ťĥáť ĥávé ťĥém. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use programming ligatures</source>
+        <translation>[Üšé þŕöĝŕámmíñĝ ĺíĝáťüŕéš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Colors</source>
+        <translation>[Çöĺöŕš ~~]</translation>
+    </message>
+    <message>
+        <source>Dark theme</source>
+        <translation>[Ďáŕķ ťĥémé ~~~]</translation>
+    </message>
+    <message>
+        <source>Used while OpenSesh is dark.</source>
+        <translation>[Üšéď ŵĥíĺé ÖþéñŠéšĥ íš ďáŕķ. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Light theme</source>
+        <translation>[Ĺíĝĥť ťĥémé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Used while OpenSesh is light.</source>
+        <translation>[Üšéď ŵĥíĺé ÖþéñŠéšĥ íš ĺíĝĥť. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Bold text</source>
+        <translation>[Böĺď ťéxť ~~~]</translation>
+    </message>
+    <message>
+        <source>Show bold text in bright colors</source>
+        <translation>[Šĥöŵ böĺď ťéxť íñ bŕíĝĥť çöĺöŕš ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Minimum contrast</source>
+        <translation>[Míñímüm çöñťŕášť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Text that is hard to read on its background is made lighter or darker. 1 turns this off; 4.5 is the WCAG level for normal text.</source>
+        <translation>[Ťéxť ťĥáť íš ĥáŕď ťö ŕéáď öñ íťš báçķĝŕöüñď íš máďé ĺíĝĥťéŕ öŕ ďáŕķéŕ. 1 ťüŕñš ťĥíš öƒƒ; 4.5 íš ťĥé ŴÇÅĜ ĺévéĺ ƒöŕ ñöŕmáĺ ťéxť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>[Öƒƒ ~]</translation>
+    </message>
+    <message>
+        <source>%1:1</source>
+        <translation>[%1:1 ~~]</translation>
+    </message>
+    <message>
+        <source>Cursor color</source>
+        <translation>[Çüŕšöŕ çöĺöŕ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Text under the cursor</source>
+        <translation>[Ťéxť üñďéŕ ťĥé çüŕšöŕ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Color of the text under the cursor</source>
+        <translation>[Çöĺöŕ öƒ ťĥé ťéxť üñďéŕ ťĥé çüŕšöŕ ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Selection</source>
+        <translation>[Šéĺéçťíöñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Selection color</source>
+        <translation>[Šéĺéçťíöñ çöĺöŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Selected text</source>
+        <translation>[Šéĺéçťéď ťéxť ~~~~]</translation>
+    </message>
+    <message>
+        <source>The theme&apos;s choice may keep each character&apos;s own color.</source>
+        <translation>[Ťĥé ťĥémé&apos;š çĥöíçé máý ķééþ éáçĥ çĥáŕáçťéŕ&apos;š öŵñ çöĺöŕ. ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Color of selected text</source>
+        <translation>[Çöĺöŕ öƒ šéĺéçťéď ťéxť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Cursor</source>
+        <translation>[Çüŕšöŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Shape</source>
+        <translation>[Šĥáþé ~~]</translation>
+    </message>
+    <message>
+        <source>Programs can choose their own shape.</source>
+        <translation>[Þŕöĝŕámš çáñ çĥööšé ťĥéíŕ öŵñ šĥáþé. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Block</source>
+        <translation>[Bĺöçķ ~~]</translation>
+    </message>
+    <message>
+        <source>Bar</source>
+        <translation>[Báŕ ~]</translation>
+    </message>
+    <message>
+        <source>Underline</source>
+        <translation>[Üñďéŕĺíñé ~~~]</translation>
+    </message>
+    <message>
+        <source>Cursor shape</source>
+        <translation>[Çüŕšöŕ šĥáþé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Blinking</source>
+        <translation>[Bĺíñķíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Reduce motion in Settings &gt; Appearance stops all blinking.</source>
+        <translation>[Ŕéďüçé möťíöñ íñ Šéťťíñĝš &gt; Åþþéáŕáñçé šťöþš áĺĺ bĺíñķíñĝ. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Blink the cursor</source>
+        <translation>[Bĺíñķ ťĥé çüŕšöŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Without focus</source>
+        <translation>[Ŵíťĥöüť ƒöçüš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Show a hollow block when the terminal isn&apos;t focused</source>
+        <translation>[Šĥöŵ á ĥöĺĺöŵ bĺöçķ ŵĥéñ ťĥé ťéŕmíñáĺ íšñ&apos;ť ƒöçüšéď ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Window</source>
+        <translation>[Ŵíñďöŵ ~~]</translation>
+    </message>
+    <message>
+        <source>Padding</source>
+        <translation>[Þáďďíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Space around the text, in pixels.</source>
+        <translation>[Šþáçé áŕöüñď ťĥé ťéxť, íñ þíxéĺš. ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Padding in pixels</source>
+        <translation>[Þáďďíñĝ íñ þíxéĺš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Background opacity</source>
+        <translation>[Báçķĝŕöüñď öþáçíťý ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Below 100% the terminal shows what is behind the window. Blur, if any, comes from your desktop.</source>
+        <translation>[Béĺöŵ 100% ťĥé ťéŕmíñáĺ šĥöŵš ŵĥáť íš béĥíñď ťĥé ŵíñďöŵ. Bĺüŕ, íƒ áñý, çöméš ƒŕöm ýöüŕ ďéšķťöþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Below 100% the terminal shows what is behind the window after OpenSesh restarts (the window needs a transparent background). Blur, if any, comes from your desktop.</source>
+        <translation>[Béĺöŵ 100% ťĥé ťéŕmíñáĺ šĥöŵš ŵĥáť íš béĥíñď ťĥé ŵíñďöŵ áƒťéŕ ÖþéñŠéšĥ ŕéšťáŕťš (ťĥé ŵíñďöŵ ñééďš á ťŕáñšþáŕéñť báçķĝŕöüñď). Bĺüŕ, íƒ áñý, çöméš ƒŕöm ýöüŕ ďéšķťöþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Background image</source>
+        <translation>[Báçķĝŕöüñď ímáĝé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>No image</source>
+        <translation>[Ñö ímáĝé ~~~]</translation>
+    </message>
+    <message>
+        <source>Background image file</source>
+        <translation>[Báçķĝŕöüñď ímáĝé ƒíĺé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose…</source>
+        <translation>[Çĥööšé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Remove the image</source>
+        <translation>[Ŕémövé ťĥé ímáĝé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Image dimming</source>
+        <translation>[Ímáĝé ďímmíñĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>How much the theme&apos;s background covers the image, so text stays readable.</source>
+        <translation>[Ĥöŵ müçĥ ťĥé ťĥémé&apos;š báçķĝŕöüñď çövéŕš ťĥé ímáĝé, šö ťéxť šťáýš ŕéáďábĺé. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Image fit</source>
+        <translation>[Ímáĝé ƒíť ~~~]</translation>
+    </message>
+    <message>
+        <source>Fill</source>
+        <translation>[Fíĺĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Fit</source>
+        <translation>[Fíť ~]</translation>
+    </message>
+    <message>
+        <source>Stretch</source>
+        <translation>[Šťŕéťçĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>Tile</source>
+        <translation>[Ťíĺé ~~]</translation>
+    </message>
+    <message>
+        <source>Center</source>
+        <translation>[Çéñťéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Scrolling</source>
+        <translation>[Šçŕöĺĺíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Scrollback</source>
+        <translation>[Šçŕöĺĺbáçķ ~~~]</translation>
+    </message>
+    <message>
+        <source>Lines of history kept for each terminal (up to 100,000).</source>
+        <translation>[Ĺíñéš öƒ ĥíšťöŕý ķéþť ƒöŕ éáçĥ ťéŕmíñáĺ (üþ ťö 100,000). ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Scrollback lines</source>
+        <translation>[Šçŕöĺĺbáçķ ĺíñéš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Scroll speed</source>
+        <translation>[Šçŕöĺĺ šþééď ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1×</source>
+        <translation>[%1× ~]</translation>
+    </message>
+    <message>
+        <source>Smooth scrolling</source>
+        <translation>[Šmööťĥ šçŕöĺĺíñĝ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Animate wheel scrolling</source>
+        <translation>[Åñímáťé ŵĥééĺ šçŕöĺĺíñĝ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Selection and clipboard</source>
+        <translation>[Šéĺéçťíöñ áñď çĺíþböáŕď ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Word separators</source>
+        <translation>[Ŵöŕď šéþáŕáťöŕš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Characters that end a word when you double-click.</source>
+        <translation>[Çĥáŕáçťéŕš ťĥáť éñď á ŵöŕď ŵĥéñ ýöü ďöübĺé-çĺíçķ. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy on select</source>
+        <translation>[Çöþý öñ šéĺéçť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy selected text to the clipboard at once</source>
+        <translation>[Çöþý šéĺéçťéď ťéxť ťö ťĥé çĺíþböáŕď áť öñçé ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Right click</source>
+        <translation>[Ŕíĝĥť çĺíçķ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Shift+right click always opens the menu.</source>
+        <translation>[Šĥíƒť+ŕíĝĥť çĺíçķ áĺŵáýš öþéñš ťĥé méñü. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Opens the menu</source>
+        <translation>[Öþéñš ťĥé méñü ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pastes</source>
+        <translation>[Þášťéš ~~]</translation>
+    </message>
+    <message>
+        <source>Primary selection</source>
+        <translation>[Þŕímáŕý šéĺéçťíöñ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Selecting text sets the primary selection; the middle button pastes it</source>
+        <translation>[Šéĺéçťíñĝ ťéxť šéťš ťĥé þŕímáŕý šéĺéçťíöñ; ťĥé míďďĺé büťťöñ þášťéš íť ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Clipboard access</source>
+        <translation>[Çĺíþböáŕď áççéšš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Lets programs, even on remote servers, put text on your clipboard (OSC 52). They can never read it.</source>
+        <translation>[Ĺéťš þŕöĝŕámš, évéñ öñ ŕémöťé šéŕvéŕš, þüť ťéxť öñ ýöüŕ çĺíþböáŕď (ÖŠÇ 52). Ťĥéý çáñ ñévéŕ ŕéáď íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Programs may copy</source>
+        <translation>[Þŕöĝŕámš máý çöþý ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Clipboard access for programs</source>
+        <translation>[Çĺíþböáŕď áççéšš ƒöŕ þŕöĝŕámš ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Behavior</source>
+        <translation>[Béĥávíöŕ ~~~]</translation>
+    </message>
+    <message>
+        <source>Bell</source>
+        <translation>[Béĺĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Notification flashes the taskbar and adds a notice when OpenSesh isn&apos;t the active window. The sound is not available on Wayland; the bell flashes instead.</source>
+        <translation>[Ñöťíƒíçáťíöñ ƒĺášĥéš ťĥé ťášķbáŕ áñď áďďš á ñöťíçé ŵĥéñ ÖþéñŠéšĥ íšñ&apos;ť ťĥé áçťívé ŵíñďöŵ. Ťĥé šöüñď íš ñöť áváíĺábĺé öñ Ŵáýĺáñď; ťĥé béĺĺ ƒĺášĥéš íñšťéáď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Flash</source>
+        <translation>[Fĺášĥ ~~]</translation>
+    </message>
+    <message>
+        <source>Sound</source>
+        <translation>[Šöüñď ~~]</translation>
+    </message>
+    <message>
+        <source>Notification</source>
+        <translation>[Ñöťíƒíçáťíöñ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal type</source>
+        <translation>[Ťéŕmíñáĺ ťýþé ~~~~]</translation>
+    </message>
+    <message>
+        <source>The TERM variable of new terminals.</source>
+        <translation>[Ťĥé ŤÉŔM váŕíábĺé öƒ ñéŵ ťéŕmíñáĺš. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Backspace sends</source>
+        <translation>[Báçķšþáçé šéñďš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>DEL (^?)</source>
+        <translation>[ĎÉĹ (^?) ~~~]</translation>
+    </message>
+    <message>
+        <source>BS (^H)</source>
+        <translation>[BŠ (^Ĥ) ~~~]</translation>
+    </message>
+    <message>
+        <source>What Backspace sends</source>
+        <translation>[Ŵĥáť Báçķšþáçé šéñďš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete sends</source>
+        <translation>[Ďéĺéťé šéñďš ~~~~]</translation>
+    </message>
+    <message>
+        <source>VT220 (ESC [3~)</source>
+        <translation>[VŤ220 (ÉŠÇ [3~) ~~~~~]</translation>
+    </message>
+    <message>
+        <source>What Delete sends</source>
+        <translation>[Ŵĥáť Ďéĺéťé šéñďš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Alt key</source>
+        <translation>[Åĺť ķéý ~~~]</translation>
+    </message>
+    <message>
+        <source>Alt acts as Meta (sends Escape before the key)</source>
+        <translation>[Åĺť áçťš áš Méťá (šéñďš Éšçáþé béƒöŕé ťĥé ķéý) ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Encoding</source>
+        <translation>[Éñçöďíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>For old systems and devices that don&apos;t use UTF-8.</source>
+        <translation>[Föŕ öĺď šýšťémš áñď ďévíçéš ťĥáť ďöñ&apos;ť üšé ÜŤF-8. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Answerback</source>
+        <translation>[Åñšŵéŕbáçķ ~~~]</translation>
+    </message>
+    <message>
+        <source>Sent when a program asks with Ctrl+E (ENQ). Printable ASCII only; empty sends nothing.</source>
+        <translation>[Šéñť ŵĥéñ á þŕöĝŕám ášķš ŵíťĥ Çťŕĺ+É (ÉÑQ). Þŕíñťábĺé ÅŠÇÍÍ öñĺý; émþťý šéñďš ñöťĥíñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Answerback message</source>
+        <translation>[Åñšŵéŕbáçķ méššáĝé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Paste delay</source>
+        <translation>[Þášťé ďéĺáý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Pause between the lines of a paste, in milliseconds, for slow devices. Escape or Ctrl+C stops a slow paste.</source>
+        <translation>[Þáüšé béťŵééñ ťĥé ĺíñéš öƒ á þášťé, íñ míĺĺíšéçöñďš, ƒöŕ šĺöŵ ďévíçéš. Éšçáþé öŕ Çťŕĺ+Ç šťöþš á šĺöŵ þášťé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Paste delay in milliseconds</source>
+        <translation>[Þášťé ďéĺáý íñ míĺĺíšéçöñďš ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keyword highlighting</source>
+        <translation>[Ķéýŵöŕď ĥíĝĥĺíĝĥťíñĝ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Rule sets color words and patterns as they appear, like errors in logs or IP addresses. Turn sets on for this profile; each tab can turn highlighting off from its menu.</source>
+        <translation>[Ŕüĺé šéťš çöĺöŕ ŵöŕďš áñď þáťťéŕñš áš ťĥéý áþþéáŕ, ĺíķé éŕŕöŕš íñ ĺöĝš öŕ ÍÞ áďďŕéššéš. Ťüŕñ šéťš öñ ƒöŕ ťĥíš þŕöƒíĺé; éáçĥ ťáb çáñ ťüŕñ ĥíĝĥĺíĝĥťíñĝ öƒƒ ƒŕöm íťš méñü. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Rule sets</source>
+        <translation>[Ŕüĺé šéťš ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (built-in)</source>
+        <translation>[%1 (büíĺť-íñ) ~~~~]</translation>
+    </message>
+    <message>
+        <source>View</source>
+        <translation>[Víéŵ ~~]</translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation>[Éďíť ~~]</translation>
+    </message>
+    <message>
+        <source>New rule set</source>
+        <translation>[Ñéŵ ŕüĺé šéť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a background image</source>
+        <translation>[Çĥööšé á báçķĝŕöüñď ímáĝé ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Images (%1)</source>
+        <translation>[Ímáĝéš (%1) ~~~~]</translation>
+    </message>
+    <message>
+        <source>All files (*)</source>
+        <translation>[Åĺĺ ƒíĺéš (*) ~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>SettingsThemesPage</name>
+    <message>
+        <source>Could not change the theme: %1</source>
+        <translation>[Çöüĺď ñöť çĥáñĝé ťĥé ťĥémé: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Themes</source>
+        <translation>[Ťĥéméš ~~]</translation>
+    </message>
+    <message>
+        <source>Terminal color themes. The default profile uses one theme while OpenSesh is dark and one while it is light; other profiles can choose their own in Settings &gt; Terminal.</source>
+        <translation>[Ťéŕmíñáĺ çöĺöŕ ťĥéméš. Ťĥé ďéƒáüĺť þŕöƒíĺé üšéš öñé ťĥémé ŵĥíĺé ÖþéñŠéšĥ íš ďáŕķ áñď öñé ŵĥíĺé íť íš ĺíĝĥť; öťĥéŕ þŕöƒíĺéš çáñ çĥööšé ťĥéíŕ öŵñ íñ Šéťťíñĝš &gt; Ťéŕmíñáĺ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation>[Ďáŕķ ~~]</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>[Ĺíĝĥť ~~]</translation>
+    </message>
+    <message>
+        <source>Built-in</source>
+        <translation>[Büíĺť-íñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Yours</source>
+        <translation>[Ýöüŕš ~~]</translation>
+    </message>
+    <message>
+        <source>%1 · in use: %2</source>
+        <translation>[%1 · íñ üšé: %2 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>No theme selected</source>
+        <translation>[Ñö ťĥémé šéĺéçťéď ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>By %1%2</source>
+        <translation>[Bý %1%2 ~~~]</translation>
+    </message>
+    <message>
+        <source>, %1 license</source>
+        <translation>[, %1 ĺíçéñšé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Use when dark</source>
+        <translation>[Üšé ŵĥéñ ďáŕķ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Use when light</source>
+        <translation>[Üšé ŵĥéñ ĺíĝĥť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Edit a copy</source>
+        <translation>[Éďíť á çöþý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation>[Éďíť ~~]</translation>
+    </message>
+    <message>
+        <source>Duplicate</source>
+        <translation>[Ďüþĺíçáťé ~~~]</translation>
+    </message>
+    <message>
+        <source>Export…</source>
+        <translation>[Éxþöŕť… ~~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>[Ímþöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>Themes from iTerm2 (.itermcolors), Windows Terminal (.json), Alacritty (.toml), Kitty (.conf) and base16 (.yaml). Colors a file leaves out are filled in to match.</source>
+        <translation>[Ťĥéméš ƒŕöm íŤéŕm2 (.íťéŕmçöĺöŕš), Ŵíñďöŵš Ťéŕmíñáĺ (.ĵšöñ), Åĺáçŕíťťý (.ťömĺ), Ķíťťý (.çöñƒ) áñď bášé16 (.ýámĺ). Çöĺöŕš á ƒíĺé ĺéávéš öüť áŕé ƒíĺĺéď íñ ťö máťçĥ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import a theme…</source>
+        <translation>[Ímþöŕť á ťĥémé… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not import the theme: %1</source>
+        <translation>[Çöüĺď ñöť ímþöŕť ťĥé ťĥémé: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Theme imported.</source>
+        <translation>[Ťĥémé ímþöŕťéď. ~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 themes imported.</source>
+        <translation>[%1 ťĥéméš ímþöŕťéď. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not export the theme: %1</source>
+        <translation>[Çöüĺď ñöť éxþöŕť ťĥé ťĥémé: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Theme exported to %1.</source>
+        <translation>[Ťĥémé éxþöŕťéď ťö %1. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import a terminal theme</source>
+        <translation>[Ímþöŕť á ťéŕmíñáĺ ťĥémé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal themes (%1)</source>
+        <translation>[Ťéŕmíñáĺ ťĥéméš (%1) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>All files (*)</source>
+        <translation>[Åĺĺ ƒíĺéš (*) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Export the theme</source>
+        <translation>[Éxþöŕť ťĥé ťĥémé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh theme (*.toml)</source>
+        <translation>[ÖþéñŠéšĥ ťĥémé (*.ťömĺ) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Alacritty colors (*.toml)</source>
+        <translation>[Åĺáçŕíťťý çöĺöŕš (*.ťömĺ) ~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>SettingsView</name>
     <message>
         <source>General</source>
@@ -3311,10 +4438,41 @@
     </message>
 </context>
 <context>
+    <name>TerminalOptionRow</name>
+    <message>
+        <source>Set in this profile.</source>
+        <translation>[Šéť íñ ťĥíš þŕöƒíĺé. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Inherited from the default profile.</source>
+        <translation>[Íñĥéŕíťéď ƒŕöm ťĥé ďéƒáüĺť þŕöƒíĺé. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use the inherited value</source>
+        <translation>[Üšé ťĥé íñĥéŕíťéď váĺüé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use OpenSesh&apos;s default</source>
+        <translation>[Üšé ÖþéñŠéšĥ&apos;š ďéƒáüĺť ~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>TerminalTab</name>
+    <message>
+        <source>The bell rang in %1.</source>
+        <translation>[Ťĥé béĺĺ ŕáñĝ íñ %1. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>a terminal</source>
+        <translation>[á ťéŕmíñáĺ ~~~]</translation>
+    </message>
     <message>
         <source>Local terminal</source>
         <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>A program in this terminal copied text to the clipboard.</source>
+        <translation>[Å þŕöĝŕám íñ ťĥíš ťéŕmíñáĺ çöþíéď ťéxť ťö ťĥé çĺíþböáŕď. ~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Scrollback</source>
@@ -3392,6 +4550,18 @@
         <source>Clear scrollback</source>
         <translation>[Çĺéáŕ šçŕöĺĺbáçķ ~~~~~]</translation>
     </message>
+    <message>
+        <source>Highlight keywords</source>
+        <translation>[Ĥíĝĥĺíĝĥť ķéýŵöŕďš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Profile</source>
+        <translation>[Þŕöƒíĺé ~~~]</translation>
+    </message>
+    <message>
+        <source>Terminal settings…</source>
+        <translation>[Ťéŕmíñáĺ šéťťíñĝš… ~~~~~~]</translation>
+    </message>
 </context>
 <context>
     <name>TerminalView</name>
@@ -3410,6 +4580,154 @@
     <message>
         <source>Quick connect</source>
         <translation>[Qüíçķ çöññéçť ~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ThemeBox</name>
+    <message>
+        <source>%1 (yours)</source>
+        <translation>[%1 (ýöüŕš) ~~~]</translation>
+    </message>
+    <message>
+        <source>Missing theme (%1)</source>
+        <translation>[Míššíñĝ ťĥémé (%1) ~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ThemeColorOption</name>
+    <message>
+        <source>Use the theme&apos;s color</source>
+        <translation>[Üšé ťĥé ťĥémé&apos;š çöĺöŕ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1: use the theme&apos;s color</source>
+        <translation>[%1: üšé ťĥé ťĥémé&apos;š çöĺöŕ ~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ThemeEditorDialog</name>
+    <message>
+        <source>Text</source>
+        <translation>[Ťéxť ~~]</translation>
+    </message>
+    <message>
+        <source>Background</source>
+        <translation>[Báçķĝŕöüñď ~~~]</translation>
+    </message>
+    <message>
+        <source>Cursor</source>
+        <translation>[Çüŕšöŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Text under the cursor</source>
+        <translation>[Ťéxť üñďéŕ ťĥé çüŕšöŕ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Selection</source>
+        <translation>[Šéĺéçťíöñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Selected text</source>
+        <translation>[Šéĺéçťéď ťéxť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Search match</source>
+        <translation>[Šéáŕçĥ máťçĥ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Search match text</source>
+        <translation>[Šéáŕçĥ máťçĥ ťéxť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Current match</source>
+        <translation>[Çüŕŕéñť máťçĥ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Current match text</source>
+        <translation>[Çüŕŕéñť máťçĥ ťéxť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>[Bĺáçķ ~~]</translation>
+    </message>
+    <message>
+        <source>Red</source>
+        <translation>[Ŕéď ~]</translation>
+    </message>
+    <message>
+        <source>Green</source>
+        <translation>[Ĝŕééñ ~~]</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>[Ýéĺĺöŵ ~~]</translation>
+    </message>
+    <message>
+        <source>Blue</source>
+        <translation>[Bĺüé ~~]</translation>
+    </message>
+    <message>
+        <source>Magenta</source>
+        <translation>[Máĝéñťá ~~~]</translation>
+    </message>
+    <message>
+        <source>Cyan</source>
+        <translation>[Çýáñ ~~]</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>[Ŵĥíťé ~~]</translation>
+    </message>
+    <message>
+        <source>%1 (edited)</source>
+        <translation>[%1 (éďíťéď) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Bright %1</source>
+        <translation>[Bŕíĝĥť %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>Edit a copy of this theme</source>
+        <translation>[Éďíť á çöþý öƒ ťĥíš ťĥémé ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Edit theme</source>
+        <translation>[Éďíť ťĥémé ~~~]</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>[Šávé ~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the theme.</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé ťĥémé. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Theme saved.</source>
+        <translation>[Ťĥémé šávéď. ~~~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Theme name</source>
+        <translation>[Ťĥémé ñámé ~~~]</translation>
+    </message>
+    <message>
+        <source>Pick a color to change it.</source>
+        <translation>[Þíçķ á çöĺöŕ ťö çĥáñĝé íť. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1: %2</source>
+        <translation>[%1: %2 ~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ThemeSample</name>
+    <message>
+        <source>Theme sample</source>
+        <translation>[Ťĥémé šámþĺé ~~~~]</translation>
     </message>
 </context>
 <context>

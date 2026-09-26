@@ -158,43 +158,83 @@ public:
 
 // ---- Metrics ------------------------------------------------------------------------------------
 
-bool Metrics::operator==(const Metrics &other) const
+bool FontSpec::operator==(const FontSpec &other) const
 {
-    return family == other.family && pointSize == other.pointSize && dpr == other.dpr
-            && cellWidth == other.cellWidth && cellHeight == other.cellHeight
-            && baseline == other.baseline && lineThickness == other.lineThickness
-            && underlineTop == other.underlineTop && strikeTop == other.strikeTop;
+    return family == other.family && fallbacks == other.fallbacks
+            && pointSize == other.pointSize && weight == other.weight
+            && boldWeight == other.boldWeight && italic == other.italic
+            && lineHeight == other.lineHeight && letterSpacing == other.letterSpacing
+            && antialiasing == other.antialiasing && hinting == other.hinting
+            && ligatures == other.ligatures;
 }
 
-QFont terminalFont(const QString &family, qreal pointSize, int style)
+bool Metrics::operator==(const Metrics &other) const
 {
-    QFont font(family);
+    return font == other.font && dpr == other.dpr && cellWidth == other.cellWidth
+            && cellHeight == other.cellHeight && baseline == other.baseline
+            && lineThickness == other.lineThickness && underlineTop == other.underlineTop
+            && strikeTop == other.strikeTop;
+}
+
+QFont terminalFont(const FontSpec &spec, int style)
+{
+    QFont font;
+    QStringList families;
+    if (!spec.family.isEmpty())
+        families.append(spec.family);
+    for (const QString &fallback : spec.fallbacks) {
+        if (!fallback.isEmpty() && !families.contains(fallback))
+            families.append(fallback);
+    }
+    if (!families.isEmpty())
+        font.setFamilies(families);
     font.setStyleHint(QFont::Monospace);
-    font.setPointSizeF(pointSize > 0 ? pointSize : 11.0);
+    font.setPointSizeF(spec.pointSize > 0 ? spec.pointSize : 11.0);
     // Glyphs are shaped one cell (or cluster) at a time, so kerning could only shift them.
     font.setKerning(false);
-    font.setBold((style & 1) != 0);
-    font.setItalic((style & 2) != 0);
+    const int weight = (style & 1) != 0 ? spec.boldWeight : spec.weight;
+    font.setWeight(QFont::Weight(std::clamp(weight, 100, 900)));
+    font.setItalic(spec.italic && (style & 2) != 0);
+    font.setStyleStrategy(spec.antialiasing ? QFont::PreferAntialias : QFont::NoAntialias);
+    switch (spec.hinting) {
+    case 1:
+        font.setHintingPreference(QFont::PreferNoHinting);
+        break;
+    case 2:
+        font.setHintingPreference(QFont::PreferVerticalHinting);
+        break;
+    case 3:
+        font.setHintingPreference(QFont::PreferFullHinting);
+        break;
+    default:
+        font.setHintingPreference(QFont::PreferDefaultHinting);
+        break;
+    }
     return font;
 }
 
-Metrics computeMetrics(const QString &family, qreal pointSize, qreal dpr)
+Metrics computeMetrics(const FontSpec &font, qreal dpr)
 {
     Metrics metrics;
-    metrics.family = family;
-    metrics.pointSize = pointSize;
+    metrics.font = font;
     metrics.dpr = dpr > 0 ? dpr : 1.0;
     const qreal d = metrics.dpr;
-    const QFontMetricsF fm(terminalFont(family, pointSize, 0));
+    const QFontMetricsF fm(terminalFont(font, 0));
 
-    // Whole device pixels, so every cell starts on a pixel (ADR 0013).
-    metrics.cellWidth = std::max(1, int(std::lround(fm.horizontalAdvance(QLatin1Char('M')) * d)));
+    // Whole device pixels, so every cell starts on a pixel (ADR 0013). Letter spacing widens
+    // (or narrows) the cell; glyphs stay centered in it.
+    const qreal advance = fm.horizontalAdvance(QLatin1Char('M'));
+    metrics.cellWidth = std::max(1, int(std::lround((advance + font.letterSpacing) * d)));
     const qreal ascent = std::max<qreal>(fm.ascent(), 1.0);
     const qreal descent = std::max<qreal>(fm.descent(), 0.0);
     const qreal leading = std::max<qreal>(fm.leading(), 0.0);
-    metrics.cellHeight = std::max(2, int(std::lround((ascent + descent + leading) * d)));
-    metrics.baseline =
-            std::clamp(int(std::lround((leading / 2 + ascent) * d)), 1, metrics.cellHeight - 1);
+    const qreal natural = (ascent + descent + leading) * d;
+    const qreal lineHeight = std::clamp<qreal>(font.lineHeight, 0.5, 3.0);
+    metrics.cellHeight = std::max(2, int(std::lround(natural * lineHeight)));
+    // Extra line height is shared above and below the text.
+    const qreal extra = (metrics.cellHeight - natural) / 2;
+    metrics.baseline = std::clamp(int(std::lround((leading / 2 + ascent) * d + extra)), 1,
+                                  metrics.cellHeight - 1);
 
     const int thickness = std::max(1, int(std::lround(fm.lineWidth() * d)));
     metrics.lineThickness = thickness;
@@ -213,7 +253,7 @@ void GlyphAtlas::reset(const Metrics &metrics)
 {
     m_metrics = metrics;
     for (int style = 0; style < 4; ++style) {
-        m_fonts[style] = terminalFont(metrics.family, metrics.pointSize, style);
+        m_fonts[style] = terminalFont(metrics.font, style);
         m_rawFonts[style] = QRawFont::fromFont(m_fonts[style]);
         // The full block's design box is the font's cell: box drawing is stretched from it.
         m_cellBox[style] = QRectF();
@@ -244,6 +284,9 @@ void GlyphAtlas::clearContents(int size)
     m_shelfHeight = 0;
     m_fast.clear();
     m_clusters.clear();
+    m_indexed.clear();
+    for (auto &shaped : m_shaped)
+        shaped.clear();
     ++m_generation;
     m_dirty = true;
     addFixedTiles();
@@ -408,6 +451,73 @@ GlyphAtlas::Glyph GlyphAtlas::cluster(const QString &text, int style, int span)
     return result;
 }
 
+QList<quint32> GlyphAtlas::shapeRun(const QString &text, int style)
+{
+    style &= 3;
+    QHash<QString, QList<quint32>> &cache = m_shaped[style];
+    const auto found = cache.constFind(text);
+    if (found != cache.constEnd())
+        return *found;
+    if (m_frameNs >= kFrameBudgetNs) {
+        ++m_deferred;
+        return {};
+    }
+    QElapsedTimer timer;
+    timer.start();
+    QList<quint32> result(text.size(), 0);
+    const QRawFont &raw = m_rawFonts[style];
+    if (raw.isValid()) {
+        QTextLayout layout(text, m_fonts[style]);
+        QTextOption option;
+        option.setWrapMode(QTextOption::NoWrap);
+        layout.setTextOption(option);
+        layout.beginLayout();
+        const QTextLine line = layout.createLine();
+        layout.endLayout();
+        const QList<QGlyphRun> runs = line.isValid()
+                ? layout.glyphRuns(0, text.size(),
+                                   QTextLayout::RetrieveGlyphIndexes
+                                           | QTextLayout::RetrieveStringIndexes)
+                : QList<QGlyphRun>();
+        // Only fonts that keep one glyph per character on the grid (JetBrains Mono, Fira Code,
+        // Cascadia Code): anything else (fallback fonts, merged glyphs) stays unshaped.
+        if (runs.size() == 1 && runs.first().rawFont().familyName() == raw.familyName()) {
+            const QList<quint32> glyphs = runs.first().glyphIndexes();
+            const QList<qsizetype> indexes = runs.first().stringIndexes();
+            const QList<quint32> plain = raw.glyphIndexesForString(text);
+            if (glyphs.size() == text.size() && indexes.size() == text.size()
+                && plain.size() == text.size()) {
+                for (qsizetype i = 0; i < text.size(); ++i) {
+                    if (indexes[i] == i && glyphs[i] != 0 && glyphs[i] != plain[i])
+                        result[i] = glyphs[i];
+                }
+            }
+        }
+    }
+    m_frameNs += timer.nsecsElapsed();
+    // Bounded: a long session of changing text can't grow it without end.
+    if (cache.size() >= 4096)
+        cache.clear();
+    cache.insert(text, result);
+    return result;
+}
+
+GlyphAtlas::Glyph GlyphAtlas::glyphByIndex(quint32 index, int style)
+{
+    style &= 3;
+    const quint64 key = (quint64(style) << 32) | index;
+    const auto found = m_indexed.constFind(key);
+    if (found != m_indexed.constEnd())
+        return *found;
+    if (m_frameNs >= kFrameBudgetNs) {
+        ++m_deferred;
+        return Glyph();
+    }
+    const Glyph result = rasterize(QString(QLatin1Char(' ')), 0, style, 1, index);
+    m_indexed.insert(key, result);
+    return result;
+}
+
 int GlyphAtlas::spanOf(const QString &text) const
 {
     if (!m_metrics.valid())
@@ -417,7 +527,8 @@ int GlyphAtlas::spanOf(const QString &text) const
     return advance > cell * 1.5 ? 2 : 1;
 }
 
-GlyphAtlas::Glyph GlyphAtlas::rasterize(const QString &text, char32_t single, int style, int span)
+GlyphAtlas::Glyph GlyphAtlas::rasterize(const QString &text, char32_t single, int style, int span,
+                                        quint32 glyphIndex)
 {
     Glyph result;
     const Metrics &m = m_metrics;
@@ -431,19 +542,21 @@ GlyphAtlas::Glyph GlyphAtlas::rasterize(const QString &text, char32_t single, in
     // (pad, pad): room for italic overhang, accents and tall fallback glyphs.
     const qreal dpr = m.dpr;
     const int pad = std::max(2, m.cellHeight / 2);
-    QImage canvas(m.cellWidth * span + 2 * pad, m.cellHeight + 2 * pad,
+    // A ligature's last glyph may draw over the cells before it (JetBrains Mono's `===`).
+    const int padX = glyphIndex != 0 ? std::max(pad, 3 * m.cellWidth) : pad;
+    QImage canvas(m.cellWidth * span + 2 * padX, m.cellHeight + 2 * pad,
                   QImage::Format_ARGB32_Premultiplied);
     canvas.fill(Qt::transparent);
     canvas.setDevicePixelRatio(dpr);
     const qreal cellWidth = qreal(m.cellWidth * span) / dpr;
     const qreal cellHeight = qreal(m.cellHeight) / dpr;
-    const qreal left = pad / dpr;
+    const qreal left = padX / dpr;
     const qreal top = pad / dpr;
     const qreal baseline = (pad + m.baseline) / dpr;
 
     {
         QPainter painter(&canvas);
-        painter.setRenderHint(QPainter::TextAntialiasing, true);
+        painter.setRenderHint(QPainter::TextAntialiasing, m.font.antialiasing);
         painter.setPen(Qt::white);
 
         QList<QGlyphRun> runs;
@@ -453,7 +566,18 @@ GlyphAtlas::Glyph GlyphAtlas::rasterize(const QString &text, char32_t single, in
         qreal runY = 0.0;
         // Fast path: a character the grid font has, without text layout.
         const QRawFont &raw = m_rawFonts[style];
-        if (single != 0 && raw.isValid() && raw.supportsCharacter(uint(single))) {
+        if (glyphIndex != 0 && raw.isValid()) {
+            const QList<quint32> indexes { glyphIndex };
+            QGlyphRun run;
+            run.setRawFont(raw);
+            run.setGlyphIndexes(indexes);
+            run.setPositions({ QPointF(0, 0) });
+            const QList<QPointF> advances = raw.advancesForGlyphIndexes(indexes);
+            advance = advances.isEmpty() ? cellWidth : advances.first().x();
+            ascent = raw.ascent();
+            descent = raw.descent();
+            runs.append(run);
+        } else if (single != 0 && raw.isValid() && raw.supportsCharacter(uint(single))) {
             const QList<quint32> indexes = raw.glyphIndexesForString(text);
             if (indexes.size() == 1 && indexes.first() != 0) {
                 QGlyphRun run;
@@ -470,7 +594,7 @@ GlyphAtlas::Glyph GlyphAtlas::rasterize(const QString &text, char32_t single, in
         // Everything else goes through text layout: font fallback (CJK, emoji, symbols),
         // combining marks, variation selectors.
         QTextLayout layout;
-        if (runs.isEmpty()) {
+        if (runs.isEmpty() && glyphIndex == 0) {
             layout.setText(text);
             layout.setFont(m_fonts[style]);
             QTextOption option;
@@ -548,7 +672,7 @@ GlyphAtlas::Glyph GlyphAtlas::rasterize(const QString &text, char32_t single, in
         QRect placed;
         if (place(canvas, ink, color, &placed)) {
             result.rect = placed;
-            result.offset = QPoint(minX - pad, minY - pad);
+            result.offset = QPoint(minX - padX, minY - pad);
             result.color = color;
         } else {
             result.valid = false;
@@ -737,7 +861,9 @@ void RootNode::sync(QQuickWindow *window, const RenderInput &input, RenderStats 
 {
     stats.software = input.software;
     m_background->setRect(QRectF(QPointF(0, 0), input.size));
-    m_background->setColor(QColor::fromRgba(m_frameBackground));
+    QColor background = QColor::fromRgba(m_frameBackground);
+    background.setAlphaF(background.alphaF() * std::clamp<qreal>(input.backgroundOpacity, 0.0, 1.0));
+    m_background->setColor(background);
     // The software backend skips custom geometry nodes (ADR 0013): keep only the background.
     if (input.software || !input.metrics.valid())
         return;
@@ -801,6 +927,65 @@ GlyphAtlas::Glyph RootNode::glyphForCell(int row, const GridCell &cell, int span
     for (std::size_t k = 0; k < count && offset + 1 + k < clusters.size(); ++k)
         text.push_back(clusters[offset + 1 + k]);
     return m_atlas.cluster(QString::fromUcs4(text.data(), qsizetype(text.size())), style, span);
+}
+
+namespace {
+
+// Characters that take part in programming ligatures (`->`, `!=`, `===`, `<=>`, `::`, ...): a row
+// is only shaped where two of them are next to each other.
+bool ligatureSymbol(char32_t ch)
+{
+    switch (ch) {
+    case U'!': case U'#': case U'$': case U'%': case U'&': case U'*': case U'+': case U'-':
+    case U'.': case U'/': case U':': case U';': case U'<': case U'=': case U'>': case U'?':
+    case U'@': case U'\\': case U'^': case U'_': case U'|': case U'~': case U'[': case U']':
+    case U'{': case U'}': case U'(': case U')':
+        return true;
+    default:
+        return false;
+    }
+}
+
+} // namespace
+
+void RootNode::findLigatures(const GridCell *cells)
+{
+    m_scratchLigatures.assign(std::size_t(m_columns), 0);
+    const auto style = [](const GridCell &cell) {
+        return ((cell.flags & flag(TerminalCellFlag::Bold)) ? 1 : 0)
+                | ((cell.flags & flag(TerminalCellFlag::Italic)) ? 2 : 0);
+    };
+    const auto plain = [](const GridCell &cell) {
+        const std::uint16_t skip = flag(TerminalCellFlag::Wide) | flag(TerminalCellFlag::WideSpacer)
+                | flag(TerminalCellFlag::Hidden);
+        return cell.cluster == 0 && (cell.flags & skip) == 0 && cell.ch >= U' ' && cell.ch < 0x7f;
+    };
+    int column = 0;
+    while (column < m_columns) {
+        if (!plain(cells[column])) {
+            ++column;
+            continue;
+        }
+        // A run of plain ASCII in one style.
+        const int start = column;
+        const int runStyle = style(cells[column]);
+        bool candidate = false;
+        while (column < m_columns && plain(cells[column]) && style(cells[column]) == runStyle) {
+            if (column > start && ligatureSymbol(cells[column].ch)
+                && ligatureSymbol(cells[column - 1].ch))
+                candidate = true;
+            ++column;
+        }
+        if (!candidate)
+            continue;
+        QString text;
+        text.reserve(column - start);
+        for (int i = start; i < column; ++i)
+            text.append(QChar(char16_t(cells[i].ch)));
+        const QList<quint32> shaped = m_atlas.shapeRun(text, runStyle);
+        for (qsizetype i = 0; i < shaped.size() && start + i < m_columns; ++i)
+            m_scratchLigatures[std::size_t(start + i)] = shaped[i];
+    }
 }
 
 void RootNode::appendGlyph(std::vector<Quad> &out, const GlyphAtlas::Glyph &glyph, int x, int y,
@@ -933,6 +1118,9 @@ void RootNode::buildRow(int row, const RenderInput &input)
     // Glyphs first, then decorations on top of them.
     m_scratchGlyphs.clear();
     m_scratchDecorations.clear();
+    const bool ligatures = m.font.ligatures;
+    if (ligatures)
+        findLigatures(cells);
     for (int column = 0; column < m_columns; ++column) {
         const GridCell &cell = cells[column];
         if (cell.flags & flag(TerminalCellFlag::WideSpacer))
@@ -942,8 +1130,14 @@ void RootNode::buildRow(int row, const RenderInput &input)
         const bool wide = (cell.flags & flag(TerminalCellFlag::Wide)) != 0;
         const int span = wide && column + 1 < m_columns ? 2 : 1;
         const int x = column * cellWidth;
-        if (cell.cluster != 0 || (cell.ch != U' ' && cell.ch != 0))
+        const quint32 shaped = ligatures ? m_scratchLigatures[std::size_t(column)] : 0;
+        if (shaped != 0) {
+            const int style = ((cell.flags & flag(TerminalCellFlag::Bold)) ? 1 : 0)
+                    | ((cell.flags & flag(TerminalCellFlag::Italic)) ? 2 : 0);
+            appendGlyph(m_scratchGlyphs, m_atlas.glyphByIndex(shaped, style), x, y, cell.fg);
+        } else if (cell.cluster != 0 || (cell.ch != U' ' && cell.ch != 0)) {
             appendGlyph(m_scratchGlyphs, glyphForCell(row, cell, span), x, y, cell.fg);
+        }
         appendDecorations(m_scratchDecorations, cell, x, y, span * cellWidth);
     }
     m_scratchGlyphs.insert(m_scratchGlyphs.end(), m_scratchDecorations.begin(),

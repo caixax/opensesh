@@ -30,6 +30,7 @@ namespace opensesh {
 
 // Shared structs defined by the cxx bridge (src/bridge/terminal_view.rs).
 struct TerminalCell;
+struct TerminalFontOptions;
 struct TerminalFrameInfo;
 struct TerminalFrameRequest;
 struct TerminalMouseEvent;
@@ -49,6 +50,9 @@ class TerminalItemBase : public QQuickItem
     Q_PROPERTY(qreal padding READ padding WRITE setPadding NOTIFY paddingChanged)
     // No cursor blinking (bind it to Theme.reduceMotion).
     Q_PROPERTY(bool reduceMotion READ reduceMotion WRITE setReduceMotion NOTIFY reduceMotionChanged)
+    // Opacity of the default background, 0 to 1 (cells with their own background stay opaque).
+    Q_PROPERTY(qreal backgroundOpacity READ backgroundOpacity WRITE setBackgroundOpacity NOTIFY
+                       backgroundOpacityChanged)
     // Grid size that fits the item, from its size, the padding and the cell size.
     Q_PROPERTY(int columns READ columns NOTIFY gridSizeChanged)
     Q_PROPERTY(int lines READ lines NOTIFY gridSizeChanged)
@@ -65,10 +69,18 @@ public:
     explicit TerminalItemBase(QObject *parent);
     ~TerminalItemBase() override;
 
-    QString fontFamily() const { return m_fontFamily; }
+    QString fontFamily() const { return m_font.family; }
     void setFontFamily(const QString &family);
-    qreal fontPointSize() const { return m_fontPointSize; }
+    qreal fontPointSize() const { return m_font.pointSize; }
     void setFontPointSize(qreal size);
+    // Every font option at once (PLAN §6.2), for the Rust side: one metrics update.
+    void setFontOptions(const QString &family, const QStringList &fallbacks,
+                        const TerminalFontOptions &options);
+    qreal backgroundOpacity() const { return m_backgroundOpacity; }
+    void setBackgroundOpacity(qreal opacity);
+    // Calls handleScrollTick() every frame (about 16 ms) until it returns false: smooth
+    // scrolling, one step per tick.
+    void startScrollTicks();
     qreal padding() const { return m_padding; }
     void setPadding(qreal padding);
     bool reduceMotion() const { return m_reduceMotion; }
@@ -98,6 +110,7 @@ Q_SIGNALS:
     void fontPointSizeChanged();
     void paddingChanged();
     void reduceMotionChanged();
+    void backgroundOpacityChanged();
     void gridSizeChanged(int columns, int lines);
     void cellSizeChanged();
 
@@ -132,6 +145,8 @@ protected:
     virtual void handleFocusChange(bool focused) = 0;
     // Text committed by an input method (the preedit is drawn here, in C++).
     virtual void handleImeCommit(const QString &text) = 0;
+    // One step of a smooth scroll (see startScrollTicks). Returns whether more steps follow.
+    virtual bool handleScrollTick() = 0;
 
     // ---- QQuickItem ----------------------------------------------------------------------------
 
@@ -170,9 +185,9 @@ private:
     // Re-sends the last hover position with new modifiers (Ctrl pressed or released over a link).
     void resendHover(Qt::KeyboardModifiers modifiers);
 
-    QString m_fontFamily;
-    qreal m_fontPointSize;
+    terminal::FontSpec m_font;
     qreal m_padding = 0.0;
+    qreal m_backgroundOpacity = 1.0;
     bool m_reduceMotion = false;
     int m_columns = 0;
     int m_lines = 0;
@@ -184,6 +199,9 @@ private:
     // Last hover position, while the pointer is over the item.
     bool m_hovering = false;
     QPointF m_hoverPosition;
+
+    // Smooth scrolling steps (GUI thread).
+    QTimer m_scrollTimer;
 
     // Cursor blinking (GUI thread). `m_blinkOn` is read during updatePaintNode.
     QTimer m_blinkTimer;

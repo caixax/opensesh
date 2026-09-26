@@ -14,6 +14,22 @@ pub const WHEEL_NOTCH: i32 = 120;
 /// Lines the scrollback (or alternate scroll) moves per wheel notch.
 pub const LINES_PER_NOTCH: i32 = 3;
 
+/// Lines to scroll for `steps` wheel notches at the profile's `speed` ([`LINES_PER_NOTCH`] per
+/// notch at 1.0), at least one line per event.
+#[must_use]
+pub fn scaled_lines(steps: i32, speed: f64) -> i32 {
+    let speed = if speed.is_finite() {
+        speed.clamp(0.1, 20.0)
+    } else {
+        1.0
+    };
+    let lines = (f64::from(steps) * f64::from(LINES_PER_NOTCH) * speed).round();
+    // Bounded by the clamps: 50 steps x 3 lines x 20 fits easily.
+    #[allow(clippy::cast_possible_truncation)]
+    let lines = lines.clamp(f64::from(i32::MIN), f64::from(i32::MAX)) as i32;
+    if lines == 0 { steps.signum() } else { lines }
+}
+
 /// Most wheel steps one event may produce (a runaway touchpad or a huge synthetic delta).
 const MAX_WHEEL_STEPS: i32 = 50;
 
@@ -330,5 +346,15 @@ mod tests {
         assert_eq!(side_of(1.0, 4.0, 10.0, 5), Side::Left);
         assert_eq!(side_of(500.0, 4.0, 10.0, 5), Side::Right);
         assert_eq!(side_of(5.0, 4.0, 0.0, 5), Side::Left);
+    }
+
+    #[test]
+    fn scroll_speed_scales_the_wheel() {
+        assert_eq!(scaled_lines(1, 1.0), 3);
+        assert_eq!(scaled_lines(-2, 1.0), -6);
+        assert_eq!(scaled_lines(1, 2.5), 8);
+        assert_eq!(scaled_lines(1, 0.25), 1);
+        assert_eq!(scaled_lines(-1, 0.1), -1, "at least one line");
+        assert_eq!(scaled_lines(1, f64::NAN), 3);
     }
 }

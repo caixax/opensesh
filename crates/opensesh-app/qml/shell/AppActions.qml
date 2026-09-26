@@ -32,7 +32,7 @@ QtObject {
         OsAction {
             actionId: "app.commandPalette"
             text: qsTr("Command palette")
-            shortcut: "Ctrl+Shift+P"
+            defaultShortcut: "Ctrl+Shift+P"
             category: root.categoryApp
             iconName: "command"
             onTriggered: root.shell.togglePalette()
@@ -40,7 +40,7 @@ QtObject {
         OsAction {
             actionId: "app.quickConnect"
             text: qsTr("Quick connect")
-            shortcut: "Ctrl+Shift+O"
+            defaultShortcut: "Ctrl+Shift+O"
             category: root.categorySessions
             iconName: "plug-zap"
             onTriggered: root.comingSoon.notify(qsTr("Quick connect"), 5)
@@ -48,7 +48,7 @@ QtObject {
         OsAction {
             actionId: "tab.newLocal"
             text: qsTr("New local terminal tab")
-            shortcut: "Ctrl+Shift+T"
+            defaultShortcut: "Ctrl+Shift+T"
             category: root.categoryTabs
             iconName: "square-terminal"
             onTriggered: root.shell.newTab()
@@ -56,7 +56,7 @@ QtObject {
         OsAction {
             actionId: "tab.duplicate"
             text: qsTr("Duplicate tab")
-            shortcut: "Ctrl+Shift+D"
+            defaultShortcut: "Ctrl+Shift+D"
             category: root.categoryTabs
             iconName: "copy"
             onTriggered: root.comingSoon.notify(qsTr("Duplicating tabs"), 4)
@@ -64,7 +64,7 @@ QtObject {
         OsAction {
             actionId: "tab.close"
             text: qsTr("Close tab")
-            shortcut: "Ctrl+Shift+W"
+            defaultShortcut: "Ctrl+Shift+W"
             category: root.categoryTabs
             iconName: "x"
             enabled: root.shell.currentTab > 0
@@ -73,7 +73,7 @@ QtObject {
         OsAction {
             actionId: "tab.reopenClosed"
             text: qsTr("Reopen closed tab")
-            shortcut: "Ctrl+Alt+Shift+T"
+            defaultShortcut: "Ctrl+Alt+Shift+T"
             category: root.categoryTabs
             iconName: "rotate-ccw"
             onTriggered: root.comingSoon.notify(qsTr("Reopening closed tabs"), 4)
@@ -81,7 +81,7 @@ QtObject {
         OsAction {
             actionId: "tab.next"
             text: qsTr("Next tab")
-            shortcut: "Ctrl+Tab"
+            defaultShortcut: "Ctrl+Tab"
             category: root.categoryTabs
             iconName: "chevron-right"
             enabled: root.shell.sessionCount > 0
@@ -90,7 +90,7 @@ QtObject {
         OsAction {
             actionId: "tab.previous"
             text: qsTr("Previous tab")
-            shortcut: "Ctrl+Shift+Tab"
+            defaultShortcut: "Ctrl+Shift+Tab"
             category: root.categoryTabs
             iconName: "chevron-left"
             enabled: root.shell.sessionCount > 0
@@ -100,7 +100,7 @@ QtObject {
         OsAction {
             actionId: "tab.nextAlt"
             text: qsTr("Next tab")
-            shortcut: "Ctrl+PgDown"
+            defaultShortcut: "Ctrl+PgDown"
             category: root.categoryTabs
             iconName: "chevron-right"
             showInPalette: false
@@ -110,7 +110,7 @@ QtObject {
         OsAction {
             actionId: "tab.previousAlt"
             text: qsTr("Previous tab")
-            shortcut: "Ctrl+PgUp"
+            defaultShortcut: "Ctrl+PgUp"
             category: root.categoryTabs
             iconName: "chevron-left"
             showInPalette: false
@@ -121,7 +121,7 @@ QtObject {
         OsAction {
             actionId: "terminal.copy"
             text: qsTr("Copy")
-            shortcut: "Ctrl+Shift+C"
+            defaultShortcut: "Ctrl+Shift+C"
             category: root.categoryTerminal
             iconName: "copy"
             enabled: root.shell.currentTerminal !== null
@@ -130,7 +130,7 @@ QtObject {
         OsAction {
             actionId: "terminal.paste"
             text: qsTr("Paste")
-            shortcut: "Ctrl+Shift+V"
+            defaultShortcut: "Ctrl+Shift+V"
             category: root.categoryTerminal
             enabled: root.shell.currentTerminal !== null
             onTriggered: root.shell.currentTerminal.paste()
@@ -138,7 +138,7 @@ QtObject {
         OsAction {
             actionId: "terminal.find"
             text: qsTr("Find in terminal")
-            shortcut: "Ctrl+Shift+F"
+            defaultShortcut: "Ctrl+Shift+F"
             category: root.categoryTerminal
             iconName: "search"
             enabled: root.shell.currentTerminal !== null
@@ -159,10 +159,53 @@ QtObject {
             enabled: root.shell.currentTerminal !== null
             onTriggered: root.shell.currentTerminal.clearScrollback()
         },
+        // Font zoom of the current tab (PLAN §6.4).
+        OsAction {
+            actionId: "terminal.zoomIn"
+            text: qsTr("Make the terminal text bigger")
+            defaultShortcut: "Ctrl+="
+            category: root.categoryTerminal
+            iconName: "plus"
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.zoom(1)
+        },
+        OsAction {
+            actionId: "terminal.zoomOut"
+            text: qsTr("Make the terminal text smaller")
+            defaultShortcut: "Ctrl+-"
+            category: root.categoryTerminal
+            iconName: "minus"
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.zoom(-1)
+        },
+        OsAction {
+            actionId: "terminal.zoomReset"
+            text: qsTr("Reset the terminal text size")
+            defaultShortcut: "Ctrl+0"
+            category: root.categoryTerminal
+            iconName: "rotate-ccw"
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.zoom(0)
+        },
+        OsAction {
+            actionId: "terminal.toggleHighlight"
+            text: qsTr("Toggle keyword highlighting in this tab")
+            category: root.categoryTerminal
+            iconName: "zap"
+            enabled: root.shell.currentTerminal !== null
+            onTriggered: root.shell.currentTerminal.toggleHighlight()
+        },
+        OsAction {
+            actionId: "terminal.settings"
+            text: qsTr("Terminal settings")
+            category: root.categoryTerminal
+            iconName: "square-terminal"
+            onTriggered: root.shell.openSettings("terminal")
+        },
         OsAction {
             actionId: "view.sidePanel"
             text: qsTr("Toggle side panel")
-            shortcut: "Ctrl+Shift+E"
+            defaultShortcut: "Ctrl+Shift+E"
             category: root.categoryView
             iconName: "panel-right"
             onTriggered: root.shell.toggleSidePanel()
@@ -170,7 +213,7 @@ QtObject {
         OsAction {
             actionId: "app.settings"
             text: qsTr("Open settings")
-            shortcut: "Ctrl+,"
+            defaultShortcut: "Ctrl+,"
             category: root.categoryApp
             iconName: "settings"
             onTriggered: root.shell.showView("settings")
@@ -178,7 +221,7 @@ QtObject {
         OsAction {
             actionId: "app.fullscreen"
             text: qsTr("Toggle full screen")
-            shortcut: "F11"
+            defaultShortcut: "F11"
             category: root.categoryView
             iconName: "maximize-2"
             onTriggered: root.shell.toggleFullScreen()
@@ -303,7 +346,7 @@ QtObject {
         OsAction {
             actionId: "app.quit"
             text: qsTr("Quit OpenSesh")
-            shortcut: "Ctrl+Shift+Q"
+            defaultShortcut: "Ctrl+Shift+Q"
             category: root.categoryApp
             iconName: "log-out"
             onTriggered: root.window.close()
@@ -312,7 +355,7 @@ QtObject {
         OsAction {
             actionId: "focus.nextRegion"
             text: qsTr("Focus the next region")
-            shortcut: "F6"
+            defaultShortcut: "F6"
             category: root.categoryView
             showInPalette: false
             onTriggered: root.shell.cycleRegion(1)
@@ -320,7 +363,7 @@ QtObject {
         OsAction {
             actionId: "focus.previousRegion"
             text: qsTr("Focus the previous region")
-            shortcut: "Shift+F6"
+            defaultShortcut: "Shift+F6"
             category: root.categoryView
             showInPalette: false
             onTriggered: root.shell.cycleRegion(-1)
@@ -329,7 +372,7 @@ QtObject {
         OsAction {
             actionId: "focus.nextRegionAlt"
             text: qsTr("Focus the next region")
-            shortcut: "Ctrl+F6"
+            defaultShortcut: "Ctrl+F6"
             category: root.categoryView
             showInPalette: false
             onTriggered: root.shell.cycleRegion(1)
@@ -337,7 +380,7 @@ QtObject {
         OsAction {
             actionId: "focus.previousRegionAlt"
             text: qsTr("Focus the previous region")
-            shortcut: "Ctrl+Shift+F6"
+            defaultShortcut: "Ctrl+Shift+F6"
             category: root.categoryView
             showInPalette: false
             onTriggered: root.shell.cycleRegion(-1)
@@ -390,7 +433,7 @@ QtObject {
             const action = gotoComponent.createObject(root, {
                 actionId: "tab.goto" + n,
                 text: n === 9 ? qsTr("Go to the last tab") : qsTr("Go to tab %1").arg(n),
-                shortcut: "Alt+" + n,
+                defaultShortcut: "Alt+" + n,
                 tabNumber: n
             });
             ActionRegistry.register(action);
@@ -399,8 +442,15 @@ QtObject {
             for (const action of debugActions)
                 ActionRegistry.register(action);
         }
-        const conflicts = ActionRegistry.conflicts();
-        if (conflicts.length > 0)
-            console.warn("AppActions: conflicting shortcuts:", JSON.stringify(conflicts));
+        // The defaults must never clash; the user's own choices are shown in Settings > Shortcuts.
+        const seen = {};
+        for (const action of ActionRegistry.actions) {
+            const key = action.defaultShortcut.toLowerCase();
+            if (key.length === 0)
+                continue;
+            if (seen[key])
+                console.warn("AppActions: conflicting default shortcuts:", seen[key], action.actionId);
+            seen[key] = action.actionId;
+        }
     }
 }

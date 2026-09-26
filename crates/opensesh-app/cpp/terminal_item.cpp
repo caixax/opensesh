@@ -68,10 +68,10 @@ struct TerminalItemBase::FfiBuffers
 
 TerminalItemBase::TerminalItemBase(QQuickItem *parent)
     : QQuickItem(parent)
-    , m_fontFamily(QStringLiteral("JetBrains Mono"))
-    , m_fontPointSize(kDefaultPointSize)
     , m_ffi(std::make_unique<FfiBuffers>())
 {
+    m_font.family = QStringLiteral("JetBrains Mono");
+    m_font.pointSize = kDefaultPointSize;
     setFlag(ItemHasContents, true);
     setFlag(ItemAcceptsInputMethod, true);
     setAcceptedMouseButtons(Qt::AllButtons);
@@ -80,6 +80,11 @@ TerminalItemBase::TerminalItemBase(QQuickItem *parent)
     setCursor(Qt::IBeamCursor);
 
     connect(&m_blinkTimer, &QTimer::timeout, this, &TerminalItemBase::onBlinkTimeout);
+    m_scrollTimer.setInterval(16);
+    connect(&m_scrollTimer, &QTimer::timeout, this, [this] {
+        if (!handleScrollTick())
+            m_scrollTimer.stop();
+    });
     connect(this, &QQuickItem::visibleChanged, this, &TerminalItemBase::updateBlinkTimer);
     if (QStyleHints *hints = QGuiApplication::styleHints())
         connect(hints, &QStyleHints::cursorFlashTimeChanged, this,
@@ -103,9 +108,9 @@ TerminalItemBase::~TerminalItemBase() = default;
 
 void TerminalItemBase::setFontFamily(const QString &family)
 {
-    if (family == m_fontFamily)
+    if (family == m_font.family)
         return;
-    m_fontFamily = family;
+    m_font.family = family;
     Q_EMIT fontFamilyChanged();
     updateMetrics();
 }
@@ -113,11 +118,56 @@ void TerminalItemBase::setFontFamily(const QString &family)
 void TerminalItemBase::setFontPointSize(qreal size)
 {
     size = std::clamp(size, kMinPointSize, kMaxPointSize);
-    if (qFuzzyCompare(size, m_fontPointSize))
+    if (qFuzzyCompare(size, m_font.pointSize))
         return;
-    m_fontPointSize = size;
+    m_font.pointSize = size;
     Q_EMIT fontPointSizeChanged();
     updateMetrics();
+}
+
+void TerminalItemBase::setFontOptions(const QString &family, const QStringList &fallbacks,
+                                      const TerminalFontOptions &options)
+{
+    terminal::FontSpec font;
+    font.family = family;
+    font.fallbacks = fallbacks;
+    font.pointSize = std::clamp<qreal>(options.point_size, kMinPointSize, kMaxPointSize);
+    font.weight = std::clamp(options.weight, 100, 900);
+    font.boldWeight = std::clamp(options.bold_weight, 100, 900);
+    font.italic = options.italic;
+    font.lineHeight = std::clamp<qreal>(options.line_height, 0.5, 3.0);
+    font.letterSpacing = std::clamp<qreal>(options.letter_spacing, -5.0, 20.0);
+    font.antialiasing = options.antialiasing;
+    font.hinting = std::clamp(options.hinting, 0, 3);
+    font.ligatures = options.ligatures;
+    if (font == m_font)
+        return;
+    const bool familyChanged = font.family != m_font.family;
+    const bool sizeChanged = !qFuzzyCompare(font.pointSize, m_font.pointSize);
+    m_font = font;
+    if (familyChanged)
+        Q_EMIT fontFamilyChanged();
+    if (sizeChanged)
+        Q_EMIT fontPointSizeChanged();
+    updateMetrics();
+    // The same cell size with another look (weights, hinting...) still needs a new atlas.
+    update();
+}
+
+void TerminalItemBase::startScrollTicks()
+{
+    if (!m_scrollTimer.isActive())
+        m_scrollTimer.start();
+}
+
+void TerminalItemBase::setBackgroundOpacity(qreal opacity)
+{
+    opacity = std::clamp<qreal>(opacity, 0.0, 1.0);
+    if (qFuzzyCompare(opacity + 1.0, m_backgroundOpacity + 1.0))
+        return;
+    m_backgroundOpacity = opacity;
+    Q_EMIT backgroundOpacityChanged();
+    update();
 }
 
 void TerminalItemBase::setPadding(qreal padding)
@@ -156,7 +206,7 @@ void TerminalItemBase::updateMetrics()
     qreal dpr = win ? win->effectiveDevicePixelRatio() : 0.0;
     if (dpr <= 0.0)
         dpr = qGuiApp ? qGuiApp->devicePixelRatio() : 1.0;
-    const terminal::Metrics metrics = terminal::computeMetrics(m_fontFamily, m_fontPointSize, dpr);
+    const terminal::Metrics metrics = terminal::computeMetrics(m_font, dpr);
     if (metrics == m_metrics)
         return;
     const qreal oldWidth = cellWidth();
@@ -164,7 +214,8 @@ void TerminalItemBase::updateMetrics()
     m_metrics = metrics;
     qCDebug(lcTerminal).nospace() << "cell " << metrics.cellWidth << "x" << metrics.cellHeight
                                   << " device px at dpr " << metrics.dpr << " for '"
-                                  << metrics.family << "' " << metrics.pointSize << " pt";
+                                  << metrics.font.family << "' " << metrics.font.pointSize
+                                  << " pt";
     if (oldWidth != cellWidth() || oldHeight != cellHeight())
         Q_EMIT cellSizeChanged();
     updateGridSize();
@@ -323,6 +374,7 @@ QSGNode *TerminalItemBase::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData
     input.metrics = m_metrics;
     input.size = QSizeF(width(), height());
     input.padding = m_padding;
+    input.backgroundOpacity = m_backgroundOpacity;
     input.software = software;
     input.cursorBlinkOn = m_blinkOn;
     input.focused = hasActiveFocus();
@@ -638,7 +690,7 @@ QVariant TerminalItemBase::inputMethodQuery(Qt::InputMethodQuery query) const
     case Qt::ImHints:
         return int(Qt::ImhNoPredictiveText | Qt::ImhNoAutoUppercase | Qt::ImhMultiLine);
     case Qt::ImFont:
-        return terminal::terminalFont(m_fontFamily, m_fontPointSize, 0);
+        return terminal::terminalFont(m_font, 0);
     case Qt::ImSurroundingText:
     case Qt::ImCurrentSelection:
         return QString();

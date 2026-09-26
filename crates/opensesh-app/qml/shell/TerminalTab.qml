@@ -1,19 +1,24 @@
 pragma ComponentBehavior: Bound
 
-// Content of one local terminal tab (Sprint 2): the TerminalItem attached to the tab's session,
-// a thin scroll bar, the search bar (Ctrl+Shift+F), the context menu (right click or the Menu
-// key), the visual bell and a banner when the shell ends with an error. A shell that exits with
-// code 0 closes its tab. Every tab stays alive while hidden, so its shell keeps running.
+// Content of one local terminal tab: the TerminalItem attached to the tab's session, with the
+// tab's profile (PLAN §6.2) and font zoom, the profile's background image, a thin scroll bar,
+// the search bar (Ctrl+Shift+F), the context menu (right click or the Menu key), the bell in the
+// profile's style and a banner when the shell ends with an error. A shell that exits with code 0
+// closes its tab. Every tab stays alive while hidden, so its shell keeps running.
 //   shell: Item            the AppShell (sessionModel, currentTab, closeTabById(), updateTab(),
 //                          shortcutText(), focusInTabStrip(), currentTerminal)
 //   tabId: int             the tab's id, which is also its session id
 //   index: int             the tab's row in shell.sessionModel
+//   profile: string        the tab's profile id (model role)
 //   startSession: bool     false: no shell (screenshot runs keep their tab titles stable)
 //   edgeInset: real        room kept free at the right edge (a frameless window's resize grip)
 //   terminal: TerminalItem read-only
 //   current: bool          read-only; this is the tab shown
+//   fontZoom: real         points added to the profile's font size (Ctrl+= / Ctrl+- / Ctrl+0)
+//   highlightOn: bool      keyword highlighting in this tab
 // Functions: focusTerminal(), openSearch(), closeSearch(), findNext(forward), copy(), paste(),
-// selectAll(), clearScrollback(), restart(), closeTab().
+// selectAll(), clearScrollback(), restart(), closeTab(), zoom(step) (0 resets),
+// toggleHighlight(), useProfile(id).
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -25,8 +30,12 @@ Item {
     required property Item shell
     required property int tabId
     required property int index
+    required property string profile
     required property bool startSession
     property real edgeInset: 0
+    property real fontZoom: 0
+    property bool highlightOn: true
+    readonly property var profileList: JSON.parse(TerminalProfiles.profiles || "[]")
 
     readonly property alias terminal: terminal
     readonly property bool current: shell.currentTabId !== 0 && shell.currentTabId === tabId
@@ -105,6 +114,39 @@ Item {
         terminal.clearScrollback();
     }
 
+    // step: +1 bigger, -1 smaller, 0 back to the profile's size.
+    function zoom(step) {
+        fontZoom = step === 0 ? 0 : Math.max(-20, Math.min(40, fontZoom + step));
+    }
+
+    function toggleHighlight() {
+        highlightOn = !highlightOn;
+    }
+
+    function useProfile(id) {
+        shell.updateTab(tabId, "profile", id);
+    }
+
+    function ringBell() {
+        const style = terminal.bellStyle;
+        if (style === "none")
+            return;
+        if (!tab.current) {
+            tab.shell.updateTab(tab.tabId, "bellRang", true);
+            return;
+        }
+        const window = tab.Window.window;
+        if (style === "sound" && Platform.beep())
+            return;
+        if (style === "notification" && window && !window.active) {
+            window.alert(0);
+            Toasts.show(qsTr("The bell rang in %1.").arg(terminal.title.length > 0 ? terminal.title : qsTr("a terminal")), "info");
+            return;
+        }
+        if (!Theme.reduceMotion)
+            bellAnimation.restart();
+    }
+
     // A Windows status such as 0xC000013A reads better in hexadecimal.
     function exitCodeText(code) {
         return code < 0 || code > 255 ? "0x" + (code >>> 0).toString(16).toUpperCase() : String(code);
@@ -139,14 +181,52 @@ Item {
             shell.currentTerminal = null;
     }
 
+    // The profile's background image, under the terminal, dimmed with the theme's background.
+    Item {
+        anchors.fill: terminal
+        visible: terminal.backgroundImage.length > 0
+
+        Image {
+            anchors.fill: parent
+            source: terminal.backgroundImage
+            asynchronous: true
+            cache: false
+            fillMode: {
+                switch (terminal.backgroundImageFit) {
+                case "contain":
+                    return Image.PreserveAspectFit;
+                case "stretch":
+                    return Image.Stretch;
+                case "tile":
+                    return Image.Tile;
+                case "center":
+                    return Image.Pad;
+                default:
+                    return Image.PreserveAspectCrop;
+                }
+            }
+            horizontalAlignment: Image.AlignHCenter
+            verticalAlignment: Image.AlignVCenter
+            clip: true
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: terminal.backgroundColor.length > 0 ? terminal.backgroundColor : Theme.bg
+            opacity: terminal.backgroundImageDim
+        }
+    }
+
     TerminalItem {
         id: terminal
 
         anchors.fill: parent
         sessionId: tab.startSession ? tab.tabId : 0
         dark: Theme.dark
-        fontFamily: Theme.monoFontFamily
-        padding: Theme.spacingSm
+        profileId: tab.profile
+        settingsRevision: TerminalProfiles.revision
+        fontZoom: tab.fontZoom
+        highlightEnabled: tab.highlightOn
         reduceMotion: Theme.reduceMotion
         Accessible.role: Accessible.Terminal
         Accessible.name: title.length > 0 ? title : qsTr("Local terminal")
@@ -156,14 +236,8 @@ Item {
             if (!tab.current)
                 tab.shell.updateTab(tab.tabId, "newOutput", true);
         }
-        onBell: {
-            if (tab.current) {
-                if (!Theme.reduceMotion)
-                    bellAnimation.restart();
-            } else {
-                tab.shell.updateTab(tab.tabId, "bellRang", true);
-            }
-        }
+        onBell: tab.ringBell()
+        onClipboardSet: Toasts.show(qsTr("A program in this terminal copied text to the clipboard."), "info")
         onExited: code => {
             if (exitCodeKnown && code === 0) {
                 // Not from inside this signal: closing the tab destroys this item.
@@ -465,6 +539,43 @@ Item {
             text: qsTr("Clear scrollback")
             iconName: "trash-2"
             onTriggered: terminal.clearScrollback()
+        }
+
+        OsMenuSeparator {}
+
+        OsMenuItem {
+            text: qsTr("Highlight keywords")
+            checkable: true
+            checked: tab.highlightOn
+            onTriggered: tab.toggleHighlight()
+        }
+
+        OsContextMenu {
+            id: profileMenu
+
+            title: qsTr("Profile")
+
+            Instantiator {
+                model: tab.profileList
+
+                delegate: OsMenuItem {
+                    required property var modelData
+
+                    text: modelData.name
+                    checkable: true
+                    checked: modelData.id === tab.profile
+                    onTriggered: tab.useProfile(modelData.id)
+                }
+
+                onObjectAdded: (index, object) => profileMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => profileMenu.removeItem(object)
+            }
+        }
+
+        OsMenuItem {
+            text: qsTr("Terminal settings…")
+            iconName: "sliders-horizontal"
+            onTriggered: tab.shell.openSettings("terminal")
         }
     }
 }
