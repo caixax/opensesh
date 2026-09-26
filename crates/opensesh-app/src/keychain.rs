@@ -341,7 +341,11 @@ impl Worker {
                 source,
                 passphrase,
                 name,
-            } => self.import(source, passphrase.as_ref().map(|text| text.as_bytes()), &name),
+            } => self.import(
+                source,
+                passphrase.as_ref().map(|text| text.as_bytes()),
+                &name,
+            ),
             Job::ExportPrivate {
                 id,
                 path,
@@ -432,7 +436,10 @@ impl Worker {
             },
             remembered: vault.remembered(),
             keyring_available: keyring.is_ok(),
-            keyring_problem: keyring.err().map(|error| error.to_string()).unwrap_or_default(),
+            keyring_problem: keyring
+                .err()
+                .map(|error| error.to_string())
+                .unwrap_or_default(),
             vault_problem: vault.problem().unwrap_or_default().to_owned(),
             failures: vault.failures(),
             wait_until_ms,
@@ -553,7 +560,11 @@ impl Worker {
     fn known_hosts(&self) -> String {
         let mut files = Vec::new();
         if self.sample {
-            files.push(("~/.ssh/known_hosts".to_owned(), known_hosts::parse(SAMPLE_KNOWN_HOSTS), String::new()));
+            files.push((
+                "~/.ssh/known_hosts".to_owned(),
+                known_hosts::parse(SAMPLE_KNOWN_HOSTS),
+                String::new(),
+            ));
         } else if let Some(config) = &self.config_dir {
             let mut paths = Vec::new();
             if let Some(home) = opensesh_core::paths::home_dir() {

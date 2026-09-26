@@ -181,6 +181,7 @@ SettingsPage {
 
     SettingsGroup {
         width: parent.width
+        visible: Keychain.filePath.length > 0
         title: qsTr("Files")
 
         SettingsRow {

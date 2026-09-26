@@ -42,6 +42,8 @@ windows-sys = { workspace = true, features = [
 ] }
 
 [dev-dependencies]
+# A stand-in agent on a Windows named pipe (tests only).
+interprocess.workspace = true
 tempfile.workspace = true
 
 [lints]
