@@ -996,7 +996,10 @@ mod tests {
         assert!(warnings.is_empty(), "{warnings:?}");
         assert_eq!(config.security.lock_after_minutes, 0);
         let text = config.to_toml_string();
-        assert!(text.contains("[security]\nlock_after_minutes = 0"), "{text}");
+        assert!(
+            text.contains("[security]\nlock_after_minutes = 0"),
+            "{text}"
+        );
         for bad in ["-1", "100000", "\"soon\"", "1.5"] {
             let (config, warnings, _) =
                 Config::from_toml_str(&format!("[security]\nlock_after_minutes = {bad}\n"))

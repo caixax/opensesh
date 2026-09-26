@@ -48,7 +48,13 @@ pub mod qobject {
 
         /// Operation `token` ended: `code` is empty on success.
         #[qsignal]
-        fn finished(self: Pin<&mut Self>, token: i32, code: QString, detail: QString, value: QString);
+        fn finished(
+            self: Pin<&mut Self>,
+            token: i32,
+            code: QString,
+            detail: QString,
+            value: QString,
+        );
 
         /// Creates the vault: with a `password`, protected by it (and remembered on this computer
         /// with `remember`); with an empty one, held by the system keyring.

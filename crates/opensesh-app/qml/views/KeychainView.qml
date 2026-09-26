@@ -543,7 +543,8 @@ Item {
 
                             OsTag {
                                 visible: rowItem.modelData.kind === "key" && (rowItem.modelData.usedBy ?? []).length > 0
-                                text: qsTr("%n identity(ies)", "", (rowItem.modelData.usedBy ?? []).length)
+                                text: qsTr("Used by %1").arg((rowItem.modelData.usedBy ?? []).join(", "))
+                                maxTextWidth: Theme.spacingXxl * 5
                             }
 
                             OsTag {

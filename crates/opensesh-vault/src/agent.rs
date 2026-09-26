@@ -542,6 +542,34 @@ mod tests {
         );
     }
 
+    /// A tiny agent on a named pipe, like the Windows OpenSSH agent's.
+    #[cfg(windows)]
+    #[test]
+    fn named_pipe_agent() {
+        use interprocess::local_socket::prelude::*;
+        use interprocess::local_socket::{GenericNamespaced, ListenerOptions};
+
+        let name = format!("opensesh-test-agent-{}", std::process::id());
+        let listener = ListenerOptions::new()
+            .name(name.as_str().to_ns_name::<GenericNamespaced>().unwrap())
+            .create_sync()
+            .unwrap();
+        let payload = answer(&[(ED25519, "from the pipe")]);
+        let server = std::thread::spawn(move || {
+            let mut stream = listener.accept().unwrap();
+            let mut request = [0_u8; 5];
+            stream.read_exact(&mut request).unwrap();
+            assert_eq!(request, request_identities());
+            let mut reply = u32::try_from(payload.len()).unwrap().to_be_bytes().to_vec();
+            reply.extend_from_slice(&payload);
+            stream.write_all(&reply).unwrap();
+        });
+        let pipe = format!(r"\\.\pipe\{name}");
+        let keys = list(&Agent::Pipe(pipe), Duration::from_secs(5)).unwrap();
+        server.join().unwrap();
+        assert_eq!(keys[0].comment, "from the pipe");
+    }
+
     #[cfg(windows)]
     #[test]
     fn a_missing_pipe_is_not_running() {
@@ -552,6 +580,24 @@ mod tests {
             ),
             Err(AgentError::NotRunning)
         );
+    }
+
+    /// The agents of this machine, printed (read-only). Run by hand with a running agent:
+    /// `cargo test -p opensesh-vault --lib real_agents -- --ignored --nocapture`.
+    #[test]
+    #[ignore = "asks the agents of the machine it runs on"]
+    fn real_agents() {
+        for listing in list_all(Duration::from_secs(3)) {
+            println!("{} ({}):", listing.agent.location(), listing.agent.code());
+            match listing.keys {
+                Ok(keys) => {
+                    for key in keys {
+                        println!("  {} {} {}", key.label, key.fingerprint, key.comment);
+                    }
+                }
+                Err(error) => println!("  {error}"),
+            }
+        }
     }
 
     #[test]
