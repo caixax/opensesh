@@ -128,7 +128,9 @@ fn windows(root: &Path, dist: &Path) -> Result<()> {
     let stage = dist.join(&name);
     fresh_dir(&stage)?;
     copy(&exe, &stage.join(WINDOWS_EXE))?;
-    copy(&cli, &stage.join(format!("{CLI_BINARY}.exe")))?;
+    // In `bin\`: next to OpenSesh.exe, `opensesh.exe` would be the same file on a
+    // case-insensitive file system. The folder is also the one to add to PATH.
+    copy(&cli, &stage.join("bin").join(format!("{CLI_BINARY}.exe")))?;
 
     let windeployqt = qt_bin_dir()?.join("windeployqt.exe");
     ensure!(windeployqt.is_file(), "{} not found", windeployqt.display());
