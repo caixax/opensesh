@@ -98,7 +98,7 @@ unsafe_op_in_unsafe_fn = "deny"
 missing_debug_implementations = "warn"
 
 [workspace.lints.clippy]
-# PLAN Ã‚Â§0 rule 10: no unwrap()/expect() in production code (tests are allowed via clippy.toml).
+# PLAN §0 rule 10: no unwrap()/expect() in production code (tests are allowed via clippy.toml).
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "warn"

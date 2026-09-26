@@ -225,24 +225,28 @@ fn deliver(request: Request, start_args: &[String]) -> Result<()> {
     }
 }
 
-/// The GUI next to this program (`OpenSesh.exe` in the Windows packages, `opensesh-app` in
-/// development builds and on Linux), else `opensesh-app` from `PATH`.
+/// The GUI next to this program or in the folder above (the Windows packages put the CLI in
+/// `bin\` under `OpenSesh.exe`), else `opensesh-app` from `PATH`.
 fn app_path() -> PathBuf {
     let names: &[&str] = if cfg!(windows) {
         &["OpenSesh.exe", "opensesh-app.exe"]
     } else {
         &["opensesh-app"]
     };
-    let dir = std::env::current_exe()
+    let here = std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(PathBuf::from));
-    dir.and_then(|dir| {
-        names
-            .iter()
-            .map(|name| dir.join(name))
-            .find(|path| path.is_file())
-    })
-    .unwrap_or_else(|| PathBuf::from(names[names.len() - 1]))
+    let dirs: Vec<PathBuf> = here
+        .into_iter()
+        .flat_map(|dir| {
+            let parent = dir.parent().map(PathBuf::from);
+            std::iter::once(dir).chain(parent)
+        })
+        .collect();
+    dirs.iter()
+        .flat_map(|dir| names.iter().map(move |name| dir.join(name)))
+        .find(|path| path.is_file())
+        .unwrap_or_else(|| PathBuf::from(names[names.len() - 1]))
 }
 
 fn start_app(args: &[String]) -> Result<()> {

@@ -67,7 +67,9 @@ $branch = (git rev-parse --abbrev-ref HEAD).Trim()
 if ($branch -ne "main") { throw "releases are cut from main (current branch: $branch)" }
 
 Step "Picking the version"
-$toml = Get-Content Cargo.toml -Raw
+# As UTF-8: Windows PowerShell's Get-Content reads a file without a BOM in the ANSI code page,
+# which garbled the non-ASCII characters of Cargo.toml on every release.
+$toml = [IO.File]::ReadAllText((Join-Path $repo "Cargo.toml"))
 $current = [regex]::Match($toml, '(?m)^version = "([^"]+)"').Groups[1].Value
 if ($Version) {
     if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "version must look like 1.2.3" }
