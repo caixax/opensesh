@@ -35,10 +35,12 @@ pragma ComponentBehavior: Bound
 // reopenClosedTab(), takeTab(index), adoptTab(entry, position), moveTabToNewWindow(index,
 // point), moveTabToShell(index, target), dropTabOutside(index, point), captureWindow(),
 // openTabs(tabs, current), closeAllTabs(), showSwitcher(step), askRenameTab(index),
-// showWorkspaces(mode), focusInTabStrip(), cycleTab(step), gotoTab(n), toggleSidePanel(),
+// showWorkspaces(mode), connectHost(id, where), connectTarget(text, where),
+// showQuickConnect(text), newHost(group), editHost(id), newGroup(parent), editGroup(id),
+// showSshImport(path), closeHostDialogs(), focusInTabStrip(), cycleTab(step), gotoTab(n), toggleSidePanel(),
 // togglePalette(), toggleNotifications(), toggleMaximize(), toggleFullScreen(),
 // cycleRegion(step), shortcutText(actionId), smokeSteps(smoke), prepareScreenshot(),
-// prepareSettingsScreenshot(), prepareTerminalScreenshot().
+// prepareSettingsScreenshot(), prepareTerminalScreenshot(), prepareHostsScreenshot().
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -596,6 +598,125 @@ Item {
         workspacesDialog.show(mode);
     }
 
+    // Opens `connection` ({kind, host, target}): where "tab" (a new tab), "right" or "down" (a
+    // split of the current terminal tab, else a new tab).
+    function openConnection(connection, where) {
+        if ((where === "right" || where === "down") && currentWorkspace && currentTab > 0)
+            return currentWorkspace.splitPane(0, where === "right" ? "horizontal" : "vertical", connection) > 0;
+        const id = TerminalSessions.allocateId();
+        const seed = {
+            layout: { pane: id },
+            focused: id,
+            panes: [{ id: id, kind: connection.kind, host: connection.host ?? "", target: connection.target ?? "" }]
+        };
+        selectTab(insertTab({ seed: JSON.stringify(seed) }));
+        return true;
+    }
+
+    // The sprint that brings connecting over `protocol`.
+    function sprintFor(protocol) {
+        switch (protocol) {
+        case "sftp":
+            return 8;
+        case "rdp":
+            return 13;
+        case "vnc":
+            return 14;
+        default:
+            return 12;
+        }
+    }
+
+    function notYet(protocol, sprint) {
+        Toasts.show(qsTr("Connecting over %1 arrives in Sprint %2.").arg(protocol.toUpperCase()).arg(sprint), "info");
+    }
+
+    // Connects to saved host `id` (see openConnection for `where`). Returns whether a session
+    // opened.
+    function connectHost(id, where) {
+        const host = JSON.parse(Hosts.hostJson(id) || "{}");
+        if (!host.id) {
+            Toasts.show(qsTr("That host no longer exists."), "warning");
+            return false;
+        }
+        if (host.protocol === "local") {
+            Hosts.recordHost(id);
+            return openConnection({ kind: "local", host: id }, where ?? "tab");
+        }
+        if (host.protocol !== "ssh") {
+            notYet(host.protocol, sprintFor(host.protocol));
+            return false;
+        }
+        if (Hosts.connectCommand(id).length === 0) {
+            Toasts.show(qsTr("%1 can't be connected to as it is: check its address, user and jump hosts.").arg(host.name), "danger");
+            return false;
+        }
+        Hosts.recordHost(id);
+        return openConnection({ kind: "ssh", host: id }, where ?? "tab");
+    }
+
+    // Connects to quick-connect text (see openConnection for `where`).
+    function connectTarget(text, where) {
+        const parsed = JSON.parse(Hosts.parseTarget(text) || "{}");
+        if (!parsed.ok) {
+            Toasts.show(qsTr("Can't connect to %1: %2").arg(text).arg(parsed.error ?? ""), "danger");
+            return false;
+        }
+        if (parsed.sprint > 0) {
+            notYet(parsed.protocol, parsed.sprint);
+            return false;
+        }
+        Hosts.recordTarget(parsed.text);
+        return openConnection({ kind: "ssh", target: parsed.text }, where ?? "tab");
+    }
+
+    function showQuickConnect(text) {
+        quickConnect.openWith(text ?? "");
+    }
+
+    function newHost(group) {
+        hostEditor.create(group ?? "");
+    }
+
+    function editHost(id) {
+        hostEditor.edit(id);
+    }
+
+    function newGroup(parent) {
+        groupEditor.create(parent ?? "");
+    }
+
+    function editGroup(id) {
+        groupEditor.edit(id);
+    }
+
+    function showSshImport(path) {
+        sshImport.show(path ?? "");
+    }
+
+    function closeHostDialogs() {
+        hostEditor.close();
+        groupEditor.close();
+        sshImport.close();
+        quickConnect.close();
+    }
+
+    // Command palette entries for the saved hosts that match `query`.
+    function hostPaletteEntries(query) {
+        const found = JSON.parse(Hosts.search(query, "all", "", "", "recent") || "[]").slice(0, 6);
+        return found.map(host => ({
+            action: {
+                text: qsTr("Connect to %1").arg(host.name),
+                category: host.target.length > 0 ? host.target : qsTr("Hosts"),
+                iconName: "server",
+                shortcut: "",
+                enabled: true,
+                actionId: ""
+            },
+            run: () => shell.connectHost(host.id, "tab")
+        }));
+    }
+
     function cycleTab(step) {
         const first = detached ? 1 : 0;
         const count = sessionModel.count + 1 - first;
@@ -842,6 +963,7 @@ Item {
                     smoke.fail("the session of a closed tab is still open");
             },
             () => shell.splitSmokeSteps(smoke),
+            () => shell.hostSmokeSteps(smoke),
             () => openTab("the second shell's first output"),
             () => {
                 pane.terminal.sendText("exit\r");
@@ -1056,6 +1178,61 @@ Item {
         ];
     }
 
+    // Functions for SmokeTest.steps: a saved host connected through a pane (the smoke test runs
+    // the hermetic shell instead of ssh), a split to the same host, and a request from another
+    // process.
+    function hostSmokeSteps(smoke) {
+        const timeout = 15000;
+        let deadline = 0;
+        let tabId = 0;
+        const waitFor = (what, condition, next) => {
+            const poll = () => {
+                if (condition())
+                    return next ? next() : [];
+                if (Date.now() > deadline) {
+                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what);
+                    return [];
+                }
+                return [poll];
+            };
+            return poll;
+        };
+        return [
+            () => {
+                Hosts.loadFixture(40);
+                const command = Hosts.connectCommand("H00000");
+                if (command[0] !== "ssh" || command[command.length - 1] !== "deploy@10.0.0.1")
+                    smoke.fail("the ssh command of a fixture host is wrong: " + JSON.stringify(command));
+                if (!shell.connectHost("H00000", "tab"))
+                    smoke.fail("connecting to a saved host opened nothing");
+                tabId = shell.currentTabId;
+                const pane = shell.currentTerminal;
+                if (!pane || pane.kind !== "ssh" || pane.host !== "H00000" || pane.terminal.command[0] !== "ssh")
+                    smoke.fail("the pane doesn't connect to the host");
+                if (!(WindowRegistry.openHosts["H00000"] > 0))
+                    smoke.fail("the Hosts view wouldn't show the open session");
+                deadline = Date.now() + timeout;
+                return [waitFor("the host's session", () => pane.terminal.running)];
+            },
+            () => {
+                if (!shell.connectHost("H00000", "right") || shell.currentWorkspace.paneCount !== 2)
+                    smoke.fail("connecting in a split didn't split the tab");
+                if (JSON.parse(Hosts.search("", "recent", "", "", "name"))[0].id !== "H00000")
+                    smoke.fail("the connection isn't in Recent");
+                Instance.simulate("connect", "cache-01.eu-west");
+                deadline = Date.now() + timeout;
+                return [waitFor("the connection requested by another process", () => shell.currentTabId !== tabId,
+                                () => console.info("smoke test: saved hosts connect in tabs, splits and from other processes"))];
+            },
+            () => {
+                shell.closeOtherTabs(shell.currentTab, "others");
+                shell.closeTab(shell.currentTab);
+                deadline = Date.now() + timeout;
+                return [waitFor("closed sessions to stop counting as open", () => !WindowRegistry.openHosts["H00000"])];
+            }
+        ];
+    }
+
     // Functions for SmokeTest.steps: instantiate every view, overlay and layout variant, then
     // run the terminal steps.
     function smokeSteps(smoke) {
@@ -1073,6 +1250,30 @@ Item {
             const settings = settingsLoader.item;
             return settings && typeof settings.smokeSteps === "function" ? settings.smokeSteps() : [];
         });
+        if (smoke) {
+            steps.push(() => shell.showView("hosts"));
+            steps.push(() => {
+                const hosts = hostsLoader.item;
+                return hosts && typeof hosts.smokeSteps === "function" ? hosts.smokeSteps(smoke) : [];
+            });
+            steps.push(() => shell.showQuickConnect("deploy@web:2222 -J bastion"));
+            steps.push(() => {
+                const parsed = JSON.parse(Hosts.parseTarget("deploy@web:2222 -J bastion"));
+                if (!parsed.ok || parsed.port !== 2222 || parsed.jump[0] !== "bastion")
+                    smoke.fail("quick connect misread deploy@web:2222 -J bastion");
+                if (Hosts.parseTarget("web:99999").indexOf("\"ok\":false") < 0)
+                    smoke.fail("quick connect took a bad port");
+                palette.close();
+                quickConnect.close();
+            });
+            steps.push(() => shell.togglePalette());
+            steps.push(() => palette.setQuery("web-01"));
+            steps.push(() => {
+                if (palette.resultCount === 0)
+                    smoke.fail("the command palette offers no host for web-01");
+                shell.togglePalette();
+            });
+        }
         steps.push(() => shell.togglePalette());
         steps.push(() => palette.setQuery("tab"));
         steps.push(() => palette.setQuery("zzzz"));
@@ -1157,6 +1358,26 @@ Item {
             workspace.setPaneReceiving(bottom, false);
             workspace.focusPane(right);
         }
+    }
+
+    // --screenshots: the Hosts view with generated hosts, as cards or a list, the host editor and
+    // quick connect.
+    function prepareHostsScreenshot(page) {
+        closeHostDialogs();
+        while (sessionModel.count > 0)
+            removeTab(sessionModel.count, false);
+        Hosts.loadFixture(60);
+        showView("hosts");
+        const hosts = hostsLoader.item;
+        if (hosts) {
+            hosts.scope = "all";
+            hosts.cards = page !== "list";
+            hosts.selectOnly("H00002");
+        }
+        if (page === "editor")
+            editHost("H00001");
+        else if (page === "quickconnect")
+            showQuickConnect("deploy@web-0");
     }
 
     // Shows Settings at `section` (e.g. "terminal").
@@ -1335,6 +1556,8 @@ Item {
                         currentIndex: Math.max(0, shell.viewIds.indexOf(shell.activeView))
 
                         ViewLoader {
+                            id: hostsLoader
+
                             viewId: "hosts"
                             currentView: shell.activeView
                             sourceComponent: HostsView {}
@@ -1440,6 +1663,7 @@ Item {
 
         topOffset: titleRegion.height + Theme.spacingLg
         shortcutText: action => shell.shortcutText(action.actionId)
+        extraResults: query => shell.hostPaletteEntries(query)
     }
 
     NotificationsPanel {
@@ -1494,6 +1718,24 @@ Item {
 
     WorkspacesDialog {
         id: workspacesDialog
+    }
+
+    QuickConnectPopup {
+        id: quickConnect
+
+        shell: shell
+    }
+
+    HostEditorDialog {
+        id: hostEditor
+    }
+
+    GroupEditorDialog {
+        id: groupEditor
+    }
+
+    SshConfigImportDialog {
+        id: sshImport
     }
 
     ShortcutHost {

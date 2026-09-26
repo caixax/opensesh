@@ -6,6 +6,8 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+use opensesh_core::ipc::Request;
+
 /// What the process should show.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Mode {
@@ -33,6 +35,9 @@ pub struct Options {
     /// Save screenshots of the window in every theme/density combination to this folder, then
     /// quit (main window and gallery).
     pub screenshot_dir: Option<PathBuf>,
+    /// What to do once the window is up (`--connect`, `--open`); a running instance takes it
+    /// instead when there is one.
+    pub request: Option<Request>,
 }
 
 /// Command-line usage text.
@@ -44,6 +49,8 @@ Options:
                          combine with QT_QPA_PLATFORM=offscreen on headless machines
   --gallery              Show the component gallery instead of the main window
   --screenshots <DIR>    Save screenshots in every theme and density to DIR, then exit
+  --connect <HOST>       Connect to a saved host (in the running OpenSesh, if there is one)
+  --open <TARGET>        Connect to user@host:port or a URL, after asking
   --crash-report <FILE>  Show the crash dialog for FILE (used internally by the panic hook)
   -V, --version          Print the version
   -h, --help             Print this help
@@ -75,6 +82,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options, CliErr
         mode: Mode::App,
         smoke_test: false,
         screenshot_dir: None,
+        request: None,
     };
     // The first of `--version` / `--help` wins over everything else.
     let mut print: Option<Mode> = None;
@@ -88,6 +96,20 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options, CliErr
                     .next()
                     .ok_or_else(|| CliError("--screenshots needs a folder argument".to_owned()))?;
                 options.screenshot_dir = Some(PathBuf::from(dir));
+            }
+            Some("--connect") => {
+                let host = args
+                    .next()
+                    .and_then(|host| host.into_string().ok())
+                    .ok_or_else(|| CliError("--connect needs a host name".to_owned()))?;
+                options.request = Some(Request::Connect { host });
+            }
+            Some("--open") => {
+                let url = args
+                    .next()
+                    .and_then(|url| url.into_string().ok())
+                    .ok_or_else(|| CliError("--open needs a target".to_owned()))?;
+                options.request = Some(Request::Open { url });
             }
             Some("--crash-report") => {
                 let file = args
@@ -106,6 +128,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options, CliErr
             mode,
             smoke_test: false,
             screenshot_dir: None,
+            request: None,
         },
         None => options,
     })
@@ -124,7 +147,28 @@ mod tests {
             mode,
             smoke_test,
             screenshot_dir: None,
+            request: None,
         }
+    }
+
+    #[test]
+    fn connect_and_open_become_requests() {
+        let parsed = parse_strs(&["--connect", "web-01"]).unwrap();
+        assert_eq!(
+            parsed.request,
+            Some(Request::Connect {
+                host: "web-01".into()
+            })
+        );
+        let parsed = parse_strs(&["--open", "ssh://deploy@web"]).unwrap();
+        assert_eq!(
+            parsed.request,
+            Some(Request::Open {
+                url: "ssh://deploy@web".into()
+            })
+        );
+        assert!(parse_strs(&["--connect"]).is_err());
+        assert!(parse_strs(&["--open"]).is_err());
     }
 
     #[test]

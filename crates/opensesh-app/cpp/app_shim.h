@@ -56,6 +56,9 @@ bool platform_beep();
 // switcher polls it to see Ctrl released, even outside the window.
 std::int32_t keyboard_modifiers();
 
+// Puts `text` on the clipboard.
+void clipboard_set_text(const QString& text);
+
 // Portable text of a key combination, e.g. "Ctrl+Shift+P" (QKeySequence::PortableText).
 QString key_sequence_text(std::int32_t key, std::int32_t modifiers);
 

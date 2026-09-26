@@ -16,8 +16,10 @@ pragma ComponentBehavior: Bound
 // once per broadcast; scrolling can follow along (`syncScroll`).
 //
 // `seed` (JSON) describes the tab when it opens: `{layout, focused, zoomed, panes: [{id, kind,
-// profile, directory, fontZoom, highlightOn}], broadcast, broadcastExcluded, syncScroll,
-// pasteConfirmed}`; empty for one new pane. A tab moved to another window takes its seed from
+// host, target, profile, directory, fontZoom, highlightOn}], broadcast, broadcastExcluded,
+// syncScroll, pasteConfirmed}`; empty for one new local pane. A pane of kind `ssh` connects to
+// saved host `host` or to quick-connect `target` (its command is worked out when it opens, so a
+// restored workspace uses the host as it is now). A tab moved to another window takes its seed from
 // `capture(true)` and attaches to the running sessions; a restored workspace brings new ids, so
 // new shells start in the saved directories.
 //   shell: Item            the AppShell (currentTabId, updateTab(), closeTabById(),
@@ -35,7 +37,8 @@ pragma ComponentBehavior: Bound
 //   participants: var      read-only; ids of the receiving panes (empty while off)
 //   syncScroll: bool       receiving panes scroll together
 //   askingToPaste: bool    read-only; the paste confirmation is open
-// Functions: focusPane(id), splitPane(id, axis) (0: the focused pane), closePane(id),
+// Functions: focusPane(id), splitPane(id, axis, connection) (0: the focused pane; `connection`
+// optionally {kind, host, target} for what the new pane runs), closePane(id),
 // moveFocus(direction), resizePane(direction), swapPane(direction), toggleZoom(id), equalize(),
 // setRatio(pathKey, ratio), toggleBroadcast(), setPaneReceiving(id, on), capture(live),
 // paneItem(id), focusTerminal().
@@ -67,7 +70,9 @@ Item {
     readonly property bool current: shell.currentTabId !== 0 && shell.currentTabId === tabId
     // Space between panes; the dividers sit in it.
     readonly property real gap: Theme.spacingXs
-    readonly property string title: focusedItem ? focusedItem.terminal.title : ""
+    // The focused terminal's title, else what it connects to.
+    readonly property string title: focusedItem ? (focusedItem.terminal.title.length > 0 ? focusedItem.terminal.title
+                                                                                        : focusedItem.label) : ""
     // The keyboard resize step, as a share of the tab.
     readonly property real resizeStep: 0.05
 
@@ -114,15 +119,8 @@ Item {
                 panes: [{ id: id, profile: AppSettings.terminalProfile, directory: "" }]
             };
         }
-        for (const pane of data.panes) {
-            paneModel.append({
-                paneId: pane.id,
-                profile: pane.profile && pane.profile.length > 0 ? pane.profile : AppSettings.terminalProfile,
-                directory: pane.directory || "",
-                startZoom: pane.fontZoom || 0,
-                startHighlight: pane.highlightOn !== false
-            });
-        }
+        for (const pane of data.panes)
+            paneModel.append(paneRow(pane));
         layout = JSON.stringify(data.layout);
         focusedPane = paneIds.indexOf(data.focused) >= 0 ? data.focused : (paneIds[0] ?? 0);
         zoomedPane = paneIds.indexOf(data.zoomed) >= 0 ? data.zoomed : 0;
@@ -136,6 +134,34 @@ Item {
         updateFocusedItem();
     }
 
+    // A pane model row from a seed pane: an `ssh` pane gets its command now.
+    function paneRow(pane) {
+        const kind = pane.kind || "local";
+        const host = pane.host || "";
+        const target = pane.target || "";
+        let command = [];
+        let label = "";
+        if (kind === "ssh") {
+            command = host.length > 0 ? Hosts.connectCommand(host) : Hosts.targetCommand(target);
+            label = host.length > 0 ? (JSON.parse(Hosts.hostJson(host) || "{}").name || target) : target;
+        }
+        // Local panes take the profile of new tabs; a host's panes let the host's chain decide.
+        const profile = pane.profile && pane.profile.length > 0 ? pane.profile
+                                                                : kind === "local" && host.length === 0 ? AppSettings.terminalProfile : "";
+        return {
+            paneId: pane.id,
+            kind: kind,
+            host: host,
+            target: target,
+            commandJson: JSON.stringify(command),
+            label: label,
+            profile: profile,
+            directory: pane.directory || "",
+            startZoom: pane.fontZoom || 0,
+            startHighlight: pane.highlightOn !== false
+        };
+    }
+
     // The tab as a workspace entry (see Workspaces); `live` adds the broadcast state, for a tab
     // that moves to another window with its sessions.
     function capture(live) {
@@ -145,7 +171,9 @@ Item {
             const item = paneItem(row.paneId);
             list.push({
                 id: row.paneId,
-                kind: "local",
+                kind: row.kind,
+                host: row.host,
+                target: row.target,
                 profile: row.profile,
                 directory: item ? item.currentDirectory() : row.directory,
                 fontZoom: item ? item.fontZoom : row.startZoom,
@@ -190,22 +218,28 @@ Item {
             focusedItem.focusTerminal();
     }
 
-    // axis: "horizontal" puts the new pane on the right, "vertical" below. It starts with the
-    // profile, directory and zoom of the pane it splits. Returns the new pane's id, 0 on failure.
-    function splitPane(id, axis) {
+    // axis: "horizontal" puts the new pane on the right, "vertical" below. Without
+    // `connection`, it runs what the pane it splits runs (the same host, or a local shell in the
+    // same directory), with its profile and zoom. Returns the new pane's id, 0 on failure.
+    function splitPane(id, axis, connection) {
         const target = id > 0 ? id : focusedPane;
         const source = paneItem(target);
         const newId = TerminalSessions.allocateId();
         const next = Layouts.split(layout, target, axis, newId, true);
         if (next.length === 0)
             return 0;
-        paneModel.append({
-            paneId: newId,
-            profile: source ? source.profile : AppSettings.terminalProfile,
-            directory: source ? source.currentDirectory() : "",
-            startZoom: source ? source.fontZoom : 0,
-            startHighlight: source ? source.highlightOn : true
-        });
+        const copy = connection ?? (source ? { kind: source.kind, host: source.host, target: source.target } : {});
+        const sameKind = source && (copy.kind ?? "local") === source.kind && (copy.host ?? "") === source.host;
+        paneModel.append(paneRow({
+            id: newId,
+            kind: copy.kind ?? "local",
+            host: copy.host ?? "",
+            target: copy.target ?? "",
+            profile: sameKind ? source.profile : "",
+            directory: source && (copy.kind ?? "local") === "local" ? source.currentDirectory() : "",
+            fontZoom: source ? source.fontZoom : 0,
+            highlightOn: source ? source.highlightOn : true
+        }));
         zoomedPane = 0;
         layout = next;
         focusPane(newId);

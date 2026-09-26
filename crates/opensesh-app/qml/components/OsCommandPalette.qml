@@ -11,6 +11,9 @@ pragma ComponentBehavior: Bound
 //   maxVisibleRows: int        rows shown before the list scrolls (default 9)
 //   shortcutText: var          function(action) -> string shown for the action's shortcut;
 //                              defaults to the portable text (`action.shortcut`)
+//   extraResults: var          optional function(query) -> [{action: {text, category, iconName,
+//                              shortcut, enabled, actionId}, run: function}], listed after the
+//                              actions while there is a query (e.g. "Connect to <host>")
 //   query: string              read-only; the current search text
 //   resultCount: int           read-only; entries currently listed
 // Functions: openWith(text) opens with a prefilled query; setQuery(text); runCurrent().
@@ -32,12 +35,16 @@ T.Popup {
     // Action ids, most recently run first (this session only).
     property var recent: []
     property string pendingActionId: ""
+    property var pendingRun: null
+    property var extraResults: null
     readonly property OsFocusReturn focusReturn: OsFocusReturn {
         popup: control
     }
 
     readonly property var results: {
         const found = ActionRegistry.search(field.text).filter(entry => entry.action.enabled);
+        if (field.text.length > 0 && typeof extraResults === "function")
+            return found.concat(extraResults(field.text));
         if (field.text.length > 0 || recent.length === 0)
             return found;
         const rank = id => {
@@ -63,6 +70,7 @@ T.Popup {
         if (!entry || !entry.action.enabled)
             return;
         pendingActionId = entry.action.actionId;
+        pendingRun = entry.run ?? null;
         close();
     }
 
@@ -91,6 +99,7 @@ T.Popup {
     onAboutToShow: {
         focusReturn.save();
         pendingActionId = "";
+        pendingRun = null;
         field.clear();
         list.currentIndex = 0;
     }
@@ -98,8 +107,12 @@ T.Popup {
     onClosed: {
         focusReturn.restore();
         const actionId = pendingActionId;
+        const run = pendingRun;
         pendingActionId = "";
-        if (actionId.length > 0)
+        pendingRun = null;
+        if (typeof run === "function")
+            run();
+        else if (actionId.length > 0)
             ActionRegistry.trigger(actionId);
     }
 

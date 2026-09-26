@@ -3,7 +3,8 @@
 // switch, settings toasts, the smoke test and the screenshot runs. It also holds the app's
 // actions (AppActions, acting on the window in use), restores the last session at startup when
 // "Restore sessions at startup" is on, and saves it when it closes (with the detached windows,
-// which close with it).
+// which close with it). Requests from a second start or the `opensesh` CLI (Instance) arrive
+// here: a saved host connects at once; a target or URL asks first (PLAN §8).
 import QtQuick
 import cc.caixa.opensesh
 
@@ -104,6 +105,13 @@ Window {
         UiState.save();
     }
 
+    function bringToFront() {
+        if (visibility === Window.Minimized)
+            showNormal();
+        raise();
+        requestActivate();
+    }
+
     function scheduleGeometrySave() {
         if (geometryReady && persistState)
             geometryTimer.restart();
@@ -153,6 +161,8 @@ Window {
             // After every onCompleted handler, so the shell has read its own state first.
             Qt.callLater(window.restoreLastSession);
         }
+        // Requests from other processes, once the window (and a restored session) is up.
+        Qt.callLater(() => Instance.takePending());
     }
 
     function restoreLastSession() {
@@ -246,6 +256,71 @@ Window {
     }
 
     Connections {
+        target: Instance
+
+        function onActivateRequested() {
+            window.bringToFront();
+        }
+
+        function onConnectRequested(host) {
+            window.bringToFront();
+            const id = Hosts.findHost(host);
+            if (id.length === 0) {
+                Toasts.show(qsTr("No saved host is called %1.").arg(host), "warning");
+                return;
+            }
+            shell.connectHost(id, "tab");
+        }
+
+        function onOpenRequested(url) {
+            window.bringToFront();
+            openConfirm.ask(url);
+        }
+    }
+
+    Connections {
+        target: Hosts
+
+        function onProblem(kind, detail) {
+            if (kind === "read-only")
+                Toasts.show(qsTr("hosts.toml can't be saved (it could not be read, or a newer OpenSesh wrote it), so this change is not kept."), "danger");
+            else
+                Toasts.show(qsTr("Could not save the hosts: %1").arg(detail || ""), "danger");
+        }
+    }
+
+    // A connection another program asked for: say what it is and ask first.
+    OsDialog {
+        id: openConfirm
+
+        property string url
+        property var parsed: ({})
+
+        function ask(text) {
+            url = text;
+            parsed = JSON.parse(Hosts.parseTarget(text) || "{}");
+            open();
+        }
+
+        title: qsTr("Connect to %1?").arg(parsed.ok ? parsed.text : url)
+        acceptText: qsTr("Connect")
+        acceptEnabled: parsed.ok === true
+
+        onAccepted: shell.connectTarget(url, "tab")
+
+        OsText {
+            width: Math.min(Theme.spacingXxl * 12, openConfirm.maxWidth - openConfirm.leftPadding - openConfirm.rightPadding)
+            text: openConfirm.parsed.ok ? qsTr("Another program asked OpenSesh to connect to %1 over %2. Continue only if you started it.")
+                                              .arg(openConfirm.parsed.host).arg(openConfirm.parsed.protocol.toUpperCase())
+                                        : qsTr("Another program asked OpenSesh to connect to %1, which can't be used: %2")
+                                              .arg(openConfirm.url).arg(openConfirm.parsed.error ?? "")
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+            horizontalAlignment: Text.AlignLeft
+        }
+    }
+
+    Connections {
         target: Workspaces
 
         function onProblem(detail) {
@@ -326,7 +401,8 @@ Window {
         steps: shell.smokeSteps(smoke)
     }
 
-    // Three series: the shell on the Hosts view, the Settings pages, then split terminal tabs.
+    // Four series: the shell on the Hosts view, the Settings pages, split terminal tabs, then the
+    // Hosts view with generated hosts.
     ScreenshotRunner {
         id: screenshots
 
@@ -356,7 +432,19 @@ Window {
         prefix: "terminal"
         pages: ["splits", "broadcast"]
         prepare: (mode, density, page) => shell.prepareTerminalScreenshot(page)
+        onFinished: hostsScreenshots.start()
+    }
+
+    ScreenshotRunner {
+        id: hostsScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "hosts"
+        pages: ["cards", "list", "editor", "quickconnect"]
+        prepare: (mode, density, page) => shell.prepareHostsScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
-        onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures > 0 ? 7 : 0)
+        onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
+                            + hostsScreenshots.failures > 0 ? 7 : 0)
     }
 }

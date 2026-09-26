@@ -1,6 +1,8 @@
 //! cxx-qt bridges between Rust and C++/QML. `build.rs` compiles every file in this folder.
 
 pub mod app_info;
+pub mod hosts;
+pub mod instance;
 pub mod keybindings;
 pub mod platform;
 pub mod settings;

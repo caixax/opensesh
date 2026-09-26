@@ -21,6 +21,7 @@ cxx.workspace = true
 cxx-qt.workspace = true
 cxx-qt-lib = { workspace = true, features = ["qt_gui", "qt_qml", "qt_quickcontrols"] }
 opensesh-core.workspace = true
+opensesh-import.workspace = true
 opensesh-term.workspace = true
 # Update checks (update.rs): GitHub Releases over HTTPS, checksums of downloaded installers.
 serde.workspace = true

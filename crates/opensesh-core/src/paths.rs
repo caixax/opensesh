@@ -236,6 +236,24 @@ impl AppPaths {
     }
 }
 
+/// The user's home directory (for `~` in paths such as `~/.ssh/config`).
+#[must_use]
+pub fn home_dir() -> Option<PathBuf> {
+    directories::BaseDirs::new().map(|dirs| dirs.home_dir().to_path_buf())
+}
+
+/// `path` with a leading `~` or `~/` replaced by `home`.
+#[must_use]
+pub fn expand_tilde(path: &str, home: &Path) -> PathBuf {
+    if path == "~" {
+        home.to_path_buf()
+    } else if let Some(rest) = path.strip_prefix("~/").or_else(|| path.strip_prefix("~\\")) {
+        home.join(rest)
+    } else {
+        PathBuf::from(path)
+    }
+}
+
 /// Whether `dir` contains the portable-mode marker file.
 #[must_use]
 pub fn is_portable_dir(dir: &Path) -> bool {

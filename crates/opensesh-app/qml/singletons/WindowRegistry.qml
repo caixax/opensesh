@@ -6,9 +6,10 @@ pragma Singleton
 //   mainShell: Item      the main window's AppShell
 //   activeShell: Item    read-only; the shell of the last active window, else the main one
 //   shells: var          read-only; every registered shell, the main one first
+//   openHosts: var       read-only; {host id: panes connected to it}, for the Hosts view
 // Functions: register(shell), unregister(shell), activated(shell), openWindow(entries, point),
 // shellAt(point), windowName(shell), capture(), openWorkspace(workspace, shell),
-// closeDetached(), rememberClosed(entry), takeClosed().
+// closeDetached(), rememberClosed(entry), takeClosed(), hostOpened(id), hostClosed(id).
 import QtQuick
 import cc.caixa.opensesh
 
@@ -23,6 +24,7 @@ QtObject {
     property var windows: []
     // Recently closed tabs as workspace entries, the newest last.
     property var closedTabs: []
+    property var openHosts: ({})
     readonly property int maxClosedTabs: 20
     property Component windowComponent: null
     // Wayland doesn't tell windows where they are, so drops can't be matched to windows.
@@ -131,6 +133,21 @@ QtObject {
     function closeDetached() {
         for (const window of windows.slice())
             window.close();
+    }
+
+    function hostOpened(id) {
+        const next = Object.assign({}, openHosts);
+        next[id] = (next[id] ?? 0) + 1;
+        openHosts = next;
+    }
+
+    function hostClosed(id) {
+        const next = Object.assign({}, openHosts);
+        if ((next[id] ?? 0) > 1)
+            next[id] -= 1;
+        else
+            delete next[id];
+        openHosts = next;
     }
 
     function rememberClosed(entry) {

@@ -388,6 +388,8 @@ fn workspace_from_qml(value: &Json) -> Result<Workspace, String> {
                     kind: Some(text("kind"))
                         .filter(|kind| !kind.is_empty())
                         .unwrap_or_else(|| workspace::LOCAL.to_owned()),
+                    host: text("host"),
+                    target: text("target"),
                     profile: text("profile"),
                     directory: text("directory"),
                 });
@@ -461,6 +463,8 @@ fn workspace_to_qml(workspace: &Workspace, mut allocate: impl FnMut() -> PaneId)
                             json!({
                                 "id": id_of(index),
                                 "kind": pane.kind,
+                                "host": pane.host,
+                                "target": pane.target,
                                 "profile": pane.profile,
                                 "directory": pane.directory,
                             })

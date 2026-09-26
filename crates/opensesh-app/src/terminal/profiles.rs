@@ -9,6 +9,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex, PoisonError, RwLock};
 
+use opensesh_core::hosts::TerminalLevel;
 use opensesh_core::terminal::highlight::HighlightLibrary;
 use opensesh_core::terminal::profile::{Level, ProfileSet};
 use opensesh_core::terminal::settings::{
@@ -127,10 +128,22 @@ impl Library {
         Some(compiled).filter(|h| !h.is_empty())
     }
 
-    /// Everything a terminal with profile `profile` needs, for the app's dark or light scheme.
+    /// Everything a terminal needs when its host's `levels` (groups, then the host) come before
+    /// its own `profile` (empty for none): the profile chain of ADR 0016.
     #[must_use]
-    pub fn resolve(&self, profile: &str, dark: bool) -> Resolved {
-        let settings = self.settings(profile);
+    pub fn resolve_with(&self, levels: &[TerminalLevel], profile: &str, dark: bool) -> Resolved {
+        let mut chain: Vec<Level<'_>> = levels
+            .iter()
+            .map(|level| Level {
+                profile: level.profile.as_deref(),
+                overrides: Some(&level.overrides),
+            })
+            .collect();
+        chain.push(Level {
+            profile: (!profile.is_empty()).then_some(profile),
+            overrides: None,
+        });
+        let settings = self.profiles.resolve(&chain);
         let theme = self.theme(&settings, dark);
         let palette = Palette::for_settings(&theme.colors, &settings);
         Resolved {
@@ -183,13 +196,13 @@ mod tests {
     #[test]
     fn a_profile_resolves_to_engine_options() {
         let library = Library::default();
-        let resolved = library.resolve("default", true);
+        let resolved = library.resolve_with(&[], "default", true);
         assert_eq!(resolved.palette, Palette::OPENSESH_DARK);
         assert_eq!(resolved.options, SessionOptions::default());
         assert_eq!(resolved.keys, KeyOptions::default());
         assert!(resolved.highlighter.is_none());
         assert_eq!(
-            library.resolve("default", false).palette,
+            library.resolve_with(&[], "default", false).palette,
             Palette::OPENSESH_LIGHT
         );
     }
@@ -211,7 +224,7 @@ mod tests {
             profiles,
             ..Library::default()
         };
-        let resolved = library.resolve("ops", true);
+        let resolved = library.resolve_with(&[], "ops", true);
         assert_eq!(resolved.theme.id, "dracula");
         assert!(resolved.keys.backspace_sends_ctrl_h);
         assert!(resolved.options.osc52_copy);
@@ -224,6 +237,9 @@ mod tests {
             .unwrap();
         assert!(Arc::ptr_eq(&highlighter, &again));
         // An unknown profile is the global one.
-        assert_eq!(library.resolve("nope", true).theme.id, "opensesh-dark");
+        assert_eq!(
+            library.resolve_with(&[], "nope", true).theme.id,
+            "opensesh-dark"
+        );
     }
 }

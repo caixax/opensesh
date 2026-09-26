@@ -30,7 +30,6 @@ QtObject {
     readonly property string categoryWorkspaces: qsTr("Workspaces")
     readonly property string categoryDebug: qsTr("Debug")
 
-    readonly property ComingSoon comingSoon: ComingSoon {}
     // The terminal tab shown in the window in use, or null.
     readonly property Item workspace: shell.currentTab > 0 ? shell.currentWorkspace : null
     readonly property bool severalPanes: workspace !== null && workspace.paneCount > 1
@@ -53,7 +52,28 @@ QtObject {
             defaultShortcut: "Ctrl+Shift+O"
             category: root.categorySessions
             iconName: "plug-zap"
-            onTriggered: root.comingSoon.notify(qsTr("Quick connect"), 5)
+            onTriggered: root.shell.showQuickConnect("")
+        },
+        OsAction {
+            actionId: "host.new"
+            text: qsTr("New host…")
+            category: root.categorySessions
+            iconName: "plus"
+            onTriggered: root.shell.newHost("")
+        },
+        OsAction {
+            actionId: "host.newGroup"
+            text: qsTr("New host group…")
+            category: root.categorySessions
+            iconName: "folder"
+            onTriggered: root.shell.newGroup("")
+        },
+        OsAction {
+            actionId: "host.importSshConfig"
+            text: qsTr("Import ~/.ssh/config…")
+            category: root.categorySessions
+            iconName: "import"
+            onTriggered: root.shell.showSshImport("")
         },
         OsAction {
             actionId: "tab.newLocal"
