@@ -75,7 +75,7 @@ opensesh connect web-01                 # connect to a saved host, by name or id
 opensesh open deploy@10.0.1.21:2222     # quick connect (also ssh://, rdp://...); OpenSesh asks first
 ```
 
-On Windows it is `opensesh.exe` in the install or portable folder; add that folder to `PATH` to use it anywhere. Starting OpenSesh again while it runs brings the open window to the front instead of opening another one.
+On Windows it is `bin\opensesh.exe` in the install or portable folder; add that `bin` folder to `PATH` to use it anywhere. Starting OpenSesh again while it runs brings the open window to the front instead of opening another one.
 
 ## Principles
 
