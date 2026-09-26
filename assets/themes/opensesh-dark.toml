@@ -1,0 +1,36 @@
+# OpenSesh Dark: the default dark terminal theme (PLAN §4.3).
+schema_version = 1
+name = "OpenSesh Dark"
+author = "OpenSesh"
+license = "GPL-3.0-or-later"
+
+[colors]
+foreground = "#D9DEE7"
+background = "#121419"
+cursor = "#E6B450"
+cursor_text = "#121419"
+selection_bg = "#2B3242"
+search_bg = "#4A3C1C"
+search_fg = "#F2F4F8"
+search_focused_bg = "#E6B450"
+search_focused_fg = "#121419"
+
+[colors.normal]
+black = "#1C1F27"
+red = "#F07178"
+green = "#9BD68A"
+yellow = "#E6C07B"
+blue = "#73B7F2"
+magenta = "#C9A0F0"
+cyan = "#6ED6D0"
+white = "#C8CDD6"
+
+[colors.bright]
+black = "#4A5263"
+red = "#FF8F95"
+green = "#B4EBA3"
+yellow = "#F2D39A"
+blue = "#9ACCFA"
+magenta = "#DDBDFB"
+cyan = "#94E8E3"
+white = "#F2F4F8"

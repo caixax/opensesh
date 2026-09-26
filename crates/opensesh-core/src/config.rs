@@ -33,52 +33,6 @@ const HEADER: &str = "# OpenSesh settings. You can edit this file while OpenSesh
                       # OpenSesh rewrites this file when a setting changes in the app: unknown\n\
                       # settings are kept, but comments and formatting are not.\n";
 
-/// Declares a string-backed settings enum with its TOML/QML identifiers.
-macro_rules! choice {
-    (
-        $(#[$meta:meta])*
-        $name:ident { $($(#[$vmeta:meta])* $variant:ident => $text:literal),+ $(,)? }
-        default $default:ident
-    ) => {
-        $(#[$meta])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-        pub enum $name {
-            $($(#[$vmeta])* $variant),+
-        }
-
-        impl $name {
-            /// All values, in UI order.
-            pub const ALL: &'static [Self] = &[$(Self::$variant),+];
-
-            /// Stable identifier used in `config.toml` and QML.
-            #[must_use]
-            pub const fn as_str(self) -> &'static str {
-                match self {
-                    $(Self::$variant => $text),+
-                }
-            }
-        }
-
-        impl Default for $name {
-            fn default() -> Self {
-                Self::$default
-            }
-        }
-
-        impl FromStr for $name {
-            type Err = UnknownValue;
-
-            fn from_str(text: &str) -> Result<Self, Self::Err> {
-                Self::ALL
-                    .iter()
-                    .copied()
-                    .find(|value| value.as_str() == text)
-                    .ok_or_else(|| UnknownValue(text.to_owned()))
-            }
-        }
-    };
-}
-
 choice! {
     /// What happens when the last tab is closed (§6.1).
     LastTabAction {
@@ -258,6 +212,21 @@ impl Default for Appearance {
     }
 }
 
+/// `[terminal]` settings (the options themselves live in terminal profiles).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TerminalConfig {
+    /// Profile of new local terminal tabs.
+    pub profile: String,
+}
+
+impl Default for TerminalConfig {
+    fn default() -> Self {
+        Self {
+            profile: crate::terminal::profile::DEFAULT_PROFILE.to_owned(),
+        }
+    }
+}
+
 /// The whole `config.toml`.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Config {
@@ -265,6 +234,8 @@ pub struct Config {
     pub general: General,
     /// `[appearance]`.
     pub appearance: Appearance,
+    /// `[terminal]`.
+    pub terminal: TerminalConfig,
     /// What this version doesn't know, written back as it was read so a save never deletes a
     /// newer OpenSesh's settings: unknown top-level keys and tables as they are, and the unknown
     /// keys of `[general]` and `[appearance]` as tables under those names. Known keys always
@@ -494,11 +465,30 @@ impl Config {
             );
             reader.unknown(&appearance, "appearance");
         }
+        let mut terminal = reader.section(&mut root, "terminal");
+        {
+            let t = &mut config.terminal;
+            let mut profile = t.profile.clone();
+            reader.string(&mut terminal, "terminal.profile", &mut profile);
+            if crate::terminal::settings::valid_id(&profile) {
+                t.profile = profile;
+            } else {
+                reader.warn(
+                    "terminal.profile",
+                    format!("`{profile}` is not a profile id, using the default profile"),
+                );
+            }
+            reader.unknown(&terminal, "terminal");
+        }
         reader.unknown(&root, "");
 
         // Every known key was taken out above (valid or not): what is left is kept as is.
         let mut extra = root;
-        for (name, rest) in [("general", general), ("appearance", appearance)] {
+        for (name, rest) in [
+            ("general", general),
+            ("appearance", appearance),
+            ("terminal", terminal),
+        ] {
             if !rest.is_empty() {
                 extra.insert(name.to_owned(), Value::Table(rest));
             }
@@ -557,6 +547,12 @@ impl Config {
             Value::String(a.window_decorations.as_str().into()),
         );
 
+        let mut terminal = Table::new();
+        terminal.insert(
+            "profile".into(),
+            Value::String(self.terminal.profile.clone()),
+        );
+
         // Unknown settings go back where they were read from; known keys take precedence.
         let keep_unknown = |known: &mut Table, unknown: &Table| {
             for (key, value) in unknown {
@@ -568,7 +564,8 @@ impl Config {
             match (key.as_str(), value) {
                 ("general", Value::Table(unknown)) => keep_unknown(&mut general, unknown),
                 ("appearance", Value::Table(unknown)) => keep_unknown(&mut appearance, unknown),
-                ("schema_version" | "general" | "appearance", _) => {}
+                ("terminal", Value::Table(unknown)) => keep_unknown(&mut terminal, unknown),
+                ("schema_version" | "general" | "appearance" | "terminal", _) => {}
                 _ => {
                     root.insert(key.clone(), value.clone());
                 }
@@ -577,6 +574,7 @@ impl Config {
         root.insert("schema_version".into(), Value::Integer(SCHEMA_VERSION));
         root.insert("general".into(), Value::Table(general));
         root.insert("appearance".into(), Value::Table(appearance));
+        root.insert("terminal".into(), Value::Table(terminal));
         format!("{HEADER}\n{root}")
     }
 }
@@ -775,6 +773,7 @@ mod tests {
         config.appearance.show_status_bar = false;
         config.appearance.window_decorations = Decorations::Native;
         config.appearance.reduce_motion = true;
+        config.terminal.profile = "work".into();
 
         let text = config.to_toml_string();
         let (parsed, warnings, _) = parse(&text);
