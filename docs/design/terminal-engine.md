@@ -68,7 +68,11 @@ let session = Session::start(backend, events, SessionConfig { size, ..SessionCon
 | `search_clear(&self)` | fair lock | Removes the highlights. |
 | `clear_history(&self)` | fair lock | Clears the scrollback (as `CSI 3 J` does); the screen stays. |
 | `text_dump(&self) -> String` | fair lock | The visible screen, one `\n`-terminated line per row, trailing spaces trimmed. For tests and the smoke test. |
-| `set_palette(&self, Palette)` | fair lock | For example when the app switches between light and dark. |
+| `set_palette(&self, Palette)` | fair lock | For example when the app switches between light and dark, or a profile changes a color option. |
+| `set_options(&self, SessionOptions)` | fair lock | Applies a profile's engine options while the program runs: scrollback lines, the default cursor shape and blinking, the hollow cursor while unfocused, word separators, OSC 52 copying, the encoding and the answerback. |
+| `set_highlighter(&self, Option<Arc<Highlighter>>)` | fair lock | Keyword highlighting rules (`highlight::Highlighter`, compiled from rule sets), or `None` to turn it off. |
+| `write_paced(&self, Vec<Vec<u8>>, Duration)` | no | Sends the chunks (usually the lines of a paste) one at a time, with a pause between them, from the engine thread's timer. |
+| `cancel_paste(&self)` / `is_pasting(&self)` | no / lock-free | Drops what is left of a paced paste; whether one is still sending. |
 | `hyperlink_at(&self, ViewportPoint) -> Option<String>` | fair lock | The OSC 8 URI under the pointer. Validate the scheme before opening it (PLAN §8). |
 | `set_link_highlight(&self, Option<(ViewportPoint, ViewportPoint)>)` | fair lock | Adds `flags::LINK` to a range (inclusive, reading order), for example a detected URL under the pointer. |
 
@@ -84,6 +88,13 @@ let session = Session::start(backend, events, SessionConfig { size, ..SessionCon
 | `Bell` | BEL, at most one every 50 ms. |
 | `CursorBlinking(bool)` | The program changed cursor blinking (DECSCUSR, mode 12). |
 | `Exited(Option<i32>)` | The program ended, sent after all its output was parsed. `None` means it was killed by a signal or failed to start. Windows codes keep their bits (for example `0xC000013A` is `-1073741510`). |
+| `Clipboard(String)` | The program set the clipboard with OSC 52, only when `SessionOptions::osc52_copy` is on (reading is never allowed). At most one every 50 ms; the latest text wins. OSC 52 strings may then be up to 1 MiB (other OSC strings stay capped at 8 KiB). |
+
+### Options (`session::SessionOptions`, Sprint 3)
+
+- **Encoding:** anything but UTF-8 goes through `encoding::Codec` (`encoding_rs`): program output is decoded to UTF-8 before both parsers, and typed input is encoded back (characters the encoding lacks become `?`; bytes that aren't UTF-8, such as raw mouse reports, pass through). Only ASCII-compatible encodings are offered, so escape sequences are untouched.
+- **Answerback:** each ENQ (0x05) outside an escape sequence is answered with the answerback text, at most 4 replies per parsed chunk. Only printable ASCII is sent; empty sends nothing (the default).
+- **Word separators and scrollback** go to `alacritty_terminal`'s `Term::set_options`, which keeps the history and marks everything dirty.
 
 ## 4. Snapshots
 
@@ -116,7 +127,10 @@ pub enum BackendEvent { Output(Vec<u8>), Exited(Option<i32>), Error(String) }
 
 ## 6. Colors
 
-`palette::Palette` holds the default foreground and background, the cursor, selection and search colors, and the 16 ANSI colors (`normal`, `bright`), plus `bold_is_bright`.
+`palette::Palette` holds the default foreground and background, the cursor, selection and search colors, and the 16 ANSI colors (`normal`, `bright`), plus `bold_is_bright` and `minimum_contrast`. `Palette::for_settings(theme colors, profile settings)` builds it from a theme and a profile's color options.
+
+- **Minimum contrast** (1.0 turns it off): after every other color decision, text below the ratio against its cell's background is moved toward white or black, just far enough (`Rgb::with_contrast`). Hidden text stays hidden.
+- **Keyword highlighting** is applied before selection and search (which win): the painter rebuilds the text of each redrawn row, the `Highlighter` marks the columns of each rule's matches (a rule with a group styles only the group; later rules win), and the cells take the rule's colors (ANSI colors of the theme, or fixed ones), bold and underline. Matches never span a soft wrap.
 
 - `Palette::OPENSESH_DARK` is exactly PLAN §4.3, and `Palette::default()` returns it. `Palette::OPENSESH_LIGHT` has AA contrast for the foreground and the 7 non-black normal colors, and 3:1 for the bright ones.
 - The engine derives the 256-color cube, the gray ramp and the dim colors itself. Programs can override colors with OSC 4, 10, 11 and 12, and those overrides win.

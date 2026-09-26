@@ -4,9 +4,25 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **Sprint 3: terminal customization.**
+  - **Profiles ([ADR 0016](docs/adr/0016-terminal-profiles-and-settings-files.md)):** every terminal option of PLAN §6.2 lives in profiles (`profiles/*.toml`) that inherit from the default one; the chain global, group, host, tab is in `opensesh-core` (groups and hosts use it once they exist). Each tab can switch profile from its menu, and new tabs use the profile chosen in Settings > Profiles. Every change reaches open terminals at once; files edited outside the app apply live too.
+  - **Fonts:** family (monospaced fonts listed, all on request), fallback fonts, size, normal and bold weight, italics on or off, line height, letter spacing, antialiasing, hinting, and per-tab zoom (Ctrl+= / Ctrl+- / Ctrl+0). Programming ligatures are experimental and off by default ([ADR 0015](docs/adr/0015-programming-ligatures.md), with a spike in `spikes/ligatures/`).
+  - **Themes:** the own TOML format, a dark and a light theme per profile, 15 built-in themes (OpenSesh Dark and Light, Catppuccin Mocha, Macchiato, Frappé and Latte, Dracula, Nord, Gruvbox Dark and Light, Tokyo Night, Storm and Day, Solarized Dark and Light) with their licenses, import from iTerm2, Windows Terminal, Alacritty, Kitty and base16 files, export to OpenSesh and Alacritty, and a visual editor.
+  - **More options:** bold as bright, a minimum contrast, cursor and selection colors, cursor shape and blinking, hollow cursor without focus, padding, background opacity (the window gets an alpha channel when a profile uses it) and a background image with dimming and fit, scrollback, scroll speed and smooth scrolling, word separators, copy on select, right click pastes or opens the menu, the Linux primary selection, opt-in OSC 52 copying, the bell (flash, sound, notification or none), `TERM`, Backspace and Delete, Alt as Meta, legacy encodings through `encoding_rs`, an answerback and a pause between pasted lines.
+  - **Keyword highlighting (PLAN §6.5):** regex rules with colors from the theme, bold and underline, in rule sets that profiles turn on (logs, network addresses, status words, paths and URLs built in, and your own in `highlights.toml`), applied as rows are drawn and switchable per tab.
+  - **Settings pages:** Terminal (every option, inherited values marked and resettable, a live preview drawn by the real terminal), Profiles, Themes and Shortcuts (capture, conflicts, keys terminal programs need, restore defaults; changes in `keybindings.toml`).
+  - **Tooling:** `cargo xtask notices` regenerates `THIRD_PARTY_NOTICES.md` (now with the themes) without the network; the Debian package needs `qml6-module-qtquick-dialogs` for the file dialogs.
+
 ### Changed
 
+- Smoke tests and screenshot runs never write profiles, themes, rules or shortcuts.
 - README: how to install OpenSesh (the Linux install script and its options, the Windows installer and portable zip), how updates work, how to check a download and how releases are made.
+
+### Fixed
+
+- The release script now keeps the blank line under a new version's heading in the changelog.
 
 ## [0.1.0] - 2026-09-26
 
