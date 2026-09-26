@@ -246,6 +246,9 @@ Item {
 
                     readonly property string vaultState: Keychain.vaultStatus
                     readonly property bool passwordLocked: vaultState === "locked" && Keychain.protection === "password"
+                    // Held by the keyring, but the keyring doesn't have its key (a data folder copied
+                    // from another computer, or a keyring that is locked or missing).
+                    readonly property bool keyMissing: vaultState === "locked" && Keychain.protection === "keyring"
 
                     Column {
                         width: parent.width
@@ -283,6 +286,7 @@ Item {
                             elide: Text.ElideNone
                             text: vaultCard.vaultState === "missing" ? qsTr("Created with your first password or key.")
                                 : vaultCard.vaultState === "unreadable" ? Keychain.vaultProblem
+                                : vaultCard.keyMissing ? qsTr("The system keyring doesn't have its key: the data may come from another computer, or the keyring is locked.")
                                 : Keychain.protection === "keyring" ? qsTr("Held by your system keyring.")
                                 : Keychain.remembered ? qsTr("Master password, remembered on this computer.")
                                 : qsTr("Protected by your master password.")
@@ -301,7 +305,14 @@ Item {
                         }
 
                         OsButton {
-                            visible: vaultCard.vaultState === "unreadable"
+                            visible: vaultCard.keyMissing
+                            text: qsTr("Try again")
+                            iconName: "refresh-cw"
+                            onClicked: view.shell.unlockVault(null)
+                        }
+
+                        OsButton {
+                            visible: vaultCard.vaultState === "unreadable" || vaultCard.keyMissing
                             variant: "danger"
                             text: qsTr("Reset…")
                             onClicked: view.shell.showVaultReset()
