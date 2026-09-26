@@ -613,6 +613,43 @@ pub fn metrics(density: Density, ui_scale: f64, reduce_motion: bool) -> Metrics 
     }
 }
 
+/// Names of the tab colors in menu order. Workspaces store the name, so a tab keeps its color
+/// readable when the scheme changes.
+pub const TAB_COLOR_NAMES: [&str; 8] = [
+    "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink",
+];
+
+/// Tab colors for the dark and the light scheme, in the order of [`TAB_COLOR_NAMES`].
+const TAB_COLORS: [(Rgba, Rgba); 8] = [
+    (Rgba::rgb(0xF2, 0x66, 0x7A), Rgba::rgb(0xC8, 0x37, 0x4D)),
+    (Rgba::rgb(0xF2, 0x9E, 0x4C), Rgba::rgb(0xC4, 0x63, 0x1A)),
+    (Rgba::rgb(0xF2, 0xC1, 0x4E), Rgba::rgb(0xA8, 0x76, 0x0C)),
+    (Rgba::rgb(0x5F, 0xD3, 0x8D), Rgba::rgb(0x1E, 0x8F, 0x52)),
+    (Rgba::rgb(0x4D, 0xB6, 0xAC), Rgba::rgb(0x13, 0x80, 0x7A)),
+    (Rgba::rgb(0x6C, 0xB6, 0xFF), Rgba::rgb(0x2B, 0x6C, 0xB0)),
+    (Rgba::rgb(0xA9, 0x83, 0xD8), Rgba::rgb(0x7B, 0x4F, 0xB8)),
+    (Rgba::rgb(0xE0, 0x7A, 0xB8), Rgba::rgb(0xB8, 0x40, 0x7F)),
+];
+
+/// The tab colors of `scheme`, in the order of [`TAB_COLOR_NAMES`]. Each one is visible (3:1)
+/// as a mark on the window background and the surfaces.
+#[must_use]
+pub fn tab_colors(scheme: ColorScheme) -> [Rgba; 8] {
+    let base = match scheme {
+        ColorScheme::Dark => dark_base(),
+        ColorScheme::Light => light_base(),
+    };
+    let surfaces = [base.bg, base.surface, base.surface2];
+    TAB_COLORS.map(|(dark, light)| {
+        let color = if scheme == ColorScheme::Dark {
+            dark
+        } else {
+            light
+        };
+        ensure_contrast(color, base.text, &surfaces, AA_UI)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -629,6 +666,22 @@ mod tests {
             }
         }
         out
+    }
+
+    #[test]
+    fn tab_colors_are_visible_in_both_schemes() {
+        for scheme in [ColorScheme::Dark, ColorScheme::Light] {
+            let base = if scheme == ColorScheme::Dark {
+                dark_base()
+            } else {
+                light_base()
+            };
+            for (name, color) in TAB_COLOR_NAMES.iter().zip(tab_colors(scheme)) {
+                for surface in [base.bg, base.surface, base.surface2] {
+                    assert_contrast(color, surface, AA_UI, name);
+                }
+            }
+        }
     }
 
     fn assert_contrast(fg: Rgba, bg: Rgba, min: f64, what: &str) {
