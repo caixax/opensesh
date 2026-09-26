@@ -854,7 +854,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "opensesh-app"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "cxx",
@@ -877,7 +877,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "directories",
  "notify",
@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-term"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "alacritty_terminal",
  "crossbeam-channel",
@@ -1955,7 +1955,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "flate2",
