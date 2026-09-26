@@ -449,6 +449,9 @@ pub struct KeyOptions {
     pub backspace_sends_ctrl_h: bool,
     /// Alt acts as Meta: it prefixes `ESC` to text and to the C0 keys. Default: true.
     pub alt_sends_escape: bool,
+    /// Delete without modifiers sends DEL (`^?`, 0x7f) instead of the VT220 `ESC [ 3 ~`.
+    /// Default: false.
+    pub delete_sends_del: bool,
     /// In application keypad mode (DECKPAM), keypad keys send the VT220 sequences (`SS3 p`..
     /// `SS3 y`, `SS3 j`..`SS3 o`, `SS3 X`, `SS3 M`) instead of their characters. Default: false,
     /// like alacritty, kitty and Windows Terminal (curses programs enable DECKPAM at start, and
@@ -461,6 +464,7 @@ impl Default for KeyOptions {
         Self {
             backspace_sends_ctrl_h: false,
             alt_sends_escape: true,
+            delete_sends_del: false,
             vt220_keypad: false,
         }
     }
@@ -515,6 +519,7 @@ pub fn encode_key(input: &KeyInput, modes: &InputModes, options: &KeyOptions) ->
         Key::End => cursor_key(b'F', mods, term),
         Key::Begin => cursor_key(b'E', mods, term),
         Key::Insert => tilde_key(2, mods),
+        Key::Delete if options.delete_sends_del && mods == Modifiers::NONE => b"\x7f".to_vec(),
         Key::Delete => tilde_key(3, mods),
         Key::PageUp => tilde_key(5, mods),
         Key::PageDown => tilde_key(6, mods),
@@ -721,6 +726,7 @@ mod tests {
                 "DECKPAM" => modes.term.insert(TermMode::APP_KEYPAD),
                 "LNM" => modes.term.insert(TermMode::LINE_FEED_NEW_LINE),
                 "BS" => options.backspace_sends_ctrl_h = true,
+                "DEL" => options.delete_sends_del = true,
                 "NOMETA" => options.alt_sends_escape = false,
                 "VT220" => options.vt220_keypad = true,
                 other => panic!("unknown mode {other}"),
@@ -900,6 +906,8 @@ mod tests {
         // Editing keys.
         row(64, Key::Insert, "", "", "", b"\x1b[2~"),
         row(64, Key::Delete, "", "\x7f", "", b"\x1b[3~"),
+        row(64, Key::Delete, "", "\x7f", "DEL", b"\x7f"),
+        row(64, Key::Delete, "S", "", "DEL", b"\x1b[3;2~"),
         row(65, Key::PageUp, "", "", "", b"\x1b[5~"),
         row(65, Key::PageDown, "", "", "", b"\x1b[6~"),
         row(66, Key::Delete, "C", "", "", b"\x1b[3;5~"),
@@ -1237,6 +1245,7 @@ mod tests {
             KeyOptions {
                 backspace_sends_ctrl_h: false,
                 alt_sends_escape: true,
+                delete_sends_del: false,
                 vt220_keypad: false
             }
         );

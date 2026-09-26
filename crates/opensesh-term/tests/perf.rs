@@ -348,6 +348,86 @@ fn full_snapshot_cost() {
     );
 }
 
+/// Full 200x60 snapshots of log-like text, plain, with keyword highlighting (the built-in log,
+/// network, status and path sets: 12 rules) and with a minimum contrast (PLAN §6.2, §6.5).
+#[test]
+#[ignore = "performance probe; run in release with --ignored --nocapture"]
+fn highlighting_and_minimum_contrast_cost() {
+    let mut data = Vec::new();
+    for row in 0..60 {
+        let level = ["INFO", "WARN", "ERROR", "DEBUG"][row % 4];
+        let line = format!(
+            "2026-09-26 12:{:02}:{:02} {level} worker-{row} connected from 10.0.{}.{} to \
+             /var/lib/app/data/{row}.db status OK after {} ms; see https://example.com/runs/{row}",
+            row % 60,
+            (row * 7) % 60,
+            row % 256,
+            (row * 3) % 256,
+            row * 13
+        );
+        data.extend_from_slice(
+            format!("\x1b[2m{:<200}\x1b[0m", &line[..line.len().min(200)]).as_bytes(),
+        );
+    }
+    data.extend_from_slice(b"\x1b[0mEND");
+    let (backend, events) = backend::replay(data);
+    let session = Session::start(
+        backend,
+        events,
+        SessionConfig {
+            size: TermSize::new(200, 61),
+            ..SessionConfig::default()
+        },
+        Arc::new(|_| {}),
+    )
+    .unwrap();
+    while !session.text_dump().contains("END") {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    let mut frame = Frame::default();
+    let rounds = 200;
+    let measure = |label: &str, palette: opensesh_term::palette::Palette, frame: &mut Frame| {
+        let mut total = Duration::ZERO;
+        let mut worst = Duration::ZERO;
+        for _ in 0..rounds {
+            // A palette change forces a full frame.
+            session.set_palette(palette.clone());
+            let started = Instant::now();
+            session.snapshot(frame);
+            let took = started.elapsed();
+            total += took;
+            worst = worst.max(took);
+        }
+        eprintln!(
+            "full 200x61 snapshot of log lines, {label}: mean {:?}, max {:?}",
+            total / rounds,
+            worst
+        );
+    };
+    let dark = opensesh_term::palette::Palette::OPENSESH_DARK;
+    measure("plain", dark.clone(), &mut frame);
+    let sets = opensesh_core::terminal::highlight::builtin_sets();
+    let highlighter = Arc::new(opensesh_term::highlight::Highlighter::new(&sets));
+    session.set_highlighter(Some(Arc::clone(&highlighter)));
+    measure(
+        "with the 4 built-in highlight sets",
+        dark.clone(),
+        &mut frame,
+    );
+    session.set_highlighter(None);
+    let contrast = opensesh_term::palette::Palette {
+        minimum_contrast: 4.5,
+        ..dark.clone()
+    };
+    measure(
+        "with a 4.5:1 minimum contrast (dim text)",
+        contrast.clone(),
+        &mut frame,
+    );
+    session.set_highlighter(Some(highlighter));
+    measure("with both", contrast, &mut frame);
+}
+
 #[test]
 #[ignore = "performance probe; run in release with --ignored --nocapture"]
 fn search_step_cost() {
