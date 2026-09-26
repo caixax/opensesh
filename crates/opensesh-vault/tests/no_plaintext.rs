@@ -14,6 +14,7 @@ use opensesh_vault::crypto::KdfParams;
 use opensesh_vault::keys::{self, KeyType};
 use opensesh_vault::manager::{IdentityEdit, Keychain, PasswordChange};
 use opensesh_vault::{KeyStore, MemoryKeyStore, Status, VaultError};
+use secrecy::ExposeSecret;
 use ssh_key::PrivateKey;
 
 const FAST: KdfParams = KdfParams::INSECURE_FOR_TESTS;
@@ -36,7 +37,7 @@ fn fixture(name: &str) -> Vec<u8> {
 }
 
 fn set(text: &str) -> PasswordChange {
-    PasswordChange::Set(zeroize::Zeroizing::new(text.to_owned()))
+    PasswordChange::Set(secrecy::SecretString::from(text))
 }
 
 /// Every form in which `needle` could sit in a file.
@@ -266,7 +267,7 @@ fn no_secret_is_written_in_clear() {
         .unlock(MASTER_TWO.as_bytes(), 2_005)
         .unwrap();
     assert_eq!(
-        restarted.identity_password(&first).unwrap().as_str(),
+        restarted.identity_password(&first).unwrap().expose_secret(),
         IDENTITY_PASSWORDS[1]
     );
     assert_eq!(restarted.file.identities.len(), 2);

@@ -24,6 +24,7 @@ opensesh-core.workspace = true
 opensesh-import.workspace = true
 opensesh-term.workspace = true
 opensesh-vault.workspace = true
+secrecy.workspace = true
 # Update checks (update.rs): GitHub Releases over HTTPS, checksums of downloaded installers.
 serde.workspace = true
 serde_json.workspace = true

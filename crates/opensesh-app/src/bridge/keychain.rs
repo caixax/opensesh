@@ -209,8 +209,8 @@ use opensesh_core::watch::FileWatcher;
 use opensesh_vault::keychain::KEYCHAIN_FILE;
 use opensesh_vault::keys::KeyType;
 use opensesh_vault::manager::{IdentityEdit, PasswordChange};
+use secrecy::{ExposeSecret, SecretString};
 use serde_json::Value as Json;
-use zeroize::Zeroizing;
 
 use crate::bridge::app_info::is_test_run;
 use crate::keychain::{Job, KeySource, Outcome};
@@ -242,15 +242,15 @@ pub struct KeychainRust {
     watcher: Option<FileWatcher>,
 }
 
-/// Secret text from QML, moved into memory that is wiped on drop.
-fn secret(text: &QString) -> Zeroizing<String> {
-    Zeroizing::new(text.to_string())
+/// Secret text from QML, moved into memory that is wiped on drop (and never printed).
+fn secret(text: &QString) -> SecretString {
+    SecretString::from(text.to_string())
 }
 
 /// `None` for empty text.
-fn optional_secret(text: &QString) -> Option<Zeroizing<String>> {
+fn optional_secret(text: &QString) -> Option<SecretString> {
     let value = secret(text);
-    (!value.is_empty()).then_some(value)
+    (!value.expose_secret().is_empty()).then_some(value)
 }
 
 impl qobject::Keychain {
