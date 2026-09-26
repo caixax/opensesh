@@ -3,13 +3,23 @@
 //! - [`vault`]: `vault.bin`, the encrypted secrets, and who holds its key (ADR 0023);
 //!   [`format`] is its byte layout, [`crypto`] the primitives, [`store`] the system keyring and
 //!   [`backoff`] the waits after wrong master passwords.
+//! - [`keys`]: SSH keys (generate, import OpenSSH and PuTTY keys with [`ppk`], export).
+//! - [`keychain`]: `keychain.toml`, the identities and keys without their secrets.
+//! - [`agent`]: keys held by SSH agents; [`known_hosts`]: host keys, read-only for now.
+//! - [`manager`]: the vault and `keychain.toml` together, as the app uses them.
 //!
 //! Secrets are never logged, never put in error messages and never written in clear: types that
 //! hold them wipe their memory on drop and print nothing in `Debug`.
 
+pub mod agent;
 pub mod backoff;
 pub mod crypto;
 pub mod format;
+pub mod keychain;
+pub mod keys;
+pub mod known_hosts;
+pub mod manager;
+pub mod ppk;
 pub mod store;
 pub mod vault;
 
