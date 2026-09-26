@@ -54,6 +54,12 @@ pub mod qobject {
         #[cxx_name = "copyText"]
         fn copy_text(self: &Self, text: &QString);
 
+        /// Seconds since the user last typed, clicked or moved the mouse in any OpenSesh window
+        /// (the vault's idle lock).
+        #[qinvokable]
+        #[cxx_name = "idleSeconds"]
+        fn idle_seconds(self: &Self) -> i32;
+
         /// The local path of a `file:` URL from a file dialog (empty for other URLs).
         #[qinvokable]
         #[cxx_name = "localPath"]
@@ -142,6 +148,11 @@ impl qobject::Platform {
     /// See the bridge declaration.
     pub fn copy_text(&self, text: &QString) {
         shim::clipboard_set_text(text);
+    }
+
+    /// See the bridge declaration.
+    pub fn idle_seconds(&self) -> i32 {
+        i32::try_from(shim::idle_milliseconds() / 1000).unwrap_or(i32::MAX)
     }
 
     /// See the bridge declaration.

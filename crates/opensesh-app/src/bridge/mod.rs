@@ -4,6 +4,7 @@ pub mod app_info;
 pub mod hosts;
 pub mod instance;
 pub mod keybindings;
+pub mod keychain;
 pub mod platform;
 pub mod settings;
 pub mod shim;

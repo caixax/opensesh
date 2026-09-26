@@ -227,6 +227,25 @@ impl Default for TerminalConfig {
     }
 }
 
+/// `[security]` settings (Sprint 6).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Security {
+    /// Lock a vault protected by a master password after this many minutes without using the
+    /// app (0: never).
+    pub lock_after_minutes: u32,
+}
+
+/// Longest idle time before the vault locks, in minutes (a day).
+pub const MAX_LOCK_AFTER_MINUTES: u32 = 24 * 60;
+
+impl Default for Security {
+    fn default() -> Self {
+        Self {
+            lock_after_minutes: 15,
+        }
+    }
+}
+
 /// The whole `config.toml`.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Config {
@@ -236,6 +255,8 @@ pub struct Config {
     pub appearance: Appearance,
     /// `[terminal]`.
     pub terminal: TerminalConfig,
+    /// `[security]`.
+    pub security: Security,
     /// What this version doesn't know, written back as it was read so a save never deletes a
     /// newer OpenSesh's settings: unknown top-level keys and tables as they are, and the unknown
     /// keys of `[general]` and `[appearance]` as tables under those names. Known keys always
@@ -480,6 +501,16 @@ impl Config {
             }
             reader.unknown(&terminal, "terminal");
         }
+        let mut security = reader.section(&mut root, "security");
+        {
+            let s = &mut config.security;
+            reader.minutes(
+                &mut security,
+                "security.lock_after_minutes",
+                &mut s.lock_after_minutes,
+            );
+            reader.unknown(&security, "security");
+        }
         reader.unknown(&root, "");
 
         // Every known key was taken out above (valid or not): what is left is kept as is.
@@ -488,6 +519,7 @@ impl Config {
             ("general", general),
             ("appearance", appearance),
             ("terminal", terminal),
+            ("security", security),
         ] {
             if !rest.is_empty() {
                 extra.insert(name.to_owned(), Value::Table(rest));
@@ -553,6 +585,12 @@ impl Config {
             Value::String(self.terminal.profile.clone()),
         );
 
+        let mut security = Table::new();
+        security.insert(
+            "lock_after_minutes".into(),
+            Value::Integer(i64::from(self.security.lock_after_minutes)),
+        );
+
         // Unknown settings go back where they were read from; known keys take precedence.
         let keep_unknown = |known: &mut Table, unknown: &Table| {
             for (key, value) in unknown {
@@ -565,7 +603,8 @@ impl Config {
                 ("general", Value::Table(unknown)) => keep_unknown(&mut general, unknown),
                 ("appearance", Value::Table(unknown)) => keep_unknown(&mut appearance, unknown),
                 ("terminal", Value::Table(unknown)) => keep_unknown(&mut terminal, unknown),
-                ("schema_version" | "general" | "appearance" | "terminal", _) => {}
+                ("security", Value::Table(unknown)) => keep_unknown(&mut security, unknown),
+                ("schema_version" | "general" | "appearance" | "terminal" | "security", _) => {}
                 _ => {
                     root.insert(key.clone(), value.clone());
                 }
@@ -575,6 +614,7 @@ impl Config {
         root.insert("general".into(), Value::Table(general));
         root.insert("appearance".into(), Value::Table(appearance));
         root.insert("terminal".into(), Value::Table(terminal));
+        root.insert("security".into(), Value::Table(security));
         format!("{HEADER}\n{root}")
     }
 }
@@ -702,6 +742,23 @@ impl Reader {
                     UI_SCALE_RANGE.start(),
                     UI_SCALE_RANGE.end()
                 ),
+            ),
+        }
+    }
+
+    fn minutes(&mut self, table: &mut Table, key: &str, target: &mut u32) {
+        match Self::take(table, key) {
+            None => {}
+            Some(Value::Integer(value)) => match u32::try_from(value) {
+                Ok(value) if value <= MAX_LOCK_AFTER_MINUTES => *target = value,
+                _ => self.warn(
+                    key,
+                    format!("{value} is outside 0..={MAX_LOCK_AFTER_MINUTES}, keeping the default"),
+                ),
+            },
+            Some(other) => self.warn(
+                key,
+                format!("expected a whole number, found {}", other.type_str()),
             ),
         }
     }
@@ -927,6 +984,26 @@ mod tests {
         let kept = parsed.extra["appearance"]["sparkle"].as_bool();
         assert_eq!(kept, Some(true));
         assert_eq!(parsed.extra.len(), 1, "{:?}", parsed.extra);
+    }
+
+    #[test]
+    fn security_settings() {
+        let (config, warnings, _) = Config::from_toml_str("").unwrap();
+        assert!(warnings.is_empty());
+        assert_eq!(config.security.lock_after_minutes, 15);
+        let (config, warnings, _) =
+            Config::from_toml_str("[security]\nlock_after_minutes = 0\n").unwrap();
+        assert!(warnings.is_empty(), "{warnings:?}");
+        assert_eq!(config.security.lock_after_minutes, 0);
+        let text = config.to_toml_string();
+        assert!(text.contains("[security]\nlock_after_minutes = 0"), "{text}");
+        for bad in ["-1", "100000", "\"soon\"", "1.5"] {
+            let (config, warnings, _) =
+                Config::from_toml_str(&format!("[security]\nlock_after_minutes = {bad}\n"))
+                    .unwrap();
+            assert_eq!(config.security.lock_after_minutes, 15, "{bad}");
+            assert_eq!(warnings.len(), 1, "{bad}");
+        }
     }
 
     #[test]

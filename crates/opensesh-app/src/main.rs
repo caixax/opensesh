@@ -8,6 +8,7 @@ mod cli;
 mod crash;
 mod gui;
 mod hosts;
+mod keychain;
 mod logging;
 mod platform;
 mod saves;

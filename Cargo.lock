@@ -1796,6 +1796,7 @@ dependencies = [
  "opensesh-core",
  "opensesh-import",
  "opensesh-term",
+ "opensesh-vault",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -1806,6 +1807,7 @@ dependencies = [
  "tracing-subscriber",
  "ureq",
  "windows-sys 0.61.2",
+ "zeroize",
 ]
 
 [[package]]

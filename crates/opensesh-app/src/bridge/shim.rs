@@ -66,6 +66,14 @@ pub mod ffi {
         #[namespace = "opensesh"]
         fn clipboard_set_text(text: &QString);
 
+        /// Starts noting user input to the application's windows (for the vault's idle lock).
+        #[namespace = "opensesh"]
+        fn install_activity_filter();
+
+        /// Milliseconds since the last user input the activity filter saw.
+        #[namespace = "opensesh"]
+        fn idle_milliseconds() -> i64;
+
         /// Portable text of a key combination (e.g. `Ctrl+Shift+P`).
         #[namespace = "opensesh"]
         fn key_sequence_text(key: i32, modifiers: i32) -> QString;

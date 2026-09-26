@@ -346,6 +346,17 @@ pub fn public_info(key: &PublicKey) -> KeyInfo {
     }
 }
 
+/// What can be shown about an OpenSSH public key line (`None` when it doesn't parse); `comment`
+/// replaces the line's own when given.
+#[must_use]
+pub fn public_line_info(line: &str, comment: Option<&str>) -> Option<KeyInfo> {
+    let mut key = PublicKey::from_openssh(line.trim()).ok()?;
+    if let Some(comment) = comment {
+        key.set_comment(comment);
+    }
+    Some(public_info(&key))
+}
+
 fn rsa_bits(key: &PublicKey) -> u32 {
     let Some(rsa) = key.key_data().rsa() else {
         return 0;

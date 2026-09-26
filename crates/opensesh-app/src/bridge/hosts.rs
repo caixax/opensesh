@@ -473,6 +473,7 @@ fn host_from_json(text: &str) -> Result<Host, Vec<(&'static str, &'static str)>>
         object.entry("name").or_insert(Json::String(String::new()));
     }
     let mut host: Host = serde_json::from_value(value).map_err(|_| vec![("host", "invalid")])?;
+    host.identity = identity_from_editor(host.identity);
     host.name = host.name.trim().to_owned();
     host.address = host.address.trim().to_owned();
     host.user = host
@@ -491,6 +492,28 @@ fn host_from_json(text: &str) -> Result<Host, Vec<(&'static str, &'static str)>>
         Ok(host)
     } else {
         Err(problems)
+    }
+}
+
+/// The editor says `none` for "no identity, even if the group has one" (saved as an empty id)
+/// and leaves the field out to inherit.
+fn identity_from_editor(identity: Option<String>) -> Option<String> {
+    identity.map(|id| {
+        if id == IDENTITY_NONE {
+            String::new()
+        } else {
+            id.trim().to_owned()
+        }
+    })
+}
+
+/// The editor's word for an empty identity.
+const IDENTITY_NONE: &str = "none";
+
+/// `identity` as the editor shows it (an empty id is `none`).
+fn identity_to_editor(value: &mut Json) {
+    if value.get("identity").and_then(Json::as_str) == Some("") {
+        value["identity"] = Json::String(IDENTITY_NONE.to_owned());
     }
 }
 
@@ -521,6 +544,7 @@ fn group_from_json(text: &str) -> Result<Group, Vec<(&'static str, &'static str)
         }
     }
     let mut group: Group = serde_json::from_value(value).map_err(|_| vec![("group", "invalid")])?;
+    group.defaults.identity = identity_from_editor(group.defaults.identity);
     group.name = group.name.trim().to_owned();
     if problems.is_empty() {
         Ok(group)
@@ -805,6 +829,7 @@ impl qobject::Hosts {
             return QString::default();
         };
         let mut value = serde_json::to_value(host).unwrap_or(Json::Null);
+        identity_to_editor(&mut value);
         if let Some(object) = value.as_object_mut() {
             object.insert("linked".to_owned(), Json::Bool(host.is_linked()));
             object.insert(
@@ -850,6 +875,9 @@ impl qobject::Hosts {
             return QString::default();
         };
         let mut value = serde_json::to_value(group).unwrap_or(Json::Null);
+        if let Some(defaults) = value.get_mut("defaults") {
+            identity_to_editor(defaults);
+        }
         if let Some(object) = value.as_object_mut() {
             object.insert(
                 "path".to_owned(),
@@ -1135,7 +1163,15 @@ impl qobject::Hosts {
         if !matches!(host.protocol, Protocol::Ssh) {
             return None;
         }
-        let args = library.file.ssh_args(host);
+        let mut args = library.file.ssh_args(host);
+        // Without a user of its own, a host uses its identity's.
+        if args.user.is_none() {
+            args.user = library
+                .file
+                .resolve(host)
+                .identity()
+                .and_then(crate::keychain::identity_user);
+        }
         args.check().ok().map(|()| args)
     }
 
