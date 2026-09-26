@@ -118,6 +118,8 @@ SettingsPage {
                 Accessible.name: qsTr("Remember on this computer")
                 onToggled: {
                     const wanted = checked;
+                    // Show the vault's real state: it changes when the worker is done.
+                    checked = Qt.binding(() => Keychain.remembered);
                     KeychainTasks.run(Keychain.setRemember(wanted), (code, detail) => {
                         if (code.length > 0)
                             Toasts.show(KeychainTasks.message(code, detail), "danger");

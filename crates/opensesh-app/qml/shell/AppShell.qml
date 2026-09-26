@@ -704,11 +704,25 @@ Item {
     }
 
     // Runs `then` (if any) once the vault is open: at once when it isn't locked, else after the
-    // master password is typed.
+    // master password is typed. A vault the keyring holds is asked for again (the keyring may have
+    // been locked); without its key there, a toast says so.
     function unlockVault(then) {
         if (Keychain.vaultStatus !== "locked") {
             if (then)
                 then();
+            return;
+        }
+        if (Keychain.protection === "keyring") {
+            KeychainTasks.run(Keychain.unlockWithKeyring(), (code, detail) => {
+                if (Keychain.vaultStatus === "unlocked") {
+                    if (then)
+                        then();
+                } else {
+                    Toasts.show(code.length > 0 ? KeychainTasks.message(code, detail)
+                                                : qsTr("The system keyring doesn't have the vault's key. Reset the vault in Settings > Security to start a new one."),
+                                "danger");
+                }
+            });
             return;
         }
         unlockDialog.show(then);
