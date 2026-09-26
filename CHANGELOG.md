@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **Sprint 5: hosts and sessions.**
+  - **Saved hosts ([ADR 0019](docs/adr/0019-hosts-groups-and-inheritance.md)):** hosts and nested groups in `hosts.toml`, with tags, favorites, color, icon, markdown notes and group defaults (user, port, jump hosts, key file, terminal profile, SSH and SFTP options) that hosts inherit unless they set their own. Edits made outside the app apply live; a file that can't be read is never overwritten.
+  - **Hosts view:** Favorites, Recent, the group tree with counts, fuzzy search on name, address, user, tags and group (under 8 ms for 1000 hosts), protocol and tag filters, four orders, cards or a list, multi-selection with the mouse and the keyboard, dragging hosts onto a group (and groups into groups), and a menu to connect, connect in a split, duplicate, edit, copy the `ssh` command, favorite, move and delete. A dot shows the hosts with an open session.
+  - **Host and group editors:** Basic, Authentication, Advanced, Terminal, SFTP and Notes, checked as you type, with every inherited value shown with the group it comes from.
+  - **Connecting:** SSH hosts open in a tab or a split through the system's OpenSSH until the built-in client arrives ([ADR 0022](docs/adr/0022-openssh-until-the-built-in-client.md)), with their group's and their own terminal profile; workspaces remember and reconnect them. Other protocols can be saved already.
+  - **Quick connect (Ctrl+Shift+O):** `user@host:port`, IPv6, `ssh://`, `sftp://`, `telnet://`, `rdp://`, `vnc://`, `-J`, `-p`, `-l` and `serial:///dev/ttyUSB0?baud=115200`, with suggestions from the saved hosts and the recent targets; the command palette lists "Connect to <host>".
+  - **`~/.ssh/config` import ([ADR 0020](docs/adr/0020-ssh-config-import.md)):** hosts with `HostName`, `User`, `Port`, `IdentityFile` and `ProxyJump`, following `Include`, either linked (read-only, following the file) or copied into a group; wildcard patterns and `Match` are skipped with a note.
+  - **Command line and single instance ([ADR 0021](docs/adr/0021-single-instance-and-cli.md)):** `opensesh list`, `opensesh connect <host>` and `opensesh open <target>`, shipped in the packages; starting OpenSesh again, or the CLI, hands the request to the running window; targets from outside ask before connecting.
+
+### Changed
+
+- Quick connect (Ctrl+Shift+O) and the Hosts view's Import button work now instead of announcing their sprint.
+- `deny.toml` allows the 0BSD license (two small dependencies of `interprocess`).
+
 ## [0.1.1] - 2026-09-26
 
 ### Added

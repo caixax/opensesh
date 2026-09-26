@@ -106,7 +106,7 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 | `OsToast` | `Rectangle` | Transient message with `kind` (`info`/`success`/`warning`/`danger`) and an optional action; `focusButton(reason)` |
 | `OsEmptyState` | `Item` | Icon, title, body and action buttons |
 | `OsSplitter` | `T.SplitView` | Themed handle, keyboard resizable |
-| `OsCommandPalette` | `T.Popup` | Search field and fuzzy-filtered action list (see `ActionRegistry`) |
+| `OsCommandPalette` | `T.Popup` | Search field and fuzzy-filtered action list (see `ActionRegistry`); `extraResults(query)` adds entries that run a function (the shell lists "Connect to <host>") |
 | `OsProgress` | `T.ProgressBar` | Determinate and indeterminate |
 | `OsSectionHeader` | `Item` | Section title with an optional trailing action |
 | `OsFormRow` | `Item` | Label, control and help/error text, aligned in forms |
@@ -118,11 +118,14 @@ Every component appears in the Gallery (`opensesh-app --gallery`) in every state
 
 | Name | Kind | Responsibility |
 |---|---|---|
-| `Theme`, `AppSettings`, `AppInfo`, `Platform`, `UiState` | Rust | Tokens, persisted settings, startup info, OS helpers, remembered UI state |
+| `Theme`, `AppSettings`, `AppInfo`, `Platform`, `UiState` | Rust | Tokens, persisted settings, startup info, OS helpers (including `keyboardModifiers()` and `copyText(text)`), remembered UI state |
 | `TerminalSessions` | Rust | The terminal sessions of every window, by pane id (`src/terminal/registry.rs`): `allocateId()` gives a new tab or pane id, `close(id)` ends the session of a closed pane, `isOpen(id)`, `count()`. A session outlives the `TerminalItem` that shows it; only closing its pane or tab ends it, so panes and tabs can move without restarting their shells. |
 | `Layouts` | Rust | Split-tree operations on a tab's layout, JSON in and out (ADR 0017): `single`, `split`, `close`, `neighbor`, `resize`, `setRatio`, `swap`, `equalize`, `geometry` (pane rectangles and dividers), `panes`, `remap` |
 | `Workspaces` | Rust | Saved workspaces and the last session (ADR 0018): `workspaces` (JSON list), `save(id, name, workspace)`, `open(id)`, `rename`, `remove`, `saveLastSession`, `lastSession`, `roundTrip` (tests) |
-| `WindowRegistry` | QML singleton | The main window's shell and the detached ones: `activeShell` (actions act on it), `openWindow(entries, point)`, `shellAt(point)`, `openWorkspace(workspace, shell)`, `capture()`, and the recently closed tabs (`rememberClosed`, `takeClosed`) |
+| `WindowRegistry` | QML singleton | The main window's shell and the detached ones: `activeShell` (actions act on it), `openWindow(entries, point)`, `shellAt(point)`, `openWorkspace(workspace, shell)`, `capture()`, the recently closed tabs (`rememberClosed`, `takeClosed`), and `openHosts` (panes per saved host, for the Hosts view's session dot) |
+| `Hosts` | Rust | Saved hosts and groups (ADR 0019): `search(text, scope, protocol, tag, sort)` (JSON summaries), `hostJson`/`groupJson`, `inherited(group, protocol)`, `validateHost`/`validateGroup` (field codes), `saveHost`, `saveGroup`, `deleteHosts`, `deleteGroup`, `moveHosts`, `moveGroup`, `duplicateHost`, `setFavorite`, `findHost`; `connectCommand(id)` and `sshCommand(id)` (ADR 0022); quick connect (`parseTarget`, `targetCommand`, `suggest`, `recordHost`, `recordTarget`); `~/.ssh/config` (`previewSshConfig`, `importSshConfig`, `unlinkSource`, ADR 0020); `loadFixture(count)` in test runs |
+| `Instance` | Rust | Requests from a second start or the `opensesh` CLI (ADR 0021): signals `activateRequested`, `connectRequested(host)`, `openRequested(url)`, delivered once QML calls `takePending()`; `simulate(op, value)` for the smoke test |
+| `TabColors` | QML singleton | Translated names of the tab colors and `color(name)` (a tab color name or `#RRGGBB` from `hosts.toml`) |
 | `ActionRegistry` | QML singleton | The single list of user actions. Each is an `OsAction` (`actionId`, `text`, `shortcut`, `category`, `iconName`, `enabled`, `showInPalette`, signal `triggered`) declared next to its handler and added with `register(action)`. `find(id)`, `trigger(id)`, `search(query)` (fuzzy, for the palette) and `conflicts()` (duplicate shortcuts). The shell's `ShortcutHost` creates one `Shortcut` per action. |
 | `Toasts` | QML singleton | `show(text, kind, actionText, actionId)` plus the history (`history`, `unread`) used by the notifications panel |
 
@@ -140,5 +143,7 @@ Every component appears in the Gallery (`opensesh-app --gallery`) in every state
 | `TabWorkspace.qml` | One terminal tab: its split tree of panes (ADR 0017), laid out flat by pane id, the dividers, the focused and maximized pane, broadcast and the paste confirmation. `AppShell` creates one per `sessionModel` row and keeps them all alive; only the current one is visible |
 | `TerminalPane.qml` | One pane: the `TerminalItem` attached to the pane's session, its scroll bar, search bar (Ctrl+Shift+F), context menu, visual bell, the broadcast border and chip, and the banner shown when the shell ends with an error |
 | `TabSwitcher.qml`, `WorkspacesDialog.qml`, `DetachedWindow.qml` | The Ctrl+Tab most-recently-used switcher, the saved workspaces dialog, and a secondary window for tabs moved out of a window |
+| `HostEditorDialog.qml`, `GroupEditorDialog.qml`, `EditorTextRow.qml`, `EditorChoiceRow.qml` | The host and group editors; the rows bind to a dotted path of the draft and show what is inherited ("deploy (from Production)") when the field is empty |
+| `QuickConnectPopup.qml`, `SshConfigImportDialog.qml` | Quick connect (Ctrl+Shift+O: the parsed target, saved hosts and recent targets; Enter, Shift+Enter or Ctrl+Enter for a tab or a split) and the `~/.ssh/config` import (link or copy) |
 | `SmokeTest.qml` | `--smoke-test`: first frame, bridge and encoding checks, then runs `steps` (functions; a step may return more steps, or itself to poll) and exits; `fail(reason)` ends the run with exit code 8. The main window's steps open a local terminal, type into it and check its output |
 | `ScreenshotRunner.qml` | `--screenshots <dir>`: every page in dark/light × comfortable/compact |

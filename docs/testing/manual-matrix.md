@@ -4,6 +4,32 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 5 (2026-09-26)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 131 to 134 steps):** as before, plus the Hosts view with 1000 generated hosts (cards and list, a fuzzy search, Favorites, a group with its subgroups, Shift extending the selection, the host menu, the host and group editors, the ssh_config import dialog), quick connect with a jump host and a bad port, the command palette offering a host, a saved host connected in a tab and in a split (the smoke test runs its hermetic shell instead of `ssh` and checks the command line), the Recent list, the open-session count, and a `connect` request as if from another process. Nothing is written.
+- **Single instance and CLI, end to end** (portable copies, a saved host on 127.0.0.1 port 1): `opensesh list`, `opensesh connect`, a second start handing over its `--connect`, a bad target refused by the CLI, `ssh` starting in a pane and its exit shown; on Linux also a stale socket replaced on the next start.
+- **Packages:** the Debian package ships `/usr/bin/opensesh` next to `opensesh-app`.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Single instance + CLI |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ | ✅ / ✅ | ✅ `windows` | ✅ (named pipe) |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ (Unix socket) |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | ⏳ |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ (GCC 16 warnings from Qt headers and cxx's generated code, as before) | ✅ / ✅ | ✅ Wayland, ✅ X11 | ⏳ |
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| Connect to a real SSH host with a jump host and a key file, and reconnect from the banner | ⏳ | ⏳ |
+| Link a real ~/.ssh/config with includes; edit it and see the Hosts view follow | ⏳ | ⏳ |
+| Drag hosts onto a group, and a group onto another; keyboard selection with Shift and Ctrl | ⏳ | ⏳ |
+| Scroll 1000 hosts as cards on real hardware | ⏳ | ⏳ |
+| `opensesh open` from a terminal: the confirmation, then the connection | ⏳ | ⏳ |
+| Starting OpenSesh from the Start menu or the launcher while it runs brings the window forward | ⏳ | ⏳ (Wayland may refuse to raise it) |
+
 ## Sprint 4 (2026-09-26)
 
 ### Automated checks

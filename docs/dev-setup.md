@@ -228,9 +228,12 @@ Smoke-test exit codes:
 | Config: `config.toml`, plus its 5 backups `config.toml.bak.N` | `$XDG_CONFIG_HOME/opensesh` | `%APPDATA%\OpenSesh` |
 | Terminal profiles (`profiles/*.toml`), themes (`themes/*.toml`), keyword highlighting rules (`highlights.toml`), changed shortcuts (`keybindings.toml`), [ADR 0016](adr/0016-terminal-profiles-and-settings-files.md) | `<config>` | same |
 | Saved workspaces (`workspaces/*.toml`), [ADR 0018](adr/0018-workspace-files.md) | `<config>` | same |
+| Hosts and groups (`hosts.toml`), [ADR 0019](adr/0019-hosts-groups-and-inheritance.md) | `<config>` | same |
 | Data (logs, vault, recordings) | `$XDG_DATA_HOME/opensesh` | `%LOCALAPPDATA%\OpenSesh` |
 | Window and panel state (`state.toml`) | `<data>/state.toml` | same |
 | The last session, for "Restore sessions at startup" (`last-session.toml`) | `<data>/last-session.toml` | same |
+| Recent connections (`recent.toml`) | `<data>/recent.toml` | same |
+| The running instance's socket ([ADR 0021](adr/0021-single-instance-and-cli.md)) | `$XDG_RUNTIME_DIR/opensesh-<tag>.sock` (else in `<data>`) | the named pipe `\\.\pipe\opensesh-<user>-<tag>` |
 | Cache | `$XDG_CACHE_HOME/opensesh` | `%LOCALAPPDATA%\OpenSesh\cache` |
 | Logs | `<data>/logs/opensesh.YYYY-MM-DD.log`, plus `crash-*.txt` | same |
 

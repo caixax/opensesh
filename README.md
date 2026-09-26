@@ -4,7 +4,7 @@
 
 OpenSesh is an open source, cross-platform and lightweight remote connections client. It is planned to cover SSH, SFTP, tunnels, local terminal, serial, telnet, mosh, RDP and VNC in a single native app built with **Rust** and **Qt 6 / QML** (through [cxx-qt](https://github.com/KDAB/cxx-qt)).
 
-> **Status: pre-alpha** ([latest release](https://github.com/caixax/opensesh/releases/latest)). The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work, and the terminal is customizable: profiles, themes (with importers from other terminals), fonts, keyword highlighting and shortcuts. SSH, SFTP and the other protocols are still to come. Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
+> **Status: pre-alpha** ([latest release](https://github.com/caixax/opensesh/releases/latest)). The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work, and the terminal is customizable: profiles, themes (with importers from other terminals), fonts, keyword highlighting and shortcuts. Tabs split into panes, move between windows and broadcast input; layouts save as workspaces. Saved hosts have groups, fuzzy search, quick connect and `~/.ssh/config` import, and SSH hosts connect through the system's OpenSSH until the built-in client arrives. SFTP and the other protocols are still to come. Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Install
 
@@ -64,6 +64,18 @@ sha256sum --ignore-missing -c SHA256SUMS.txt
 ```
 
 On Windows, compare the output of `Get-FileHash .\OpenSesh-*-setup.exe` (PowerShell) with the file's line.
+
+### Command line
+
+The packages also install `opensesh`, which works with the running OpenSesh (starting it when needed):
+
+```sh
+opensesh list [--json]                  # saved hosts, with the ones linked from ~/.ssh/config
+opensesh connect web-01                 # connect to a saved host, by name or id
+opensesh open deploy@10.0.1.21:2222     # quick connect (also ssh://, rdp://...); OpenSesh asks first
+```
+
+On Windows it is `opensesh.exe` in the install or portable folder; add that folder to `PATH` to use it anywhere. Starting OpenSesh again while it runs brings the open window to the front instead of opening another one.
 
 ## Principles
 

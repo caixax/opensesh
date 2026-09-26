@@ -15,7 +15,7 @@ Two layers are measured separately:
 | RAM at rest with 1 terminal under 150 MB (target 100 MB) | one idle session adds about 1 MB; a full 10,000-line scrollback adds 30 MB at 120 columns and 50 MB at 200 columns | **Windows: pass, target missed:** 117.5 MB working set (135 MB private) with one idle tab. **Debian WSLg: fail:** 212 MB RSS (201 MB PSS), about 115 MB of it Mesa's software renderer. A full scrollback adds 28 MB at 124 columns and 45 MB at 204 columns, which takes a maximized Windows tab to 167.5 MB |
 | `cat` of a 100 MB file or `yes` for 10 s: the UI doesn't freeze and input keeps responding | a renderer thread never waited more than 4.5 ms for a snapshot; Ctrl+C ends `yes` in 5 to 8 ms on Linux | **Pass.** Frames at the display rate while output flows; event-loop lag p99 under 1 ms on Windows and under 4.5 ms on Linux; typed keys reach the program in 0.8 ms (Windows) and 1.9 to 3.1 ms (Linux) at the median during `yes`; Ctrl+C to the prompt 57 to 101 ms on Windows (`yes.exe`, bundled ConPTY) and at most 12 ms on Linux (median 7.5 ms). A few isolated stalls of 34 to 63 ms, none of 100 ms |
 | Key-to-pixel latency comparable to native terminals; render at the display refresh, only with damage | input is handled before output; one `Dirty` per frame; a snapshot with nothing damaged costs 2 µs | **Pass on Windows.** Key to pixels p50 5.9 to 6.1 ms, against 8.1 ms for Windows Terminal and 13.8 ms for the console host with the same probe. 180 frames/s on the 180 Hz monitor while output flows, no frames when idle except the cursor blink. On WSLg the software renderer isn't throttled to the 60 Hz display (144 frames/s during floods) |
-| Hosts view with 1000 entries: smooth scrolling, search under 16 ms | Sprint 5 | Sprint 5 |
+| Hosts view with 1000 entries: smooth scrolling, search under 16 ms | **Pass.** The slowest query over 1000 hosts takes 0.86 ms (release) | **Pass.** A query takes 7 to 8 ms from typing to updated cards, listing all 1000 hosts 6 to 8 ms (release, Windows); cards are reused while scrolling ([below](#hosts-search-sprint-5-2026-09-26)) |
 
 ## Environment
 
@@ -139,6 +139,12 @@ A search step runs on the calling thread under the lock (ADR 0012), so a step ov
 | + a session with a full scrollback at 200 x 60 | 84.0 MB (80.4 MB): +49.8 MB | 87.1 to 87.3 MB (91.8 to 92.1 MB): +50.3 MB |
 
 The engine's own cost is small; the scrollback dominates. With the 150 MB budget (target 100 MB) for the whole app, a wide terminal with a full 10,000-line history takes a third of it; several such tabs exceed it. The scrollback size becomes a user setting in Sprint 3. The GUI measurements below confirm it: one maximized tab with a full history takes the Windows app to 167.5 MB.
+
+### Hosts search (Sprint 5, 2026-09-26)
+
+`cargo test --release -p opensesh-core a_thousand -- --nocapture` searches the generated list of 1000 hosts (`hosts::search::sample_hosts`: five regions, two environments, eight roles, tags) with nine queries (`w`, `web eu`, `10.2`, `monitor us-west`, one that matches nothing...) and lists them all without a query. The slowest took **0.86 ms**: the matcher from `nucleo` over one line per host (name, address, user, tags, group), plus the order. The test checks the 16 ms budget in release builds.
+
+In the app (`--smoke-test`, release build, Windows, offscreen), the Hosts view loads the same 1000 hosts and times each refresh: the Rust search and its JSON, parsing it, and updating the list model with the visible cards. Listing all 1000 hosts took **6 to 8 ms** and the query `web eu` (226 hosts) **7 to 8 ms** in three runs. The first version rebuilt every visible card on each change (a new JavaScript array as the model, and a tag repeater per card) and took 25 to 44 ms; the view now keeps one list model updated in place, cards have fixed tag slots, and the views reuse their delegates while scrolling.
 
 ## How to measure (GUI)
 
