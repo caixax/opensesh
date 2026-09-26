@@ -172,10 +172,19 @@ pub fn send(endpoint: &Endpoint, request: &Request, timeout: Duration) -> Result
     })
 }
 
-/// A running listener; it stops accepting when the process ends.
+/// A running listener; it stops accepting when the process ends. Dropping it removes the
+/// socket file (a file left by a process that was killed is replaced by the next start).
 #[derive(Debug)]
 pub struct Server {
     endpoint: Endpoint,
+}
+
+impl Drop for Server {
+    fn drop(&mut self) {
+        if let Some(path) = self.endpoint.path() {
+            let _ = std::fs::remove_file(path);
+        }
+    }
 }
 
 impl Server {
@@ -290,8 +299,12 @@ mod tests {
     #[test]
     fn a_request_reaches_the_listening_instance() {
         let dir = tempfile::tempdir().unwrap();
-        let paths = AppPaths::portable(dir.path());
-        let endpoint = Endpoint::for_paths(&paths);
+        // A socket in the test's own folder, not in the user's runtime directory.
+        let endpoint = if cfg!(windows) {
+            Endpoint::for_paths(&AppPaths::portable(dir.path()))
+        } else {
+            Endpoint::Path(dir.path().join("instance.sock"))
+        };
         // Nobody listens yet.
         assert!(matches!(
             send(&endpoint, &Request::Activate, Duration::from_millis(200)),
@@ -330,7 +343,12 @@ mod tests {
         .unwrap();
         assert!(matches!(reply, Reply::Error { .. }));
         // A second listener on the same endpoint is refused while the first one answers.
-        assert!(serve(endpoint, |_| Reply::Ok).is_err());
+        assert!(serve(endpoint.clone(), |_| Reply::Ok).is_err());
+        // Stopping removes the socket file.
+        drop(server);
+        if let Some(path) = endpoint.path() {
+            assert!(!path.exists());
+        }
     }
 
     #[test]

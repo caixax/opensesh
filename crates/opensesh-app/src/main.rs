@@ -87,6 +87,8 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
     // and the other modes stay on their own.
     let single =
         options.mode == Mode::App && !options.smoke_test && options.screenshot_dir.is_none();
+    // Kept until the window closes; dropping it removes the socket file.
+    let mut instance_server = None;
     if single {
         let endpoint = ipc::Endpoint::for_paths(&paths);
         let request = options.request.clone().unwrap_or(ipc::Request::Activate);
@@ -111,6 +113,7 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
             Ok(server) => {
                 bridge::instance::set_listening();
                 tracing::info!(endpoint = ?server.endpoint(), "listening for other OpenSesh starts");
+                instance_server = Some(server);
             }
             Err(error) => tracing::warn!("could not listen for other OpenSesh starts: {error}"),
         }
@@ -167,6 +170,7 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
     services::init(paths)?;
 
     let result = gui::run(qml, &initial_language);
+    drop(instance_server);
     // The window is gone: end the shells of the tabs still open (in the background).
     terminal::registry::shutdown_all();
     // Settings and UI state may still be waiting in the writer's debounce window.
