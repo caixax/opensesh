@@ -284,6 +284,8 @@ pub struct LocalOptions {
     pub options: SessionOptions,
     /// `TERM` for the shell.
     pub term: String,
+    /// Working directory to start in; empty for the home directory.
+    pub directory: String,
 }
 
 /// A shell that reads no startup files and keeps no history, for the smoke test: it must not
@@ -305,7 +307,11 @@ fn start_local(options: LocalOptions, notify: Notify) -> Result<Session, StartEr
     } else {
         ShellCommand::user_shell()
     };
-    let command = command.env("TERM", &options.term);
+    let mut command = command.env("TERM", &options.term);
+    // A directory that no longer exists falls back to home (see ShellCommand::cwd).
+    if !options.directory.trim().is_empty() {
+        command = command.cwd(options.directory.trim());
+    }
     let (backend, events) = pty::spawn(command, options.size)?;
     let config = SessionConfig {
         size: options.size,
@@ -316,8 +322,17 @@ fn start_local(options: LocalOptions, notify: Notify) -> Result<Session, StartEr
     Ok(Session::start(backend, events, config, notify)?)
 }
 
-/// Ids of preview sessions: negative, so they never meet a tab's.
+/// Ids of preview sessions: negative, so they never meet a pane's.
 static NEXT_PREVIEW: AtomicI32 = AtomicI32::new(-1);
+
+/// Ids of tabs and panes: positive and unique across windows.
+static NEXT_ID: AtomicI32 = AtomicI32::new(1);
+
+/// A new tab or pane id.
+#[must_use]
+pub fn allocate_id() -> i32 {
+    NEXT_ID.fetch_add(1, Ordering::Relaxed)
+}
 
 /// Starts a session that plays `bytes` once and has no program (the settings preview), under a
 /// new negative id. Close it with [`close`] when the view goes away.

@@ -1,8 +1,10 @@
 // Status bar (PLAN §5.3). Left: the session status: the current terminal's working directory
-// when the shell reports it (OSC 7), else its title (a live monitor arrives in Sprint 11).
+// when the shell reports it (OSC 7), else its title (a live monitor arrives in Sprint 11), and
+// while the tab broadcasts, how many panes receive the input (click to stop).
 // Right: the notifications button with the unread count, a theme quick switch
 // (System -> Dark -> Light) and the version.
-//   terminal: TerminalItem   the terminal of the current tab, or null
+//   terminal: TerminalItem   the focused terminal of the current tab, or null
+//   workspace: TabWorkspace  the current tab, or null
 import QtQuick
 import cc.caixa.opensesh
 
@@ -10,6 +12,8 @@ Rectangle {
     id: bar
 
     property TerminalItem terminal: null
+    property Item workspace: null
+    readonly property int receiving: workspace && workspace.broadcast ? workspace.participants.length : 0
     readonly property string sessionText: {
         if (!terminal)
             return qsTr("No active session");
@@ -63,6 +67,26 @@ Rectangle {
             Accessible.role: Accessible.StaticText
             Accessible.name: bar.terminal && bar.terminal.workingDirectory.length > 0
                              ? qsTr("Working directory: %1").arg(bar.terminal.workingDirectory) : text
+        }
+
+        OsButton {
+            id: broadcastButton
+
+            anchors.verticalCenter: parent.verticalCenter
+            visible: bar.workspace !== null && bar.workspace.broadcast
+            implicitHeight: bar.buttonSize
+            leftPadding: Theme.spacingSm
+            rightPadding: Theme.spacingSm
+            variant: "danger"
+            iconName: "radio-tower"
+            text: bar.receiving > 1 ? qsTr("Broadcasting to %n panes", "", bar.receiving) : qsTr("Broadcast on, no other pane receives")
+            Accessible.description: qsTr("Click to stop broadcasting")
+            onClicked: bar.workspace.toggleBroadcast()
+
+            OsTooltip {
+                visible: broadcastButton.hovered
+                text: qsTr("Stop broadcasting (%1)").arg(ActionRegistry.find("pane.broadcast") ? ActionRegistry.find("pane.broadcast").shortcut : "")
+            }
         }
     }
 

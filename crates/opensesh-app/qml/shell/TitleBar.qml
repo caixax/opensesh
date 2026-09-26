@@ -100,6 +100,8 @@ Rectangle {
             Layout.alignment: Qt.AlignVCenter
             implicitWidth: Theme.controlHeightSmall
             implicitHeight: Theme.controlHeightSmall
+            // A detached window has no side panel.
+            visible: !bar.shell.detached
             iconName: bar.shell.sidePanelLeft ? "panel-left" : "panel-right"
             checked: bar.shell.sidePanelOpen
             toolTip: qsTr("Side panel (%1)").arg(bar.shell.shortcutText("view.sidePanel"))

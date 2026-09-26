@@ -43,6 +43,12 @@ pub mod qobject {
         #[qinvokable]
         fn beep(self: &Self) -> bool;
 
+        /// The keyboard modifiers held right now (`Qt.ControlModifier` and so on), read from
+        /// the system rather than from the last key event.
+        #[qinvokable]
+        #[cxx_name = "keyboardModifiers"]
+        fn keyboard_modifiers(self: &Self) -> i32;
+
         /// The local path of a `file:` URL from a file dialog (empty for other URLs).
         #[qinvokable]
         #[cxx_name = "localPath"]
@@ -121,6 +127,11 @@ impl qobject::Platform {
     /// See the bridge declaration.
     pub fn beep(&self) -> bool {
         shim::platform_beep()
+    }
+
+    /// See the bridge declaration.
+    pub fn keyboard_modifiers(&self) -> i32 {
+        shim::keyboard_modifiers()
     }
 
     /// See the bridge declaration.

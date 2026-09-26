@@ -83,7 +83,7 @@ SettingsPage {
 
         SettingsRow {
             label: qsTr("Restore sessions at startup")
-            helpText: qsTr("Reopens the tabs that were open when you quit. Takes effect from Sprint 4, when tabs and workspaces arrive.")
+            helpText: qsTr("Reopens the tabs of every window, with their split panes, when OpenSesh starts. New shells start in the folders the old ones were in.")
 
             OsSwitch {
                 checked: AppSettings.restoreSessions

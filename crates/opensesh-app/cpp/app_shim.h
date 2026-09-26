@@ -52,6 +52,10 @@ QStringList font_families(bool monospace_only);
 // standard one yet. Returns whether a sound was requested.
 bool platform_beep();
 
+// The keyboard modifiers held right now (Qt::KeyboardModifiers), read from the system: the tab
+// switcher polls it to see Ctrl released, even outside the window.
+std::int32_t keyboard_modifiers();
+
 // Portable text of a key combination, e.g. "Ctrl+Shift+P" (QKeySequence::PortableText).
 QString key_sequence_text(std::int32_t key, std::int32_t modifiers);
 

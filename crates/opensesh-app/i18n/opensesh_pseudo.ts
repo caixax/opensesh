@@ -28,6 +28,14 @@
         <translation>[Ťéŕmíñáĺ ~~~]</translation>
     </message>
     <message>
+        <source>Panes</source>
+        <translation>[Þáñéš ~~]</translation>
+    </message>
+    <message>
+        <source>Workspaces</source>
+        <translation>[Ŵöŕķšþáçéš ~~~]</translation>
+    </message>
+    <message>
         <source>Debug</source>
         <translation>[Ďébüĝ ~~]</translation>
     </message>
@@ -48,20 +56,12 @@
         <translation>[Ďüþĺíçáťé ťáb ~~~~]</translation>
     </message>
     <message>
-        <source>Duplicating tabs</source>
-        <translation>[Ďüþĺíçáťíñĝ ťábš ~~~~~]</translation>
-    </message>
-    <message>
         <source>Close tab</source>
         <translation>[Çĺöšé ťáb ~~~]</translation>
     </message>
     <message>
         <source>Reopen closed tab</source>
         <translation>[Ŕéöþéñ çĺöšéď ťáb ~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Reopening closed tabs</source>
-        <translation>[Ŕéöþéñíñĝ çĺöšéď ťábš ~~~~~~~]</translation>
     </message>
     <message>
         <source>Next tab</source>
@@ -104,8 +104,112 @@
         <translation>[Ŕéšéť ťĥé ťéŕmíñáĺ ťéxť šížé ~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Toggle keyword highlighting in this tab</source>
-        <translation>[Ťöĝĝĺé ķéýŵöŕď ĥíĝĥĺíĝĥťíñĝ íñ ťĥíš ťáb ~~~~~~~~~~~~]</translation>
+        <source>Switch to the previously used tab</source>
+        <translation>[Šŵíťçĥ ťö ťĥé þŕévíöüšĺý üšéď ťáb ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Switch to the least recently used tab</source>
+        <translation>[Šŵíťçĥ ťö ťĥé ĺéášť ŕéçéñťĺý üšéď ťáb ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Move tab left</source>
+        <translation>[Mövé ťáb ĺéƒť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Move tab right</source>
+        <translation>[Mövé ťáb ŕíĝĥť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Rename tab</source>
+        <translation>[Ŕéñámé ťáb ~~~]</translation>
+    </message>
+    <message>
+        <source>Unpin tab</source>
+        <translation>[Üñþíñ ťáb ~~~]</translation>
+    </message>
+    <message>
+        <source>Pin tab</source>
+        <translation>[Þíñ ťáb ~~~]</translation>
+    </message>
+    <message>
+        <source>Close other tabs</source>
+        <translation>[Çĺöšé öťĥéŕ ťábš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close tabs to the left</source>
+        <translation>[Çĺöšé ťábš ťö ťĥé ĺéƒť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close tabs to the right</source>
+        <translation>[Çĺöšé ťábš ťö ťĥé ŕíĝĥť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Move tab to a new window</source>
+        <translation>[Mövé ťáb ťö á ñéŵ ŵíñďöŵ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Move tab to the main window</source>
+        <translation>[Mövé ťáb ťö ťĥé máíñ ŵíñďöŵ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Split right</source>
+        <translation>[Šþĺíť ŕíĝĥť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Split down</source>
+        <translation>[Šþĺíť ďöŵñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Close pane</source>
+        <translation>[Çĺöšé þáñé ~~~]</translation>
+    </message>
+    <message>
+        <source>Restore pane size</source>
+        <translation>[Ŕéšťöŕé þáñé šížé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Maximize pane</source>
+        <translation>[Máxímížé þáñé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Make all panes the same size</source>
+        <translation>[Máķé áĺĺ þáñéš ťĥé šámé šížé ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Stop broadcasting input</source>
+        <translation>[Šťöþ bŕöáďçášťíñĝ íñþüť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Broadcast input to all panes</source>
+        <translation>[Bŕöáďçášť íñþüť ťö áĺĺ þáñéš ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Stop receiving broadcast input in this pane</source>
+        <translation>[Šťöþ ŕéçéívíñĝ bŕöáďçášť íñþüť íñ ťĥíš þáñé ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Receive broadcast input in this pane</source>
+        <translation>[Ŕéçéívé bŕöáďçášť íñþüť íñ ťĥíš þáñé ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Stop synchronized scrolling</source>
+        <translation>[Šťöþ šýñçĥŕöñížéď šçŕöĺĺíñĝ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Synchronize scrolling of the receiving panes</source>
+        <translation>[Šýñçĥŕöñížé šçŕöĺĺíñĝ öƒ ťĥé ŕéçéívíñĝ þáñéš ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Save workspace…</source>
+        <translation>[Šávé ŵöŕķšþáçé… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Open workspace…</source>
+        <translation>[Öþéñ ŵöŕķšþáçé… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Toggle keyword highlighting in this pane</source>
+        <translation>[Ťöĝĝĺé ķéýŵöŕď ĥíĝĥĺíĝĥťíñĝ íñ ťĥíš þáñé ~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Terminal settings</source>
@@ -244,6 +348,54 @@
         <translation>[Öþéñ ĺöĝš ~~~]</translation>
     </message>
     <message>
+        <source>Focus the pane on the left</source>
+        <translation>[Föçüš ťĥé þáñé öñ ťĥé ĺéƒť ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Resize the pane to the left</source>
+        <translation>[Ŕéšížé ťĥé þáñé ťö ťĥé ĺéƒť ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Swap with the pane on the left</source>
+        <translation>[Šŵáþ ŵíťĥ ťĥé þáñé öñ ťĥé ĺéƒť ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Focus the pane on the right</source>
+        <translation>[Föçüš ťĥé þáñé öñ ťĥé ŕíĝĥť ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Resize the pane to the right</source>
+        <translation>[Ŕéšížé ťĥé þáñé ťö ťĥé ŕíĝĥť ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Swap with the pane on the right</source>
+        <translation>[Šŵáþ ŵíťĥ ťĥé þáñé öñ ťĥé ŕíĝĥť ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Focus the pane above</source>
+        <translation>[Föçüš ťĥé þáñé ábövé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Resize the pane upward</source>
+        <translation>[Ŕéšížé ťĥé þáñé üþŵáŕď ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Swap with the pane above</source>
+        <translation>[Šŵáþ ŵíťĥ ťĥé þáñé ábövé ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Focus the pane below</source>
+        <translation>[Föçüš ťĥé þáñé béĺöŵ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Resize the pane downward</source>
+        <translation>[Ŕéšížé ťĥé þáñé ďöŵñŵáŕď ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Swap with the pane below</source>
+        <translation>[Šŵáþ ŵíťĥ ťĥé þáñé béĺöŵ ~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Go to the last tab</source>
         <translation>[Ĝö ťö ťĥé ĺášť ťáb ~~~~~~]</translation>
     </message>
@@ -255,8 +407,24 @@
 <context>
     <name>AppShell</name>
     <message>
+        <source>Home</source>
+        <translation>[Ĥömé ~~]</translation>
+    </message>
+    <message>
+        <source>Local terminal</source>
+        <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
+    </message>
+    <message>
         <source>Smoke test notification.</source>
         <translation>[Šmöķé ťéšť ñöťíƒíçáťíöñ. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Logs</source>
+        <translation>[Ĺöĝš ~~]</translation>
+    </message>
+    <message>
+        <source>Deploy</source>
+        <translation>[Ďéþĺöý ~~]</translation>
     </message>
     <message>
         <source>Hosts</source>
@@ -289,6 +457,22 @@
     <message>
         <source>Settings</source>
         <translation>[Šéťťíñĝš ~~~]</translation>
+    </message>
+    <message>
+        <source>Rename tab</source>
+        <translation>[Ŕéñámé ťáb ~~~]</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>[Ŕéñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Tab name</source>
+        <translation>[Ťáb ñámé ~~~]</translation>
+    </message>
+    <message>
+        <source>Leave it empty to show the terminal&apos;s own title.</source>
+        <translation>[Ĺéávé íť émþťý ťö šĥöŵ ťĥé ťéŕmíñáĺ&apos;š öŵñ ťíťĺé. ~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -331,6 +515,17 @@
     <message>
         <source>Close</source>
         <translation>[Çĺöšé ~~]</translation>
+    </message>
+</context>
+<context>
+    <name>DetachedWindow</name>
+    <message>
+        <source>%1 - OpenSesh</source>
+        <translation>[%1 - ÖþéñŠéšĥ ~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh</source>
+        <translation>[ÖþéñŠéšĥ ~~~]</translation>
     </message>
 </context>
 <context>
@@ -760,6 +955,10 @@
     <message>
         <source>There is a problem with config.toml. The log has the details.</source>
         <translation>[Ťĥéŕé íš á þŕöbĺém ŵíťĥ çöñƒíĝ.ťömĺ. Ťĥé ĺöĝ ĥáš ťĥé ďéťáíĺš. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the workspace: %1</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé ŵöŕķšþáçé: %1 ~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>%1 comes from a newer OpenSesh or can&apos;t be read, so this change is not saved.</source>
@@ -2648,6 +2847,14 @@
         <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
     </message>
     <message>
+        <source>Pinned</source>
+        <translation>[Þíññéď ~~]</translation>
+    </message>
+    <message>
+        <source>Broadcasting input</source>
+        <translation>[Bŕöáďçášťíñĝ íñþüť ~~~~~~]</translation>
+    </message>
+    <message>
         <source>The bell rang</source>
         <translation>[Ťĥé béĺĺ ŕáñĝ ~~~~]</translation>
     </message>
@@ -2662,6 +2869,94 @@
     <message>
         <source>New tab</source>
         <translation>[Ñéŵ ťáb ~~~]</translation>
+    </message>
+    <message>
+        <source>Drop outside this window to move the tab to another one</source>
+        <translation>[Ďŕöþ öüťšíďé ťĥíš ŵíñďöŵ ťö mövé ťĥé ťáb ťö áñöťĥéŕ öñé ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation>[Ŕéñámé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Color</source>
+        <translation>[Çöĺöŕ ~~]</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>[Ñöñé ~~]</translation>
+    </message>
+    <message>
+        <source>Red</source>
+        <translation>[Ŕéď ~]</translation>
+    </message>
+    <message>
+        <source>Orange</source>
+        <translation>[Öŕáñĝé ~~]</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>[Ýéĺĺöŵ ~~]</translation>
+    </message>
+    <message>
+        <source>Green</source>
+        <translation>[Ĝŕééñ ~~]</translation>
+    </message>
+    <message>
+        <source>Teal</source>
+        <translation>[Ťéáĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Blue</source>
+        <translation>[Bĺüé ~~]</translation>
+    </message>
+    <message>
+        <source>Purple</source>
+        <translation>[Þüŕþĺé ~~]</translation>
+    </message>
+    <message>
+        <source>Pink</source>
+        <translation>[Þíñķ ~~]</translation>
+    </message>
+    <message>
+        <source>Unpin</source>
+        <translation>[Üñþíñ ~~]</translation>
+    </message>
+    <message>
+        <source>Pin</source>
+        <translation>[Þíñ ~]</translation>
+    </message>
+    <message>
+        <source>Duplicate</source>
+        <translation>[Ďüþĺíçáťé ~~~]</translation>
+    </message>
+    <message>
+        <source>Move to a new window</source>
+        <translation>[Mövé ťö á ñéŵ ŵíñďöŵ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Move to window</source>
+        <translation>[Mövé ťö ŵíñďöŵ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>[Çĺöšé ~~]</translation>
+    </message>
+    <message>
+        <source>Close other tabs</source>
+        <translation>[Çĺöšé öťĥéŕ ťábš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close tabs to the left</source>
+        <translation>[Çĺöšé ťábš ťö ťĥé ĺéƒť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close tabs to the right</source>
+        <translation>[Çĺöšé ťábš ťö ťĥé ŕíĝĥť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reopen closed tab</source>
+        <translation>[Ŕéöþéñ çĺöšéď ťáb ~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -3085,8 +3380,8 @@
         <translation>[Ŕéšťöŕé šéššíöñš áť šťáŕťüþ ~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Reopens the tabs that were open when you quit. Takes effect from Sprint 4, when tabs and workspaces arrive.</source>
-        <translation>[Ŕéöþéñš ťĥé ťábš ťĥáť ŵéŕé öþéñ ŵĥéñ ýöü qüíť. Ťáķéš éƒƒéçť ƒŕöm Šþŕíñť 4, ŵĥéñ ťábš áñď ŵöŕķšþáçéš áŕŕívé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Reopens the tabs of every window, with their split panes, when OpenSesh starts. New shells start in the folders the old ones were in.</source>
+        <translation>[Ŕéöþéñš ťĥé ťábš öƒ évéŕý ŵíñďöŵ, ŵíťĥ ťĥéíŕ šþĺíť þáñéš, ŵĥéñ ÖþéñŠéšĥ šťáŕťš. Ñéŵ šĥéĺĺš šťáŕť íñ ťĥé ƒöĺďéŕš ťĥé öĺď öñéš ŵéŕé íñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Confirm before closing with active sessions</source>
@@ -4418,6 +4713,25 @@
         <translation>[Ŵöŕķíñĝ ďíŕéçťöŕý: %1 ~~~~~~~]</translation>
     </message>
     <message numerus="yes">
+        <source>Broadcasting to %n panes</source>
+        <translation>
+            <numerusform>[Bŕöáďçášťíñĝ ťö %n þáñéš ~~~~~~~~]</numerusform>
+            <numerusform>[Bŕöáďçášťíñĝ ťö %n þáñéš ~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Broadcast on, no other pane receives</source>
+        <translation>[Bŕöáďçášť öñ, ñö öťĥéŕ þáñé ŕéçéívéš ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Click to stop broadcasting</source>
+        <translation>[Çĺíçķ ťö šťöþ bŕöáďçášťíñĝ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Stop broadcasting (%1)</source>
+        <translation>[Šťöþ bŕöáďçášťíñĝ (%1) ~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
         <source>Notifications (%n unread)</source>
         <translation>
             <numerusform>[Ñöťíƒíçáťíöñš (%n üñŕéáď) ~~~~~~~~]</numerusform>
@@ -4435,6 +4749,35 @@
     <message>
         <source>v%1</source>
         <translation>[v%1 ~]</translation>
+    </message>
+</context>
+<context>
+    <name>TabSwitcher</name>
+    <message>
+        <source>Switch tab</source>
+        <translation>[Šŵíťçĥ ťáb ~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>TabWorkspace</name>
+    <message>
+        <source>Pane divider</source>
+        <translation>[Þáñé ďívíďéŕ ~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Paste into %n panes?</source>
+        <translation>
+            <numerusform>[Þášťé íñťö %n þáñéš? ~~~~~~]</numerusform>
+            <numerusform>[Þášťé íñťö %n þáñéš? ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Paste</source>
+        <translation>[Þášťé ~~]</translation>
+    </message>
+    <message>
+        <source>Broadcast is on, so the text goes to every receiving pane of this tab. You won&apos;t be asked again until broadcast is turned off.</source>
+        <translation>[Bŕöáďçášť íš öñ, šö ťĥé ťéxť ĝöéš ťö évéŕý ŕéçéívíñĝ þáñé öƒ ťĥíš ťáb. Ýöü ŵöñ&apos;ť bé ášķéď áĝáíñ üñťíĺ bŕöáďçášť íš ťüŕñéď öƒƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -4457,7 +4800,7 @@
     </message>
 </context>
 <context>
-    <name>TerminalTab</name>
+    <name>TerminalPane</name>
     <message>
         <source>The bell rang in %1.</source>
         <translation>[Ťĥé béĺĺ ŕáñĝ íñ %1. ~~~~~~]</translation>
@@ -4470,6 +4813,13 @@
         <source>Local terminal</source>
         <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
     </message>
+    <message numerus="yes">
+        <source>Broadcasting input to %n panes</source>
+        <translation>
+            <numerusform>[Bŕöáďçášťíñĝ íñþüť ťö %n þáñéš ~~~~~~~~~]</numerusform>
+            <numerusform>[Bŕöáďçášťíñĝ íñþüť ťö %n þáñéš ~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
     <message>
         <source>A program in this terminal copied text to the clipboard.</source>
         <translation>[Å þŕöĝŕám íñ ťĥíš ťéŕmíñáĺ çöþíéď ťéxť ťö ťĥé çĺíþböáŕď. ~~~~~~~~~~~~~~~~~]</translation>
@@ -4477,6 +4827,26 @@
     <message>
         <source>Scrollback</source>
         <translation>[Šçŕöĺĺbáçķ ~~~]</translation>
+    </message>
+    <message>
+        <source>Receive broadcast input</source>
+        <translation>[Ŕéçéívé bŕöáďçášť íñþüť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Receiving</source>
+        <translation>[Ŕéçéívíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Not receiving</source>
+        <translation>[Ñöť ŕéçéívíñĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>This pane receives what is typed in the other receiving panes. Click to leave.</source>
+        <translation>[Ťĥíš þáñé ŕéçéívéš ŵĥáť íš ťýþéď íñ ťĥé öťĥéŕ ŕéçéívíñĝ þáñéš. Çĺíçķ ťö ĺéávé. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This pane only gets its own input. Click to receive broadcast input.</source>
+        <translation>[Ťĥíš þáñé öñĺý ĝéťš íťš öŵñ íñþüť. Çĺíçķ ťö ŕéçéívé bŕöáďçášť íñþüť. ~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Find in terminal</source>
@@ -4527,6 +4897,10 @@
         <translation>[Ŕéšťáŕť ~~~]</translation>
     </message>
     <message>
+        <source>Close pane</source>
+        <translation>[Çĺöšé þáñé ~~~]</translation>
+    </message>
+    <message>
         <source>Close tab</source>
         <translation>[Çĺöšé ťáb ~~~]</translation>
     </message>
@@ -4541,6 +4915,30 @@
     <message>
         <source>Select all</source>
         <translation>[Šéĺéçť áĺĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Split right</source>
+        <translation>[Šþĺíť ŕíĝĥť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Split down</source>
+        <translation>[Šþĺíť ďöŵñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Restore pane size</source>
+        <translation>[Ŕéšťöŕé þáñé šížé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Maximize pane</source>
+        <translation>[Máxímížé þáñé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Broadcast input to all panes</source>
+        <translation>[Bŕöáďçášť íñþüť ťö áĺĺ þáñéš ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Synchronize scrolling</source>
+        <translation>[Šýñçĥŕöñížé šçŕöĺĺíñĝ ~~~~~~~]</translation>
     </message>
     <message>
         <source>Find…</source>
@@ -4570,12 +4968,16 @@
         <translation>[Ñö ťéŕmíñáĺ öþéñ ~~~~~]</translation>
     </message>
     <message>
-        <source>Open a local terminal or connect to a host.</source>
-        <translation>[Öþéñ á ĺöçáĺ ťéŕmíñáĺ öŕ çöññéçť ťö á ĥöšť. ~~~~~~~~~~~~~]</translation>
+        <source>Open a local terminal, a saved workspace or connect to a host.</source>
+        <translation>[Öþéñ á ĺöçáĺ ťéŕmíñáĺ, á šávéď ŵöŕķšþáçé öŕ çöññéçť ťö á ĥöšť. ~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Open local terminal</source>
         <translation>[Öþéñ ĺöçáĺ ťéŕmíñáĺ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Open workspace…</source>
+        <translation>[Öþéñ ŵöŕķšþáçé… ~~~~~]</translation>
     </message>
     <message>
         <source>Quick connect</source>
@@ -4789,6 +5191,114 @@
     <message>
         <source>Close</source>
         <translation>[Çĺöšé ~~]</translation>
+    </message>
+</context>
+<context>
+    <name>WindowRegistry</name>
+    <message>
+        <source>Main window</source>
+        <translation>[Máíñ ŵíñďöŵ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Window %1</source>
+        <translation>[Ŵíñďöŵ %1 ~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>WorkspacesDialog</name>
+    <message>
+        <source>There are no terminal tabs to save.</source>
+        <translation>[Ťĥéŕé áŕé ñö ťéŕmíñáĺ ťábš ťö šávé. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Workspace &quot;%1&quot; saved.</source>
+        <translation>[Ŵöŕķšþáçé &quot;%1&quot; šávéď. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The workspace could not be saved. The log has the details.</source>
+        <translation>[Ťĥé ŵöŕķšþáçé çöüĺď ñöť bé šávéď. Ťĥé ĺöĝ ĥáš ťĥé ďéťáíĺš. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The workspace could not be opened. The log has the details.</source>
+        <translation>[Ťĥé ŵöŕķšþáçé çöüĺď ñöť bé öþéñéď. Ťĥé ĺöĝ ĥáš ťĥé ďéťáíĺš. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Workspaces</source>
+        <translation>[Ŵöŕķšþáçéš ~~~]</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>[Çĺöšé ~~]</translation>
+    </message>
+    <message>
+        <source>Save the tabs of every window, with their split panes, as a workspace, and open it again later.</source>
+        <translation>[Šávé ťĥé ťábš öƒ évéŕý ŵíñďöŵ, ŵíťĥ ťĥéíŕ šþĺíť þáñéš, áš á ŵöŕķšþáçé, áñď öþéñ íť áĝáíñ ĺáťéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Workspace name</source>
+        <translation>[Ŵöŕķšþáçé ñámé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Name of the workspace to save</source>
+        <translation>[Ñámé öƒ ťĥé ŵöŕķšþáçé ťö šávé ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Replace</source>
+        <translation>[Ŕéþĺáçé ~~~]</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>[Šávé ~~]</translation>
+    </message>
+    <message>
+        <source>No saved workspaces yet.</source>
+        <translation>[Ñö šávéď ŵöŕķšþáçéš ýéť. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved workspaces</source>
+        <translation>[Šávéď ŵöŕķšþáçéš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1, %2</source>
+        <translation>[%1, %2 ~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n tab(s)</source>
+        <translation>
+            <numerusform>[%n ťáb(š) ~~~]</numerusform>
+            <numerusform>[%n ťáb(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n pane(s)</source>
+        <translation>
+            <numerusform>[%n þáñé(š) ~~~]</numerusform>
+            <numerusform>[%n þáñé(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>[Ŕéñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
+    </message>
+    <message>
+        <source>Opening adds the tabs to this window and starts new shells in the saved folders.</source>
+        <translation>[Öþéñíñĝ áďďš ťĥé ťábš ťö ťĥíš ŵíñďöŵ áñď šťáŕťš ñéŵ šĥéĺĺš íñ ťĥé šávéď ƒöĺďéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Rename workspace</source>
+        <translation>[Ŕéñámé ŵöŕķšþáçé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete this workspace?</source>
+        <translation>[Ďéĺéťé ťĥíš ŵöŕķšþáçé? ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 is removed from the workspaces folder. Open tabs are not affected.</source>
+        <translation>[%1 íš ŕémövéď ƒŕöm ťĥé ŵöŕķšþáçéš ƒöĺďéŕ. Öþéñ ťábš áŕé ñöť áƒƒéçťéď. ~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 </TS>
