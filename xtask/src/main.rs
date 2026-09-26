@@ -49,6 +49,8 @@ Tasks:
   vttest     Download the pinned vttest release, verify its sha256 and build it with configure
              and make into target/vttest/vttest, for the terminal harness tests. Linux and other
              Unix systems only (use WSL on Windows). --force: rebuild.
+  notices    Regenerate THIRD_PARTY_NOTICES.md from the bundle manifests (icons, fonts, terminal
+             themes in assets/themes/themes.toml, ConPTY). No network.
   dist       `dist windows`: build the Windows release packages into target/dist (portable zip
              and NSIS installer). Linux packages: scripts/linux/build.sh. Whole releases:
              scripts/release.bat.
@@ -147,6 +149,10 @@ fn run() -> Result<ExitCode> {
                 eprintln!("shaders: run `cargo xtask shaders` and commit the result");
                 Ok(ExitCode::FAILURE)
             }
+        }
+        Some("notices") => {
+            notices::write(&root)?;
+            Ok(ExitCode::SUCCESS)
         }
         Some("lint-qml") => {
             // Kept as an `OsString`, so directories with non-UTF-8 names work too.
