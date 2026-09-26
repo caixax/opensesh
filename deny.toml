@@ -21,6 +21,8 @@ ignore = []
 # Allowlist of licenses compatible with GPL-3.0-or-later (ADR 0001). Anything else fails CI
 # and needs a review before being added here.
 allow = [
+    # Zero-clause BSD: no conditions at all (interprocess's recvmsg and doctest-file, ADR 0021).
+    "0BSD",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
     "BSD-3-Clause",
