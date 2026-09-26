@@ -130,6 +130,23 @@ print_stdout = "warn"
 print_stderr = "warn"
 large_futures = "warn"
 
+# Debug builds and tests: unoptimized, generating an RSA-4096 key takes over a minute and
+# Argon2 seconds. Optimizing the arithmetic crates alone brings them to release speed.
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
+[profile.dev.package.rsa]
+opt-level = 3
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3
+[profile.dev.package.bcrypt-pbkdf]
+opt-level = 3
+[profile.dev.package.blowfish]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
