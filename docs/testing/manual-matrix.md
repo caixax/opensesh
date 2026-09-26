@@ -4,6 +4,49 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 6 (2026-09-27)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 237 to 252 steps, most of them polling the wait):** as before, plus the Keychain view with the following, all in memory. Nothing is written, and the user's keyring isn't touched.
+  - An identity saved with a password (which creates a keyring-held vault) and an Ed25519 key generated.
+  - The key menu, the identity editor, and the generate and import dialogs.
+  - A master password set, the vault locked, three wrong passwords, and the right one refused during the wait, then accepted after it.
+  - The Agents and Known hosts sections.
+- **The "done when" test** (`tests/no_plaintext.rs`): no secret in clear in the data and config folders, and the wait kept across a restart.
+- **The real keyring,** with a throwaway service name (`cc.caixa.OpenSesh.selftest`), removed at the end (`cargo test -p opensesh-vault --lib system_keyring -- --ignored`):
+  - Credential Manager on Windows (afterwards `cmdkey /list` shows no OpenSesh entry);
+  - GNOME Keyring in a private D-Bus session on Debian.
+- **Real agents** (`--lib real_agents -- --ignored --nocapture`):
+  - Pageant 0.83 (the official build, checked against PuTTY's SHA-256 list) holding a fixture key;
+  - `ssh-agent` with `ssh-add` on Debian and Fedora.
+  Each listed the key with the fingerprint `ssh-add -l` prints. A stand-in agent on a named pipe covers the Windows OpenSSH agent's transport (its service is disabled on this machine).
+- **PuTTY keys:** fixtures made by `puttygen` 0.83 (versions 2 and 3; Argon2i, Argon2d and Argon2id; Ed25519, ECDSA and RSA), each giving the public key `puttygen` prints.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real agent | Real keyring |
+|---|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ | ✅ / ✅ | ✅ `windows` | ✅ Pageant | ✅ Credential Manager |
+| Debian 13 (WSLg) ¹ | 6.8.2 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ ssh-agent | ✅ GNOME Keyring |
+| Fedora 43 (WSLg) ² | 6.10.3 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ ssh-agent | — |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ⏳ ³ | ⏳ ³ | ⏳ ³ | ⏳ ³ | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | CI_RESULT | CI_RESULT (offscreen) | — | — | — |
+
+¹ The keychain as first committed; the later changes (typed passwords as `SecretString`, the vault held by a keyring without its key, the smoke test's final unlock) are covered by Windows, Fedora and CI.
+² Everything but the smoke test's final unlock (a QML-only change), which Windows and CI ran.
+³ Not run: the drive holding the WSL disks filled up during the sprint, and the Arch and Debian disks went read-only with I/O errors. The Arch container in CI ran instead.
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| Save an identity with a password through the app: the vault appears in the keyring (Credential Manager, Seahorse or KWalletManager), and opens by itself after a restart | ⏳ | ⏳ GNOME, ⏳ KDE |
+| Set a master password, restart: the unlock dialog; three wrong passwords and the countdown; "remember on this computer" skips the dialog next time | ⏳ | ⏳ |
+| Leave the app alone past the idle time: the vault locks and the status bar shows it | ⏳ | ⏳ |
+| Import your own OpenSSH key with a passphrase, and a .ppk saved by PuTTY on Windows | ⏳ | ⏳ |
+| Export a private key with a passphrase and load it with `ssh-add` | ⏳ | ⏳ |
+| The Windows OpenSSH agent service with keys added by `ssh-add` | ⏳ | — |
+| A locked login keyring on Linux: the desktop's unlock prompt while the keychain shows it is busy | — | ⏳ |
+
 ## Sprint 5 (2026-09-26)
 
 ### Automated checks
