@@ -4,6 +4,35 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 3 (2026-09-26)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 84 to 87 steps):** as before, plus Settings > Terminal (with its live preview), Profiles, Themes and Shortcuts, the highlighting rule editor and the theme editor. In a real terminal tab it creates a profile, checks that a profile edit reaches the open terminal (`fontSize`), zooms the tab, toggles highlighting, changes and resets a shortcut, and deletes the profile. Test runs keep these changes in memory: nothing is written.
+- **Gallery (`--gallery --smoke-test`):** unchanged.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) |
+|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ | ✅ / ✅ |
+| Debian 13 (WSL) | 6.8.2 (distro) | ✅ | ✅ / ✅ |
+| Fedora 43 (WSL) | 6.10.3 (distro) | ✅ | ✅ / ✅ |
+| Arch Linux (WSL) | 6.11.2 (distro) | ✅ (GCC 16 warnings from Qt headers, as in Sprint 1) | ✅ / ✅ |
+
+Screenshots (`--screenshots`) of Settings > Appearance, Terminal, Profiles, Themes and Shortcuts were reviewed in dark/light × comfortable/compact on Windows with the real renderer, and the Terminal preview with a profile that turns on ligatures, the Dracula theme, highlighting and a 4.5:1 minimum contrast.
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| Translucent background (`background_opacity` below 1): the window starts with an alpha channel, without warnings | ✅ (started; the desktop showing through was not looked at) | ⏳ |
+| The desktop shows through a translucent terminal, and only there (the panels stay opaque); blur from the compositor (KDE, Hyprland) | ⏳ | ⏳ (needs real hardware) |
+| Bell "sound" | ⏳ | ⏳ X11 (Wayland has no standard beep: flashes) |
+| Bell "notification" flashes the taskbar entry of an inactive window | ⏳ | ⏳ |
+| File dialogs (background image, theme import and export): native on Windows, the portal or Qt's own on Linux | ⏳ | ⏳ |
+| Fonts from the system font list, fallback fonts (a Nerd Font, a CJK font), hinting and antialiasing off | ⏳ | ⏳ |
+| Ligatures with Fira Code and Cascadia Code | ⏳ | ⏳ |
+| Legacy encodings against a real device or server (ISO-8859-15, Shift_JIS) | ⏳ (Sprint 7, SSH) | ⏳ |
+
 ## Sprint 1 (2026-09-25)
 
 ### Automated checks

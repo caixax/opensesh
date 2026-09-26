@@ -40,7 +40,7 @@ sudo pacman -S --needed base-devel git lld qt6-base qt6-declarative qt6-svg qt6-
 sudo apt install build-essential pkg-config git curl lld \
   qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-wayland-dev qt6-wayland qt6-tools-dev qt6-l10n-tools \
   qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts \
-  qml6-module-qtquick-window qml6-module-qtquick-templates qml6-module-qtqml-workerscript
+  qml6-module-qtquick-window qml6-module-qtquick-templates qml6-module-qtqml-workerscript qml6-module-qtquick-dialogs
 ```
 
 - **qmake:** `/usr/bin/qmake6`, from the `qmake6` package, which `qt6-base-dev` pulls in.
@@ -174,6 +174,7 @@ The assets these tasks generate are committed, so normal builds work offline:
 
 - **`cargo xtask conpty`** (Windows) copies the bundled ConPTY next to the app; see [ConPTY](#conpty-windows-pseudoconsole-host). Its outputs in `target/` are not committed; the license copy and the notices are.
 - **`cargo xtask vttest`** (Linux) builds the pinned vttest used by the terminal harness tests; see [vttest](#vttest).
+- **`cargo xtask notices`** regenerates `THIRD_PARTY_NOTICES.md` from the manifests (icons, fonts, the terminal themes in `assets/themes/themes.toml`, ConPTY) without the network; a test fails when the committed file is stale. The built-in terminal themes are upstream files kept in `assets/themes/upstream/` at the commits `themes.toml` pins; to update one, fetch the file at a new commit, update the manifest and run the task.
 
 `icons`, `fonts`, `conpty` and `vttest` download from the network; no other task does.
 
@@ -225,6 +226,7 @@ Smoke-test exit codes:
 | | Linux | Windows |
 |---|---|---|
 | Config: `config.toml`, plus its 5 backups `config.toml.bak.N` | `$XDG_CONFIG_HOME/opensesh` | `%APPDATA%\OpenSesh` |
+| Terminal profiles (`profiles/*.toml`), themes (`themes/*.toml`), keyword highlighting rules (`highlights.toml`), changed shortcuts (`keybindings.toml`), [ADR 0016](adr/0016-terminal-profiles-and-settings-files.md) | `<config>` | same |
 | Data (logs, vault, recordings) | `$XDG_DATA_HOME/opensesh` | `%LOCALAPPDATA%\OpenSesh` |
 | Window and panel state (`state.toml`) | `<data>/state.toml` | same |
 | Cache | `$XDG_CACHE_HOME/opensesh` | `%LOCALAPPDATA%\OpenSesh\cache` |
@@ -232,7 +234,8 @@ Smoke-test exit codes:
 
 - If a file named `portable` sits next to the executable, everything goes to `./data/` next to it instead.
 - On Linux, directories the app creates get mode `0700`, the data directory is always kept private, and `config.toml` is written with mode `0600`.
-- You can edit `config.toml` while the app runs: changes apply live. An invalid value is ignored, with a warning that names the key.
+- You can edit `config.toml` while the app runs: changes apply live. An invalid value is ignored, with a warning that names the key. The same goes for the profiles, themes, `highlights.toml` and `keybindings.toml`; Settings > Profiles lists what was ignored.
+- Smoke tests and screenshot runs read these files but never write them or create folders.
 - A `config.toml` with a syntax error, or one written by a newer OpenSesh, is never overwritten: changes made in the app apply but aren't saved until the file is fixed (Settings > General shows why). "Restore defaults" replaces a broken file and keeps it as `config.toml.bak.1`.
 
 ## Releasing

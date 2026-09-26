@@ -4,7 +4,7 @@
 
 OpenSesh is an open source, cross-platform and lightweight remote connections client. It is planned to cover SSH, SFTP, tunnels, local terminal, serial, telnet, mosh, RDP and VNC in a single native app built with **Rust** and **Qt 6 / QML** (through [cxx-qt](https://github.com/KDAB/cxx-qt)).
 
-> **Status: pre-alpha** ([latest release](https://github.com/caixax/opensesh/releases/latest)). The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work; SSH, SFTP and the other protocols are still to come. Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
+> **Status: pre-alpha** ([latest release](https://github.com/caixax/opensesh/releases/latest)). The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work, and the terminal is customizable: profiles, themes (with importers from other terminals), fonts, keyword highlighting and shortcuts. SSH, SFTP and the other protocols are still to come. Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Install
 

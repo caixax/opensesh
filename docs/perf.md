@@ -81,6 +81,22 @@ Replay backend, 200 x 60, with a snapshot every 16 ms.
 
 A search step runs on the calling thread under the lock (ADR 0012), so a step over the full 10,000 lines holds the renderer for about one frame. `SessionConfig::search_max_lines` bounds it.
 
+### Keyword highlighting, minimum contrast and ligatures (Sprint 3, 2026-09-26)
+
+`highlighting_and_minimum_contrast_cost`: full snapshots of 61 log lines of 200 columns (dates, levels, IPv4 addresses, paths, URLs), drawn dim so the minimum contrast has work to do. Windows, release build.
+
+| Full 200 x 61 snapshot of log lines (mean / max) | Windows |
+|---|---|
+| Plain | 497 µs / 0.93 ms |
+| With the 4 built-in highlight sets (12 rules) | 676 µs / 1.52 ms |
+| With a 4.5:1 minimum contrast | 545 µs / 1.06 ms |
+| With both | 746 µs / 1.13 ms |
+
+- Highlighting costs about 0.18 ms per full frame of 61 busy rows, and only rows that are redrawn are scanned. The minimum contrast costs about 0.05 ms.
+- Dim text is what makes this corpus slower than the colored one above (the dim blend per cell); it is not new.
+- The colored-cells probe (`full_snapshot_cost`) measures 94 to 100 µs with the Sprint 3 engine against 89 to 93 µs before it, within the machine's noise. A first version that looked up a highlight style for every cell cost 12 % more; the painter now has one copy of its cell function with highlighting and one without.
+- Ligatures (experimental, off by default) are measured in [ADR 0015](adr/0015-programming-ligatures.md): shaping a 120-column code line costs about 86 µs the first time, and shaped runs are cached. They are paid only when the option is on, only on rows where two symbol characters touch, and within the renderer's 4 ms per-frame budget.
+
 ### `cat` of a 100 MiB file through the PTY
 
 104.9 MB of the mixed corpus, 200 x 60. "From the PTY" is what the engine received: the inbox Windows host re-renders the output, so it sends more bytes than the file has.
