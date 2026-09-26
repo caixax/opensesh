@@ -144,6 +144,8 @@ Item {
             const step = () => (result === null ? [step] : check());
             return step;
         };
+        // Polls until the wait after wrong passwords is over.
+        const waitOver = () => (Keychain.waitUntil > Date.now() ? [waitOver] : null);
         const track = newToken => {
             result = null;
             token = KeychainTasks.run(newToken, (code, detail, value) => result = { code: code, detail: detail, value: value });
@@ -196,11 +198,17 @@ Item {
             wait(() => {
                 if (result.code !== "wait" || Keychain.vaultStatus !== "locked")
                     smoke.fail("the right password was tried during the wait: " + result.code);
-                else
-                    console.info("smoke test: the keychain kept an identity and a key, locked, and waited after wrong passwords");
                 shell.unlockVault(null);
             }),
             () => shell.closeKeychainDialogs(),
+            waitOver,
+            () => track(Keychain.unlock("smoke master password")),
+            wait(() => {
+                if (result.code !== "" || Keychain.vaultStatus !== "unlocked")
+                    smoke.fail("the master password did not unlock the vault after the wait: " + result.code);
+                else
+                    console.info("smoke test: the keychain kept an identity and a key, locked, waited after wrong passwords, then unlocked");
+            }),
             () => showSection("agents"),
             () => showSection("known"),
             () => showSection("identities")
