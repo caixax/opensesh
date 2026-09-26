@@ -17,8 +17,11 @@ out="$here/dist"
 mkdir -p "$work" "$out"
 
 find "$work" -mindepth 1 -maxdepth 1 ! -name target -exec rm -rf {} +
-tar -C "$here" --exclude=./target --exclude=./dist --exclude=./.git --exclude=./.claude \
-    --exclude=./CLAUDE.md -cf - . | tar -C "$work" -xf -
+# Only what git tracks or would track: build outputs and the local files that .gitignore and
+# .git/info/exclude leave out are not copied. (safe.directory: the checkout may belong to
+# another user, e.g. /mnt/<drive> in WSL or a container's workspace.)
+git -c safe.directory='*' -C "$here" ls-files -z --cached --others --exclude-standard \
+    | tar -C "$here" --null --ignore-failed-read -T - -cf - | tar -C "$work" -xf -
 
 # shellcheck disable=SC1091
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
@@ -73,7 +76,7 @@ case "$family" in
             > "$work/target/package/shlibs/debian/control"
         shlibs="$(cd "$work/target/package/shlibs" && dpkg-shlibdeps -O --ignore-missing-info \
             "$deb/usr/bin/opensesh-app" | sed -n 's/^shlibs:Depends=//p')"
-        qml="qml6-module-qtquick, qml6-module-qtquick-templates, qml6-module-qtquick-layouts, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, qt6-svg-plugins"
+        qml="qml6-module-qtquick, qml6-module-qtquick-templates, qml6-module-qtquick-layouts, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, qml6-module-qtquick-dialogs, qt6-svg-plugins"
         mkdir -p "$deb/DEBIAN"
         size="$(du -sk "$deb/usr" | cut -f1)"
         cat > "$deb/DEBIAN/control" <<EOF
