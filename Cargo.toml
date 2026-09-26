@@ -4,6 +4,7 @@ members = [
     "crates/opensesh-core",
     "crates/opensesh-term",
     "crates/opensesh-import",
+    "crates/opensesh-vault",
     "crates/opensesh-cli",
     "crates/opensesh-app",
     "xtask",
@@ -12,6 +13,7 @@ default-members = [
     "crates/opensesh-core",
     "crates/opensesh-term",
     "crates/opensesh-import",
+    "crates/opensesh-vault",
     "crates/opensesh-cli",
     "crates/opensesh-app",
 ]
@@ -34,6 +36,7 @@ publish = false
 opensesh-core = { path = "crates/opensesh-core" }
 opensesh-import = { path = "crates/opensesh-import" }
 opensesh-term = { path = "crates/opensesh-term" }
+opensesh-vault = { path = "crates/opensesh-vault" }
 
 # Qt bridge (KDAB cxx-qt)
 cxx = "1.0.202"
@@ -76,6 +79,25 @@ nucleo-matcher = "0.3.1"
 ulid = "3.0.0"
 # One running instance and the `opensesh` CLI: local sockets (ADR 0021).
 interprocess = "2.4.4"
+
+# Vault, identities and SSH keys (Sprint 6, opensesh-vault; ADR 0024). The RustCrypto crates
+# follow the generation of ssh-key 0.6 (rand_core 0.6, digest 0.10, cipher 0.4), so one copy of
+# each primitive is linked; `ssh_key::sha2` is its SHA-2.
+argon2 = { version = "0.5.3", default-features = false, features = ["alloc"] }
+chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["alloc"] }
+rand_core = { version = "0.6.4", features = ["getrandom"] }
+secrecy = "0.10.3"
+zeroize = "1.9.0"
+ssh-key = { version = "0.6.7", features = ["ed25519", "p256", "p384", "p521", "rsa", "encryption", "getrandom"] }
+ssh-encoding = "0.2.0"
+base64ct = { version = "1.8.3", features = ["alloc"] }
+# PuTTY .ppk keys (v2: SHA-1 and HMAC-SHA-1; v3: Argon2 and HMAC-SHA-256; both AES-256-CBC).
+aes = "0.8.4"
+cbc = "0.1.2"
+hmac = "0.12.1"
+sha1 = "0.10.7"
+# The system keyring: Credential Manager on Windows, Secret Service on Linux (ADR 0023).
+keyring = "4.2.0"
 
 # xtask only (regex is also used by opensesh-term)
 flate2 = "1.1.10"

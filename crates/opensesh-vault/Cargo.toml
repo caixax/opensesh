@@ -1,0 +1,47 @@
+[package]
+name = "opensesh-vault"
+description = "OpenSesh vault, identities, SSH keys, agents and known hosts (no Qt)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+aes.workspace = true
+argon2.workspace = true
+base64ct.workspace = true
+cbc.workspace = true
+chacha20poly1305.workspace = true
+hmac.workspace = true
+keyring.workspace = true
+opensesh-core.workspace = true
+rand_core.workspace = true
+secrecy.workspace = true
+serde.workspace = true
+sha1.workspace = true
+ssh-encoding.workspace = true
+ssh-key.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+tracing.workspace = true
+ulid.workspace = true
+zeroize.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# Pageant's WM_COPYDATA protocol (ADR 0025).
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
