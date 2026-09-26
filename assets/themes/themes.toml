@@ -1,0 +1,37 @@
+# Terminal color themes bundled with OpenSesh (PLAN §6.3, ADR 0016). The upstream files are
+# kept unmodified in upstream/ (fetched at the pinned commits) and read by the Alacritty
+# importer at start-up; OpenSesh Dark and Light are OpenSesh's own (opensesh-dark.toml,
+# opensesh-light.toml). THIRD_PARTY_NOTICES.md is generated from this file (cargo xtask notices).
+schema_version = 1
+
+[[source]]
+name = "Catppuccin for Alacritty"
+repository = "https://github.com/catppuccin/alacritty"
+commit = "f6cb5a5c2b404cdaceaff193b9c52317f62c62f7"
+license = "MIT"
+license_files = ["LICENSES/catppuccin-MIT.txt"]
+files = ["catppuccin-mocha.toml", "catppuccin-macchiato.toml", "catppuccin-frappe.toml", "catppuccin-latte.toml"]
+
+[[source]]
+name = "Dracula for Alacritty"
+repository = "https://github.com/dracula/alacritty"
+commit = "c8a3a13404b78d520d04354e133b5075d9b785e1"
+license = "MIT"
+license_files = ["LICENSES/dracula-MIT.txt"]
+files = ["dracula.toml"]
+
+[[source]]
+name = "alacritty-theme (Nord, Gruvbox, Solarized)"
+repository = "https://github.com/alacritty/alacritty-theme"
+commit = "ab88d5a80d676b5dc6157e91aba8067f2078dc94"
+license = "Apache-2.0 (the Alacritty files); the color schemes: MIT (Nord by Sven Greb, gruvbox by Pavel Pertsev, Solarized by Ethan Schoonover)"
+license_files = ["LICENSES/alacritty-theme-Apache-2.0.txt", "LICENSES/nord-MIT.txt", "LICENSES/gruvbox-MIT.txt", "LICENSES/solarized-MIT.txt"]
+files = ["nord.toml", "gruvbox_dark.toml", "gruvbox_light.toml", "solarized_dark.toml", "solarized_light.toml"]
+
+[[source]]
+name = "Tokyo Night (tokyonight.nvim extras)"
+repository = "https://github.com/folke/tokyonight.nvim"
+commit = "cdc07ac78467a233fd62c493de29a17e0cf2b2b6"
+license = "Apache-2.0"
+license_files = ["LICENSES/tokyonight-Apache-2.0.txt"]
+files = ["tokyonight_night.toml", "tokyonight_storm.toml", "tokyonight_day.toml"]

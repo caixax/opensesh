@@ -17,6 +17,9 @@ use crate::fsutil::{self, WriteOutcome};
 /// Called on the writer thread once a write finished (or failed).
 pub type WriteCallback = Box<dyn FnOnce(&Path, io::Result<WriteOutcome>) + Send>;
 
+/// Called on the writer thread once a removal finished (or failed).
+pub type RemoveCallback = Box<dyn FnOnce(&Path, io::Result<()>) + Send>;
+
 struct Job {
     bytes: Vec<u8>,
     backups: usize,
@@ -24,7 +27,14 @@ struct Job {
 }
 
 enum Message {
-    Write { path: PathBuf, job: Job },
+    Write {
+        path: PathBuf,
+        job: Job,
+    },
+    Remove {
+        path: PathBuf,
+        done: Option<RemoveCallback>,
+    },
     Flush(Sender<()>),
 }
 
@@ -62,6 +72,20 @@ impl FileWriter {
                         Ok(Message::Write { path, job }) => {
                             // A newer version replaces the pending one (its callback is dropped).
                             pending.insert(path, job);
+                        }
+                        Ok(Message::Remove { path, done }) => {
+                            // A write still waiting for this file would bring it back.
+                            pending.remove(&path);
+                            let result = match std::fs::remove_file(&path) {
+                                Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+                                other => other,
+                            };
+                            if let Err(error) = &result {
+                                tracing::warn!(path = %path.display(), "could not remove file: {error}");
+                            }
+                            if let Some(done) = done {
+                                done(&path, result);
+                            }
                         }
                         Ok(Message::Flush(reply)) => {
                             write_all(&mut pending);
@@ -104,6 +128,19 @@ impl FileWriter {
             .and_then(|sender| sender.as_ref().map(|s| s.send(message)));
         if !matches!(sent, Some(Ok(()))) {
             tracing::error!("file writer is stopped; a save was dropped");
+        }
+    }
+
+    /// Queues the removal of `path` (a missing file is fine), dropping any write of it still
+    /// waiting. Returns immediately; `done` runs on the writer thread with the result.
+    pub fn remove(&self, path: PathBuf, done: Option<RemoveCallback>) {
+        let sent = self.sender.lock().ok().and_then(|sender| {
+            sender
+                .as_ref()
+                .map(|s| s.send(Message::Remove { path, done }))
+        });
+        if !matches!(sent, Some(Ok(()))) {
+            tracing::error!("file writer is stopped; a removal was dropped");
         }
     }
 
@@ -153,6 +190,27 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
+
+    #[test]
+    fn remove_drops_a_pending_write_and_deletes_the_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("old.toml");
+        std::fs::write(&path, "x").unwrap();
+        let writer = FileWriter::spawn(Duration::from_secs(60)).unwrap();
+        writer.write(path.clone(), b"new".to_vec(), 0, None);
+        let (done_tx, done_rx) = mpsc::channel();
+        writer.remove(
+            path.clone(),
+            Some(Box::new(move |_, result| {
+                done_tx.send(result.is_ok()).unwrap()
+            })),
+        );
+        assert!(done_rx.recv_timeout(Duration::from_secs(5)).unwrap());
+        writer.flush();
+        assert!(!path.exists(), "the pending write was dropped");
+        writer.remove(dir.path().join("missing.toml"), None);
+        writer.flush();
+    }
 
     #[test]
     fn flush_writes_the_latest_version_only_once() {

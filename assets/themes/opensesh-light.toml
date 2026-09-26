@@ -1,0 +1,37 @@
+# OpenSesh Light: the default light terminal theme. The normal ANSI colors reach 4.5:1 on the
+# background and the bright ones (bold text) 3:1.
+schema_version = 1
+name = "OpenSesh Light"
+author = "OpenSesh"
+license = "GPL-3.0-or-later"
+
+[colors]
+foreground = "#1F232B"
+background = "#FAF9F5"
+cursor = "#B7800F"
+cursor_text = "#FFFFFF"
+selection_bg = "#E6DAB8"
+search_bg = "#F3E2AE"
+search_fg = "#1F232B"
+search_focused_bg = "#D99A1F"
+search_focused_fg = "#1F232B"
+
+[colors.normal]
+black = "#1F232B"
+red = "#B3261E"
+green = "#2A6E2F"
+yellow = "#855C00"
+blue = "#1F5FBF"
+magenta = "#8E3FB5"
+cyan = "#0B6E78"
+white = "#5F6672"
+
+[colors.bright]
+black = "#6B7280"
+red = "#D2453B"
+green = "#3D8C42"
+yellow = "#A77A0C"
+blue = "#3A7BD5"
+magenta = "#A95CCF"
+cyan = "#178A94"
+white = "#7D8491"

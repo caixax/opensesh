@@ -47,10 +47,14 @@ tracing-subscriber = { version = "0.3.23", default-features = false }
 
 # Config and platform
 directories = "6.0.0"
+# Terminal encodings other than UTF-8 (Sprint 3, opensesh-term).
+encoding_rs = "0.8.42"
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 toml = "1.1.6"
+# iTerm2 `.itermcolors` theme import (an XML property list; opensesh-core).
+quick-xml = "0.42.0"
 
 # xtask only (regex is also used by opensesh-term)
 flate2 = "1.1.10"

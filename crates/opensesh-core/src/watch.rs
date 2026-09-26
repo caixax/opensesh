@@ -106,6 +106,58 @@ impl FileWatcher {
     }
 }
 
+impl FileWatcher {
+    /// Calls `on_change` (on a background thread) after any file directly inside `dir` whose
+    /// name ends with `suffix` was created, modified, renamed or removed, once no new event
+    /// arrived for `debounce`. `dir` must exist.
+    ///
+    /// # Errors
+    ///
+    /// Fails if `dir` can't be watched or the callback thread can't start.
+    pub fn spawn_dir(
+        dir: &Path,
+        suffix: &str,
+        debounce: Duration,
+        on_change: impl Fn() + Send + 'static,
+    ) -> Result<Self, WatchError> {
+        let (sender, receiver) = mpsc::channel::<()>();
+        let suffix = suffix.to_owned();
+        let mut watcher =
+            notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
+                let Ok(event) = event else { return };
+                if matches!(event.kind, EventKind::Access(_)) {
+                    return;
+                }
+                let concerns = event.paths.iter().any(|changed: &PathBuf| {
+                    changed
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|name| name.ends_with(&suffix))
+                });
+                if concerns {
+                    let _ = sender.send(());
+                }
+            })?;
+        watcher.watch(dir, RecursiveMode::NonRecursive)?;
+        std::thread::Builder::new()
+            .name("opensesh-watch".to_owned())
+            .spawn(move || {
+                while receiver.recv().is_ok() {
+                    loop {
+                        match receiver.recv_timeout(debounce) {
+                            Ok(()) => {}
+                            Err(RecvTimeoutError::Timeout) => break,
+                            Err(RecvTimeoutError::Disconnected) => return,
+                        }
+                    }
+                    on_change();
+                }
+            })
+            .map_err(WatchError::Thread)?;
+        Ok(Self { _watcher: watcher })
+    }
+}
+
 /// The directory to watch and the file name to look for.
 fn split(path: &Path) -> Option<(PathBuf, OsString)> {
     let dir = path.parent().filter(|dir| !dir.as_os_str().is_empty())?;
@@ -164,6 +216,23 @@ mod tests {
         let (_watcher, changes) = watch(&path);
         std::fs::write(dir.path().join("hosts.toml"), "x").unwrap();
         assert!(changes.recv_timeout(Duration::from_millis(400)).is_err());
+    }
+
+    #[test]
+    fn a_directory_watch_reports_matching_files_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let (tx, rx) = mpsc::channel();
+        let _watcher =
+            FileWatcher::spawn_dir(dir.path(), ".toml", Duration::from_millis(50), move || {
+                let _ = tx.send(());
+            })
+            .unwrap();
+        std::fs::write(dir.path().join("notes.txt"), "x").unwrap();
+        assert!(rx.recv_timeout(Duration::from_millis(400)).is_err());
+        std::fs::write(dir.path().join("work.toml"), "x").unwrap();
+        assert!(rx.recv_timeout(Duration::from_secs(5)).is_ok());
+        std::fs::remove_file(dir.path().join("work.toml")).unwrap();
+        assert!(rx.recv_timeout(Duration::from_secs(5)).is_ok());
     }
 
     #[test]
