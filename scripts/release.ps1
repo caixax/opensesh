@@ -89,7 +89,7 @@ Run "cargo update --workspace --quiet"
 $changelog = [IO.File]::ReadAllText((Join-Path $repo "CHANGELOG.md"))
 $date = Get-Date -Format "yyyy-MM-dd"
 if ($changelog -notmatch "(?m)^## \[$([regex]::Escape($next))\]") {
-    $changelog = [regex]::Replace($changelog, '(?m)^## \[Unreleased\]\s*$', "## [Unreleased]`n`n## [$next] - $date", 1)
+    $changelog = [regex]::Replace($changelog, '(?m)^## \[Unreleased\][ \t]*$', "## [Unreleased]`n`n## [$next] - $date", 1)
     [IO.File]::WriteAllText((Join-Path $repo "CHANGELOG.md"), $changelog)
 }
 
