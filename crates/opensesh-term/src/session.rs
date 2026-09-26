@@ -33,12 +33,15 @@ use alacritty_terminal::vte::ansi::{
     CursorShape as EngineCursorShape, CursorStyle, NamedColor, Processor, Timeout,
 };
 use crossbeam_channel::{Receiver, Sender, TryRecvError, select};
+use opensesh_core::terminal::highlight::HighlightStyle;
 
 use crate::backend::{BackendEvent, TermSize, TerminalBackend};
+use crate::encoding::Codec;
+use crate::highlight::{Highlighter, RowText, RuleColor};
 use crate::input::InputModes;
 use crate::input::paste::encode_focus;
 use crate::osc::{OscLimiter, SideParser};
-use crate::palette::{ColorTable, DIM_BLEND, Palette};
+use crate::palette::{ColorTable, DIM_BLEND, Palette, Rgb};
 use crate::search::{Search, SearchError};
 use crate::snapshot::{Cell, Cursor, CursorShape, Damage, Frame, Row, flags};
 
@@ -54,6 +57,9 @@ const MAX_COMBINING_MARKS: usize = 8;
 
 /// How long a synchronized update (DEC mode 2026) may hold the redraw back, as in vte.
 const SYNC_HOLD: Duration = Duration::from_millis(150);
+
+/// Most answerback replies per parsed chunk (a flood of ENQ bytes can't flood the program).
+const MAX_ANSWERBACKS_PER_CHUNK: usize = 4;
 
 /// A vte synchronized-update timeout that never asks vte to buffer.
 ///
@@ -106,6 +112,9 @@ pub enum Notice {
     Exited(Option<i32>),
     /// The program turned cursor blinking on or off.
     CursorBlinking(bool),
+    /// The program set the clipboard through OSC 52 (only when [`SessionOptions::osc52_copy`]
+    /// allows it). At most one per 50 ms: the latest text wins.
+    Clipboard(String),
 }
 
 /// The GUI's callback for [`Notice`]s. It runs on the engine thread, never while the `Term` is
@@ -113,18 +122,14 @@ pub enum Notice {
 pub type Notify = Arc<dyn Fn(Notice) + Send + Sync>;
 
 /// Settings for a new [`Session`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SessionConfig {
     /// Initial size; use the size the backend was started with.
     pub size: TermSize,
-    /// Lines of scrollback history.
-    pub scrollback_lines: usize,
     /// Colors.
     pub palette: Palette,
-    /// Cursor shape when the program doesn't choose one (`Block`, `Beam` or `Underline`).
-    pub cursor_shape: CursorShape,
-    /// Whether that default cursor blinks.
-    pub cursor_blinking: bool,
+    /// The options that can also change later ([`Session::set_options`]).
+    pub options: SessionOptions,
     /// Most lines one [`Session::search`] step scans (it runs on the caller's thread). Default
     /// 10,000, the whole default history: a step that finds nothing in 10,000 lines of 200
     /// columns takes about 16 ms (release build).
@@ -135,12 +140,79 @@ impl Default for SessionConfig {
     fn default() -> Self {
         Self {
             size: TermSize::default(),
-            scrollback_lines: 10_000,
             palette: Palette::default(),
-            cursor_shape: CursorShape::Block,
-            cursor_blinking: false,
+            options: SessionOptions::default(),
             search_max_lines: 10_000,
         }
+    }
+}
+
+/// Session options that can change while it runs (PLAN §6.2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionOptions {
+    /// Lines of scrollback history.
+    pub scrollback_lines: usize,
+    /// Cursor shape when the program doesn't choose one (`Block`, `Beam` or `Underline`).
+    pub cursor_shape: CursorShape,
+    /// Whether that default cursor blinks.
+    pub cursor_blinking: bool,
+    /// A cursor turns into a hollow block while the terminal doesn't have the focus.
+    pub cursor_hollow_unfocused: bool,
+    /// Characters that end a word for double-click selection.
+    pub word_separators: String,
+    /// Programs may set the clipboard with OSC 52 ([`Notice::Clipboard`]); reading it is never
+    /// allowed.
+    pub osc52_copy: bool,
+    /// Encoding of the program's input and output (a WHATWG name; UTF-8 needs no conversion).
+    pub encoding: String,
+    /// Reply to ENQ (printable ASCII; empty sends nothing).
+    pub answerback: String,
+}
+
+impl Default for SessionOptions {
+    fn default() -> Self {
+        Self {
+            scrollback_lines: 10_000,
+            cursor_shape: CursorShape::Block,
+            cursor_blinking: false,
+            cursor_hollow_unfocused: true,
+            word_separators: SEMANTIC_ESCAPE_CHARS.to_owned(),
+            osc52_copy: false,
+            encoding: "UTF-8".to_owned(),
+            answerback: String::new(),
+        }
+    }
+}
+
+impl SessionOptions {
+    /// `alacritty_terminal`'s configuration for these options.
+    fn engine_config(&self) -> Config {
+        Config {
+            scrolling_history: self.scrollback_lines,
+            default_cursor_style: CursorStyle {
+                shape: engine_cursor_shape(self.cursor_shape),
+                blinking: self.cursor_blinking,
+            },
+            vi_mode_cursor_style: None,
+            semantic_escape_chars: self.word_separators.clone(),
+            // The kitty keyboard stack has a remote-triggerable panic in 0.26.0 (ADR 0012).
+            kitty_keyboard: false,
+            // OSC 52 is opt-in (PLAN §6.2), and never lets a program read the clipboard.
+            osc52: if self.osc52_copy {
+                Osc52::OnlyCopy
+            } else {
+                Osc52::Disabled
+            },
+        }
+    }
+
+    /// The answerback bytes: printable ASCII only, at most 64 bytes.
+    fn answerback_bytes(&self) -> Vec<u8> {
+        self.answerback
+            .bytes()
+            .filter(|byte| (0x20..0x7f).contains(byte))
+            .take(64)
+            .collect()
     }
 }
 
@@ -234,6 +306,8 @@ struct Shared {
     engine_mouse_hidden: AtomicBool,
     /// A synchronized update (DEC mode 2026) is open: snapshots keep showing the previous screen.
     synchronized: AtomicBool,
+    /// A paced paste ([`Session::write_paced`]) still has lines to send.
+    pasting: AtomicBool,
     closed: AtomicBool,
     notify: Notify,
     search_max_lines: usize,
@@ -267,9 +341,15 @@ struct State {
     full_redraw: bool,
     /// What the previous frame showed.
     shown: Shown,
+    /// Draw the cursor as a hollow block while unfocused.
+    hollow_unfocused: bool,
+    /// Keyword highlighting rules, if any are on.
+    highlighter: Option<Arc<Highlighter>>,
     /// Scratch buffers reused by every snapshot.
     row_damage: Vec<bool>,
     matches: Vec<Match>,
+    row_text: RowText,
+    row_styles: Vec<u16>,
 }
 
 /// View state that isn't part of `alacritty_terminal`'s damage: when it changes, the next frame
@@ -284,6 +364,9 @@ struct Shown {
 
 enum Command {
     Write(Vec<u8>),
+    Paced(Vec<Vec<u8>>, Duration),
+    CancelPaste,
+    Options(SessionOptions),
     Resize(TermSize),
     Focus(bool),
     Redraw,
@@ -343,20 +426,12 @@ impl Session {
     ) -> Result<Self, SessionError> {
         let size = config.size.clamped();
         let (term_events_tx, term_events) = crossbeam_channel::unbounded();
-        let term_config = Config {
-            scrolling_history: config.scrollback_lines,
-            default_cursor_style: CursorStyle {
-                shape: engine_cursor_shape(config.cursor_shape),
-                blinking: config.cursor_blinking,
-            },
-            vi_mode_cursor_style: None,
-            semantic_escape_chars: SEMANTIC_ESCAPE_CHARS.to_owned(),
-            // The kitty keyboard stack has a remote-triggerable panic in 0.26.0 (ADR 0012).
-            kitty_keyboard: false,
-            // OSC 52 clipboard access is opt-in (PLAN §6.2), and has no UI yet.
-            osc52: Osc52::Disabled,
-        };
-        let term = Term::new(term_config, &GridSize::from(size), Listener(term_events_tx));
+        let options = config.options;
+        let term = Term::new(
+            options.engine_config(),
+            &GridSize::from(size),
+            Listener(term_events_tx),
+        );
         let state = State {
             term,
             colors: ColorTable::new(&config.palette),
@@ -366,8 +441,12 @@ impl Session {
             link: None,
             full_redraw: true,
             shown: Shown::default(),
+            hollow_unfocused: options.cursor_hollow_unfocused,
+            highlighter: None,
             row_damage: Vec::new(),
             matches: Vec::new(),
+            row_text: RowText::default(),
+            row_styles: Vec::new(),
         };
         let shared = Arc::new(Shared {
             state: FairMutex::new(state),
@@ -376,6 +455,7 @@ impl Session {
             x10_mouse: AtomicBool::new(false),
             engine_mouse_hidden: AtomicBool::new(false),
             synchronized: AtomicBool::new(false),
+            pasting: AtomicBool::new(false),
             closed: AtomicBool::new(false),
             notify,
             search_max_lines: config.search_max_lines.max(1),
@@ -390,7 +470,18 @@ impl Session {
             processor: Processor::new(),
             sync_hold: None,
             side: SideParser::new(),
-            limiter: OscLimiter::default(),
+            limiter: {
+                let mut limiter = OscLimiter::default();
+                limiter.set_clipboard(options.osc52_copy);
+                limiter
+            },
+            codec: Codec::new(&options.encoding),
+            decoded: Vec::new(),
+            answerback: options.answerback_bytes(),
+            paste: VecDeque::new(),
+            paste_delay: Duration::ZERO,
+            paste_next: None,
+            clipboard: Throttled::default(),
             pending: Pending::default(),
             size,
             pending_resize: None,
@@ -400,7 +491,7 @@ impl Session {
             directory: Throttled::default(),
             bell: Throttled::default(),
             blinking: Throttled::default(),
-            cursor_blinking: config.cursor_blinking,
+            cursor_blinking: options.cursor_blinking,
         };
         std::thread::Builder::new()
             .name("opensesh-term-engine".to_owned())
@@ -655,6 +746,49 @@ impl Session {
         text
     }
 
+    /// Applies new options (scrollback, default cursor, word separators, OSC 52, encoding,
+    /// answerback) to the running session. Locks briefly.
+    pub fn set_options(&self, options: SessionOptions) {
+        let mut state = self.lock();
+        state.term.set_options(options.engine_config());
+        state.hollow_unfocused = options.cursor_hollow_unfocused;
+        state.full_redraw = true;
+        drop(state);
+        self.send(Command::Options(options));
+        self.redraw();
+    }
+
+    /// Turns keyword highlighting on with `highlighter`, or off with `None`. Locks briefly.
+    pub fn set_highlighter(&self, highlighter: Option<Arc<Highlighter>>) {
+        let highlighter = highlighter.filter(|highlighter| !highlighter.is_empty());
+        let mut state = self.lock();
+        state.highlighter = highlighter;
+        state.full_redraw = true;
+        drop(state);
+        self.redraw();
+    }
+
+    /// Sends `chunks` (usually the lines of a paste) one at a time, `delay` apart, for devices
+    /// that drop input sent too fast. Queued after any paced paste still going. Never blocks.
+    pub fn write_paced(&self, chunks: Vec<Vec<u8>>, delay: Duration) {
+        let chunks: Vec<Vec<u8>> = chunks.into_iter().filter(|c| !c.is_empty()).collect();
+        if !chunks.is_empty() {
+            self.inner.shared.pasting.store(true, Ordering::Release);
+            self.send(Command::Paced(chunks, delay));
+        }
+    }
+
+    /// Drops what is left of a paced paste.
+    pub fn cancel_paste(&self) {
+        self.send(Command::CancelPaste);
+    }
+
+    /// Whether a paced paste is still sending.
+    #[must_use]
+    pub fn is_pasting(&self) -> bool {
+        self.inner.shared.pasting.load(Ordering::Acquire)
+    }
+
     /// Replaces the colors (for example when the app switches between light and dark). Locks
     /// briefly.
     pub fn set_palette(&self, palette: Palette) {
@@ -818,6 +952,8 @@ impl State {
             matches: &self.matches,
             focused_match: self.search.as_ref().and_then(Search::focused),
             link: self.link,
+            highlighter: self.highlighter.as_deref(),
+            contrast: self.palette.minimum_contrast > 1.0,
         };
         let grid = self.term.grid();
         let offset = i32::try_from(display_offset).unwrap_or(i32::MAX);
@@ -835,10 +971,61 @@ impl State {
             target.index = u16::try_from(row).unwrap_or(u16::MAX);
             target.cells.clear();
             let line = Line(i32::try_from(row).unwrap_or(i32::MAX) - offset);
-            for (column, cell) in grid[line][..].iter().enumerate() {
-                let point = Point::new(line, Column(column));
-                let painted = painter.cell(cell, point, &mut next_match, &mut out.clusters);
-                target.cells.push(painted);
+            let cells = &grid[line][..];
+            self.row_styles.clear();
+            if let Some(highlighter) = painter.highlighter {
+                self.row_text.clear();
+                for (column, cell) in cells.iter().enumerate() {
+                    if cell
+                        .flags
+                        .intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER)
+                    {
+                        continue;
+                    }
+                    let width = if cell.flags.contains(Flags::WIDE_CHAR) {
+                        2
+                    } else {
+                        1
+                    };
+                    let ch = if cell.c == '\t' { ' ' } else { cell.c };
+                    self.row_text
+                        .push(ch, cell.zerowidth().unwrap_or(&[]), column, width);
+                }
+                highlighter.row(&self.row_text, columns, &mut self.row_styles);
+            }
+            // Two loops, each with its own copy of `cell`: the one without highlighting carries
+            // no highlighting code at all (it costs about 12 % of a full snapshot otherwise).
+            match painter.highlighter.filter(|_| !self.row_styles.is_empty()) {
+                Some(highlighter) => {
+                    for (column, cell) in cells.iter().enumerate() {
+                        let point = Point::new(line, Column(column));
+                        let style = match self.row_styles.get(column) {
+                            Some(&mark) if mark > 0 => highlighter.style(usize::from(mark - 1)),
+                            _ => None,
+                        };
+                        let painted = painter.cell::<true>(
+                            cell,
+                            point,
+                            style,
+                            &mut next_match,
+                            &mut out.clusters,
+                        );
+                        target.cells.push(painted);
+                    }
+                }
+                None => {
+                    for (column, cell) in cells.iter().enumerate() {
+                        let point = Point::new(line, Column(column));
+                        let painted = painter.cell::<false>(
+                            cell,
+                            point,
+                            None,
+                            &mut next_match,
+                            &mut out.clusters,
+                        );
+                        target.cells.push(painted);
+                    }
+                }
             }
         }
         out.rows.truncate(count);
@@ -852,7 +1039,7 @@ impl State {
         let viewport = point_to_viewport(display_offset, point).filter(|point| point.line < lines);
         let shape = match (viewport, content.cursor.shape) {
             (None, _) | (_, EngineCursorShape::Hidden) => CursorShape::Hidden,
-            _ if !self.focused => CursorShape::HollowBlock,
+            _ if !self.focused && self.hollow_unfocused => CursorShape::HollowBlock,
             (_, EngineCursorShape::Block) => CursorShape::Block,
             (_, EngineCursorShape::HollowBlock) => CursorShape::HollowBlock,
             (_, EngineCursorShape::Beam) => CursorShape::Beam,
@@ -889,14 +1076,63 @@ struct Painter<'a> {
     matches: &'a [Match],
     focused_match: Option<&'a Match>,
     link: Option<(Point, Point)>,
+    highlighter: Option<&'a Highlighter>,
+    /// The palette asks for a minimum contrast.
+    contrast: bool,
 }
 
 impl Painter<'_> {
     /// `next_match` walks `matches` in step with the cells (both are in reading order).
-    fn cell(
+    /// Applies a keyword highlighting rule's style. Kept out of `cell` (and out of line), so the
+    /// common path without highlighting stays small enough to inline.
+    #[inline(never)]
+    fn apply_highlight(
+        &self,
+        style: &HighlightStyle,
+        fg: &mut Rgb,
+        bg: &mut Rgb,
+        underline: &mut Option<Rgb>,
+        out_flags: &mut u16,
+    ) {
+        if let Some(color) = style.foreground {
+            *fg = self.rule_color(color);
+            *underline = None;
+        }
+        if let Some(color) = style.background {
+            *bg = self.rule_color(color);
+        }
+        if style.bold {
+            *out_flags |= flags::BOLD;
+        }
+        if style.underline && *out_flags & UNDERLINE_FLAGS == 0 {
+            *out_flags |= flags::UNDERLINE;
+        }
+    }
+
+    /// Lightens or darkens text below the palette's minimum contrast (out of line, as above).
+    #[inline(never)]
+    fn enforce_contrast(&self, fg: &mut Rgb, underline: &mut Rgb, bg: Rgb) {
+        let adjusted = fg.with_contrast(bg, self.palette.minimum_contrast);
+        if *underline == *fg {
+            *underline = adjusted;
+        }
+        *fg = adjusted;
+    }
+
+    /// A rule color from the current table (OSC 4 changes apply to it too).
+    fn rule_color(&self, color: opensesh_core::terminal::highlight::HighlightColor) -> Rgb {
+        match RuleColor::from(color) {
+            RuleColor::Indexed(index) => self.colors.get(self.overrides, index),
+            RuleColor::Rgb(r, g, b) => Rgb::new(r, g, b),
+        }
+    }
+
+    /// One cell with its final colors. `HIGHLIGHT` compiles the keyword highlighting in or out.
+    fn cell<const HIGHLIGHT: bool>(
         &self,
         cell: &TermCell,
         point: Point,
+        highlight: Option<&HighlightStyle>,
         next_match: &mut usize,
         clusters: &mut Vec<Vec<char>>,
     ) -> Cell {
@@ -914,9 +1150,14 @@ impl Painter<'_> {
         if engine_flags.contains(Flags::INVERSE) {
             std::mem::swap(&mut fg, &mut bg);
         }
+        let mut out_flags = map_flags(engine_flags);
+        if HIGHLIGHT {
+            if let Some(style) = highlight {
+                self.apply_highlight(style, &mut fg, &mut bg, &mut underline, &mut out_flags);
+            }
+        }
         let mut underline = underline.unwrap_or(fg);
 
-        let mut out_flags = map_flags(engine_flags);
         // Both halves of a wide character share the selection state.
         let selected = self.selection.is_some_and(|selection| {
             selection.contains(point)
@@ -975,6 +1216,8 @@ impl Painter<'_> {
         if engine_flags.contains(Flags::HIDDEN) {
             fg = bg;
             underline = bg;
+        } else if self.contrast {
+            self.enforce_contrast(&mut fg, &mut underline, bg);
         }
 
         let spacer =
@@ -1001,6 +1244,13 @@ impl Painter<'_> {
         }
     }
 }
+
+/// Every underline style bit.
+const UNDERLINE_FLAGS: u16 = flags::UNDERLINE
+    | flags::DOUBLE_UNDERLINE
+    | flags::CURLY_UNDERLINE
+    | flags::DOTTED_UNDERLINE
+    | flags::DASHED_UNDERLINE;
 
 /// Engine cell flags to the snapshot's flag bits.
 fn map_flags(engine: Flags) -> u16 {
@@ -1133,6 +1383,18 @@ struct Engine {
     side: SideParser,
     /// Caps OSC strings before both parsers (hostile titles, ADR 0012).
     limiter: OscLimiter,
+    /// Converts a legacy encoding to and from UTF-8; `None` for UTF-8.
+    codec: Option<Codec>,
+    /// Scratch buffer for decoded output.
+    decoded: Vec<u8>,
+    /// Reply to ENQ.
+    answerback: Vec<u8>,
+    /// Chunks of a paced paste still to send, and when the next one goes.
+    paste: VecDeque<Vec<u8>>,
+    paste_delay: Duration,
+    paste_next: Option<Instant>,
+    /// Latest OSC 52 text not sent yet.
+    clipboard: Throttled<String>,
     pending: Pending,
     size: TermSize,
     pending_resize: Option<TermSize>,
@@ -1218,7 +1480,28 @@ impl Engine {
     /// Handles one command; `false` means stop.
     fn command(&mut self, command: Command) -> bool {
         match command {
-            Command::Write(bytes) => self.write_backend(&bytes),
+            Command::Write(bytes) => self.write_input(&bytes),
+            Command::Paced(chunks, delay) => {
+                self.paste.extend(chunks);
+                self.paste_delay = delay;
+                if self.paste_next.is_none() {
+                    self.paste_next = Some(Instant::now());
+                    self.timers(Instant::now());
+                }
+            }
+            Command::CancelPaste => self.end_paste(),
+            Command::Options(options) => {
+                // A new codec only for a new encoding: the old one may hold half a character.
+                let same = match &self.codec {
+                    Some(codec) => codec.name().eq_ignore_ascii_case(options.encoding.trim()),
+                    None => Codec::new(&options.encoding).is_none(),
+                };
+                if !same {
+                    self.codec = Codec::new(&options.encoding);
+                }
+                self.answerback = options.answerback_bytes();
+                self.limiter.set_clipboard(options.osc52_copy);
+            }
             // Coalesced: only the last size of a burst is applied.
             Command::Resize(size) => self.pending_resize = Some(size.clamped()),
             Command::Focus(focused) => {
@@ -1264,6 +1547,23 @@ impl Engine {
                 let _ = backend.resize(size);
             }
         }
+    }
+
+    /// Typed or pasted input: converted to the session's encoding first.
+    fn write_input(&mut self, bytes: &[u8]) {
+        match &mut self.codec {
+            Some(codec) => {
+                let encoded = codec.encode(bytes);
+                self.write_backend(&encoded);
+            }
+            None => self.write_backend(bytes),
+        }
+    }
+
+    fn end_paste(&mut self) {
+        self.paste.clear();
+        self.paste_next = None;
+        self.shared.pasting.store(false, Ordering::Release);
     }
 
     fn write_backend(&self, bytes: &[u8]) {
@@ -1326,6 +1626,14 @@ impl Engine {
             let available = &front[self.pending.offset..];
             let bytes = &available[..available.len().min(CHUNK_BYTES - processed)];
             let count = bytes.len();
+            let bytes = match &mut self.codec {
+                Some(codec) => {
+                    self.decoded.clear();
+                    codec.decode(bytes, &mut self.decoded);
+                    self.decoded.as_slice()
+                }
+                None => bytes,
+            };
             let limited = self.limiter.filter(bytes);
             let bytes = limited.as_deref().unwrap_or(bytes);
             self.side.advance(bytes);
@@ -1376,8 +1684,10 @@ impl Engine {
                 Event::Title(title) => self.title.set(Some(sanitize(&title, MAX_TITLE_CHARS))),
                 Event::ResetTitle => self.title.set(None),
                 Event::Bell => self.bell.set(()),
-                Event::ClipboardStore(..) | Event::ClipboardLoad(..) => {
-                    tracing::debug!("OSC 52 clipboard request ignored (disabled)");
+                // Only sent when OSC 52 copying is on (`Osc52::OnlyCopy`); loads never are.
+                Event::ClipboardStore(_, text) => self.clipboard.set(text),
+                Event::ClipboardLoad(..) => {
+                    tracing::debug!("OSC 52 clipboard read refused");
                 }
                 Event::CursorBlinkingChange
                 | Event::MouseCursorDirty
@@ -1407,6 +1717,12 @@ impl Engine {
         if let Some(directory) = self.side.take_working_directory() {
             self.directory.set(directory);
         }
+        let enquiries = self.side.take_enquiries();
+        if !self.answerback.is_empty() {
+            for _ in 0..enquiries.min(MAX_ANSWERBACKS_PER_CHUNK) {
+                self.write_backend(&self.answerback);
+            }
+        }
     }
 
     fn next_deadline(&self) -> Option<Instant> {
@@ -1416,6 +1732,8 @@ impl Engine {
             self.directory.due(),
             self.bell.due(),
             self.blinking.due(),
+            self.clipboard.due(),
+            self.paste_next,
         ]
         .into_iter()
         .flatten()
@@ -1429,6 +1747,18 @@ impl Engine {
             self.side.end_synchronized();
             self.shared.synchronized.store(false, Ordering::Release);
             self.shared.mark_dirty();
+        }
+        if self.paste_next.is_some_and(|next| now >= next) {
+            match self.paste.pop_front() {
+                Some(chunk) => {
+                    self.write_input(&chunk);
+                    self.paste_next = Some(now + self.paste_delay);
+                }
+                None => self.end_paste(),
+            }
+            if self.paste.is_empty() {
+                self.end_paste();
+            }
         }
         self.flush_notices(now, false);
     }
@@ -1449,6 +1779,9 @@ impl Engine {
         }
         if let Some(blinking) = self.blinking.take(now, force, true) {
             self.shared.emit(Notice::CursorBlinking(blinking));
+        }
+        if let Some(text) = self.clipboard.take(now, force, false) {
+            self.shared.emit(Notice::Clipboard(text));
         }
     }
 
@@ -1794,7 +2127,10 @@ mod tests {
     fn search_scrolls_and_highlights() {
         let h = start_with(SessionConfig {
             size: TermSize::new(20, 3),
-            scrollback_lines: 100,
+            options: SessionOptions {
+                scrollback_lines: 100,
+                ..SessionOptions::default()
+            },
             ..SessionConfig::default()
         });
         let mut text = Vec::new();
@@ -1863,7 +2199,10 @@ mod tests {
     fn scrolling_through_history() {
         let h = start_with(SessionConfig {
             size: TermSize::new(10, 2),
-            scrollback_lines: 50,
+            options: SessionOptions {
+                scrollback_lines: 50,
+                ..SessionOptions::default()
+            },
             ..SessionConfig::default()
         });
         h.feed_until(b"a\r\nb\r\nc\r\nd", "d");
@@ -2205,5 +2544,181 @@ mod tests {
             flags::SELECTED,
             "the spacer too"
         );
+    }
+
+    #[test]
+    fn answerback_replies_to_enq_only_when_set() {
+        let h = start(20, 3);
+        h.feed_until(b"a\x05b", "ab");
+        assert!(h.written().is_empty(), "no answerback by default");
+        h.session.set_options(SessionOptions {
+            answerback: "OpenSesh\r\x1b[x".into(),
+            ..SessionOptions::default()
+        });
+        h.feed_until(b"\x05c", "abc");
+        h.wait_written(b"OpenSesh");
+        assert_eq!(
+            h.written(),
+            b"OpenSesh[x",
+            "control characters are never sent"
+        );
+    }
+
+    #[test]
+    fn legacy_encodings_convert_both_ways() {
+        let h = start_with(SessionConfig {
+            size: TermSize::new(20, 3),
+            options: SessionOptions {
+                encoding: "windows-1252".into(),
+                ..SessionOptions::default()
+            },
+            ..SessionConfig::default()
+        });
+        h.feed_until(b"caf\xe9 \x80", "caf\u{e9} \u{20ac}");
+        h.session.write("\u{e9}\u{20ac}".as_bytes());
+        h.wait_written(b"\xe9\x80");
+        // Back to UTF-8 while running.
+        h.session.set_options(SessionOptions::default());
+        h.feed_until("na\u{ef}ve".as_bytes(), "na\u{ef}ve");
+    }
+
+    #[test]
+    fn paced_writes_arrive_in_order_with_pauses() {
+        let h = start(20, 3);
+        let started = Instant::now();
+        h.session.write_paced(
+            vec![b"one\r".to_vec(), b"two\r".to_vec(), b"three\r".to_vec()],
+            Duration::from_millis(30),
+        );
+        assert!(h.session.is_pasting());
+        h.wait_written(b"one\rtwo\rthree\r");
+        assert!(started.elapsed() >= Duration::from_millis(60));
+        h.wait_for(|session| !session.is_pasting());
+    }
+
+    #[test]
+    fn a_paced_write_can_be_cancelled() {
+        let h = start(20, 3);
+        h.session.write_paced(
+            vec![b"a".to_vec(), b"b".to_vec(), b"c".to_vec()],
+            Duration::from_secs(10),
+        );
+        h.wait_written(b"a");
+        h.session.cancel_paste();
+        h.wait_for(|session| !session.is_pasting());
+        std::thread::sleep(Duration::from_millis(50));
+        assert_eq!(h.written(), b"a");
+    }
+
+    #[test]
+    fn osc52_sets_the_clipboard_only_when_allowed() {
+        let h = start(20, 3);
+        // "hello" in base64.
+        h.feed_until(b"\x1b]52;c;aGVsbG8=\x07x", "x");
+        std::thread::sleep(Duration::from_millis(80));
+        assert!(
+            !h.notices
+                .try_iter()
+                .any(|notice| matches!(notice, Notice::Clipboard(_))),
+            "off by default"
+        );
+        h.session.set_options(SessionOptions {
+            osc52_copy: true,
+            ..SessionOptions::default()
+        });
+        h.feed_until(b"\x1b]52;c;aGVsbG8=\x07y", "xy");
+        let notice = h.wait_notice(|notice| matches!(notice, Notice::Clipboard(_)));
+        assert_eq!(notice, Notice::Clipboard("hello".into()));
+        // Programs can never read the clipboard.
+        h.feed_until(b"\x1b]52;c;?\x07z", "xyz");
+        assert!(h.written().is_empty());
+    }
+
+    #[test]
+    fn highlight_rules_style_matching_cells() {
+        use opensesh_core::terminal::highlight::{
+            HighlightColor, HighlightRule, HighlightSet, HighlightStyle,
+        };
+        let set = HighlightSet {
+            id: "t".into(),
+            name: "t".into(),
+            builtin: false,
+            rules: vec![HighlightRule {
+                pattern: "ERROR".into(),
+                ignore_case: false,
+                style: HighlightStyle {
+                    foreground: Some(HighlightColor::Ansi(1)),
+                    background: None,
+                    bold: true,
+                    underline: true,
+                },
+            }],
+        };
+        let h = start(20, 3);
+        h.feed_until(b"ok ERROR x", "ERROR");
+        h.session
+            .set_highlighter(Some(Arc::new(Highlighter::new([&set]))));
+        let frame = h.frame();
+        let hit = cell_at(&frame, 0, 3);
+        assert_eq!(hit.fg, argb(0xF07178), "the theme's red");
+        assert_ne!(hit.flags & flags::BOLD, 0);
+        assert_ne!(hit.flags & flags::UNDERLINE, 0);
+        assert_eq!(cell_at(&frame, 0, 0).flags & flags::BOLD, 0);
+
+        h.session.set_highlighter(None);
+        let frame = h.frame();
+        assert_eq!(cell_at(&frame, 0, 3).flags & flags::BOLD, 0);
+    }
+
+    #[test]
+    fn minimum_contrast_lifts_unreadable_text() {
+        let h = start_with(SessionConfig {
+            size: TermSize::new(20, 3),
+            palette: Palette {
+                minimum_contrast: 4.5,
+                ..Palette::OPENSESH_DARK
+            },
+            ..SessionConfig::default()
+        });
+        // ANSI black on the dark background: about 1.1:1 as the theme has it.
+        h.feed_until(b"\x1b[30mX\x1b[0m", "X");
+        let cell = cell_at(&h.frame(), 0, 0);
+        let fg = Rgb::from_hex(cell.fg);
+        let bg = Rgb::from_hex(cell.bg);
+        assert!(fg.contrast(bg) >= 4.5, "{:.2}", fg.contrast(bg));
+    }
+
+    #[test]
+    fn the_cursor_can_stay_solid_when_unfocused() {
+        let h = start(20, 3);
+        h.feed_until(b"x", "x");
+        assert_eq!(h.frame().cursor.shape, CursorShape::HollowBlock);
+        h.session.set_options(SessionOptions {
+            cursor_hollow_unfocused: false,
+            ..SessionOptions::default()
+        });
+        assert_eq!(h.frame().cursor.shape, CursorShape::Block);
+    }
+
+    #[test]
+    fn word_separators_change_while_running() {
+        let h = start(30, 3);
+        h.feed_until(b"alpha.beta gamma", "gamma");
+        h.session.selection_start(
+            ViewportPoint::new(0, 1),
+            Side::Left,
+            SelectionKind::Semantic,
+        );
+        assert_eq!(h.session.selection_text().as_deref(), Some("alpha.beta"));
+        h.session.set_options(SessionOptions {
+            word_separators: " .".into(),
+            ..SessionOptions::default()
+        });
+        h.session.selection_start(
+            ViewportPoint::new(0, 1),
+            Side::Left,
+            SelectionKind::Semantic,
+        );
+        assert_eq!(h.session.selection_text().as_deref(), Some("alpha"));
     }
 }

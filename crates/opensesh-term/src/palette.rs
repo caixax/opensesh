@@ -7,8 +7,13 @@
 //! take precedence over the table; the snapshot resolves every cell to plain RGB, so the renderer
 //! never sees the palette.
 
+use std::sync::LazyLock;
+
 use alacritty_terminal::term::color::{COUNT, Colors};
 use alacritty_terminal::vte::ansi::{Color, NamedColor, Rgb as VteRgb};
+use opensesh_core::terminal::settings::TerminalSettings;
+use opensesh_core::terminal::theme::ThemeColors;
+use opensesh_core::theme::Rgba;
 
 /// How far dim text (SGR 2) moves from its color toward the cell background (`0.0..=1.0`).
 pub const DIM_BLEND: f32 = 0.35;
@@ -44,22 +49,68 @@ impl Rgb {
         u32::from_be_bytes([0xFF, self.r, self.g, self.b])
     }
 
-    /// WCAG 2 contrast ratio between two opaque colors, from 1.0 to 21.0.
+    /// WCAG 2 relative luminance, from 0.0 to 1.0 (a table lookup per channel, no `powf`).
     #[must_use]
-    pub fn contrast(self, other: Self) -> f64 {
-        fn luminance(color: Rgb) -> f64 {
-            let linear = |channel: u8| {
-                let c = f64::from(channel) / 255.0;
-                if c <= 0.04045 {
+    pub fn luminance(self) -> f64 {
+        static LINEAR: LazyLock<[f64; 256]> = LazyLock::new(|| {
+            let mut table = [0.0; 256];
+            for (channel, value) in table.iter_mut().enumerate() {
+                #[allow(clippy::cast_precision_loss)] // 0..=255 is exact in f64.
+                let c = channel as f64 / 255.0;
+                *value = if c <= 0.04045 {
                     c / 12.92
                 } else {
                     ((c + 0.055) / 1.055).powf(2.4)
-                }
-            };
-            0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b)
-        }
-        let (a, b) = (luminance(self), luminance(other));
+                };
+            }
+            table
+        });
+        let linear = &*LINEAR;
+        0.2126 * linear[usize::from(self.r)]
+            + 0.7152 * linear[usize::from(self.g)]
+            + 0.0722 * linear[usize::from(self.b)]
+    }
+
+    /// WCAG 2 contrast ratio between two opaque colors, from 1.0 to 21.0.
+    #[must_use]
+    pub fn contrast(self, other: Self) -> f64 {
+        let (a, b) = (self.luminance(), other.luminance());
         (a.max(b) + 0.05) / (a.min(b) + 0.05)
+    }
+
+    /// This color moved toward white or black (whichever can reach it) until its contrast with
+    /// `background` is at least `minimum`, keeping as much of its hue as possible; unchanged
+    /// when it already has enough. When neither can reach `minimum`, the better extreme.
+    #[must_use]
+    pub fn with_contrast(self, background: Self, minimum: f64) -> Self {
+        if self.contrast(background) >= minimum {
+            return self;
+        }
+        let white = Self::new(255, 255, 255);
+        let black = Self::new(0, 0, 0);
+        let (toward_white, toward_black) = (white.contrast(background), black.contrast(background));
+        let target = if toward_white >= minimum
+            && (toward_black < minimum || self.luminance() >= background.luminance())
+        {
+            white
+        } else if toward_black >= minimum {
+            black
+        } else if toward_white >= toward_black {
+            return white;
+        } else {
+            return black;
+        };
+        // Contrast grows with t: find the smallest t that reaches `minimum`.
+        let (mut low, mut high) = (0.0_f32, 1.0_f32);
+        for _ in 0..12 {
+            let mid = (low + high) / 2.0;
+            if self.mix(target, mid).contrast(background) >= minimum {
+                high = mid;
+            } else {
+                low = mid;
+            }
+        }
+        self.mix(target, high)
     }
 
     /// Linear interpolation in sRGB: `t = 0` gives `self`, `t = 1` gives `other`.
@@ -87,6 +138,12 @@ impl From<VteRgb> for Rgb {
     }
 }
 
+impl From<Rgba> for Rgb {
+    fn from(color: Rgba) -> Self {
+        Self::new(color.r, color.g, color.b)
+    }
+}
+
 impl From<Rgb> for VteRgb {
     fn from(color: Rgb) -> Self {
         Self {
@@ -97,8 +154,8 @@ impl From<Rgb> for VteRgb {
     }
 }
 
-/// A terminal color scheme.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A terminal color scheme, with the profile's color options applied.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Palette {
     /// Default text color.
     pub foreground: Rgb,
@@ -126,6 +183,9 @@ pub struct Palette {
     pub bright: [Rgb; 8],
     /// Draw bold text that uses one of the 8 normal colors with its bright variant.
     pub bold_is_bright: bool,
+    /// Least contrast between a character and its background; text below it is lightened or
+    /// darkened. 1.0 turns the adjustment off.
+    pub minimum_contrast: f64,
 }
 
 impl Palette {
@@ -162,6 +222,7 @@ impl Palette {
             Rgb::from_hex(0xF2F4F8),
         ],
         bold_is_bright: true,
+        minimum_contrast: 1.0,
     };
 
     /// OpenSesh Light: a warm paper background close to the app's light surfaces, the light
@@ -199,7 +260,51 @@ impl Palette {
             Rgb::from_hex(0x7D8491),
         ],
         bold_is_bright: true,
+        minimum_contrast: 1.0,
     };
+
+    /// The palette of a theme, with no profile options.
+    #[must_use]
+    pub fn from_theme(colors: &ThemeColors) -> Self {
+        Self {
+            foreground: colors.foreground.into(),
+            background: colors.background.into(),
+            cursor: colors.cursor.into(),
+            cursor_text: colors.cursor_text.into(),
+            selection_background: colors.selection_background.into(),
+            selection_foreground: colors.selection_foreground.map(Rgb::from),
+            match_background: colors.match_background.into(),
+            match_foreground: colors.match_foreground.into(),
+            focused_match_background: colors.focused_match_background.into(),
+            focused_match_foreground: colors.focused_match_foreground.into(),
+            normal: colors.normal.map(Rgb::from),
+            bright: colors.bright.map(Rgb::from),
+            bold_is_bright: true,
+            minimum_contrast: 1.0,
+        }
+    }
+
+    /// The palette of a theme with a profile's color options: cursor and selection colors,
+    /// bold as bright and minimum contrast.
+    #[must_use]
+    pub fn for_settings(colors: &ThemeColors, settings: &TerminalSettings) -> Self {
+        let mut palette = Self::from_theme(colors);
+        if let Some(color) = settings.cursor_color.color() {
+            palette.cursor = color.into();
+        }
+        if let Some(color) = settings.cursor_text_color.color() {
+            palette.cursor_text = color.into();
+        }
+        if let Some(color) = settings.selection_background.color() {
+            palette.selection_background = color.into();
+        }
+        if let Some(color) = settings.selection_foreground.color() {
+            palette.selection_foreground = Some(color.into());
+        }
+        palette.bold_is_bright = settings.bold_is_bright;
+        palette.minimum_contrast = settings.minimum_contrast;
+        palette
+    }
 }
 
 impl Default for Palette {
@@ -446,5 +551,69 @@ mod tests {
         assert_eq!(black.mix(white, 0.5), Rgb::new(128, 128, 128));
         assert_eq!(black.mix(white, 2.0), white);
         assert_eq!(white.mix(black, -1.0), white);
+        assert!((black.contrast(white) - 21.0).abs() < 1e-9);
+        let gray = Rgb::new(0x77, 0x77, 0x77);
+        let expected = contrast(gray, white);
+        assert!((gray.contrast(white) - expected).abs() < 1e-9);
+    }
+
+    #[test]
+    fn the_built_in_theme_files_give_the_engine_palettes() {
+        use opensesh_core::terminal::theme::builtin_colors;
+        assert_eq!(
+            Palette::from_theme(&builtin_colors::OPENSESH_DARK),
+            Palette::OPENSESH_DARK
+        );
+        assert_eq!(
+            Palette::from_theme(&builtin_colors::OPENSESH_LIGHT),
+            Palette::OPENSESH_LIGHT
+        );
+    }
+
+    #[test]
+    fn profile_color_options_apply() {
+        use opensesh_core::terminal::settings::{TerminalSettings, ThemeColor};
+        use opensesh_core::terminal::theme::builtin_colors;
+        let settings = TerminalSettings {
+            cursor_color: ThemeColor::Custom(Rgba::rgb(1, 2, 3)),
+            selection_foreground: ThemeColor::Custom(Rgba::rgb(4, 5, 6)),
+            bold_is_bright: false,
+            minimum_contrast: 4.5,
+            ..TerminalSettings::default()
+        };
+        let palette = Palette::for_settings(&builtin_colors::OPENSESH_DARK, &settings);
+        assert_eq!(palette.cursor, Rgb::new(1, 2, 3));
+        assert_eq!(palette.selection_foreground, Some(Rgb::new(4, 5, 6)));
+        assert_eq!(palette.cursor_text, Palette::OPENSESH_DARK.cursor_text);
+        assert!(!palette.bold_is_bright);
+        assert!((palette.minimum_contrast - 4.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn minimum_contrast_moves_text_just_enough() {
+        let background = Rgb::from_hex(0x282a36);
+        // Dracula's comment color on its background: 3.0:1.
+        let comment = Rgb::from_hex(0x6272a4);
+        let adjusted = comment.with_contrast(background, 4.5);
+        assert!(adjusted.contrast(background) >= 4.5);
+        assert!(adjusted.contrast(background) < 4.8, "only as far as needed");
+        assert!(adjusted.b > adjusted.r, "keeps its blue tint");
+        assert_eq!(
+            comment.with_contrast(background, 2.0),
+            comment,
+            "already enough"
+        );
+
+        // Dark text on a dark background goes lighter; light text on light goes darker.
+        let light_bg = Rgb::from_hex(0xfaf9f5);
+        let pale = Rgb::from_hex(0xe0e0e0);
+        let darker = pale.with_contrast(light_bg, 4.5);
+        assert!(darker.luminance() < pale.luminance());
+        assert!(darker.contrast(light_bg) >= 4.5);
+
+        // Unreachable: the better extreme.
+        let mid = Rgb::new(0x77, 0x77, 0x77);
+        let best = Rgb::new(0x10, 0x10, 0x10).with_contrast(mid, 21.0);
+        assert!(best == Rgb::new(0, 0, 0) || best == Rgb::new(255, 255, 255));
     }
 }

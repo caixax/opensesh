@@ -18,6 +18,10 @@ pub const MAX_OSC_PAYLOAD: usize = 4096;
 /// Longest OSC string payload passed on to the parsers ([`OscLimiter`]); the rest is dropped.
 pub const MAX_OSC_STRING: usize = 8 * 1024;
 
+/// Longest OSC 52 (clipboard) payload when programs may set the clipboard: 1 MiB of base64,
+/// about 768 KiB of text.
+pub const MAX_OSC52_STRING: usize = 1024 * 1024;
+
 /// Caps OSC strings (`ESC ] ... BEL|ST`) before any parser sees them.
 ///
 /// vte buffers OSC strings without a limit, and `alacritty_terminal` keeps the whole title and
@@ -31,9 +35,19 @@ pub struct OscLimiter {
     escape: bool,
     /// Payload bytes of the current OSC string, `None` outside one.
     osc: Option<usize>,
+    /// The first payload bytes of the current OSC string (to spot `52;`).
+    prefix: [u8; 3],
+    /// Allow OSC 52 strings up to [`MAX_OSC52_STRING`].
+    clipboard: bool,
 }
 
 impl OscLimiter {
+    /// Lets OSC 52 (clipboard) strings through up to [`MAX_OSC52_STRING`] instead of
+    /// [`MAX_OSC_STRING`], for when programs may set the clipboard.
+    pub fn set_clipboard(&mut self, allowed: bool) {
+        self.clipboard = allowed;
+    }
+
     /// Filters `input`. Returns `None` when every byte passes (the common case), else the bytes
     /// to parse instead.
     pub fn filter(&mut self, input: &[u8]) -> Option<Vec<u8>> {
@@ -62,13 +76,22 @@ impl OscLimiter {
                     true
                 }
                 _ => {
+                    if let Some(slot) = self.prefix.get_mut(length) {
+                        *slot = byte;
+                    }
                     self.osc = Some(length.saturating_add(1));
-                    length < MAX_OSC_STRING
+                    let limit = if self.clipboard && self.prefix == *b"52;" {
+                        MAX_OSC52_STRING
+                    } else {
+                        MAX_OSC_STRING
+                    };
+                    length < limit
                 }
             },
             None => {
                 if self.escape && byte == b']' {
                     self.osc = Some(0);
+                    self.prefix = [0; 3];
                 }
                 self.escape = byte == 0x1B;
                 true
@@ -103,6 +126,8 @@ struct SideState {
     synchronized: bool,
     /// Latest OSC 7 directory that was not taken yet.
     working_directory: Option<String>,
+    /// ENQ (Ctrl+E) bytes received since the last [`SideParser::take_enquiries`].
+    enquiries: usize,
 }
 
 impl SideParser {
@@ -148,9 +173,21 @@ impl SideParser {
     pub fn take_working_directory(&mut self) -> Option<String> {
         self.state.working_directory.take()
     }
+
+    /// How many ENQ (0x05) control bytes arrived since the previous call: each one asks for the
+    /// answerback message.
+    pub fn take_enquiries(&mut self) -> usize {
+        std::mem::take(&mut self.state.enquiries)
+    }
 }
 
 impl Perform for SideState {
+    fn execute(&mut self, byte: u8) {
+        if byte == 0x05 {
+            self.enquiries = self.enquiries.saturating_add(1);
+        }
+    }
+
     fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
         let Some((&first, rest)) = params.split_first() else {
             return;
@@ -490,5 +527,36 @@ mod tests {
         side.advance(b"?");
         side.advance(b"9h");
         assert!(side.x10_mouse());
+    }
+
+    #[test]
+    fn enquiries_are_counted_outside_strings_only() {
+        let mut side = SideParser::new();
+        side.advance(b"a\x05b\x05");
+        side.advance(b"\x1b]0;title\x05still title\x07");
+        assert_eq!(side.take_enquiries(), 2);
+        assert_eq!(side.take_enquiries(), 0);
+    }
+
+    #[test]
+    fn clipboard_strings_may_be_longer_when_allowed() {
+        let body = vec![b'A'; MAX_OSC_STRING * 2];
+        let mut stream = b"\x1b]52;c;".to_vec();
+        stream.extend_from_slice(&body);
+        stream.push(0x07);
+
+        let mut limiter = OscLimiter::default();
+        let cut = limiter.filter(&stream).unwrap();
+        assert_eq!(cut.len(), 2 + MAX_OSC_STRING + 1);
+
+        let mut limiter = OscLimiter::default();
+        limiter.set_clipboard(true);
+        assert!(limiter.filter(&stream).is_none(), "passes whole");
+
+        // Other OSC strings keep the normal cap.
+        let mut title = b"\x1b]2;".to_vec();
+        title.extend_from_slice(&body);
+        title.push(0x07);
+        assert!(limiter.filter(&title).is_some());
     }
 }

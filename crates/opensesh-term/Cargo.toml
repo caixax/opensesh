@@ -13,6 +13,8 @@ publish.workspace = true
 [dependencies]
 alacritty_terminal.workspace = true
 crossbeam-channel.workspace = true
+encoding_rs.workspace = true
+opensesh-core.workspace = true
 portable-pty.workspace = true
 regex.workspace = true
 thiserror.workspace = true

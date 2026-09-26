@@ -7,6 +7,8 @@
 //! Threads per session and the reasons for them: [ADR 0012](../../../docs/adr/0012-terminal-engine-and-session-threads.md).
 
 pub mod backend;
+pub mod encoding;
+pub mod highlight;
 pub mod input;
 pub mod links;
 pub mod osc;
