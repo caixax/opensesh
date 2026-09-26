@@ -22,6 +22,7 @@ use opensesh_vault::keys::{self, KeyType};
 use opensesh_vault::known_hosts::{self, KNOWN_HOSTS_FILE};
 use opensesh_vault::manager::{IdentityEdit, Keychain, KeychainOpError};
 use opensesh_vault::{KeyStore, MemoryKeyStore, Protection, Status, SystemKeyring, VaultError};
+use secrecy::{ExposeSecret, SecretString};
 use serde_json::{Value as Json, json};
 use zeroize::Zeroizing;
 
@@ -40,30 +41,30 @@ pub enum Job {
     /// Create the vault: with a password, protected by it; without, held by the keyring.
     CreateVault {
         /// The master password, if any.
-        password: Option<Zeroizing<String>>,
+        password: Option<SecretString>,
         /// Keep the key in the keyring too.
         remember: bool,
     },
     /// Unlock with the master password.
-    Unlock(Zeroizing<String>),
+    Unlock(SecretString),
     /// Lock.
     Lock,
     /// Protect a keyring vault with a master password.
     SetPassword {
         /// The new master password.
-        password: Zeroizing<String>,
+        password: SecretString,
         /// Keep the key in the keyring too.
         remember: bool,
     },
     /// Change the master password.
     ChangePassword {
         /// The current one.
-        current: Zeroizing<String>,
+        current: SecretString,
         /// The new one.
-        new: Zeroizing<String>,
+        new: SecretString,
     },
     /// Let the keyring hold the key again.
-    RemovePassword(Zeroizing<String>),
+    RemovePassword(SecretString),
     /// Remember (or forget) the key on this computer.
     SetRemember(bool),
     /// Delete the vault.
@@ -86,7 +87,7 @@ pub enum Job {
         /// A file to read, or the text itself.
         source: KeySource,
         /// Its passphrase, if it has one.
-        passphrase: Option<Zeroizing<String>>,
+        passphrase: Option<SecretString>,
         /// Display name.
         name: String,
     },
@@ -97,7 +98,7 @@ pub enum Job {
         /// Where.
         path: PathBuf,
         /// A passphrase for the file, if any.
-        passphrase: Option<Zeroizing<String>>,
+        passphrase: Option<SecretString>,
     },
     /// Write a public key to a file.
     ExportPublic {
@@ -128,7 +129,7 @@ pub enum KeySource {
     /// A file.
     File(PathBuf),
     /// Pasted text.
-    Text(Zeroizing<String>),
+    Text(SecretString),
 }
 
 /// What the QML singleton shows. Everything here is public.
@@ -281,7 +282,10 @@ impl Worker {
             Job::CreateVault { password, remember } => match password {
                 Some(password) => self
                     .keychain
-                    .create_with_password(password.as_bytes(), KdfParams::RECOMMENDED)
+                    .create_with_password(
+                        password.expose_secret().as_bytes(),
+                        KdfParams::RECOMMENDED,
+                    )
                     .and_then(|()| {
                         if remember {
                             self.keychain.vault.set_remember(true)?;
@@ -293,7 +297,7 @@ impl Worker {
             Job::Unlock(password) => self
                 .keychain
                 .vault
-                .unlock(password.as_bytes(), now_secs())
+                .unlock(password.expose_secret().as_bytes(), now_secs())
                 .map(|()| String::new())
                 .map_err(KeychainOpError::from),
             Job::Lock => {
@@ -303,15 +307,19 @@ impl Worker {
             Job::SetPassword { password, remember } => self
                 .keychain
                 .vault
-                .set_password(password.as_bytes(), KdfParams::RECOMMENDED, remember)
+                .set_password(
+                    password.expose_secret().as_bytes(),
+                    KdfParams::RECOMMENDED,
+                    remember,
+                )
                 .map(|()| String::new())
                 .map_err(KeychainOpError::from),
             Job::ChangePassword { current, new } => self
                 .keychain
                 .vault
                 .change_password(
-                    current.as_bytes(),
-                    new.as_bytes(),
+                    current.expose_secret().as_bytes(),
+                    new.expose_secret().as_bytes(),
                     KdfParams::RECOMMENDED,
                     now_secs(),
                 )
@@ -320,7 +328,7 @@ impl Worker {
             Job::RemovePassword(current) => self
                 .keychain
                 .vault
-                .remove_password(current.as_bytes(), now_secs())
+                .remove_password(current.expose_secret().as_bytes(), now_secs())
                 .map(|()| String::new())
                 .map_err(KeychainOpError::from),
             Job::SetRemember(remember) => self
@@ -343,7 +351,9 @@ impl Worker {
                 name,
             } => self.import(
                 source,
-                passphrase.as_ref().map(|text| text.as_bytes()),
+                passphrase
+                    .as_ref()
+                    .map(|text| text.expose_secret().as_bytes()),
                 &name,
             ),
             Job::ExportPrivate {
@@ -352,7 +362,12 @@ impl Worker {
                 passphrase,
             } => self
                 .keychain
-                .export_private(&id, passphrase.as_ref().map(|text| text.as_bytes()))
+                .export_private(
+                    &id,
+                    passphrase
+                        .as_ref()
+                        .map(|text| text.expose_secret().as_bytes()),
+                )
                 .and_then(|text| write_file(&path, text.as_bytes()))
                 .map(|()| String::new()),
             Job::ExportPublic { id, path } => match self.keychain.file.key(&id) {
@@ -405,7 +420,7 @@ impl Worker {
         name: &str,
     ) -> Result<String, KeychainOpError> {
         let bytes = match source {
-            KeySource::Text(text) => Zeroizing::new(text.as_bytes().to_vec()),
+            KeySource::Text(text) => Zeroizing::new(text.expose_secret().as_bytes().to_vec()),
             KeySource::File(path) => Zeroizing::new(read_key_file(&path)?),
         };
         self.keychain.import_key(&bytes, passphrase, name)
@@ -632,8 +647,8 @@ impl Worker {
                 name: name.to_owned(),
                 user: user.to_owned(),
                 password: if password {
-                    opensesh_vault::manager::PasswordChange::Set(Zeroizing::new(
-                        "sample password".to_owned(),
+                    opensesh_vault::manager::PasswordChange::Set(SecretString::from(
+                        "sample password",
                     ))
                 } else {
                     opensesh_vault::manager::PasswordChange::Keep

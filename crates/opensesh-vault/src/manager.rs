@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use opensesh_core::config::Warning;
 use opensesh_core::fsutil::{self, DEFAULT_BACKUPS};
+use secrecy::{ExposeSecret, SecretString};
 use ssh_key::PrivateKey;
 use zeroize::Zeroizing;
 
@@ -96,8 +97,8 @@ pub enum PasswordChange {
     Keep,
     /// No password any more.
     Clear,
-    /// A new one.
-    Set(Zeroizing<String>),
+    /// A new one (`Debug` shows `[REDACTED]`).
+    Set(SecretString),
 }
 
 /// An identity as the editor saves it.
@@ -317,7 +318,7 @@ impl Keychain {
             }
             PasswordChange::Set(password) => {
                 self.ensure_vault()?;
-                let data = Zeroizing::new(password.as_bytes().to_vec());
+                let data = Zeroizing::new(password.expose_secret().as_bytes().to_vec());
                 let id = match old_password {
                     Some(id) => {
                         self.vault.replace(id, SecretKind::Password, data)?;
@@ -399,7 +400,7 @@ impl Keychain {
     /// # Errors
     ///
     /// When the identity or its password doesn't exist, or the vault is locked.
-    pub fn identity_password(&self, id: &str) -> Result<Zeroizing<String>, KeychainOpError> {
+    pub fn identity_password(&self, id: &str) -> Result<SecretString, KeychainOpError> {
         let identity = self
             .file
             .identity(id)
@@ -410,7 +411,9 @@ impl Keychain {
             .and_then(parse_ref)
             .ok_or_else(|| KeychainOpError::NotFound(format!("{id} password")))?;
         let bytes = &self.vault.get(&secret)?.data;
-        Ok(Zeroizing::new(String::from_utf8_lossy(bytes).into_owned()))
+        Ok(SecretString::from(
+            String::from_utf8_lossy(bytes).into_owned(),
+        ))
     }
 
     /// Adds `key` under `name`; its id. A key already here (same fingerprint) is refused.
@@ -612,7 +615,7 @@ mod tests {
     use crate::store::MemoryKeyStore;
 
     fn set(text: &str) -> PasswordChange {
-        PasswordChange::Set(Zeroizing::new(text.to_owned()))
+        PasswordChange::Set(SecretString::from(text))
     }
 
     #[test]
@@ -634,7 +637,10 @@ mod tests {
             .unwrap();
         // The first secret created a vault held by the keyring.
         assert_eq!(keychain.vault.status(), Status::Unlocked);
-        assert_eq!(keychain.identity_password(&id).unwrap().as_str(), "pw-one");
+        assert_eq!(
+            keychain.identity_password(&id).unwrap().expose_secret(),
+            "pw-one"
+        );
         // Replacing keeps one secret; clearing removes it.
         keychain
             .save_identity(IdentityEdit {
@@ -645,7 +651,10 @@ mod tests {
             })
             .unwrap();
         assert_eq!(keychain.vault.len(), 1);
-        assert_eq!(keychain.identity_password(&id).unwrap().as_str(), "pw-two");
+        assert_eq!(
+            keychain.identity_password(&id).unwrap().expose_secret(),
+            "pw-two"
+        );
         keychain
             .save_identity(IdentityEdit {
                 id: id.clone(),
@@ -660,6 +669,16 @@ mod tests {
         let again = Keychain::open(Some((dir.path(), dir.path())), store);
         assert_eq!(again.file.identities.len(), 1);
         assert_eq!(again.file.identities[0].user, "");
+    }
+
+    #[test]
+    fn edits_print_no_password() {
+        let edit = IdentityEdit {
+            name: "n".into(),
+            password: set("printed-by-mistake?"),
+            ..IdentityEdit::default()
+        };
+        assert!(!format!("{edit:?}").contains("printed-by-mistake?"));
     }
 
     #[test]
@@ -768,7 +787,7 @@ mod tests {
         let mut again = Keychain::open(Some((dir.path(), dir.path())), Arc::clone(&store));
         assert!(again.vault.unlock_with_keyring().unwrap());
         assert_eq!(
-            again.identity_password(&id).unwrap().as_str(),
+            again.identity_password(&id).unwrap().expose_secret(),
             "selftest password"
         );
         again.reset_vault().unwrap();
