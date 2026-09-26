@@ -483,6 +483,10 @@
         <translation>[Çáñ&apos;ť çöññéçť ťö %1: %2 ~~~~~~~]</translation>
     </message>
     <message>
+        <source>The system keyring doesn&apos;t have the vault&apos;s key. Reset the vault in Settings &gt; Security to start a new one.</source>
+        <translation>[Ťĥé šýšťém ķéýŕíñĝ ďöéšñ&apos;ť ĥávé ťĥé váüĺť&apos;š ķéý. Ŕéšéť ťĥé váüĺť íñ Šéťťíñĝš &gt; Šéçüŕíťý ťö šťáŕť á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Connect to %1</source>
         <translation>[Çöññéçť ťö %1 ~~~~]</translation>
     </message>
@@ -2423,6 +2427,10 @@
         <translation>[Çŕéáťéď ŵíťĥ ýöüŕ ƒíŕšť þáššŵöŕď öŕ ķéý. ~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>The system keyring doesn&apos;t have its key: the data may come from another computer, or the keyring is locked.</source>
+        <translation>[Ťĥé šýšťém ķéýŕíñĝ ďöéšñ&apos;ť ĥávé íťš ķéý: ťĥé ďáťá máý çömé ƒŕöm áñöťĥéŕ çömþüťéŕ, öŕ ťĥé ķéýŕíñĝ íš ĺöçķéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Held by your system keyring.</source>
         <translation>[Ĥéĺď bý ýöüŕ šýšťém ķéýŕíñĝ. ~~~~~~~~~]</translation>
     </message>
@@ -2441,6 +2449,10 @@
     <message>
         <source>Lock</source>
         <translation>[Ĺöçķ ~~]</translation>
+    </message>
+    <message>
+        <source>Try again</source>
+        <translation>[Ťŕý áĝáíñ ~~~]</translation>
     </message>
     <message>
         <source>Reset…</source>
