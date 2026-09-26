@@ -109,7 +109,9 @@ Window {
     minimumWidth: 640
     minimumHeight: 420
     title: qsTr("OpenSesh")
-    color: Theme.bg
+    // A translucent terminal shows what is behind the window: the panels paint their own
+    // backgrounds, so only the terminal area lets the desktop through.
+    color: shell.translucentTerminal ? "transparent" : Theme.bg // lint-qml: allow (no paint, not a design color)
     // Frameless windows keep the system menu and the minimize, maximize and close functions. On
     // Windows these add no caption, and without them the taskbar button, Win+Down / Win+Up and
     // Alt+Space do nothing; X11 and Wayland only look at FramelessWindowHint.
@@ -222,6 +224,29 @@ Window {
         }
     }
 
+    // Terminal profiles, themes, highlighting rules and shortcuts (their own files).
+    Connections {
+        target: TerminalProfiles
+
+        function onProblem(kind, detail) {
+            if (kind === "read-only")
+                Toasts.show(qsTr("%1 comes from a newer OpenSesh or can't be read, so this change is not saved.").arg(detail), "danger");
+            else
+                Toasts.show(qsTr("Could not save the terminal settings: %1").arg(detail || ""), "danger");
+        }
+    }
+
+    Connections {
+        target: Keybindings
+
+        function onProblem(kind, detail) {
+            if (kind === "read-only")
+                Toasts.show(qsTr("%1 comes from a newer OpenSesh or can't be read, so shortcut changes are not saved.").arg(detail), "danger");
+            else
+                Toasts.show(qsTr("Could not save the shortcuts: %1").arg(detail || ""), "danger");
+        }
+    }
+
     ThemeBinder {
         id: themeBinder
     }
@@ -232,7 +257,7 @@ Window {
         id: root
 
         anchors.fill: parent
-        color: Theme.bg
+        color: shell.translucentTerminal ? "transparent" : Theme.bg // lint-qml: allow (no paint, not a design color)
 
         AppShell {
             id: shell
@@ -283,7 +308,8 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "settings"
-        prepare: () => shell.prepareSettingsScreenshot()
+        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts"]
+        prepare: (mode, density, page) => shell.prepareSettingsScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures > 0 ? 7 : 0)
     }

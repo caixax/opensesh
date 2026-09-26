@@ -43,6 +43,7 @@ pub mod qobject {
         #[qproperty(QString, tabs_position, cxx_name = "tabsPosition", READ = tabs_position, WRITE = set_tabs_position, NOTIFY = settings_changed)]
         #[qproperty(bool, show_status_bar, cxx_name = "showStatusBar", READ = show_status_bar, WRITE = set_show_status_bar, NOTIFY = settings_changed)]
         #[qproperty(QString, window_decorations, cxx_name = "windowDecorations", READ = window_decorations, WRITE = set_window_decorations, NOTIFY = settings_changed)]
+        #[qproperty(QString, terminal_profile, cxx_name = "terminalProfile", READ = terminal_profile, WRITE = set_terminal_profile, NOTIFY = settings_changed)]
         #[qproperty(QString, config_path, cxx_name = "configPath", READ = config_path, NOTIFY = status_changed)]
         #[qproperty(bool, read_only, cxx_name = "readOnly", READ = read_only, NOTIFY = status_changed)]
         #[qproperty(QString, read_only_reason, cxx_name = "readOnlyReason", READ = read_only_reason, NOTIFY = status_changed)]
@@ -106,6 +107,8 @@ pub mod qobject {
         fn set_show_status_bar(self: Pin<&mut Self>, value: bool);
         fn window_decorations(self: &Self) -> QString;
         fn set_window_decorations(self: Pin<&mut Self>, value: QString);
+        fn terminal_profile(self: &Self) -> QString;
+        fn set_terminal_profile(self: Pin<&mut Self>, value: QString);
         fn config_path(self: &Self) -> QString;
         fn read_only(self: &Self) -> bool;
         fn read_only_reason(self: &Self) -> QString;
@@ -555,6 +558,18 @@ impl qobject::AppSettings {
                 tracing::warn!(value, "ignoring invalid UI scale");
                 self.change(|_| false);
             }
+        }
+    }
+    pub fn terminal_profile(&self) -> QString {
+        qstring(&self.config.terminal.profile)
+    }
+    pub fn set_terminal_profile(self: Pin<&mut Self>, value: QString) {
+        let text = value.to_string().trim().to_owned();
+        if opensesh_core::terminal::settings::valid_id(&text) {
+            self.change(|c| replace(&mut c.terminal.profile, text));
+        } else {
+            tracing::warn!(value = %text, "ignoring an invalid terminal profile id from QML");
+            self.change(|_| false);
         }
     }
     pub fn ui_font(&self) -> QString {

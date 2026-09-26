@@ -9,6 +9,7 @@ mod crash;
 mod gui;
 mod logging;
 mod platform;
+mod saves;
 mod services;
 mod terminal;
 mod update;

@@ -3,4 +3,6 @@
 
 pub mod demo;
 pub mod interaction;
+pub mod preview;
+pub mod profiles;
 pub mod registry;

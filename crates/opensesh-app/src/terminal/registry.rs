@@ -13,13 +13,15 @@
 //! which only posts an event.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
-use opensesh_term::backend::{BackendError, TermSize};
+use opensesh_term::backend::{self, BackendError, TermSize};
 use opensesh_term::palette::Palette;
 use opensesh_term::pty;
-use opensesh_term::session::{Notice, Notify, Session, SessionConfig, SessionError};
+use opensesh_term::session::{
+    Notice, Notify, Session, SessionConfig, SessionError, SessionOptions,
+};
 use opensesh_term::shell::ShellCommand;
 
 /// Queues the attached item's `drain` on the GUI thread. Returns `false` when the item is gone
@@ -78,7 +80,7 @@ pub struct SessionInfo {
 }
 
 /// What happened since the attached item last took the events.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Events {
     /// The screen changed (take a snapshot).
     pub dirty: bool,
@@ -88,13 +90,15 @@ pub struct Events {
     pub info: bool,
     /// The program ended ([`SessionInfo::exit`] is set).
     pub exited: bool,
+    /// The program set the clipboard (OSC 52): the latest text.
+    pub clipboard: Option<String>,
 }
 
 impl Events {
     /// Whether anything happened.
     #[must_use]
-    pub fn any(self) -> bool {
-        self.dirty || self.bell || self.info || self.exited
+    pub fn any(&self) -> bool {
+        self.dirty || self.bell || self.info || self.exited || self.clipboard.is_some()
     }
 }
 
@@ -139,6 +143,7 @@ impl SessionState {
             }
             // The snapshot's cursor carries the blinking wish; nothing to do here.
             Notice::CursorBlinking(_) => {}
+            Notice::Clipboard(text) => self.events.clipboard = Some(text),
         }
     }
 
@@ -269,12 +274,16 @@ fn sessions() -> MutexGuard<'static, HashMap<i32, Arc<SessionEntry>>> {
 }
 
 /// Settings of a new local session.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LocalOptions {
     /// Grid and cell size.
     pub size: TermSize,
     /// Colors.
     pub palette: Palette,
+    /// Engine options.
+    pub options: SessionOptions,
+    /// `TERM` for the shell.
+    pub term: String,
 }
 
 /// A shell that reads no startup files and keeps no history, for the smoke test: it must not
@@ -296,13 +305,41 @@ fn start_local(options: LocalOptions, notify: Notify) -> Result<Session, StartEr
     } else {
         ShellCommand::user_shell()
     };
+    let command = command.env("TERM", &options.term);
     let (backend, events) = pty::spawn(command, options.size)?;
     let config = SessionConfig {
         size: options.size,
         palette: options.palette,
+        options: options.options,
         ..SessionConfig::default()
     };
     Ok(Session::start(backend, events, config, notify)?)
+}
+
+/// Ids of preview sessions: negative, so they never meet a tab's.
+static NEXT_PREVIEW: AtomicI32 = AtomicI32::new(-1);
+
+/// Starts a session that plays `bytes` once and has no program (the settings preview), under a
+/// new negative id. Close it with [`close`] when the view goes away.
+///
+/// # Errors
+/// [`StartError`] if the engine thread could not be created.
+pub fn open_replay(
+    bytes: Vec<u8>,
+    options: LocalOptions,
+) -> Result<(i32, Arc<SessionEntry>), StartError> {
+    let id = NEXT_PREVIEW.fetch_sub(1, Ordering::Relaxed);
+    let entry = open_with(id, move |notify| {
+        let (backend, events) = backend::replay(bytes);
+        let config = SessionConfig {
+            size: options.size,
+            palette: options.palette,
+            options: options.options,
+            ..SessionConfig::default()
+        };
+        Ok(Session::start(backend, events, config, notify)?)
+    })?;
+    Ok((id, entry))
 }
 
 /// The session of tab `id`, if it is open.
@@ -356,10 +393,10 @@ pub fn restart_local(id: i32, options: LocalOptions) -> Result<Arc<SessionEntry>
     open_local(id, options)
 }
 
-/// How many sessions are open.
+/// How many tab sessions are open (previews don't count).
 #[must_use]
 pub fn count() -> usize {
-    sessions().len()
+    sessions().keys().filter(|id| **id > 0).count()
 }
 
 /// Ends every session (the main window closed).

@@ -71,6 +71,30 @@ pub fn enable_windows_altgr() {
 ///
 /// # Errors
 ///
+/// Whether some terminal profile makes the background translucent: only then does the window get
+/// an alpha channel (it costs a little on some systems, and X11 without a compositor shows the
+/// transparent parts black). Test runs never do.
+fn wants_window_alpha() -> bool {
+    if crate::bridge::app_info::is_test_run() {
+        return false;
+    }
+    let Some(services) = crate::services::get() else {
+        return false;
+    };
+    let dir = services
+        .paths
+        .config_dir()
+        .join(opensesh_core::terminal::profile::PROFILES_DIR);
+    // A few small files, read once before the window exists.
+    let (profiles, _) = opensesh_core::terminal::profile::ProfileSet::load_dir(&dir);
+    profiles.list().iter().any(|profile| {
+        profile
+            .terminal
+            .background_opacity
+            .is_some_and(|opacity| opacity < 0.999)
+    })
+}
+
 /// Fails if Qt objects can't be created or the QML file fails to load.
 pub fn run(qml_url: &str, language: &str) -> Result<i32> {
     crate::bridge::shim::install_qt_message_handler();
@@ -97,6 +121,13 @@ pub fn run(qml_url: &str, language: &str) -> Result<i32> {
     // its shader pipeline cache to the per-user cache folder.
     if crate::services::get().is_some_and(|services| services.paths.is_portable()) {
         shim::disable_shader_disk_cache();
+    }
+    if wants_window_alpha() {
+        shim::enable_window_alpha();
+        crate::bridge::app_info::set_window_alpha(true);
+        tracing::info!(
+            "a terminal profile has a translucent background: the window gets an alpha channel"
+        );
     }
     let fonts = shim::register_bundled_fonts();
     shim::set_application_font_family(&QString::from(DEFAULT_UI_FONT));

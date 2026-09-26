@@ -37,12 +37,20 @@ std::int32_t register_bundled_fonts();
 // Sets the application default font family (size stays the platform default).
 void set_application_font_family(const QString& family);
 
+// Asks every Qt Quick window created from now on for an alpha channel (see
+// QQuickWindow::setDefaultAlphaBuffer), so a translucent terminal shows what is behind the window.
+void enable_window_alpha();
+
 // Turns off Qt Quick's automatic shader pipeline cache, which Qt writes to the per-user cache
 // folder (QStandardPaths::CacheLocation): portable mode keeps everything next to the executable.
 void disable_shader_disk_cache();
 
 // Installed font families, optionally only fixed-pitch ones, sorted.
 QStringList font_families(bool monospace_only);
+
+// The system's alert sound: MessageBeep on Windows, the X11 bell on X11. Wayland has no
+// standard one yet. Returns whether a sound was requested.
+bool platform_beep();
 
 // Portable text of a key combination, e.g. "Ctrl+Shift+P" (QKeySequence::PortableText).
 QString key_sequence_text(std::int32_t key, std::int32_t modifiers);

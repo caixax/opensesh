@@ -108,7 +108,7 @@ Column {
             text: qsTr("Quick connect")
             category: qsTr("Connections")
             iconName: "zap"
-            shortcut: "Ctrl+Shift+O"
+            defaultShortcut: "Ctrl+Shift+O"
             onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
         },
         OsAction {
@@ -116,7 +116,7 @@ Column {
             text: qsTr("New local terminal")
             category: qsTr("Tabs")
             iconName: "square-terminal"
-            shortcut: "Ctrl+Shift+T"
+            defaultShortcut: "Ctrl+Shift+T"
             onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
         },
         OsAction {
@@ -124,7 +124,7 @@ Column {
             text: qsTr("Toggle SFTP panel")
             category: qsTr("View")
             iconName: "folder-sync"
-            shortcut: "Ctrl+Shift+E"
+            defaultShortcut: "Ctrl+Shift+E"
             onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
         },
         OsAction {
@@ -139,7 +139,7 @@ Column {
             text: qsTr("Open settings")
             category: qsTr("App")
             iconName: "settings"
-            shortcut: "Ctrl+,"
+            defaultShortcut: "Ctrl+,"
             onTriggered: resultText.result = qsTr("Ran \"%1\"").arg(text)
         },
         OsAction {

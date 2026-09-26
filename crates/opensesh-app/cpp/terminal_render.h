@@ -12,6 +12,7 @@
 #include <QtCore/QRectF>
 #include <QtCore/QSizeF>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 #include <QtGui/QFont>
 #include <QtGui/QImage>
 #include <QtGui/QRawFont>
@@ -34,12 +35,37 @@ struct TerminalFrameInfo;
 
 namespace terminal {
 
-// Cell geometry for one font at one device pixel ratio. Every length except `pointSize` is in
-// device pixels and, for the vertical ones, measured from the top of the cell.
-struct Metrics
+// The grid font and how it is drawn (PLAN §6.2).
+struct FontSpec
 {
     QString family;
-    qreal pointSize = 0.0;
+    // Tried in order for characters the main family lacks, before Qt's own fallback.
+    QStringList fallbacks;
+    qreal pointSize = 11.0;
+    // CSS-like weights, 100 to 900.
+    int weight = 400;
+    int boldWeight = 700;
+    // Draw italic cells in italics (otherwise upright).
+    bool italic = true;
+    // Multiplies the font's natural line height.
+    qreal lineHeight = 1.0;
+    // Extra logical pixels between cells (negative tightens).
+    qreal letterSpacing = 0.0;
+    bool antialiasing = true;
+    // QFont::HintingPreference: 0 default, 1 none, 2 vertical, 3 full.
+    int hinting = 0;
+    // Programming ligatures (experimental, ADR 0015).
+    bool ligatures = false;
+
+    bool operator==(const FontSpec &other) const;
+    bool operator!=(const FontSpec &other) const { return !(*this == other); }
+};
+
+// Cell geometry for one font at one device pixel ratio. Every length is in device pixels and,
+// for the vertical ones, measured from the top of the cell.
+struct Metrics
+{
+    FontSpec font;
     qreal dpr = 1.0;
     int cellWidth = 0;
     int cellHeight = 0;
@@ -53,12 +79,12 @@ struct Metrics
     bool operator!=(const Metrics &other) const { return !(*this == other); }
 };
 
-// Metrics of `family` at `pointSize` and `dpr`. The cell is rounded to whole device pixels
-// (ADR 0013). Never fails: a missing family falls back to Qt's default font.
-Metrics computeMetrics(const QString &family, qreal pointSize, qreal dpr);
+// Metrics of `font` at `dpr`. The cell is rounded to whole device pixels (ADR 0013). Never
+// fails: a missing family falls back to Qt's default font.
+Metrics computeMetrics(const FontSpec &font, qreal dpr);
 
 // The grid font in one of the four styles (bit 0 bold, bit 1 italic).
-QFont terminalFont(const QString &family, qreal pointSize, int style);
+QFont terminalFont(const FontSpec &font, int style);
 
 // Per-frame counters, for OPENSESH_TERMINAL_STATS.
 struct RenderStats
@@ -78,6 +104,8 @@ struct RenderInput
     Metrics metrics;
     QSizeF size;
     qreal padding = 0.0;
+    // Opacity of the default background (cells with their own background stay opaque).
+    qreal backgroundOpacity = 1.0;
     // Qt Quick's software backend draws no custom geometry: only the background is drawn.
     bool software = false;
     // Blink phase: false while a blinking cursor is in its hidden half.
@@ -132,6 +160,14 @@ public:
     Glyph glyph(char32_t ch, int style, int span);
     // A grapheme cluster (base character plus combining marks, or any text).
     Glyph cluster(const QString &text, int style, int span);
+    // Programming ligatures (ADR 0015): for each character of `text` (printable ASCII in one
+    // style), the glyph the font's shaping gives it where that differs from its own glyph (a
+    // contextual alternate), else 0. Cached by text; an empty result means "not this frame" (the
+    // rasterizing budget is spent, counted in deferred()).
+    QList<quint32> shapeRun(const QString &text, int style);
+    // A glyph by index (a shaped alternate), placed like the character it replaces; its ink may
+    // reach into the neighbouring cells.
+    Glyph glyphByIndex(quint32 index, int style);
     // Natural advance of `text` in cells (1 or 2), for the preedit.
     int spanOf(const QString &text) const;
     // Curly underline tile, one cell wide.
@@ -166,7 +202,8 @@ public:
     int resets = 0;
 
 private:
-    Glyph rasterize(const QString &text, char32_t single, int style, int span);
+    Glyph rasterize(const QString &text, char32_t single, int style, int span,
+                    quint32 glyphIndex = 0);
     bool place(const QImage &source, const QRect &area, bool color, QRect *placed);
     bool allocate(const QSize &size, QPoint *position);
     void clearContents(int size);
@@ -188,6 +225,8 @@ private:
     int m_deferred = 0;
     QHash<quint32, Glyph> m_fast;
     QHash<QString, Glyph> m_clusters;
+    QHash<quint64, Glyph> m_indexed;
+    QHash<QString, QList<quint32>> m_shaped[4];
     Glyph m_curly;
     QRect m_solid;
 };
@@ -262,6 +301,8 @@ private:
                      std::uint32_t color) const;
     void appendDecorations(std::vector<Quad> &out, const GridCell &cell, int x, int y,
                            int width) const;
+    // Fills m_scratchLigatures for a row: the shaped glyph per column, 0 for the plain one.
+    void findLigatures(const GridCell *cells);
     GlyphAtlas::Glyph glyphForCell(int row, const GridCell &cell, int span);
     void writeGlyphGeometry(QSGGeometryNode *node, const std::vector<Quad> &quads,
                             const RenderInput &input) const;
@@ -283,6 +324,7 @@ private:
     std::vector<Quad> m_scratchBackgrounds;
     std::vector<Quad> m_scratchGlyphs;
     std::vector<Quad> m_scratchDecorations;
+    std::vector<quint32> m_scratchLigatures;
 
     int m_columns = 0;
     int m_lines = 0;

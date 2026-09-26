@@ -35,29 +35,25 @@ FocusScope {
             id: "terminal",
             text: qsTr("Terminal"),
             iconName: "square-terminal",
-            description: qsTr("Font, colors, cursor, scrollback, clipboard and terminal behavior, with a live preview."),
-            sprint: 3
+            description: qsTr("Font, colors, cursor, scrollback, clipboard and terminal behavior, with a live preview.")
         },
         {
             id: "profiles",
             text: qsTr("Profiles"),
             iconName: "user",
-            description: qsTr("Terminal profiles that groups, hosts and tabs inherit and override."),
-            sprint: 3
+            description: qsTr("Terminal profiles that groups, hosts and tabs inherit and override.")
         },
         {
             id: "themes",
             text: qsTr("Themes"),
             iconName: "palette",
-            description: qsTr("Terminal color themes: the built-in ones, imported ones and your own, with a visual editor."),
-            sprint: 3
+            description: qsTr("Terminal color themes: the built-in ones, imported ones and your own, with a visual editor.")
         },
         {
             id: "shortcuts",
             text: qsTr("Shortcuts"),
             iconName: "keyboard",
-            description: qsTr("Every keyboard shortcut, editable, with conflict detection."),
-            sprint: 3
+            description: qsTr("Every keyboard shortcut, editable, with conflict detection.")
         },
         {
             id: "ssh",
@@ -111,6 +107,11 @@ FocusScope {
         return -1;
     }
 
+    // The page shown now (e.g. to hand Settings > Terminal a profile to edit).
+    function currentPage(): Item {
+        return pageLoader.item;
+    }
+
     function showSection(id: string): bool {
         if (indexOf(id) < 0) {
             console.warn("SettingsView: unknown section", id);
@@ -125,6 +126,13 @@ FocusScope {
         steps.push(() => view.showSection("general"));
         steps.push(() => pageLoader.item.openRestoreDialog());
         steps.push(() => pageLoader.item.closeRestoreDialog());
+        steps.push(() => view.showSection("terminal"));
+        steps.push(() => pageLoader.item.openRulesDialog("logs"));
+        steps.push(() => pageLoader.item.closeRulesDialog());
+        steps.push(() => view.showSection("themes"));
+        steps.push(() => pageLoader.item.openEditor());
+        steps.push(() => pageLoader.item.closeEditor());
+        steps.push(() => view.showSection("general"));
         return steps;
     }
 
@@ -321,6 +329,14 @@ FocusScope {
                     return generalPage;
                 case "appearance":
                     return appearancePage;
+                case "terminal":
+                    return terminalPage;
+                case "profiles":
+                    return profilesPage;
+                case "themes":
+                    return themesPage;
+                case "shortcuts":
+                    return shortcutsPage;
                 case "about":
                     return aboutPage;
                 default:
@@ -350,6 +366,30 @@ FocusScope {
         id: appearancePage
 
         SettingsAppearancePage {}
+    }
+
+    Component {
+        id: terminalPage
+
+        SettingsTerminalPage {}
+    }
+
+    Component {
+        id: profilesPage
+
+        SettingsProfilesPage {}
+    }
+
+    Component {
+        id: themesPage
+
+        SettingsThemesPage {}
+    }
+
+    Component {
+        id: shortcutsPage
+
+        SettingsShortcutsPage {}
     }
 
     Component {

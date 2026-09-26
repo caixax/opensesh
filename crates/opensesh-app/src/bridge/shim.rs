@@ -50,6 +50,14 @@ pub mod ffi {
         #[namespace = "opensesh"]
         fn font_families(monospace_only: bool) -> QStringList;
 
+        /// Asks Qt Quick windows for an alpha channel (before they are created).
+        #[namespace = "opensesh"]
+        fn enable_window_alpha();
+
+        /// The system's alert sound; returns whether one was requested (not on Wayland).
+        #[namespace = "opensesh"]
+        fn platform_beep() -> bool;
+
         /// Portable text of a key combination (e.g. `Ctrl+Shift+P`).
         #[namespace = "opensesh"]
         fn key_sequence_text(key: i32, modifiers: i32) -> QString;

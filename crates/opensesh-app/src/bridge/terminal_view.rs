@@ -25,11 +25,18 @@
 //! the read-only `columns`, `lines`, `cellWidth`, `cellHeight`, `gridSizeChanged` and
 //! `requestFrame()`):
 //!
-//! - properties: `sessionId`, `dark` (the OpenSesh dark or light terminal colors), `copyOnSelect`,
-//!   and read-only `title`, `workingDirectory`, `running`, `exitCode`, `exitCodeKnown`,
-//!   `hasSelection`, `displayOffset`, `historySize` (for a scroll bar) and `searchError`;
-//! - signals: `bell()`, `exited(code)`, `activity()` (new content while the item is hidden) and
-//!   `contextMenuRequested(x, y)` (right click, or the Menu key at the cursor);
+//! - properties: `sessionId`, `dark` (the app's scheme: picks the profile's dark or light theme),
+//!   `profileId` (the tab's profile, empty for the default one), `settingsRevision` (bind it to
+//!   `TerminalProfiles.revision`: profile edits apply at once), `fontZoom` (points added to the
+//!   profile's size, per tab), `highlightEnabled` (keyword highlighting for this tab), `preview`
+//!   (shows the settings sample instead of a session), `copyOnSelect`, and read-only `title`,
+//!   `workingDirectory`, `running`, `exitCode`, `exitCodeKnown`, `hasSelection`,
+//!   `displayOffset`, `historySize` (for a scroll bar), `searchError`, and from the profile
+//!   `bellStyle`, `backgroundImage` (a file URL), `backgroundImageDim`, `backgroundImageFit`,
+//!   `backgroundColor` and `fontSize`;
+//! - signals: `bell()`, `exited(code)`, `activity()` (new content while the item is hidden),
+//!   `contextMenuRequested(x, y)` (right click, or the Menu key at the cursor) and
+//!   `clipboardSet()` (a program copied text with OSC 52);
 //! - invokables: `copy()`, `paste()`, `pasteSelection()` (Linux primary selection), `selectAll()`,
 //!   `clearSelection()`, `find(pattern, forward)`, `clearSearch()`, `scrollLines(n)`,
 //!   `scrollTo(offset)`, `scrollToBottom()`, `clearScrollback()`, `restart()`, and for tests
@@ -149,6 +156,29 @@ pub mod qobject {
         full: bool,
     }
 
+    /// Font options besides the families (`TerminalItemBase::setFontOptions`).
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    struct TerminalFontOptions {
+        /// Size in points.
+        point_size: f64,
+        /// Weight of normal text, 100 to 900.
+        weight: i32,
+        /// Weight of bold text, 100 to 900.
+        bold_weight: i32,
+        /// Draw italic text in italics.
+        italic: bool,
+        /// Line height multiplier.
+        line_height: f64,
+        /// Extra space between cells, logical pixels.
+        letter_spacing: f64,
+        /// Smooth glyph edges.
+        antialiasing: bool,
+        /// 0 default, 1 none, 2 vertical, 3 full hinting.
+        hinting: i32,
+        /// Programming ligatures (experimental).
+        ligatures: bool,
+    }
+
     /// A mouse press, release or move over the grid.
     #[derive(Clone, Copy, Debug, PartialEq)]
     struct TerminalMouseEvent {
@@ -201,6 +231,10 @@ pub mod qobject {
         include!("cxx-qt-lib/qstring.h");
         /// Qt string type from cxx-qt-lib.
         type QString = cxx_qt_lib::QString;
+
+        include!("cxx-qt-lib/qstringlist.h");
+        /// Qt string list type from cxx-qt-lib.
+        type QStringList = cxx_qt_lib::QStringList;
     }
 
     unsafe extern "C++" {
@@ -220,6 +254,17 @@ pub mod qobject {
         #[qproperty(bool, demo_animated, cxx_name = "demoAnimated", READ, WRITE = set_demo_animated, NOTIFY = demo_changed)]
         #[qproperty(i32, session_id, cxx_name = "sessionId", READ, WRITE = set_session_id, NOTIFY = session_id_changed)]
         #[qproperty(bool, dark, READ, WRITE = set_dark, NOTIFY = dark_changed)]
+        #[qproperty(QString, profile_id, cxx_name = "profileId", READ, WRITE = set_profile_id, NOTIFY = inputs_changed)]
+        #[qproperty(i32, settings_revision, cxx_name = "settingsRevision", READ, WRITE = set_settings_revision, NOTIFY = inputs_changed)]
+        #[qproperty(f64, font_zoom, cxx_name = "fontZoom", READ, WRITE = set_font_zoom, NOTIFY = inputs_changed)]
+        #[qproperty(bool, highlight_enabled, cxx_name = "highlightEnabled", READ, WRITE = set_highlight_enabled, NOTIFY = inputs_changed)]
+        #[qproperty(bool, preview, READ, WRITE = set_preview, NOTIFY = inputs_changed)]
+        #[qproperty(QString, bell_style, cxx_name = "bellStyle", READ, NOTIFY = appearance_changed)]
+        #[qproperty(QString, background_image, cxx_name = "backgroundImage", READ, NOTIFY = appearance_changed)]
+        #[qproperty(f64, background_image_dim, cxx_name = "backgroundImageDim", READ, NOTIFY = appearance_changed)]
+        #[qproperty(QString, background_image_fit, cxx_name = "backgroundImageFit", READ, NOTIFY = appearance_changed)]
+        #[qproperty(QString, background_color, cxx_name = "backgroundColor", READ, NOTIFY = appearance_changed)]
+        #[qproperty(f64, font_size, cxx_name = "fontSize", READ, NOTIFY = appearance_changed)]
         #[qproperty(bool, copy_on_select, cxx_name = "copyOnSelect", READ, WRITE, NOTIFY)]
         #[qproperty(QString, title, READ, NOTIFY = session_info_changed)]
         #[qproperty(QString, working_directory, cxx_name = "workingDirectory", READ, NOTIFY = session_info_changed)]
@@ -246,6 +291,23 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "darkChanged"]
         fn dark_changed(self: Pin<&mut TerminalItem>);
+
+        /// Emitted when `profileId`, `settingsRevision`, `fontZoom`, `highlightEnabled` or
+        /// `preview` changes.
+        #[qsignal]
+        #[cxx_name = "inputsChanged"]
+        fn inputs_changed(self: Pin<&mut TerminalItem>);
+
+        /// Emitted when a read-only value from the profile changes (`bellStyle`, the background
+        /// image, `backgroundColor`, `fontSize`).
+        #[qsignal]
+        #[cxx_name = "appearanceChanged"]
+        fn appearance_changed(self: Pin<&mut TerminalItem>);
+
+        /// A program put text on the clipboard (OSC 52, when the profile allows it).
+        #[qsignal]
+        #[cxx_name = "clipboardSet"]
+        fn clipboard_set(self: Pin<&mut TerminalItem>);
 
         /// Emitted when the title, the working directory or the running and exit state change.
         #[qsignal]
@@ -294,8 +356,18 @@ pub mod qobject {
         fn set_demo_animated(self: Pin<&mut TerminalItem>, value: bool);
         /// Attaches to the session of tab `id` (0 for none), starting a local shell if needed.
         fn set_session_id(self: Pin<&mut TerminalItem>, id: i32);
-        /// The OpenSesh dark (true) or light terminal colors.
+        /// The app's dark (true) or light scheme: picks the profile's dark or light theme.
         fn set_dark(self: Pin<&mut TerminalItem>, value: bool);
+        /// The tab's profile (empty for the default one).
+        fn set_profile_id(self: Pin<&mut TerminalItem>, value: QString);
+        /// Bound to `TerminalProfiles.revision`: a new value re-applies the profile.
+        fn set_settings_revision(self: Pin<&mut TerminalItem>, value: i32);
+        /// Points added to the profile's font size (per tab).
+        fn set_font_zoom(self: Pin<&mut TerminalItem>, value: f64);
+        /// Keyword highlighting for this terminal.
+        fn set_highlight_enabled(self: Pin<&mut TerminalItem>, value: bool);
+        /// Shows the settings sample (no program) instead of a tab's session.
+        fn set_preview(self: Pin<&mut TerminalItem>, value: bool);
 
         /// Copies the selection to the clipboard. Returns whether there was one.
         #[qinvokable]
@@ -426,6 +498,11 @@ pub mod qobject {
         #[cxx_name = "handleImeCommit"]
         fn handle_ime_commit(self: Pin<&mut TerminalItem>, text: &QString);
 
+        /// One step of a smooth scroll; returns whether more follow.
+        #[cxx_override]
+        #[cxx_name = "handleScrollTick"]
+        fn handle_scroll_tick(self: Pin<&mut TerminalItem>) -> bool;
+
         /// The grid or cell size changed (cells in device pixels).
         #[cxx_override]
         #[cxx_name = "handleGridSize"]
@@ -467,6 +544,41 @@ pub mod qobject {
         #[inherit]
         fn padding(self: &TerminalItem) -> f64;
 
+        /// Sets the space around the grid.
+        #[inherit]
+        #[cxx_name = "setPadding"]
+        fn set_padding(self: Pin<&mut TerminalItem>, padding: f64);
+
+        /// Sets every font option at once (see the C++ base).
+        #[inherit]
+        #[cxx_name = "setFontOptions"]
+        fn set_font_options(
+            self: Pin<&mut TerminalItem>,
+            family: &QString,
+            fallbacks: &QStringList,
+            options: &TerminalFontOptions,
+        );
+
+        /// Opacity of the default background.
+        #[inherit]
+        #[cxx_name = "setBackgroundOpacity"]
+        fn set_background_opacity(self: Pin<&mut TerminalItem>, opacity: f64);
+
+        /// Starts calling `handleScrollTick` every frame.
+        #[inherit]
+        #[cxx_name = "startScrollTicks"]
+        fn start_scroll_ticks(self: Pin<&mut TerminalItem>);
+
+        /// `QQuickItem::setActiveFocusOnTab()`: a preview is not a Tab stop.
+        #[inherit]
+        #[cxx_name = "setActiveFocusOnTab"]
+        fn set_active_focus_on_tab(self: Pin<&mut TerminalItem>, enabled: bool);
+
+        /// No animations (the app's reduce motion setting).
+        #[inherit]
+        #[cxx_name = "reduceMotion"]
+        fn reduce_motion(self: &TerminalItem) -> bool;
+
         /// Sets the clipboard, or the primary selection where there is one.
         #[inherit]
         #[cxx_name = "setClipboardText"]
@@ -506,6 +618,7 @@ use std::time::{Duration, Instant};
 
 use cxx_qt::{CxxQtThread, CxxQtType, Threading};
 use cxx_qt_lib::QString;
+use opensesh_core::terminal::settings::{FONT_SIZE_RANGE, Hinting, RightClick};
 use opensesh_term::backend::TermSize;
 use opensesh_term::input::keys::{
     Key, KeyInput, KeyOptions, encode_key, is_windows_alt_code, modifiers_from_qt, qt,
@@ -522,14 +635,15 @@ use opensesh_term::palette::Palette;
 use opensesh_term::session::{Scroll, SelectionKind, Side, ViewportPoint};
 use opensesh_term::snapshot::{self, CursorShape, Damage, Frame};
 
-use crate::terminal::demo;
 use crate::terminal::interaction::{
-    LINES_PER_NOTCH, ScreenText, WheelSteps, display_title, side_of, unswap_alt_wheel, url_at,
+    ScreenText, WheelSteps, display_title, scaled_lines, side_of, unswap_alt_wheel, url_at,
 };
+use crate::terminal::profiles::{self, DEFAULT_FONT, Resolved};
 use crate::terminal::registry::{self, LocalOptions, SessionEntry, SessionInfo, Waker};
+use crate::terminal::{demo, preview};
 use qobject::{
-    TerminalCell, TerminalCursorShape, TerminalFrameInfo, TerminalFrameRequest, TerminalMouseEvent,
-    TerminalWheelEvent,
+    QStringList, TerminalCell, TerminalCursorShape, TerminalFontOptions, TerminalFrameInfo,
+    TerminalFrameRequest, TerminalMouseEvent, TerminalWheelEvent,
 };
 
 /// What the next `fillFrame` has to send (demo only).
@@ -601,6 +715,17 @@ pub struct TerminalItemRust {
     // QML properties.
     session_id: i32,
     dark: bool,
+    profile_id: QString,
+    settings_revision: i32,
+    font_zoom: f64,
+    highlight_enabled: bool,
+    preview: bool,
+    bell_style: QString,
+    background_image: QString,
+    background_image_dim: f64,
+    background_image_fit: QString,
+    background_color: QString,
+    font_size: f64,
     copy_on_select: bool,
     title: QString,
     working_directory: QString,
@@ -651,6 +776,16 @@ pub struct TerminalItemRust {
     link_hovered: bool,
     /// The detected URL currently underlined.
     link_range: Option<(ViewportPoint, ViewportPoint)>,
+
+    // The profile, as last applied (GUI thread).
+    /// What the terminal uses from its profile; `None` until it was applied once.
+    resolved: Option<Resolved>,
+    /// The highlighting last handed to the attached session: `None` before anything was sent.
+    sent_highlighter: Option<Option<Arc<opensesh_term::highlight::Highlighter>>>,
+    /// The preview's session id in the registry (negative), 0 without one.
+    preview_id: i32,
+    /// Lines a smooth scroll still has to move (positive: up, into the history).
+    scroll_pending: i32,
 }
 
 impl std::fmt::Debug for TerminalItemRust {
@@ -675,6 +810,17 @@ impl Default for TerminalItemRust {
             tick: 0,
             session_id: 0,
             dark: true,
+            profile_id: QString::default(),
+            settings_revision: 0,
+            font_zoom: 0.0,
+            highlight_enabled: true,
+            preview: false,
+            bell_style: QString::from("visual"),
+            background_image: QString::default(),
+            background_image_dim: 0.0,
+            background_image_fit: QString::from("cover"),
+            background_color: QString::default(),
+            font_size: 11.0,
             copy_on_select: false,
             title: QString::default(),
             working_directory: QString::default(),
@@ -704,6 +850,10 @@ impl Default for TerminalItemRust {
             wheel: WheelSteps::default(),
             link_hovered: false,
             link_range: None,
+            resolved: None,
+            sent_highlighter: None,
+            preview_id: 0,
+            scroll_pending: 0,
         }
     }
 }
@@ -713,6 +863,10 @@ impl Drop for TerminalItemRust {
         // The session lives on in the registry until its tab closes.
         if let Some(attached) = self.attached.take() {
             attached.entry.detach(attached.token);
+        }
+        // A preview's session belongs to its item.
+        if self.preview_id != 0 {
+            registry::close(self.preview_id);
         }
     }
 }
@@ -837,6 +991,29 @@ impl TerminalItemRust {
         self.quiet_until.is_some_and(|until| Instant::now() < until)
     }
 
+    /// Options for a new session of this item: from the resolved profile.
+    fn local_options(&mut self, size: TermSize) -> LocalOptions {
+        if self.resolved.is_none() {
+            let profile = self.profile_id.to_string();
+            let profile = if profile.is_empty() {
+                opensesh_core::terminal::profile::DEFAULT_PROFILE
+            } else {
+                profile.as_str()
+            };
+            self.resolved = Some(profiles::current().resolve(profile, self.dark));
+        }
+        let resolved = self.resolved.as_ref();
+        LocalOptions {
+            size,
+            palette: resolved.map_or_else(Palette::default, |r| r.palette.clone()),
+            options: resolved.map(|r| r.options.clone()).unwrap_or_default(),
+            term: resolved.map_or_else(
+                || opensesh_core::terminal::settings::DEFAULT_TERM.to_owned(),
+                |r| r.settings.term.clone(),
+            ),
+        }
+    }
+
     /// The link at `point`: an OSC 8 hyperlink, else a URL detected in the row's text.
     fn link_at(&self, entry: &SessionEntry, point: ViewportPoint) -> Option<Link> {
         if let Some(url) = entry.session().hyperlink_at(point) {
@@ -853,13 +1030,66 @@ impl TerminalItemRust {
     }
 }
 
-/// The terminal colors for the app's dark or light theme.
+/// The terminal colors for the app's dark or light theme without a profile (tests, fallbacks).
+#[cfg(test)]
 fn palette_for(dark: bool) -> Palette {
     if dark {
         Palette::OPENSESH_DARK
     } else {
         Palette::OPENSESH_LIGHT
     }
+}
+
+/// `QFont::HintingPreference` order used by the C++ side.
+fn hinting_index(hinting: Hinting) -> i32 {
+    match hinting {
+        Hinting::Default => 0,
+        Hinting::None => 1,
+        Hinting::Vertical => 2,
+        Hinting::Full => 3,
+    }
+}
+
+/// A local path as a `file:` URL for QML's `Image` (empty stays empty).
+fn file_url(path: &str) -> String {
+    if path.is_empty() {
+        return String::new();
+    }
+    let path = path.replace('\\', "/");
+    let mut url = String::from("file://");
+    if !path.starts_with('/') {
+        url.push('/');
+    }
+    for byte in path.bytes() {
+        if byte.is_ascii_alphanumeric() || b"/-._~:".contains(&byte) {
+            url.push(char::from(byte));
+        } else {
+            url.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    url
+}
+
+/// Splits encoded paste bytes after each carriage return, for a paced paste: one chunk per
+/// line, the bracketed paste markers staying with the first and last lines.
+fn paste_chunks(bytes: &[u8]) -> Vec<Vec<u8>> {
+    let mut chunks: Vec<Vec<u8>> = bytes
+        .split_inclusive(|byte| *byte == b'\r')
+        .map(<[u8]>::to_vec)
+        .collect();
+    // The closing marker alone would be a chunk of its own: glue it to the last line.
+    if chunks.len() > 1
+        && chunks
+            .last()
+            .is_some_and(|last| last.as_slice() == b"\x1b[201~")
+    {
+        if let Some(marker) = chunks.pop() {
+            if let Some(last) = chunks.last_mut() {
+                last.extend_from_slice(&marker);
+            }
+        }
+    }
+    chunks
 }
 
 /// A grid size from the C++ side, `None` while any part is 0 (no window yet).
@@ -999,19 +1229,210 @@ impl qobject::TerminalItem {
         if self.dark == value {
             return;
         }
+        self.as_mut().rust_mut().dark = value;
+        self.as_mut().apply_settings();
+        self.as_mut().dark_changed();
+    }
+
+    /// See the bridge declaration.
+    pub fn set_profile_id(mut self: Pin<&mut Self>, value: QString) {
+        if self.profile_id == value {
+            return;
+        }
+        self.as_mut().rust_mut().profile_id = value;
+        self.as_mut().apply_settings();
+        self.as_mut().inputs_changed();
+    }
+
+    /// See the bridge declaration.
+    pub fn set_settings_revision(mut self: Pin<&mut Self>, value: i32) {
+        if self.settings_revision == value {
+            return;
+        }
+        self.as_mut().rust_mut().settings_revision = value;
+        self.as_mut().apply_settings();
+        self.as_mut().inputs_changed();
+    }
+
+    /// See the bridge declaration.
+    pub fn set_font_zoom(mut self: Pin<&mut Self>, value: f64) {
+        let value = if value.is_finite() {
+            value.clamp(-40.0, 80.0)
+        } else {
+            0.0
+        };
+        if (self.font_zoom - value).abs() < f64::EPSILON {
+            return;
+        }
+        self.as_mut().rust_mut().font_zoom = value;
+        self.as_mut().apply_settings();
+        self.as_mut().inputs_changed();
+    }
+
+    /// See the bridge declaration.
+    pub fn set_highlight_enabled(mut self: Pin<&mut Self>, value: bool) {
+        if self.highlight_enabled == value {
+            return;
+        }
+        self.as_mut().rust_mut().highlight_enabled = value;
+        self.as_mut().apply_settings();
+        self.as_mut().inputs_changed();
+    }
+
+    /// See the bridge declaration.
+    pub fn set_preview(mut self: Pin<&mut Self>, value: bool) {
+        if self.preview == value {
+            return;
+        }
+        self.as_mut().rust_mut().preview = value;
+        // A preview only shows: keys and the Tab chain stay with the page around it.
+        self.as_mut().set_active_focus_on_tab(!value);
+        if !value {
+            self.as_mut().end_preview();
+        }
+        self.as_mut().inputs_changed();
+        self.as_mut().attach_or_start();
+    }
+
+    /// Closes the preview's own session.
+    fn end_preview(mut self: Pin<&mut Self>) {
+        let id = std::mem::take(&mut self.as_mut().rust_mut().preview_id);
+        if id != 0 {
+            self.as_mut().detach();
+            registry::close(id);
+        }
+    }
+
+    /// Resolves the profile and applies it: fonts, padding, background, colors and engine
+    /// options, keys, and the values QML reads (bell, background image). Cheap when nothing
+    /// changed; a new palette or options go to the session only when they differ.
+    fn apply_settings(mut self: Pin<&mut Self>) {
+        if self.demo {
+            return;
+        }
+        let library = profiles::current();
+        let profile = self.profile_id.to_string();
+        let profile = if profile.is_empty() {
+            opensesh_core::terminal::profile::DEFAULT_PROFILE
+        } else {
+            profile.as_str()
+        };
+        let resolved = library.resolve(profile, self.dark);
+        let settings = &resolved.settings;
+
+        // Fonts and layout (the C++ side ignores values that didn't change).
+        let family = if settings.font_family.trim().is_empty() {
+            DEFAULT_FONT.to_owned()
+        } else {
+            settings.font_family.clone()
+        };
+        let mut fallbacks = QStringList::default();
+        for fallback in &settings.font_fallbacks {
+            fallbacks.append(QString::from(fallback));
+        }
+        let size = (settings.font_size + self.font_zoom)
+            .clamp(*FONT_SIZE_RANGE.start(), *FONT_SIZE_RANGE.end());
+        let weight = i32::try_from(settings.font_weight).unwrap_or(400);
+        let bold_weight = i32::try_from(settings.font_weight_bold).unwrap_or(700);
+        let options = TerminalFontOptions {
+            point_size: size,
+            weight,
+            bold_weight,
+            italic: settings.font_italic,
+            line_height: settings.line_height,
+            letter_spacing: settings.letter_spacing,
+            antialiasing: settings.antialiasing,
+            hinting: hinting_index(settings.hinting),
+            ligatures: settings.ligatures,
+        };
+        self.as_mut()
+            .set_font_options(&QString::from(&family), &fallbacks, &options);
+        self.as_mut().set_padding(f64::from(settings.padding));
+        // With a background image, QML draws the image and the dimming under the grid.
+        let image = settings.background_image.trim().to_owned();
+        let opacity = if image.is_empty() {
+            settings.background_opacity
+        } else {
+            0.0
+        };
+        self.as_mut().set_background_opacity(opacity);
+
+        // The session.
+        if let Some(entry) = self.entry() {
+            let session = entry.session();
+            let previous = self.resolved.as_ref();
+            if previous.is_none_or(|previous| previous.palette != resolved.palette) {
+                session.set_palette(resolved.palette.clone());
+            }
+            if previous.is_none_or(|previous| previous.options != resolved.options) {
+                session.set_options(resolved.options.clone());
+            }
+            let highlighter = resolved
+                .highlighter
+                .clone()
+                .filter(|_| self.highlight_enabled);
+            let same = match (&self.sent_highlighter, &highlighter) {
+                (Some(Some(sent)), Some(new)) => Arc::ptr_eq(sent, new),
+                (Some(None), None) => true,
+                _ => false,
+            };
+            if !same {
+                session.set_highlighter(highlighter.clone());
+                self.as_mut().rust_mut().sent_highlighter = Some(highlighter);
+            }
+        }
+
+        // What QML reads.
+        let bell = QString::from(settings.bell.as_str());
+        let image_url = QString::from(&file_url(&image));
+        let fit = QString::from(settings.background_image_fit.as_str());
+        let background = QString::from(&resolved.theme.colors.background.to_hex());
+        let dim = settings.background_image_dim;
+        let copy_on_select = settings.copy_on_select;
+        let changed = self.bell_style != bell
+            || self.background_image != image_url
+            || self.background_image_fit != fit
+            || self.background_color != background
+            || (self.background_image_dim - dim).abs() > f64::EPSILON
+            || (self.font_size - size).abs() > f64::EPSILON;
         {
             let mut state = self.as_mut().rust_mut();
-            state.dark = value;
             state.quiet_until = Some(Instant::now() + QUIET_AFTER_CHANGE);
+            state.bell_style = bell;
+            state.background_image = image_url;
+            state.background_image_fit = fit;
+            state.background_color = background;
+            state.background_image_dim = dim;
+            state.font_size = size;
+            state.resolved = Some(resolved);
         }
-        if let Some(entry) = self.entry() {
-            entry.session().set_palette(palette_for(value));
+        if self.copy_on_select != copy_on_select {
+            self.as_mut().set_copy_on_select(copy_on_select);
         }
-        self.as_mut().dark_changed();
+        if changed {
+            self.as_mut().appearance_changed();
+        }
     }
 
     /// Attaches to the session of `sessionId`, or starts it once the grid size is known.
     fn attach_or_start(mut self: Pin<&mut Self>) {
+        if self.preview {
+            if self.attached.is_some() {
+                return;
+            }
+            let Some(size) = self.grid else {
+                return;
+            };
+            let options = self.as_mut().rust_mut().local_options(size);
+            match registry::open_replay(preview::SAMPLE.as_bytes().to_vec(), options) {
+                Ok((id, entry)) => {
+                    self.as_mut().rust_mut().preview_id = id;
+                    self.as_mut().attach(entry);
+                }
+                Err(error) => tracing::error!(%error, "could not start the terminal preview"),
+            }
+            return;
+        }
         let id = self.session_id;
         if id <= 0 || self.attached.is_some() {
             return;
@@ -1023,10 +1444,7 @@ impl qobject::TerminalItem {
                 let Some(size) = self.grid else {
                     return;
                 };
-                let options = LocalOptions {
-                    size,
-                    palette: palette_for(self.dark),
-                };
+                let options = self.as_mut().rust_mut().local_options(size);
                 match registry::open_local(id, options) {
                     Ok(entry) => entry,
                     Err(error) => {
@@ -1055,7 +1473,7 @@ impl qobject::TerminalItem {
             Arc::new(move || thread.queue(move |item| item.drain(token)).is_ok())
         };
         let focused = self.has_active_focus();
-        let (dark, grid) = (self.dark, self.grid);
+        let grid = self.grid;
         {
             let mut state = self.as_mut().rust_mut();
             state.attached = Some(Attached {
@@ -1067,9 +1485,12 @@ impl qobject::TerminalItem {
             state.quiet_until = Some(Instant::now() + QUIET_AFTER_CHANGE);
             state.focus_sent = Some(focused);
             state.mouse = MouseState::default();
+            // The next apply sends everything to this session.
+            state.resolved = None;
+            state.sent_highlighter = None;
         }
+        self.as_mut().apply_settings();
         let session = entry.session();
-        session.set_palette(palette_for(dark));
         if let Some(size) = grid {
             session.resize(size);
         }
@@ -1130,6 +1551,11 @@ impl qobject::TerminalItem {
         }
         if events.bell {
             self.as_mut().bell();
+        }
+        if let Some(text) = events.clipboard {
+            self.as_mut()
+                .set_clipboard_text(&QString::from(&text), false);
+            self.as_mut().clipboard_set();
         }
         if events.exited {
             let (code, _) = exit_status(info.exit);
@@ -1232,13 +1658,37 @@ impl qobject::TerminalItem {
         entry.session().write(bytes);
     }
 
-    /// Pastes `text` (sanitised and bracketed by `encode_paste`).
-    fn paste_text(self: Pin<&mut Self>, text: &str) {
+    /// Pastes `text` (sanitised and bracketed by `encode_paste`), line by line with the
+    /// profile's delay when it has one.
+    fn paste_text(mut self: Pin<&mut Self>, text: &str) {
         let Some(entry) = self.entry() else {
             return;
         };
         let bytes = encode_paste(text, &entry.session().modes());
-        self.send_input(&entry, &bytes);
+        let delay = self
+            .resolved
+            .as_ref()
+            .map_or(0, |resolved| resolved.settings.paste_line_delay_ms);
+        let chunks = paste_chunks(&bytes);
+        if delay == 0 || chunks.len() < 2 {
+            self.send_input(&entry, &bytes);
+            return;
+        }
+        if self.scrolled {
+            entry.session().scroll(Scroll::Bottom);
+            self.as_mut().rust_mut().scrolled = false;
+        }
+        entry
+            .session()
+            .write_paced(chunks, Duration::from_millis(u64::from(delay)));
+    }
+
+    /// Whether the profile turns the Linux primary selection on (and the platform has one).
+    fn primary_selection(&self) -> bool {
+        self.resolved
+            .as_ref()
+            .is_none_or(|resolved| resolved.settings.primary_selection)
+            && self.supports_primary_selection()
     }
 
     /// A selection gesture ended: update `hasSelection`, copy on select, and set the primary
@@ -1253,7 +1703,7 @@ impl qobject::TerminalItem {
         if self.copy_on_select {
             self.as_mut().set_clipboard_text(&text, false);
         }
-        if self.supports_primary_selection() {
+        if self.primary_selection() {
             self.as_mut().set_clipboard_text(&text, true);
         }
     }
@@ -1327,7 +1777,7 @@ impl qobject::TerminalItem {
 
     /// See the bridge declaration.
     pub fn paste_selection(self: Pin<&mut Self>) {
-        if !self.supports_primary_selection() {
+        if !self.primary_selection() {
             return;
         }
         let text = self.clipboard_text(true).to_string();
@@ -1435,10 +1885,7 @@ impl qobject::TerminalItem {
         }
         self.as_mut().detach();
         tracing::info!(id, "restarting a local terminal");
-        let options = LocalOptions {
-            size,
-            palette: palette_for(self.dark),
-        };
+        let options = self.as_mut().rust_mut().local_options(size);
         match registry::restart_local(id, options) {
             Ok(entry) => {
                 self.as_mut().attach(entry);
@@ -1490,8 +1937,9 @@ impl qobject::TerminalItem {
         _keypad: bool,
         _auto_repeat: bool,
     ) -> bool {
-        // Without a session nothing consumes keys, so Tab still moves the focus (the gallery).
-        let Some(entry) = self.entry() else {
+        // Without a session nothing consumes keys, so Tab still moves the focus (the gallery);
+        // neither does a preview.
+        let Some(entry) = self.entry().filter(|_| !self.preview) else {
             return false;
         };
         if is_windows_alt_code(key, qt_bits(modifiers)) {
@@ -1542,7 +1990,19 @@ impl qobject::TerminalItem {
                 return true;
             }
         }
-        let Some(bytes) = encode_key(&input, &modes, &KeyOptions::default()) else {
+        // Escape or Ctrl+C stop a slow paste that is still going (and still reach the program).
+        if session.is_pasting()
+            && (input.key == Key::Escape
+                || (input.mods.ctrl && input.text.eq_ignore_ascii_case("c"))
+                || (input.mods.ctrl && key == 0x43))
+        {
+            session.cancel_paste();
+        }
+        let keys = self
+            .resolved
+            .as_ref()
+            .map_or_else(KeyOptions::default, |resolved| resolved.keys);
+        let Some(bytes) = encode_key(&input, &modes, &keys) else {
             return false;
         };
         self.send_input(&entry, &bytes);
@@ -1640,7 +2100,18 @@ impl qobject::TerminalItem {
                 self.as_mut().rust_mut().mouse.selecting = true;
             }
             MouseButton::Middle => self.paste_selection(),
-            MouseButton::Right => self.as_mut().context_menu_requested(event.x, event.y),
+            MouseButton::Right => {
+                let pastes = self
+                    .resolved
+                    .as_ref()
+                    .is_some_and(|resolved| resolved.settings.right_click == RightClick::Paste);
+                // Shift+right click always opens the menu.
+                if pastes && !mods.shift {
+                    self.paste();
+                } else {
+                    self.as_mut().context_menu_requested(event.x, event.y);
+                }
+            }
             _ => {}
         }
     }
@@ -1778,15 +2249,44 @@ impl qobject::TerminalItem {
         if steps_y == 0 {
             return;
         }
-        let lines = steps_y.saturating_mul(LINES_PER_NOTCH);
+        let (speed, smooth) = self.resolved.as_ref().map_or((1.0, false), |resolved| {
+            (
+                resolved.settings.scroll_speed,
+                resolved.settings.smooth_scroll,
+            )
+        });
+        let lines = scaled_lines(steps_y, speed);
         if !mods.shift {
             if let Some(bytes) = alternate_scroll(lines, &modes) {
                 session.write(&bytes);
                 return;
             }
         }
+        if smooth && !self.reduce_motion() {
+            {
+                let mut state = self.as_mut().rust_mut();
+                state.scroll_pending = state.scroll_pending.saturating_add(lines);
+                state.scrolled = true;
+            }
+            self.as_mut().start_scroll_ticks();
+            return;
+        }
         session.scroll(Scroll::Lines(lines));
         self.as_mut().rust_mut().scrolled = true;
+    }
+
+    fn handle_scroll_tick(mut self: Pin<&mut Self>) -> bool {
+        let pending = self.scroll_pending;
+        let Some(entry) = self.entry().filter(|_| pending != 0) else {
+            self.as_mut().rust_mut().scroll_pending = 0;
+            return false;
+        };
+        // A quarter of what is left per frame, at least one line: fast at first, then easing.
+        let step = pending.signum() * (pending.abs() / 4).max(1);
+        entry.session().scroll(Scroll::Lines(step));
+        let mut state = self.as_mut().rust_mut();
+        state.scroll_pending -= step;
+        state.scroll_pending != 0
     }
 
     fn handle_hover(
@@ -2254,6 +2754,38 @@ mod tests {
         assert_eq!(exit_status(None), (-1, false));
         assert_eq!(palette_for(true), Palette::OPENSESH_DARK);
         assert_eq!(palette_for(false), Palette::OPENSESH_LIGHT);
+    }
+
+    #[test]
+    fn a_paced_paste_is_cut_after_each_line() {
+        assert_eq!(
+            paste_chunks(b"\x1b[200~ls\rpwd\r\x1b[201~"),
+            [b"\x1b[200~ls\r".to_vec(), b"pwd\r\x1b[201~".to_vec()]
+        );
+        assert_eq!(
+            paste_chunks(b"one\rtwo"),
+            [b"one\r".to_vec(), b"two".to_vec()]
+        );
+        assert_eq!(paste_chunks(b"single"), [b"single".to_vec()]);
+        assert!(paste_chunks(b"").is_empty());
+    }
+
+    #[test]
+    fn image_paths_become_file_urls() {
+        assert_eq!(file_url(""), "");
+        assert_eq!(file_url("/home/me/a b.png"), "file:///home/me/a%20b.png");
+        assert_eq!(
+            file_url("C:\\Users\\me\\fondo ñ.jpg"),
+            "file:///C:/Users/me/fondo%20%C3%B1.jpg"
+        );
+    }
+
+    #[test]
+    fn hinting_follows_the_qt_order() {
+        assert_eq!(hinting_index(Hinting::Default), 0);
+        assert_eq!(hinting_index(Hinting::None), 1);
+        assert_eq!(hinting_index(Hinting::Vertical), 2);
+        assert_eq!(hinting_index(Hinting::Full), 3);
     }
 
     fn fill(state: &mut TerminalItemRust, columns: u16, lines: u16, full: bool) -> Option<usize> {

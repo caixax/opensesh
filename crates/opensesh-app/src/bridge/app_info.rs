@@ -26,6 +26,7 @@ pub mod qobject {
         #[qproperty(QString, app_id, cxx_name = "appId", READ, CONSTANT)]
         #[qproperty(bool, smoke_test, cxx_name = "smokeTest", READ, CONSTANT)]
         #[qproperty(bool, gallery, READ, CONSTANT)]
+        #[qproperty(bool, window_alpha, cxx_name = "windowAlpha", READ, CONSTANT)]
         #[qproperty(QString, screenshot_dir, cxx_name = "screenshotDir", READ, CONSTANT)]
         #[qproperty(QString, crash_report, cxx_name = "crashReport", READ, CONSTANT)]
         #[qproperty(
@@ -69,6 +70,24 @@ pub fn is_smoke_test() -> bool {
     STARTUP.get().is_some_and(|startup| startup.smoke_test)
 }
 
+/// Whether this run must leave the user's files alone: a smoke test or a screenshot run reads
+/// the settings but never writes them (or creates folders for them).
+#[must_use]
+pub fn is_test_run() -> bool {
+    STARTUP
+        .get()
+        .is_some_and(|startup| startup.smoke_test || startup.screenshot_dir.is_some())
+}
+
+/// Whether the main window has an alpha channel (a profile asked for a translucent terminal
+/// background when the app started).
+static WINDOW_ALPHA: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Records that windows are created with an alpha channel (before QML loads).
+pub fn set_window_alpha(enabled: bool) {
+    WINDOW_ALPHA.store(enabled, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// Records the startup data. Only the first call has an effect; it must happen before the QML
 /// engine instantiates the singleton.
 pub fn set_startup(startup: Startup) {
@@ -84,6 +103,7 @@ pub struct AppInfoRust {
     app_id: QString,
     smoke_test: bool,
     gallery: bool,
+    window_alpha: bool,
     screenshot_dir: QString,
     crash_report: QString,
     crash_report_path: QString,
@@ -107,6 +127,7 @@ impl Default for AppInfoRust {
             app_id: QString::from(identity::APP_ID),
             smoke_test: startup.smoke_test,
             gallery: startup.gallery,
+            window_alpha: WINDOW_ALPHA.load(std::sync::atomic::Ordering::Relaxed),
             screenshot_dir: startup
                 .screenshot_dir
                 .map(|dir| QString::from(&dir.display().to_string()))

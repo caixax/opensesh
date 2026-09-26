@@ -11,6 +11,10 @@ pub mod qobject {
         include!("cxx-qt-lib/qstringlist.h");
         /// Qt string list type from cxx-qt-lib.
         type QStringList = cxx_qt_lib::QStringList;
+
+        include!("cxx-qt-lib/qurl.h");
+        /// Qt URL type from cxx-qt-lib.
+        type QUrl = cxx_qt_lib::QUrl;
     }
 
     extern "RustQt" {
@@ -33,6 +37,16 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "fontFamilies"]
         fn font_families(self: &Self, monospace_only: bool) -> QStringList;
+
+        /// Plays the system's alert sound (the terminal bell's "sound" style). Returns false
+        /// where there is none (Wayland), so the caller can flash instead.
+        #[qinvokable]
+        fn beep(self: &Self) -> bool;
+
+        /// The local path of a `file:` URL from a file dialog (empty for other URLs).
+        #[qinvokable]
+        #[cxx_name = "localPath"]
+        fn local_path(self: &Self, url: &QUrl) -> QString;
 
         /// Portable text of a key combination (`KeyEvent.key`, `KeyEvent.modifiers`), e.g.
         /// `Ctrl+Shift+P`: untranslated and stable, so it can be stored and shown.
@@ -62,7 +76,7 @@ pub mod qobject {
     }
 }
 
-use cxx_qt_lib::{QString, QStringList};
+use cxx_qt_lib::{QString, QStringList, QUrl};
 use opensesh_core::config::Decorations;
 use opensesh_core::desktop::{self, DesktopInfo};
 
@@ -102,6 +116,16 @@ impl qobject::Platform {
     /// See the bridge declaration.
     pub fn font_families(&self, monospace_only: bool) -> QStringList {
         shim::font_families(monospace_only)
+    }
+
+    /// See the bridge declaration.
+    pub fn beep(&self) -> bool {
+        shim::platform_beep()
+    }
+
+    /// See the bridge declaration.
+    pub fn local_path(&self, url: &QUrl) -> QString {
+        url.to_local_file().unwrap_or_default()
     }
 
     /// See the bridge declaration.

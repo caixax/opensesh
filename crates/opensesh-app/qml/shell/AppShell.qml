@@ -67,6 +67,11 @@ Item {
     readonly property int sessionCount: sessionModel.count
     property int nextTabId: 1
     property Item currentTerminal: null
+    // The terminal shown has a translucent background and the window has an alpha channel:
+    // Main.qml stops painting the window background.
+    readonly property bool translucentTerminal: AppInfo.windowAlpha && currentTab > 0 && currentTerminal !== null
+                                                && currentTerminal.terminal.backgroundImage.length === 0
+                                                && currentTerminal.terminal.backgroundOpacity < 0.999
 
     onCurrentTabChanged: syncCurrentTabId()
     // Set while the tab model changes, so the tab bar's own index adjustments are ignored.
@@ -149,6 +154,7 @@ Item {
             tabId: nextTabId,
             kind: "local",
             title: "",
+            profile: AppSettings.terminalProfile,
             newOutput: false,
             bellRang: false,
             startSession: startSession ?? true
@@ -389,6 +395,7 @@ Item {
         let tab = null;
         let tabId = 0;
         let deadline = 0;
+        let profileId = "";
         // A step that polls `condition` until it holds, then runs `next` (which may return steps).
         const waitFor = (what, condition, next) => {
             const poll = () => {
@@ -423,6 +430,44 @@ Item {
             },
             () => {
                 console.info("smoke test: the local terminal echoed", marker);
+                // A profile change reaches the open terminal at once (test runs keep profiles
+                // in memory and never write them).
+                profileId = TerminalProfiles.createProfile("Smoke test", "");
+                if (profileId.length === 0) {
+                    smoke.fail("could not create a profile");
+                    return [];
+                }
+                TerminalProfiles.setOption(profileId, "font_size", "20");
+                tab.useProfile(profileId);
+                deadline = Date.now() + timeout;
+                return [waitFor("the tab to use the new profile", () => tab.terminal.fontSize === 20)];
+            },
+            () => {
+                TerminalProfiles.setOption(profileId, "font_size", "18");
+                TerminalProfiles.setOption(profileId, "highlight_sets", JSON.stringify(["logs", "network"]));
+                deadline = Date.now() + timeout;
+                return [waitFor("a live profile edit to reach the terminal", () => tab.terminal.fontSize === 18)];
+            },
+            () => {
+                tab.zoom(1);
+                tab.toggleHighlight();
+                deadline = Date.now() + timeout;
+                return [waitFor("the tab's zoom", () => tab.terminal.fontSize === 19)];
+            },
+            () => {
+                const find = ActionRegistry.find("terminal.find");
+                Keybindings.setShortcut("terminal.find", "Ctrl+Alt+F", find.defaultShortcut);
+                if (find.shortcut !== "Ctrl+Alt+F")
+                    smoke.fail("a changed shortcut did not reach its action");
+                Keybindings.reset("terminal.find");
+                if (find.shortcut !== find.defaultShortcut)
+                    smoke.fail("a reset shortcut did not go back to the default");
+                TerminalProfiles.deleteProfile(profileId);
+                deadline = Date.now() + timeout;
+                return [waitFor("the tab to fall back to the default profile", () => tab.terminal.fontSize !== 19 && tab.terminal.fontSize > 0,
+                                () => console.info("smoke test: profile changes reached the terminal live"))];
+            },
+            () => {
                 shell.closeTabById(tabId);
                 if (TerminalSessions.isOpen(tabId))
                     smoke.fail("the session of a closed tab is still open");
@@ -512,11 +557,19 @@ Item {
         showView("hosts");
     }
 
-    function prepareSettingsScreenshot() {
+    // Shows Settings at `section` (e.g. "terminal").
+    function openSettings(section) {
         showView("settings");
         const settings = settingsLoader.item;
         if (settings && typeof settings.showSection === "function")
-            settings.showSection("appearance");
+            settings.showSection(section);
+    }
+
+    function prepareSettingsScreenshot(page) {
+        showView("settings");
+        const settings = settingsLoader.item;
+        if (settings && typeof settings.showSection === "function")
+            settings.showSection(page && page.length > 0 ? page : "appearance");
     }
 
     Component.onCompleted: {
