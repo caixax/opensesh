@@ -4,7 +4,66 @@
 
 OpenSesh is an open source, cross-platform and lightweight remote connections client. It is planned to cover SSH, SFTP, tunnels, local terminal, serial, telnet, mosh, RDP and VNC in a single native app built with **Rust** and **Qt 6 / QML** (through [cxx-qt](https://github.com/KDAB/cxx-qt)).
 
-> **Status: pre-alpha.** The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work; SSH, SFTP and the other protocols are still to come. Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
+> **Status: pre-alpha** ([latest release](https://github.com/caixax/opensesh/releases/latest)). The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work; SSH, SFTP and the other protocols are still to come. Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
+
+## Install
+
+### Linux
+
+One command finds out which distribution you run, downloads the matching package of the latest release, checks it against the release's `SHA256SUMS.txt` and installs it with your package manager, which pulls in Qt:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | bash
+```
+
+| Distribution | Package |
+|---|---|
+| Debian 13 (trixie) or later | `.deb` (apt) |
+| Fedora | `.rpm` (dnf) |
+| Arch Linux and derivatives (Manjaro, EndeavourOS, CachyOS) | `.pkg.tar.zst` (pacman) |
+
+On a Wayland session the script also installs Qt's Wayland plugin. Ubuntu and other distributions aren't packaged yet: the `.deb` is built against Debian 13's Qt, so [build from source](#building-from-source) there.
+
+Running the script again updates OpenSesh. It asks before installing anything; to pass options through the pipe, add them after `bash -s --`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | bash -s -- --dry-run
+```
+
+| Option | What it does |
+|---|---|
+| `--version X.Y.Z` | Installs that release instead of the latest |
+| `--yes` | Doesn't ask before installing |
+| `--dry-run` | Shows what it would do, and does nothing |
+| `--uninstall` | Removes OpenSesh (your settings in `~/.config/opensesh` stay) |
+
+You can also download the package from the [releases page](https://github.com/caixax/opensesh/releases/latest) and install it yourself (`sudo apt install ./opensesh_*.deb`, `sudo dnf install ./opensesh-*.rpm` or `sudo pacman -U opensesh-*.pkg.tar.zst`).
+
+### Windows 10 and 11
+
+From the [releases page](https://github.com/caixax/opensesh/releases/latest):
+
+- **Installer** (`OpenSesh-X.Y.Z-windows-x64-setup.exe`): installs for your user only, without administrator rights, and adds OpenSesh to the Start menu and to "Installed apps" for uninstalling.
+- **Portable** (`OpenSesh-X.Y.Z-windows-x64-portable.zip`): unzip it anywhere and run `OpenSesh.exe`. Settings and data stay in the `data` folder next to it, so it runs from a USB stick.
+
+Both bundle Qt, the Microsoft C++ runtime and a modern ConPTY, so nothing else is needed. Windows SmartScreen may warn the first time, since the builds aren't code-signed yet.
+
+### Updates
+
+OpenSesh never connects to the internet on its own. In **Settings > General > Updates** you can turn on a check for new releases (at startup and once a day) or check now:
+
+- the installed Windows app downloads the new installer, verifies it against `SHA256SUMS.txt` and restarts updated;
+- the portable app and the Linux packages open the download page (on Linux, running the install script again updates).
+
+### Checking a download
+
+Every release has a `SHA256SUMS.txt`. On Linux, in the folder with the download:
+
+```sh
+sha256sum --ignore-missing -c SHA256SUMS.txt
+```
+
+On Windows, compare the output of `Get-FileHash .\OpenSesh-*-setup.exe` (PowerShell) with the file's line.
 
 ## Principles
 
@@ -22,6 +81,16 @@ You need Rust (the toolchain is pinned in `rust-toolchain.toml`), a C++17 compil
 ```sh
 cargo run -p opensesh-app
 ```
+
+## Releasing
+
+Releases are built on one Windows machine with the Linux packages made in its WSL distributions (Debian 13, Fedora and Arch), which takes minutes instead of the hours GitHub's runners need:
+
+```bat
+scripts\release.bat -Patch        :: or -Minor, -Major, -V 0.2.0
+```
+
+The script sets the version, moves the changelog's unreleased section under it, runs the tests, builds the Windows installer and portable zip and the three Linux packages, writes `SHA256SUMS.txt`, tags the release and publishes it on GitHub. The **Release (fallback)** workflow in GitHub Actions builds the same packages for an existing tag when that machine isn't available. Details are in [`docs/dev-setup.md`](docs/dev-setup.md#releasing).
 
 ## Contributing
 

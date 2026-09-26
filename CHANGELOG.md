@@ -4,7 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Changed
+
+- README: how to install OpenSesh (the Linux install script and its options, the Windows installer and portable zip), how updates work, how to check a download and how releases are made.
+
 ## [0.1.0] - 2026-09-26
+
 ### Added
 
 - **Releases and updates:**
