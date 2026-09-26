@@ -55,6 +55,14 @@ pub mod qobject {
             READ,
             CONSTANT
         )]
+        #[qproperty(
+            QStringList,
+            tab_color_names,
+            cxx_name = "tabColorNames",
+            READ,
+            CONSTANT
+        )]
+        #[qproperty(QStringList, tab_colors, cxx_name = "tabColors", READ, NOTIFY = theme_changed)]
         #[qproperty(QColor, accent_text, cxx_name = "accentText", READ, NOTIFY = theme_changed)]
         #[qproperty(QColor, accent_fg, cxx_name = "accentFg", READ, NOTIFY = theme_changed)]
         #[qproperty(QColor, success, READ, NOTIFY = theme_changed)]
@@ -176,6 +184,10 @@ pub struct ThemeRust {
     default_accent: QColor,
     /// `#RRGGBB` codes of [`theme::ACCENT_PRESETS`].
     accent_presets: QStringList,
+    /// Names of the tab colors ([`theme::TAB_COLOR_NAMES`]).
+    tab_color_names: QStringList,
+    /// `#RRGGBB` codes of the tab colors for the current scheme, in the order of the names.
+    tab_colors: QStringList,
     accent_text: QColor,
     accent_fg: QColor,
     success: QColor,
@@ -246,6 +258,11 @@ impl Default for ThemeRust {
                 .iter()
                 .map(|preset| QString::from(&preset.to_hex()))
                 .collect(),
+            tab_color_names: theme::TAB_COLOR_NAMES
+                .iter()
+                .map(|name| QString::from(*name))
+                .collect(),
+            tab_colors: QStringList::default(),
             accent_text: QColor::default(),
             accent_fg: QColor::default(),
             success: QColor::default(),
@@ -355,6 +372,10 @@ impl ThemeRust {
         } else {
             theme::DEFAULT_ACCENT_LIGHT
         });
+        self.tab_colors = theme::tab_colors(resolved.scheme)
+            .iter()
+            .map(|color| QString::from(&color.to_hex()))
+            .collect();
         self.accent_text = qcolor(p.accent_text);
         self.accent_fg = qcolor(p.accent_fg);
         self.success = qcolor(p.success);

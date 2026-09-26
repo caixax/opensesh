@@ -33,10 +33,13 @@
 //!   `workingDirectory`, `running`, `exitCode`, `exitCodeKnown`, `hasSelection`,
 //!   `displayOffset`, `historySize` (for a scroll bar), `searchError`, and from the profile
 //!   `bellStyle`, `backgroundImage` (a file URL), `backgroundImageDim`, `backgroundImageFit`,
-//!   `backgroundColor` and `fontSize`;
+//!   `backgroundColor` and `fontSize`; `startDirectory` (where a new shell starts),
+//!   `broadcastTargets` (pane ids that also receive what is typed here, Sprint 4),
+//!   `scrollSyncTargets` (pane ids that scroll along) and `pasteGuard` (pastes ask first);
 //! - signals: `bell()`, `exited(code)`, `activity()` (new content while the item is hidden),
 //!   `contextMenuRequested(x, y)` (right click, or the Menu key at the cursor) and
-//!   `clipboardSet()` (a program copied text with OSC 52);
+//!   `clipboardSet()` (a program copied text with OSC 52) and `pasteConfirmationNeeded(selection)`
+//!   (a paste waits for `pasteGuard` to be cleared);
 //! - invokables: `copy()`, `paste()`, `pasteSelection()` (Linux primary selection), `selectAll()`,
 //!   `clearSelection()`, `find(pattern, forward)`, `clearSearch()`, `scrollLines(n)`,
 //!   `scrollTo(offset)`, `scrollToBottom()`, `clearScrollback()`, `restart()`, and for tests
@@ -235,6 +238,10 @@ pub mod qobject {
         include!("cxx-qt-lib/qstringlist.h");
         /// Qt string list type from cxx-qt-lib.
         type QStringList = cxx_qt_lib::QStringList;
+
+        include!("cxx-qt-lib/qlist.h");
+        /// A list of pane ids.
+        type QList_i32 = cxx_qt_lib::QList<i32>;
     }
 
     unsafe extern "C++" {
@@ -259,6 +266,31 @@ pub mod qobject {
         #[qproperty(f64, font_zoom, cxx_name = "fontZoom", READ, WRITE = set_font_zoom, NOTIFY = inputs_changed)]
         #[qproperty(bool, highlight_enabled, cxx_name = "highlightEnabled", READ, WRITE = set_highlight_enabled, NOTIFY = inputs_changed)]
         #[qproperty(bool, preview, READ, WRITE = set_preview, NOTIFY = inputs_changed)]
+        #[qproperty(
+            QString,
+            start_directory,
+            cxx_name = "startDirectory",
+            READ,
+            WRITE,
+            NOTIFY
+        )]
+        #[qproperty(
+            QList_i32,
+            broadcast_targets,
+            cxx_name = "broadcastTargets",
+            READ,
+            WRITE,
+            NOTIFY
+        )]
+        #[qproperty(
+            QList_i32,
+            scroll_sync_targets,
+            cxx_name = "scrollSyncTargets",
+            READ,
+            WRITE,
+            NOTIFY
+        )]
+        #[qproperty(bool, paste_guard, cxx_name = "pasteGuard", READ, WRITE, NOTIFY)]
         #[qproperty(QString, bell_style, cxx_name = "bellStyle", READ, NOTIFY = appearance_changed)]
         #[qproperty(QString, background_image, cxx_name = "backgroundImage", READ, NOTIFY = appearance_changed)]
         #[qproperty(f64, background_image_dim, cxx_name = "backgroundImageDim", READ, NOTIFY = appearance_changed)]
@@ -308,6 +340,12 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "clipboardSet"]
         fn clipboard_set(self: Pin<&mut TerminalItem>);
+
+        /// A paste waits because `pasteGuard` is set (broadcast): confirm, clear the guard and
+        /// call `paste()` (or `pasteSelection()` when `selection`) again.
+        #[qsignal]
+        #[cxx_name = "pasteConfirmationNeeded"]
+        fn paste_confirmation_needed(self: Pin<&mut TerminalItem>, selection: bool);
 
         /// Emitted when the title, the working directory or the running and exit state change.
         #[qsignal]
@@ -642,8 +680,8 @@ use crate::terminal::profiles::{self, DEFAULT_FONT, Resolved};
 use crate::terminal::registry::{self, LocalOptions, SessionEntry, SessionInfo, Waker};
 use crate::terminal::{demo, preview};
 use qobject::{
-    QStringList, TerminalCell, TerminalCursorShape, TerminalFontOptions, TerminalFrameInfo,
-    TerminalFrameRequest, TerminalMouseEvent, TerminalWheelEvent,
+    QList_i32, QStringList, TerminalCell, TerminalCursorShape, TerminalFontOptions,
+    TerminalFrameInfo, TerminalFrameRequest, TerminalMouseEvent, TerminalWheelEvent,
 };
 
 /// What the next `fillFrame` has to send (demo only).
@@ -726,6 +764,10 @@ pub struct TerminalItemRust {
     background_image_fit: QString,
     background_color: QString,
     font_size: f64,
+    start_directory: QString,
+    broadcast_targets: QList_i32,
+    scroll_sync_targets: QList_i32,
+    paste_guard: bool,
     copy_on_select: bool,
     title: QString,
     working_directory: QString,
@@ -821,6 +863,10 @@ impl Default for TerminalItemRust {
             background_image_fit: QString::from("cover"),
             background_color: QString::default(),
             font_size: 11.0,
+            start_directory: QString::default(),
+            broadcast_targets: QList_i32::default(),
+            scroll_sync_targets: QList_i32::default(),
+            paste_guard: false,
             copy_on_select: false,
             title: QString::default(),
             working_directory: QString::default(),
@@ -1011,6 +1057,7 @@ impl TerminalItemRust {
                 || opensesh_core::terminal::settings::DEFAULT_TERM.to_owned(),
                 |r| r.settings.term.clone(),
             ),
+            directory: self.start_directory.to_string(),
         }
     }
 
@@ -1150,6 +1197,18 @@ fn exit_status(exit: Option<Option<i32>>) -> (i32, bool) {
 /// the terminal, and every Ctrl+Shift / Alt app shortcut keeps working.
 ///
 /// [ADR 0011]: ../../../../docs/adr/0011-focus-regions-and-function-keys.md
+/// The panes that get a copy of this pane's input (or scrolling): each target once, never this
+/// pane (`own`) and never an id that can't be a pane's.
+fn broadcast_ids(targets: &[i32], own: Option<i32>) -> Vec<i32> {
+    let mut ids = Vec::with_capacity(targets.len());
+    for &id in targets {
+        if id > 0 && Some(id) != own && !ids.contains(&id) {
+            ids.push(id);
+        }
+    }
+    ids
+}
+
 fn wants_shortcut_override(key: i32, modifiers: i32) -> bool {
     let bits = qt_bits(modifiers);
     // Windows Alt codes: the keypad digits must not switch tabs (Alt+1..9).
@@ -1646,6 +1705,63 @@ impl qobject::TerminalItem {
         }
     }
 
+    /// The sessions that also receive what is typed here (broadcast), without this one.
+    fn broadcast_sessions(&self) -> Vec<Arc<SessionEntry>> {
+        let own = self.attached.as_ref().map(|attached| attached.entry.id());
+        let targets: Vec<i32> = self.broadcast_targets.iter().copied().collect();
+        broadcast_ids(&targets, own)
+            .into_iter()
+            .filter_map(registry::get)
+            .collect()
+    }
+
+    /// Sends a key to the broadcast targets, encoded for each target's own modes (a program
+    /// in application cursor mode gets its own arrow sequences).
+    fn broadcast_key(&self, input: &KeyInput, keys: &KeyOptions) {
+        for target in self.broadcast_sessions() {
+            let session = target.session();
+            if let Some(bytes) = encode_key(input, &session.modes(), keys) {
+                session.scroll(Scroll::Bottom);
+                session.write(&bytes);
+            }
+        }
+    }
+
+    /// Sends text as typed (input method, tests) to the broadcast targets.
+    fn broadcast_text(&self, bytes: &[u8]) {
+        for target in self.broadcast_sessions() {
+            target.session().scroll(Scroll::Bottom);
+            target.session().write(bytes);
+        }
+    }
+
+    /// Pastes `text` into the broadcast targets, bracketed for each target that asked for it.
+    fn broadcast_paste(&self, text: &str, delay: u32) {
+        for target in self.broadcast_sessions() {
+            let session = target.session();
+            let bytes = encode_paste(text, &session.modes());
+            session.scroll(Scroll::Bottom);
+            let chunks = paste_chunks(&bytes);
+            if delay == 0 || chunks.len() < 2 {
+                session.write(&bytes);
+            } else {
+                session.write_paced(chunks, Duration::from_millis(u64::from(delay)));
+            }
+        }
+    }
+
+    /// Scrolls the synchronized panes along with this one.
+    fn scroll_synced(&self, scroll: Scroll) {
+        let own = self.attached.as_ref().map(|attached| attached.entry.id());
+        let targets: Vec<i32> = self.scroll_sync_targets.iter().copied().collect();
+        for target in broadcast_ids(&targets, own)
+            .into_iter()
+            .filter_map(registry::get)
+        {
+            target.session().scroll(scroll);
+        }
+    }
+
     /// Writes typed or pasted input, back on the live screen first.
     fn send_input(mut self: Pin<&mut Self>, entry: &SessionEntry, bytes: &[u8]) {
         if bytes.is_empty() {
@@ -1669,6 +1785,7 @@ impl qobject::TerminalItem {
             .resolved
             .as_ref()
             .map_or(0, |resolved| resolved.settings.paste_line_delay_ms);
+        self.broadcast_paste(text, delay);
         let chunks = paste_chunks(&bytes);
         if delay == 0 || chunks.len() < 2 {
             self.send_input(&entry, &bytes);
@@ -1770,14 +1887,22 @@ impl qobject::TerminalItem {
     }
 
     /// See the bridge declaration.
-    pub fn paste(self: Pin<&mut Self>) {
+    pub fn paste(mut self: Pin<&mut Self>) {
+        if self.paste_guard {
+            self.as_mut().paste_confirmation_needed(false);
+            return;
+        }
         let text = self.clipboard_text(false).to_string();
         self.paste_text(&text);
     }
 
     /// See the bridge declaration.
-    pub fn paste_selection(self: Pin<&mut Self>) {
+    pub fn paste_selection(mut self: Pin<&mut Self>) {
         if !self.primary_selection() {
+            return;
+        }
+        if self.paste_guard {
+            self.as_mut().paste_confirmation_needed(true);
             return;
         }
         let text = self.clipboard_text(true).to_string();
@@ -1841,6 +1966,7 @@ impl qobject::TerminalItem {
     pub fn scroll_lines(mut self: Pin<&mut Self>, lines: i32) {
         if let Some(entry) = self.entry() {
             entry.session().scroll(Scroll::Lines(lines));
+            self.scroll_synced(Scroll::Lines(lines));
             self.as_mut().rust_mut().scrolled = true;
         }
     }
@@ -1911,6 +2037,7 @@ impl qobject::TerminalItem {
             return;
         };
         let text = text.to_string();
+        self.broadcast_text(text.as_bytes());
         self.send_input(&entry, text.as_bytes());
     }
 
@@ -2005,6 +2132,7 @@ impl qobject::TerminalItem {
         let Some(bytes) = encode_key(&input, &modes, &keys) else {
             return false;
         };
+        self.broadcast_key(&input, &keys);
         self.send_input(&entry, &bytes);
         true
     }
@@ -2272,6 +2400,7 @@ impl qobject::TerminalItem {
             return;
         }
         session.scroll(Scroll::Lines(lines));
+        self.scroll_synced(Scroll::Lines(lines));
         self.as_mut().rust_mut().scrolled = true;
     }
 
@@ -2284,6 +2413,7 @@ impl qobject::TerminalItem {
         // A quarter of what is left per frame, at least one line: fast at first, then easing.
         let step = pending.signum() * (pending.abs() / 4).max(1);
         entry.session().scroll(Scroll::Lines(step));
+        self.scroll_synced(Scroll::Lines(step));
         let mut state = self.as_mut().rust_mut();
         state.scroll_pending -= step;
         state.scroll_pending != 0
@@ -2365,6 +2495,7 @@ impl qobject::TerminalItem {
             .chars()
             .filter(|c| !c.is_control())
             .collect();
+        self.broadcast_text(text.as_bytes());
         self.send_input(&entry, text.as_bytes());
     }
 
@@ -2548,6 +2679,15 @@ mod tests {
             cursor_color: 0,
             cursor_text_color: 0,
         }
+    }
+
+    #[test]
+    fn broadcast_reaches_every_other_pane_once() {
+        assert_eq!(broadcast_ids(&[3, 5, 3, 0, -2, 7], Some(5)), vec![3, 7]);
+        assert_eq!(broadcast_ids(&[5], Some(5)), Vec::<i32>::new());
+        assert_eq!(broadcast_ids(&[], Some(5)), Vec::<i32>::new());
+        // Not attached yet: every valid target.
+        assert_eq!(broadcast_ids(&[2, 1], None), vec![2, 1]);
     }
 
     #[test]

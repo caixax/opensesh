@@ -3,6 +3,7 @@
 //   iconName: string       optional leading icon
 //   closable: bool         shows a small close button on hover and on the current tab (default true)
 //   activity: bool         accent dot for unseen activity (hidden while the close button shows)
+//   markColor: color       a colored line along the top (a tab color); transparent for none
 //   maxTitleWidth: real    the title elides beyond this width
 //   signal closeRequested  close button clicked or middle-click on the tab
 import QtQuick
@@ -15,6 +16,7 @@ T.TabButton {
     property string iconName: ""
     property bool closable: true
     property bool activity: false
+    property color markColor: "transparent"
     property real maxTitleWidth: Theme.spacingXxl * 7
 
     signal closeRequested
@@ -167,6 +169,17 @@ T.TabButton {
                     duration: Theme.durationFast
                 }
             }
+        }
+
+        // The tab's color.
+        Rectangle {
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width - 2 * Theme.radiusControl
+            height: Theme.borderWidth * 2
+            radius: height / 2
+            color: control.markColor
+            visible: control.markColor.a > 0
         }
 
         // Selected indicator.

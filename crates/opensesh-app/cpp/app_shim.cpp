@@ -222,6 +222,11 @@ void enable_window_alpha()
     QQuickWindow::setDefaultAlphaBuffer(true);
 }
 
+std::int32_t keyboard_modifiers()
+{
+    return std::int32_t(QGuiApplication::queryKeyboardModifiers().toInt());
+}
+
 bool platform_beep()
 {
 #if defined(Q_OS_WIN)

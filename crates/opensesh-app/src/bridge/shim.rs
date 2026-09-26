@@ -58,6 +58,10 @@ pub mod ffi {
         #[namespace = "opensesh"]
         fn platform_beep() -> bool;
 
+        /// The keyboard modifiers held right now (`Qt::KeyboardModifiers` bits).
+        #[namespace = "opensesh"]
+        fn keyboard_modifiers() -> i32;
+
         /// Portable text of a key combination (e.g. `Ctrl+Shift+P`).
         #[namespace = "opensesh"]
         fn key_sequence_text(key: i32, modifiers: i32) -> QString;

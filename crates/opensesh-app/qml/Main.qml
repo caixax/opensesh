@@ -1,6 +1,9 @@
 // Main window (PLAN §5.3). The content is the AppShell; this file owns what belongs to the
 // window itself: decorations, geometry restored from and saved to UiState, the live language
-// switch, settings toasts, the smoke test and the screenshot runs.
+// switch, settings toasts, the smoke test and the screenshot runs. It also holds the app's
+// actions (AppActions, acting on the window in use), restores the last session at startup when
+// "Restore sessions at startup" is on, and saves it when it closes (with the detached windows,
+// which close with it).
 import QtQuick
 import cc.caixa.opensesh
 
@@ -123,9 +126,17 @@ Window {
     onXChanged: scheduleGeometrySave()
     onYChanged: scheduleGeometrySave()
     onVisibilityChanged: scheduleGeometrySave()
+    onActiveChanged: {
+        if (active)
+            WindowRegistry.activated(shell);
+    }
     onClosing: {
         geometryTimer.stop();
         recordGeometry();
+        // Every window's tabs, before the detached windows close and end their sessions.
+        if (persistState && AppSettings.restoreSessions)
+            Workspaces.saveLastSession(JSON.stringify(WindowRegistry.capture()));
+        WindowRegistry.closeDetached();
     }
 
     Component.onCompleted: {
@@ -136,8 +147,13 @@ Window {
         else
             show();
         geometryReady = true;
-        if (screenshotMode)
+        if (screenshotMode) {
             screenshots.start();
+        } else if (persistState && AppSettings.restoreSessions) {
+            const last = Workspaces.lastSession();
+            if (last.length > 0)
+                WindowRegistry.openWorkspace(JSON.parse(last), shell);
+        }
     }
 
     // Update checks (only when the user enabled them, never in test runs): 10 s after start,
@@ -224,6 +240,14 @@ Window {
         }
     }
 
+    Connections {
+        target: Workspaces
+
+        function onProblem(detail) {
+            Toasts.show(qsTr("Could not save the workspace: %1").arg(detail || ""), "danger");
+        }
+    }
+
     // Terminal profiles, themes, highlighting rules and shortcuts (their own files).
     Connections {
         target: TerminalProfiles
@@ -284,6 +308,12 @@ Window {
         }
     }
 
+    // One set of actions for every window: they act on the window in use.
+    AppActions {
+        shell: WindowRegistry.activeShell ?? shell
+        window: window
+    }
+
     SmokeTest {
         id: smoke
 
@@ -291,7 +321,7 @@ Window {
         steps: shell.smokeSteps(smoke)
     }
 
-    // Two series: the shell on the Hosts view, then Settings > Appearance.
+    // Three series: the shell on the Hosts view, the Settings pages, then split terminal tabs.
     ScreenshotRunner {
         id: screenshots
 
@@ -310,7 +340,18 @@ Window {
         prefix: "settings"
         pages: ["appearance", "terminal", "profiles", "themes", "shortcuts"]
         prepare: (mode, density, page) => shell.prepareSettingsScreenshot(page)
+        onFinished: terminalScreenshots.start()
+    }
+
+    ScreenshotRunner {
+        id: terminalScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "terminal"
+        pages: ["splits", "broadcast"]
+        prepare: (mode, density, page) => shell.prepareTerminalScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
-        onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures > 0 ? 7 : 0)
+        onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures > 0 ? 7 : 0)
     }
 }

@@ -11,6 +11,8 @@ pragma ComponentBehavior: Bound
 //   maxVisible: int   toasts shown at once (default 4); the oldest is dropped first
 //   timeout: int      auto-dismiss delay in ms (default 5000); 0 keeps toasts until closed
 //   count: int        read-only; toasts currently shown
+//   accepting: bool   shows new toasts (default true); with several windows, only the one in
+//                     use shows them
 // Functions: show(toast) (a `Toasts.shown` payload), dismiss(toastId), clear().
 import QtQuick
 import cc.caixa.opensesh
@@ -20,6 +22,7 @@ Item {
 
     property int maxVisible: 4
     property int timeout: 5000
+    property bool accepting: true
     readonly property int count: toastModel.count
 
     function show(toast) {
@@ -107,7 +110,8 @@ Item {
         target: Toasts
 
         function onShown(toast) {
-            host.show(toast);
+            if (host.accepting)
+                host.show(toast);
         }
     }
 
