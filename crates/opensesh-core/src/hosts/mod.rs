@@ -8,7 +8,8 @@
 //! - [`target`]: the quick-connect parser and the OpenSSH command line.
 //! - [`recent`]: recent connections.
 //!
-//! Secrets are never stored here; the vault (Sprint 6) adds references to it.
+//! Secrets are never stored here: a host or group names an identity of the keychain
+//! (`keychain.toml`, Sprint 6), whose password and key live in the vault.
 
 pub mod recent;
 pub mod search;
@@ -279,7 +280,10 @@ pub struct HostDefaults {
     /// Jump hosts, first hop first: saved host ids or names, or `user@host:port`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub jump: Option<Vec<String>>,
-    /// Private key file (until the vault holds identities, Sprint 6).
+    /// Keychain identity id (user name, password and/or key).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identity: Option<String>,
+    /// Private key file.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub identity_file: Option<String>,
     /// Terminal profile id.
@@ -366,6 +370,9 @@ pub struct Host {
     /// User name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
+    /// Keychain identity id; an empty one means none, even if the group has one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identity: Option<String>,
     /// Private key file.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub identity_file: Option<String>,
@@ -417,6 +424,7 @@ impl Default for Host {
             address: String::new(),
             port: None,
             user: None,
+            identity: None,
             identity_file: None,
             jump: None,
             profile: None,
@@ -513,6 +521,7 @@ pub const INHERITED_KEYS: &[&str] = &[
     "user",
     "port",
     "jump",
+    "identity",
     "identity_file",
     "profile",
     "ssh.backend",
@@ -605,6 +614,12 @@ impl ResolvedHost {
     #[must_use]
     pub fn user(&self) -> Option<&str> {
         self.string("user")
+    }
+
+    /// The keychain identity id.
+    #[must_use]
+    pub fn identity(&self) -> Option<&str> {
+        self.string("identity")
     }
 
     /// The port.
@@ -1298,6 +1313,38 @@ mod tests {
         let (back, warnings) = HostsFile::from_toml_str(&text).unwrap();
         assert!(warnings.is_empty(), "{warnings:?}");
         assert_eq!(back, file);
+    }
+
+    #[test]
+    fn identities_are_inherited_and_can_be_turned_off() {
+        let text = r#"
+            [[group]]
+            id = "G"
+            name = "prod"
+            [group.defaults]
+            identity = "01J9ZM0000000000000000IDDE"
+
+            [[host]]
+            id = "A"
+            name = "a"
+            address = "a"
+            group = "G"
+
+            [[host]]
+            id = "B"
+            name = "b"
+            address = "b"
+            group = "G"
+            identity = ""
+        "#;
+        let (file, warnings) = HostsFile::from_toml_str(text).unwrap();
+        assert!(warnings.is_empty(), "{warnings:?}");
+        let a = file.resolve(file.host("A").unwrap());
+        assert_eq!(a.identity(), Some("01J9ZM0000000000000000IDDE"));
+        assert_eq!(a.fields["identity"].origin, Origin::Group("G".into()));
+        let b = file.resolve(file.host("B").unwrap());
+        assert_eq!(b.identity(), None);
+        assert_eq!(b.fields["identity"].origin, Origin::Host);
     }
 
     #[test]

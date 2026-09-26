@@ -59,6 +59,14 @@ std::int32_t keyboard_modifiers();
 // Puts `text` on the clipboard.
 void clipboard_set_text(const QString& text);
 
+// Starts noting the user's input (keys, clicks, wheel, touch, mouse moves) to any window of the
+// application. Call once, after the QGuiApplication exists.
+void install_activity_filter();
+
+// Milliseconds since the last input noted by the activity filter (since it was installed when
+// there was none yet).
+std::int64_t idle_milliseconds();
+
 // Portable text of a key combination, e.g. "Ctrl+Shift+P" (QKeySequence::PortableText).
 QString key_sequence_text(std::int32_t key, std::int32_t modifiers);
 

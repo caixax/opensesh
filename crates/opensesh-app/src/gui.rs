@@ -147,6 +147,7 @@ pub fn run(qml_url: &str, language: &str) -> Result<i32> {
         .context("could not create the QQmlApplicationEngine")?;
 
     shim::install_icon_provider(engine.as_mut());
+    shim::install_activity_filter();
     shim::set_translation_engine(engine.as_mut());
     shim::apply_translation(&QString::from(language));
 

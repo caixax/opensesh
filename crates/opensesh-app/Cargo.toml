@@ -23,6 +23,7 @@ cxx-qt-lib = { workspace = true, features = ["qt_gui", "qt_qml", "qt_quickcontro
 opensesh-core.workspace = true
 opensesh-import.workspace = true
 opensesh-term.workspace = true
+opensesh-vault.workspace = true
 # Update checks (update.rs): GitHub Releases over HTTPS, checksums of downloaded installers.
 serde.workspace = true
 serde_json.workspace = true
@@ -32,6 +33,7 @@ tracing.workspace = true
 tracing-appender.workspace = true
 tracing-subscriber = { workspace = true, features = ["ansi", "env-filter", "fmt", "std"] }
 ureq.workspace = true
+zeroize.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true, features = [

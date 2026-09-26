@@ -44,6 +44,7 @@ pub mod qobject {
         #[qproperty(bool, show_status_bar, cxx_name = "showStatusBar", READ = show_status_bar, WRITE = set_show_status_bar, NOTIFY = settings_changed)]
         #[qproperty(QString, window_decorations, cxx_name = "windowDecorations", READ = window_decorations, WRITE = set_window_decorations, NOTIFY = settings_changed)]
         #[qproperty(QString, terminal_profile, cxx_name = "terminalProfile", READ = terminal_profile, WRITE = set_terminal_profile, NOTIFY = settings_changed)]
+        #[qproperty(i32, lock_after_minutes, cxx_name = "lockAfterMinutes", READ = lock_after_minutes, WRITE = set_lock_after_minutes, NOTIFY = settings_changed)]
         #[qproperty(QString, config_path, cxx_name = "configPath", READ = config_path, NOTIFY = status_changed)]
         #[qproperty(bool, read_only, cxx_name = "readOnly", READ = read_only, NOTIFY = status_changed)]
         #[qproperty(QString, read_only_reason, cxx_name = "readOnlyReason", READ = read_only_reason, NOTIFY = status_changed)]
@@ -109,6 +110,8 @@ pub mod qobject {
         fn set_window_decorations(self: Pin<&mut Self>, value: QString);
         fn terminal_profile(self: &Self) -> QString;
         fn set_terminal_profile(self: Pin<&mut Self>, value: QString);
+        fn lock_after_minutes(self: &Self) -> i32;
+        fn set_lock_after_minutes(self: Pin<&mut Self>, value: i32);
         fn config_path(self: &Self) -> QString;
         fn read_only(self: &Self) -> bool;
         fn read_only_reason(self: &Self) -> QString;
@@ -507,6 +510,21 @@ impl qobject::AppSettings {
         self.set_choice("onLastTabClosed", &value, |c| {
             &mut c.general.on_last_tab_closed
         });
+    }
+    pub fn lock_after_minutes(&self) -> i32 {
+        i32::try_from(self.config.security.lock_after_minutes).unwrap_or(i32::MAX)
+    }
+    pub fn set_lock_after_minutes(self: Pin<&mut Self>, value: i32) {
+        match u32::try_from(value)
+            .ok()
+            .filter(|minutes| *minutes <= config::MAX_LOCK_AFTER_MINUTES)
+        {
+            Some(minutes) => self.change(|c| replace(&mut c.security.lock_after_minutes, minutes)),
+            None => {
+                tracing::warn!(value, "ignoring invalid idle lock time");
+                self.change(|_| false);
+            }
+        }
     }
     pub fn restore_sessions(&self) -> bool {
         self.config.general.restore_sessions

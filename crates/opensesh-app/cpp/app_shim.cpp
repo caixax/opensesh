@@ -1,11 +1,14 @@
 #include "opensesh-app/app_shim.h"
 
 #include <algorithm>
+#include <atomic>
 #include <optional>
 
 #include <QtCore/QCache>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
+#include <QtCore/QElapsedTimer>
+#include <QtCore/QEvent>
 #include <QtCore/QFile>
 #include <QtCore/QHash>
 #include <QtCore/QLocale>
@@ -227,6 +230,58 @@ void clipboard_set_text(const QString& text)
 {
     if (QClipboard *clipboard = QGuiApplication::clipboard())
         clipboard->setText(text);
+}
+
+namespace {
+
+// Time base of the activity filter, started with it.
+QElapsedTimer &activity_clock()
+{
+    static QElapsedTimer clock;
+    return clock;
+}
+
+std::atomic<std::int64_t> last_input_ms{0};
+
+class ActivityFilter : public QObject
+{
+public:
+    using QObject::QObject;
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        switch (event->type()) {
+        case QEvent::KeyPress:
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseMove:
+        case QEvent::Wheel:
+        case QEvent::TouchBegin:
+        case QEvent::TabletPress:
+            last_input_ms.store(activity_clock().elapsed(), std::memory_order_relaxed);
+            break;
+        default:
+            break;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
+} // namespace
+
+void install_activity_filter()
+{
+    if (!qGuiApp || activity_clock().isValid())
+        return;
+    activity_clock().start();
+    qGuiApp->installEventFilter(new ActivityFilter(qGuiApp));
+}
+
+std::int64_t idle_milliseconds()
+{
+    if (!activity_clock().isValid())
+        return 0;
+    return activity_clock().elapsed() - last_input_ms.load(std::memory_order_relaxed);
 }
 
 std::int32_t keyboard_modifiers()

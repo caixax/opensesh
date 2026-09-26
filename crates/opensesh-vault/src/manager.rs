@@ -42,7 +42,16 @@ pub enum KeychainOpError {
     /// `keychain.toml` can't be written (unreadable, or from a newer OpenSesh).
     #[error("the keychain file is read-only")]
     ReadOnly,
-    /// `keychain.toml` couldn't be written.
+    /// A file couldn't be read.
+    #[error("could not read {path}")]
+    Read {
+        /// The file.
+        path: String,
+        /// Why.
+        #[source]
+        source: std::io::Error,
+    },
+    /// A file couldn't be written.
     #[error("could not write {path}")]
     Write {
         /// The file.
@@ -73,6 +82,7 @@ impl KeychainOpError {
             Self::NotFound(_) => "not-found",
             Self::Duplicate(_) => "duplicate",
             Self::ReadOnly => "read-only",
+            Self::Read { .. } => "read",
             Self::Write { .. } => "write",
         }
     }
