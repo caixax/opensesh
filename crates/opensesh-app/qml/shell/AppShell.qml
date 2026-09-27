@@ -1039,6 +1039,7 @@ Item {
             },
             () => shell.splitSmokeSteps(smoke),
             () => shell.hostSmokeSteps(smoke),
+            () => shell.sftpSmokeSteps(smoke),
             () => openTab("the second shell's first output"),
             () => {
                 pane.terminal.sendText("exit\r");
@@ -1330,6 +1331,20 @@ Item {
                 return wait("the reconnected shell", () => state() === "connected",
                             () => console.info("smoke test: an SSH pane asked for the host key and the password, connected and reconnected"));
             },
+            // The side panel's files: the pane's own connection, following the shell's folder.
+            () => {
+                shell.setSidePanelOpen(true);
+                sidePanel.currentIndex = 0;
+                return wait("the side panel's files", () => sidePanel.files.pane !== null && sidePanel.files.pane.ready
+                            && sidePanel.files.pane.browser.rowOf("docs") >= 0);
+            },
+            () => {
+                pane.terminal.sendText("cd /docs\r");
+                return wait("the side panel to follow the shell", () => sidePanel.files.pane.browser.path === "/docs"
+                            && sidePanel.files.pane.browser.rowOf("readme.txt") >= 0,
+                            () => console.info("smoke test: the side panel showed an SSH pane's files over its connection and followed its folder"));
+            },
+            () => shell.setSidePanelOpen(false),
             // "Install my key": pick a key, connect in a new tab, the key goes in.
             () => {
                 shell.installKey("H00000");
@@ -1371,6 +1386,22 @@ Item {
                 shell.closeTab(shell.currentTab);
                 deadline = Date.now() + timeout;
                 return [waitFor("closed sessions to stop counting as open", () => !WindowRegistry.openHosts["H00000"])];
+            }
+        ];
+    }
+
+    // Functions for SmokeTest.steps: the SFTP view's (SftpView.smokeSteps), after the SSH steps
+    // started the test server.
+    function sftpSmokeSteps(smoke) {
+        return [
+            () => shell.showView("sftp"),
+            () => {
+                const sftp = sftpLoader.item;
+                if (!sftp || typeof sftp.smokeSteps !== "function") {
+                    smoke.fail("the SFTP view didn't load");
+                    return [];
+                }
+                return sftp.smokeSteps(smoke);
             }
         ];
     }
@@ -1766,6 +1797,8 @@ Item {
                             sourceComponent: TerminalView {}
                         }
                         ViewLoader {
+                            id: sftpLoader
+
                             viewId: "sftp"
                             currentView: shell.activeView
                             sourceComponent: SftpView {}

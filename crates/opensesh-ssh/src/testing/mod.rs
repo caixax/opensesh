@@ -1,7 +1,8 @@
 //! A tiny SSH server for tests, and for the app's smoke test (which must not reach the network):
 //! a user [`USER`] with the password [`PASSWORD`] and/or keys, an optional one-time code after a
 //! key ([`CODE`]), `direct-tcpip` for jump hosts, and a shell that prints `test$ ` and echoes what
-//! it gets ("exit" ends it with status 3, "drop" drops the connection). It also answers the OS
+//! it gets ("exit" ends it with status 3, "drop" drops the connection, "cd /path" reports the
+//! folder with OSC 7). It also answers the OS
 //! detection command and "install my key" (into [`Rules::authorized_keys`]), and serves SFTP
 //! over a folder when [`Rules::sftp_root`] names one. Nothing here runs unless a test or the
 //! smoke test starts it.
@@ -327,6 +328,20 @@ impl Handler for Server {
         if self.rules.droppable && self.typed.ends_with(b"drop\r") {
             self.typed.clear();
             return Err(russh::Error::Disconnect);
+        }
+        // "cd <absolute path>" says where the shell went (OSC 7), as an integrated shell does.
+        if self.typed.ends_with(b"\r") {
+            let line = self.typed[..self.typed.len() - 1]
+                .rsplit(|byte| *byte == b'\r')
+                .next()
+                .unwrap_or_default()
+                .to_vec();
+            if let Some(path) = line.strip_prefix(b"cd /") {
+                let mut reply = b"\r\n\x1b]7;file://test/".to_vec();
+                reply.extend_from_slice(path);
+                reply.extend_from_slice(b"\x1b\\test$ ");
+                session.data(channel, reply)?;
+            }
         }
         Ok(())
     }
