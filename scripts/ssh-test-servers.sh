@@ -7,7 +7,7 @@
 #
 # Everything listens on 127.0.0.1 only, as the user `opensesh-test`:
 #
-#   2221  OpenSSH, public key only (the first jump host)
+#   2221  OpenSSH, public key or a user certificate (the first jump host)
 #   2222  Dropbear, public key or password (the second jump host)
 #   2223  OpenSSH, public key and then a one-time code (TOTP through PAM)
 #   2224  Dropbear, password
@@ -103,6 +103,11 @@ start() {
     # The tests' key, and the user's authorized_keys and TOTP secret.
     ssh-keygen -q -t ed25519 -N '' -C "opensesh-test-client" -f "$STATE/client_ed25519"
     chown "$owner" "$STATE/client_ed25519" "$STATE/client_ed25519.pub"
+    # Another key, not in authorized_keys, with a certificate from a user CA that 2221 trusts.
+    ssh-keygen -q -t ed25519 -N '' -C "opensesh-test-ca" -f "$STATE/user_ca"
+    ssh-keygen -q -t ed25519 -N '' -C "opensesh-test-certified" -f "$STATE/client_cert_ed25519"
+    ssh-keygen -q -s "$STATE/user_ca" -I opensesh-test -n "$TEST_USER" -V -5m:+1d         "$STATE/client_cert_ed25519.pub"
+    chown "$owner" "$STATE"/client_cert_ed25519*
     install -d -m 700 -o "$TEST_USER" "$home/.ssh"
     install -m 600 -o "$TEST_USER" "$STATE/client_ed25519.pub" "$home/.ssh/authorized_keys"
     printf '%s\n' "$TOTP_SECRET" '" WINDOW_SIZE 3' '" TOTP_AUTH' >"$home/.google_authenticator"
@@ -118,10 +123,12 @@ start() {
     ssh-keygen -q -t ed25519 -N '' -f "$STATE/ssh_host_ed25519_key"
     dropbearkey -t ed25519 -f "$STATE/dropbear_ed25519_key" >/dev/null 2>&1
     mkdir -p /run/sshd /var/empty
-    local port methods
+    local port methods ca
     for port in 2221 2223; do
         methods=publickey
         [ "$port" = 2223 ] && methods=publickey,keyboard-interactive
+        ca=none
+        [ "$port" = 2221 ] && ca="$STATE/user_ca.pub"
         cat >"$STATE/sshd_$port.conf" <<EOF
 Port $port
 ListenAddress 127.0.0.1
@@ -130,6 +137,7 @@ PidFile $STATE/sshd_$port.pid
 AllowUsers $TEST_USER
 AuthenticationMethods $methods
 PubkeyAuthentication yes
+TrustedUserCAKeys $ca
 PasswordAuthentication no
 KbdInteractiveAuthentication yes
 UsePAM yes

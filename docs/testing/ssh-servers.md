@@ -18,7 +18,7 @@ starts, on 127.0.0.1 only, for the user `opensesh-test`:
 
 | Port | Server   | Authentication                                     | Role             |
 |------|----------|----------------------------------------------------|------------------|
-| 2221 | OpenSSH  | public key                                         | first jump host  |
+| 2221 | OpenSSH  | public key or a user certificate; X11 forwarding   | first jump host  |
 | 2222 | Dropbear | public key or password                             | second jump host |
 | 2223 | OpenSSH  | public key, then a one-time code (TOTP, PAM)       | target with MFA  |
 | 2224 | Dropbear | password                                           | password target  |
@@ -40,6 +40,9 @@ sudo scripts/ssh-test-servers.sh stop
 The tests cover:
 
 - OpenSSH with a key file, Dropbear with a password, a wrong password refused;
+- a key that isn't in `authorized_keys` getting in with its certificate (`<key>-cert.pub`, from
+  a user CA the server trusts), then agent forwarding: `ssh-add -l` on the server lists the
+  local agent's key;
 - OpenSSH → Dropbear → OpenSSH (two jump hosts), every hop authenticated by the agent, and the
   target asking for a one-time code after the key (the code comes from `oathtool`);
 - the terminal backend through Dropbear to the MFA target: the session's `sshd-session` is

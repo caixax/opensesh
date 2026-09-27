@@ -1,6 +1,7 @@
 //! The SSH client against real servers (PLAN Sprint 7): OpenSSH and Dropbear, a chain of two jump
-//! hosts authenticated by an agent, a one-time code (TOTP through PAM) after a key, and the
-//! terminal backend reconnecting after the server side of the session is killed.
+//! hosts authenticated by an agent, a one-time code (TOTP through PAM) after a key, a user
+//! certificate, agent forwarding, and the terminal backend reconnecting after the server side of
+//! the session is killed.
 //!
 //! The servers come from `scripts/ssh-test-servers.sh start` (127.0.0.1:2221-2224), so these
 //! tests are ignored by default. With the servers up, and an agent that holds
@@ -164,6 +165,45 @@ async fn openssh_with_a_key_file_and_dropbear_with_a_password() {
         .await
         .is_err()
     );
+}
+
+#[test]
+#[ignore = "needs scripts/ssh-test-servers.sh start"]
+fn a_user_certificate_then_agent_forwarding() {
+    let dir = tempfile::tempdir().unwrap();
+    let (asker, _) = user();
+    // The certified key isn't in authorized_keys: only its certificate gets it in.
+    let certified = AuthPlan {
+        key_files: vec![state().join("client_cert_ed25519")],
+        ..AuthPlan::default()
+    };
+    let runtime = opensesh_ssh::runtime().unwrap();
+    let connection = runtime
+        .block_on(connect::connect(
+            &spec(dir.path(), vec![hop(OPENSSH_KEY_ONLY, certified)]),
+            &asker,
+            &connect::quiet(),
+        ))
+        .unwrap();
+    runtime.block_on(connection.close());
+    // The agent reaches the server's `ssh-add -l` through the forwarded channel.
+    let forwarding = ConnectSpec {
+        agent_forwarding: true,
+        ..spec(dir.path(), vec![hop(OPENSSH_KEY_ONLY, agent())])
+    };
+    let session = SessionSpec {
+        command: Some("ssh-add -l".to_owned()),
+        ..SessionSpec::default()
+    };
+    let sink: backend::StatusSink = Arc::new(|_| {});
+    let (_terminal, events) =
+        backend::start(forwarding, session, Options::default(), asker, sink).unwrap();
+    let (text, all) = read_until(&events, |_, all| {
+        all.iter()
+            .any(|event| matches!(event, BackendEvent::Exited(_)))
+    });
+    assert!(text.contains("opensesh-test-client"), "{text:?}");
+    assert!(all.contains(&BackendEvent::Exited(Some(0))), "{all:?}");
 }
 
 #[tokio::test(flavor = "multi_thread")]
