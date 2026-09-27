@@ -12,6 +12,7 @@ pub mod hosts;
 pub mod identity;
 pub mod ipc;
 pub mod keybindings;
+pub mod paste;
 pub mod paths;
 pub mod state;
 pub mod terminal;
