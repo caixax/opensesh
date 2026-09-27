@@ -64,8 +64,8 @@
 
 ### Close
 - [x] fmt, clippy `-D warnings`, tests, lint-qml, i18n, shaders, deny, audit
-- [ ] Build and smoke tests on Windows and in the WSL distros; GitHub Actions green
-- [ ] ADRs, docs, CHANGELOG, report, commits pushed to GitHub
+- [x] Build and smoke tests on Windows and in the WSL distros; GitHub Actions green
+- [x] ADRs, docs, CHANGELOG, report, commits pushed to GitHub
 
 ## Report
 
@@ -125,10 +125,9 @@
   - On Debian, GNOME Keyring in a private D-Bus session, and `ssh-agent` with `ssh-add`.
   - On Fedora, `ssh-agent` with `ssh-add`.
   - A stand-in agent on a named pipe covers the Windows OpenSSH agent, whose service is disabled on this machine.
-- **WSL:**
-  - Debian 13 (Qt 6.8.2) passed clippy, tests and the smoke tests (offscreen, gallery, Wayland, X11) on the keychain as first committed.
-  - Fedora 43 (Qt 6.10.3) passed them on everything but the smoke test's final unlock (a QML-only change).
-  - Arch couldn't run: the drive that holds the WSL disks filled up, and the Arch and Debian disks went read-only with I/O errors. The CI containers (Arch, Fedora, Debian 13) and Ubuntu cover Linux on the final code (see the [matrix](../testing/manual-matrix.md)).
+- **WSL, on the final code:** clippy, every test and the smoke tests (offscreen, gallery, Wayland, X11) in Debian 13 (Qt 6.8.2), Fedora 43 (Qt 6.10.3) and Arch (Qt 6.11.2).
+  - The drive holding the WSL disks filled up in the middle of the sprint; the distros moved to another drive and passed again (see the [matrix](../testing/manual-matrix.md)).
+- **GitHub Actions:** green on Ubuntu 24.04, Windows and the Arch, Fedora and Debian 13 containers.
 
 ### Pending
 
@@ -149,3 +148,4 @@
 - **A keyring that asks the user to unlock it** holds the keychain worker until answered. The UI stays responsive and shows the operation as busy.
 - **Memory:** what the user types into password fields lives in Qt strings, which aren't wiped (documented in the threat model).
 - **No keyring (servers, WSL, minimal desktops):** secrets need a master password; the dialogs offer it.
+- **The WSL test distros** now live on another drive, after the first one filled up and left two of them read-only for a while. They passed again, but a disk that runs out of space can still break a verification run.
