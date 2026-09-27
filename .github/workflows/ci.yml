@@ -6,7 +6,8 @@
 #   distro  - Arch, Fedora and Debian 13 containers with their own Qt packages
 #   ssh     - the SSH client against real OpenSSH and Dropbear servers (scripts/ssh-test-servers.sh):
 #             two jump hosts with an agent, a one-time code through PAM, reconnection; SFTP: 1 GiB
-#             both ways with checksums, an interrupted upload resumed, a server without SFTP
+#             both ways with checksums, an interrupted upload resumed, a server without SFTP;
+#             tunnels: curl through -L, -R and -D, and a tunnel back after its session is killed
 #   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, bundled ConPTY, offscreen
 #             smoke test
 name: CI
@@ -217,14 +218,14 @@ jobs:
         with:
           key: ssh-servers
       - name: Build the tests
-        run: cargo test --locked -p opensesh-ssh --test real_servers --test real_sftp --no-run
+        run: cargo test --locked -p opensesh-ssh --test real_servers --test real_sftp --test real_tunnels --no-run
       - name: Start OpenSSH and Dropbear
         run: sudo scripts/ssh-test-servers.sh start
       - name: Tests against the servers
         run: |
           eval "$(ssh-agent -s)"
           ssh-add /tmp/opensesh-ssh-servers/client_ed25519
-          cargo test --locked -p opensesh-ssh --test real_servers --test real_sftp -- --ignored --test-threads 1
+          cargo test --locked -p opensesh-ssh --test real_servers --test real_sftp --test real_tunnels -- --ignored --test-threads 1
       - name: Server logs
         if: failure()
         run: sudo tail -n 60 /tmp/opensesh-ssh-servers/*.log
