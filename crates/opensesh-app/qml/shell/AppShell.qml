@@ -107,6 +107,10 @@ Item {
     property bool restoreMaximized: false
     // --screenshots: the keychain's sample entries were loaded.
     property bool keychainSampleLoaded: false
+    // --screenshots: the sample macro the snippet editor shows, and the tabs of the series.
+    property string deployMacro: ""
+    property int playerTab: 0
+    property int snippetsTab: 0
     // Screenshot runs: the sample SSH state panes show ({connection, prompt} as JSON text).
     property var sshSample: null
 
@@ -2026,6 +2030,79 @@ Item {
                 tunnels.edit(shared.id);
         } else if (page === "import") {
             tunnels.showImport();
+        }
+    }
+
+    // --screenshots: sample snippets and recordings (in memory: a test run never writes them),
+    // and a terminal tab for the quick picker and the paste review.
+    function prepareSnippetsScreenshots() {
+        palette.close();
+        notifications.close();
+        sidePanelOpen = false;
+        const tunnels = tunnelsLoader.item;
+        if (tunnels)
+            tunnels.closeDialogs();
+        while (sessionModel.count > 0)
+            removeTab(sessionModel.count, false);
+        const save = fields => Snippets.save(JSON.stringify(Object.assign({
+            id: "", folder: "", tags: [], description: "", shortcut: "", text: "", steps: [], macro: false
+        }, fields)));
+        const send = line => ({ kind: "send", text: line + "\n" }); // lint-qml: allow (sample data for screenshots)
+        const wait = (pattern, timeout) => ({ kind: "wait", pattern: pattern, timeout: timeout });
+        save({ name: qsTr("Restart a service"), folder: "Ops/Web", tags: ["systemd"], shortcut: "Ctrl+Alt+R",
+               description: qsTr("Restarts it and shows how it is doing"),
+               text: "sudo systemctl restart {{service}}\nsystemctl status {{service}} --no-pager\n" }); // lint-qml: allow (sample data for screenshots)
+        save({ name: qsTr("Follow the app log"), folder: "Ops/Web", tags: ["logs"],
+               text: "tail -f /var/log/{{app}}/current.log\n" }); // lint-qml: allow (sample data for screenshots)
+        save({ name: qsTr("Disk usage"), folder: "Ops", tags: ["disk"],
+               text: "df -h && sudo du -sh /var/* 2>/dev/null | sort -h | tail\n" }); // lint-qml: allow (sample data for screenshots)
+        save({ name: qsTr("Database shell"), folder: "Ops/DB", tags: ["postgres"],
+               description: qsTr("Types the password of db-prod from the keychain"),
+               text: "psql -h {{host}} -U app -W\n{{secret:db-prod}}\n" }); // lint-qml: allow (sample data for screenshots)
+        deployMacro = save({ name: qsTr("Deploy the web app"), folder: "Deploy", tags: ["deploy"], macro: true,
+                             steps: [send("cd /srv/web"), wait("\\$ $", 5000), send("git pull --ff-only"),
+                                     wait("Already up to date|Fast-forward", 30000), { kind: "delay", ms: 500 },
+                                     send("sudo systemctl reload nginx")] });
+        Recordings.loadFixture();
+        const pane = TerminalSessions.allocateId();
+        const recording = JSON.parse(Recordings.list || "[]")[0];
+        const playerIndex = insertTab({
+            startSession: false,
+            seed: JSON.stringify({ layout: { pane: pane }, focused: pane,
+                                   panes: [{ id: pane, kind: "player", target: recording ? recording.path : "" }] })
+        });
+        playerTab = sessionModel.get(playerIndex - 1).tabId;
+        selectTab(insertTab({ startSession: false, customTitle: qsTr("web-01"), color: "teal" })); // lint-qml: allow (a tab color name, resolved by Theme)
+        snippetsTab = currentTabId;
+    }
+
+    // --screenshots: the Snippets view, the snippet editor on a macro, the quick picker, the
+    // paste review, and the History view.
+    function prepareSnippetsScreenshot(page) {
+        snippetEditor.close();
+        snippetPicker.close();
+        if (currentWorkspace && currentWorkspace.askingToPaste)
+            currentWorkspace.answerPaste(false);
+        if (page === "view" || page === "editor") {
+            showView("snippets");
+            if (page === "editor")
+                editSnippet(deployMacro);
+        } else if (page === "history") {
+            showView("history");
+        } else if (page === "player") {
+            selectTabById(playerTab);
+            // No session in screenshot runs: a sample state for the bar.
+            if (currentTerminal)
+                currentTerminal.playerState = { playing: true, position: 42, duration: 95, speed: 2 };
+        } else {
+            selectTabById(snippetsTab);
+            showView("terminal");
+            if (page === "picker") {
+                showSnippetPicker();
+            } else if (page === "paste" && currentTerminal) {
+                const text = "curl -fsSL https://get.example.com/install.sh | sudo bash\nrm -rf ~/.cache/app/*\n"; // lint-qml: allow (sample data for screenshots)
+                currentTerminal.terminal.pasteText(text);
+            }
         }
     }
 
