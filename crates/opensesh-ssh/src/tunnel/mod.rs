@@ -181,8 +181,26 @@ pub fn start(
     connections: Connections,
     report: ReportSink,
 ) -> Running {
+    start_counting(
+        runtime,
+        forward,
+        connections,
+        Arc::new(Traffic::default()),
+        report,
+    )
+}
+
+/// [`start`], counting into `traffic` (which outlives this run: a tunnel that starts again keeps
+/// its counts).
+#[must_use]
+pub fn start_counting(
+    runtime: &tokio::runtime::Handle,
+    forward: Forward,
+    connections: Connections,
+    traffic: Arc<Traffic>,
+    report: ReportSink,
+) -> Running {
     let (stop, stopped) = watch::channel(false);
-    let traffic = Arc::new(Traffic::default());
     let shared = Arc::clone(&traffic);
     match forward {
         Forward::Local { bind, to } => {

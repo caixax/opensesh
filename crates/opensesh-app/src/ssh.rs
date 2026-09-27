@@ -29,6 +29,8 @@ use crate::services;
 /// Everything a pane needs to start an SSH session.
 #[derive(Debug, Clone)]
 pub struct SshStart {
+    /// The saved host, if it is one (tunnels tied to it follow its sessions).
+    pub host: Option<String>,
     /// Where to connect.
     pub connect: ConnectSpec,
     /// What to run.
@@ -364,6 +366,7 @@ fn session_for(
     // Only a saved host has an icon to show the OS with.
     let auto_icon = !host.id.is_empty() && (host.icon.is_empty() || host.icon == "auto");
     Ok(SshStart {
+        host: (!host.id.is_empty()).then(|| host.id.clone()),
         connect: hermetic(connect)?,
         session,
         options: Options {
