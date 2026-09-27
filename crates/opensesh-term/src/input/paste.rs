@@ -18,6 +18,12 @@ const PASTE_START: &[u8] = b"\x1b[200~";
 /// End of a bracketed paste, `CSI 201 ~`.
 const PASTE_END: &[u8] = b"\x1b[201~";
 
+/// Whether the program asked for bracketed paste (a pasted newline then waits for Enter).
+#[must_use]
+pub fn is_bracketed(modes: &InputModes) -> bool {
+    modes.term.contains(TermMode::BRACKETED_PASTE)
+}
+
 /// Encodes clipboard text for the program: sanitised (see the module docs) and wrapped in
 /// `CSI 200 ~` / `CSI 201 ~` when the program enabled bracketed paste (DECSET 2004).
 ///

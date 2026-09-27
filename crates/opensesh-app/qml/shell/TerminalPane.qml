@@ -13,7 +13,7 @@ pragma ComponentBehavior: Bound
 // get a border in Theme.danger; a chip in the top right corner (under the search bar while it is
 // open) shows whether the pane receives and turns it on or off.
 //   workspace: Item        the TabWorkspace (shell, participants, pasteConfirmed, closePane(),
-//                          setFocusedPane(), paneActivity(), paneBell(), confirmPaste())
+//                          setFocusedPane(), paneActivity(), paneBell(), reviewPaste())
 //   paneId: int            the pane's id, which is also its session id
 //   kind: string           `local` or `ssh` (model role)
 //   host: string           the saved host it connects to, if any (model role)
@@ -261,7 +261,7 @@ Item {
         }
         onBell: pane.ringBell()
         onClipboardSet: Toasts.show(qsTr("A program in this terminal copied text to the clipboard."), "info")
-        onPasteConfirmationNeeded: selection => pane.workspace.confirmPaste(pane.paneId, selection)
+        onPasteReview: (text, findings, broadcast) => pane.workspace.reviewPaste(pane.paneId, text, findings, broadcast)
         onActiveFocusChanged: {
             if (activeFocus)
                 pane.workspace.setFocusedPane(pane.paneId);

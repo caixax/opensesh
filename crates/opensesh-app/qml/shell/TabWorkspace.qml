@@ -78,7 +78,6 @@ Item {
 
     // The paste waiting for confirmation.
     property int pastePane: 0
-    property bool pasteFromSelection: false
     readonly property bool askingToPaste: pasteDialog.visible
 
     function focusTerminal() {
@@ -363,14 +362,14 @@ Item {
         shell.updateTab(tabId, "bellRang", true);
     }
 
-    // A paste into several panes waits for this confirmation, once per broadcast.
-    function confirmPaste(id, selection) {
+    // A paste waits for the paste review: the analyzer found something, or it is the first paste
+    // into several panes while broadcasting (once per broadcast).
+    function reviewPaste(id, text, findings, broadcast) {
         pastePane = id;
-        pasteFromSelection = selection;
-        pasteDialog.open();
+        pasteDialog.show(text, findings, broadcast, participants.length);
     }
 
-    // Closes the paste confirmation; `paste` true pastes as if confirmed.
+    // Closes the paste review; `paste` true pastes the (possibly edited) text.
     function answerPaste(paste) {
         if (paste)
             pasteDialog.accept();
@@ -556,38 +555,20 @@ Item {
         }
     }
 
-    OsDialog {
+    PasteReviewDialog {
         id: pasteDialog
 
-        title: qsTr("Paste into %n panes?", "", workspace.participants.length)
-        acceptText: qsTr("Paste")
-
-        onAccepted: {
-            workspace.pasteConfirmed = true;
+        onPasteRequested: text => {
+            if (broadcast)
+                workspace.pasteConfirmed = true;
             const item = workspace.paneItem(workspace.pastePane);
-            if (!item)
-                return;
-            if (workspace.pasteFromSelection)
-                item.terminal.pasteSelection();
-            else
-                item.terminal.paste();
+            if (item)
+                item.terminal.pasteReviewed(text);
         }
         onClosed: {
             const item = workspace.paneItem(workspace.pastePane);
             if (item && workspace.current)
                 item.focusTerminal();
-        }
-
-        Column {
-            width: Math.min(Theme.spacingXxl * 12, pasteDialog.maxWidth - pasteDialog.leftPadding - pasteDialog.rightPadding)
-
-            OsText {
-                width: parent.width
-                text: qsTr("Broadcast is on, so the text goes to every receiving pane of this tab. You won't be asked again until broadcast is turned off.")
-                wrapMode: Text.Wrap
-                elide: Text.ElideNone
-                horizontalAlignment: Text.AlignLeft
-            }
         }
     }
 }

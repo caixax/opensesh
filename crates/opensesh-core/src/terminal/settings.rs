@@ -765,6 +765,8 @@ terminal_settings! {
     answerback: String = String::new(), check answerback;
     /// Pause between the lines of a paste, in milliseconds (for slow devices).
     paste_line_delay_ms: u32 = 0, check paste_delay;
+    /// Check pastes and show what looks risky before sending them (PLAN §8).
+    paste_protection: bool = true, check any;
     /// Keyword highlighting rule sets, by id (PLAN §6.5).
     highlight_sets: Vec<String> = Vec::new(), check set_ids;
 }

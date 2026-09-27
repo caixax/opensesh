@@ -350,11 +350,18 @@ pub mod qobject {
         #[cxx_name = "clipboardSet"]
         fn clipboard_set(self: Pin<&mut TerminalItem>);
 
-        /// A paste waits because `pasteGuard` is set (broadcast): confirm, clear the guard and
-        /// call `paste()` (or `pasteSelection()` when `selection`) again.
+        /// A paste waits for the paste review (Sprint 10): the paste analyzer found something
+        /// (`findings`: JSON `[{kind, severity, line, start, end, detail}]`, UTF-16 offsets into
+        /// `text`), or `pasteGuard` is set (`broadcast`). Call `pasteReviewed()` with the text
+        /// the user accepted, or nothing to cancel.
         #[qsignal]
-        #[cxx_name = "pasteConfirmationNeeded"]
-        fn paste_confirmation_needed(self: Pin<&mut TerminalItem>, selection: bool);
+        #[cxx_name = "pasteReview"]
+        fn paste_review(
+            self: Pin<&mut TerminalItem>,
+            text: QString,
+            findings: QString,
+            broadcast: bool,
+        );
 
         /// Emitted when the title, the working directory or the running and exit state change.
         #[qsignal]
@@ -447,6 +454,16 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "pasteSelection"]
         fn paste_selection(self: Pin<&mut TerminalItem>);
+
+        /// Pastes `text` as the clipboard would be, through the same checks.
+        #[qinvokable]
+        #[cxx_name = "pasteText"]
+        fn paste_given(self: Pin<&mut TerminalItem>, text: &QString);
+
+        /// Pastes `text` the user accepted in the paste review (no more checks).
+        #[qinvokable]
+        #[cxx_name = "pasteReviewed"]
+        fn paste_reviewed(self: Pin<&mut TerminalItem>, text: &QString);
 
         /// Selects the whole buffer, scrollback included.
         #[qinvokable]
@@ -695,6 +712,7 @@ use std::time::{Duration, Instant};
 
 use cxx_qt::{CxxQtThread, CxxQtType, Threading};
 use cxx_qt_lib::QString;
+use opensesh_core::paste as paste_check;
 use opensesh_core::terminal::settings::{FONT_SIZE_RANGE, Hinting, RightClick};
 use opensesh_term::backend::TermSize;
 use opensesh_term::input::keys::{
@@ -705,7 +723,7 @@ use opensesh_term::input::mouse::{
     MouseAction, MouseButton, MouseInput, MouseProtocol, alternate_scroll, encode_mouse,
     mouse_protocol, mouse_reporting_active,
 };
-use opensesh_term::input::paste::encode_paste;
+use opensesh_term::input::paste::{encode_paste, is_bracketed};
 use opensesh_term::input::{InputModes, Modifiers};
 use opensesh_term::links;
 use opensesh_term::palette::Palette;
@@ -2182,26 +2200,72 @@ impl qobject::TerminalItem {
     }
 
     /// See the bridge declaration.
-    pub fn paste(mut self: Pin<&mut Self>) {
-        if self.paste_guard {
-            self.as_mut().paste_confirmation_needed(false);
-            return;
-        }
+    pub fn paste(self: Pin<&mut Self>) {
         let text = self.clipboard_text(false).to_string();
-        self.paste_text(&text);
+        self.paste_checked(&text);
     }
 
     /// See the bridge declaration.
-    pub fn paste_selection(mut self: Pin<&mut Self>) {
+    pub fn paste_selection(self: Pin<&mut Self>) {
         if !self.primary_selection() {
             return;
         }
-        if self.paste_guard {
-            self.as_mut().paste_confirmation_needed(true);
+        let text = self.clipboard_text(true).to_string();
+        self.paste_checked(&text);
+    }
+
+    /// See the bridge declaration.
+    pub fn paste_given(self: Pin<&mut Self>, text: &QString) {
+        self.paste_checked(&text.to_string());
+    }
+
+    /// See the bridge declaration.
+    pub fn paste_reviewed(self: Pin<&mut Self>, text: &QString) {
+        self.paste_text(&text.to_string());
+    }
+
+    /// Pastes `text`, unless it goes to the paste review first: the profile's paste protection
+    /// found something worth a look, or broadcast wasn't confirmed yet.
+    fn paste_checked(mut self: Pin<&mut Self>, text: &str) {
+        if text.is_empty() {
             return;
         }
-        let text = self.clipboard_text(true).to_string();
-        self.paste_text(&text);
+        let protect = self
+            .resolved
+            .as_ref()
+            .is_none_or(|resolved| resolved.settings.paste_protection);
+        let bracketed = self
+            .entry()
+            .is_some_and(|entry| is_bracketed(&entry.session().modes()));
+        let findings = if protect {
+            paste_check::analyze(text, bracketed)
+        } else {
+            Vec::new()
+        };
+        if !self.paste_guard && !paste_check::worth_a_look(&findings) {
+            self.paste_text(text);
+            return;
+        }
+        let list: Vec<serde_json::Value> = findings
+            .iter()
+            .map(|finding| {
+                let (start, end) = paste_check::utf16_range(text, finding.start, finding.end);
+                serde_json::json!({
+                    "kind": finding.kind.as_str(),
+                    "severity": finding.severity.as_str(),
+                    "line": finding.line,
+                    "start": start,
+                    "end": end,
+                    "detail": finding.detail,
+                })
+            })
+            .collect();
+        let broadcast = self.paste_guard;
+        self.as_mut().paste_review(
+            QString::from(text),
+            QString::from(&serde_json::Value::Array(list).to_string()),
+            broadcast,
+        );
     }
 
     /// See the bridge declaration.
