@@ -144,6 +144,8 @@ OsDialog {
                     id: keyText
 
                     width: keyFlick.width
+                    // A template TextArea keeps a one-line implicit height: it grows with its text.
+                    implicitHeight: contentHeight + topPadding + bottomPadding
                     enabled: !dialog.working
                     wrapMode: TextEdit.WrapAnywhere
                     color: Theme.text

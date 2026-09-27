@@ -166,6 +166,8 @@ OsDialog {
                     id: editor
 
                     width: textFlick.width
+                    // A template TextArea keeps a one-line implicit height: it grows with its text.
+                    implicitHeight: contentHeight + topPadding + bottomPadding
                     wrapMode: TextEdit.WrapAnywhere
                     color: Theme.text
                     selectionColor: Theme.selection
