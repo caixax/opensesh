@@ -579,23 +579,10 @@ impl Queue {
                 let elapsed = now.duration_since(last.0).as_secs_f64();
                 if progress.state == State::Running && elapsed > 0.0 {
                     let previous = last.1.unwrap_or(progress.bytes_done);
-                    #[allow(clippy::cast_precision_loss)] // Byte counts well below 2^52.
-                    let rate = progress.bytes_done.saturating_sub(previous) as f64 / elapsed;
-                    progress.speed = if progress.speed > 0.0 {
-                        progress.speed * 0.7 + rate * 0.3
-                    } else {
-                        rate
-                    };
+                    let moved = progress.bytes_done.saturating_sub(previous);
+                    progress.speed = smoothed_speed(progress.speed, moved, elapsed);
                     let left = progress.bytes_total.saturating_sub(progress.bytes_done);
-                    progress.eta = (progress.speed > 1.0).then(|| {
-                        #[allow(
-                            clippy::cast_precision_loss,
-                            clippy::cast_possible_truncation,
-                            clippy::cast_sign_loss
-                        )] // A positive number of seconds.
-                        let secs = (left as f64 / progress.speed).ceil() as u64;
-                        secs
-                    });
+                    progress.eta = eta(left, progress.speed);
                 } else if progress.state != State::Running {
                     progress.speed = 0.0;
                 }
@@ -713,6 +700,31 @@ impl Queue {
         }
         Ok(())
     }
+}
+
+/// The speed after `moved` bytes in `elapsed` seconds: the first measure as it is, then 30% of
+/// each new one, so the number doesn't jump with every tick.
+fn smoothed_speed(speed: f64, moved: u64, elapsed: f64) -> f64 {
+    #[allow(clippy::cast_precision_loss)] // Byte counts well below 2^52.
+    let rate = moved as f64 / elapsed;
+    if speed > 0.0 {
+        speed * 0.7 + rate * 0.3
+    } else {
+        rate
+    }
+}
+
+/// Seconds left for `left` bytes at `speed` (rounded up); none while there's no speed to go by.
+fn eta(left: u64, speed: f64) -> Option<u64> {
+    (speed > 1.0).then(|| {
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )] // A positive number of seconds.
+        let secs = (left as f64 / speed).ceil() as u64;
+        secs
+    })
 }
 
 /// How a file ended.
@@ -1089,6 +1101,17 @@ impl FileJob {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn speed_and_eta() {
+        assert!((smoothed_speed(0.0, 1000, 0.5) - 2000.0).abs() < 1e-9);
+        assert!((smoothed_speed(2000.0, 0, 0.25) - 1400.0).abs() < 1e-9);
+        assert!((smoothed_speed(1000.0, 4000, 1.0) - 1900.0).abs() < 1e-9);
+        assert_eq!(eta(10_000, 1000.0), Some(10));
+        assert_eq!(eta(10_001, 1000.0), Some(11));
+        assert_eq!(eta(0, 1000.0), Some(0));
+        assert_eq!(eta(10_000, 0.5), None);
+    }
 
     #[test]
     fn paths_within() {
