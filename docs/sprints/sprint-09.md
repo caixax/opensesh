@@ -90,7 +90,7 @@
   - Screenshots (native): the Tunnels view (running with traffic, waiting for a session, stopped with the warning, failed), the editor of a tunnel that listens on every interface, and the import dialog, in dark and light, comfortable and compact.
 - **Real servers in WSL (Arch):** `real_tunnels.rs` (2 tests) with the 8 tests of `real_servers.rs` and `real_sftp.rs`.
 - **WSL, on the final code:** the build, clippy, every test (559 passed, 34 ignored) and the smoke tests (offscreen, gallery, Wayland, X11) in Debian 13 (Qt 6.8.2), Fedora 43 (Qt 6.10.3) and Arch (Qt 6.11.2); `ssh-agent` with a fixture key. The build script now reports its exit code and keeps its log (last sprint's stale Arch binary).
-- **GitHub Actions:** running on the pushed commits (updated below once it finishes).
+- **GitHub Actions:** green on Ubuntu 24.04, Windows, the Arch, Fedora and Debian 13 containers, and the `ssh` job, where `real_servers.rs`, `real_sftp.rs` and `real_tunnels.rs` pass against the Ubuntu 24.04 OpenSSH and Dropbear (`curl` through each kind of tunnel, and the reconnection).
 
 ### Deviations
 
