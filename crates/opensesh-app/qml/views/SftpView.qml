@@ -3,9 +3,9 @@ pragma ComponentBehavior: Bound
 // SFTP view (PLAN §5.4, Sprint 8): two file panes side by side, each showing this computer or a
 // server (a saved host, or quick-connect text, on a connection of its own), and the transfer
 // queue below. F5 and F6 copy or move the selection to the other pane; files drag between the
-// panes and in from the file manager.
-// Functions: setSource(side, source) (`source`: {mode, hostId, target, title}), pane(side),
-// smokeSteps(smoke).
+// panes and in from the file manager. The sides can swap (a server's side connects again).
+// Functions: setSource(side, source) (`source`: {mode, hostId, target, title, startPath}),
+// pane(side), swapSides(), smokeSteps(smoke).
 import QtQuick
 import QtQuick.Layouts
 import cc.caixa.opensesh
@@ -22,6 +22,16 @@ Item {
 
     function setSource(side, source) {
         (side === 0 ? leftSide : rightSide).use(source);
+    }
+
+    // Each side's files go to the other side, in the folder they were showing.
+    function swapSides() {
+        const where = side => Object.assign({}, side.source, {
+            startPath: side.pane && side.pane.ready ? side.pane.browser.path : (side.source.startPath ?? "")
+        });
+        const left = where(leftSide);
+        leftSide.use(where(rightSide));
+        rightSide.use(left);
     }
 
     // Functions for SmokeTest.steps, after the SSH steps started the test server and loaded the
@@ -169,6 +179,18 @@ Item {
                 left.browser.done.disconnect(failOnError);
                 right.browser.done.disconnect(failOnError);
                 console.info("smoke test: the SFTP view listed, made, uploaded, downloaded, renamed, changed and deleted files on the test server");
+                // Swapped: the server on the left (connecting again), this computer on the right,
+                // each in the folder it showed.
+                const folder = left.browser.path;
+                view.swapSides();
+                right = view.pane(0);
+                left = view.pane(1);
+                deadline = Date.now() + timeout;
+                return [connectRight, () => wait("the swapped sides", () => left.ready && left.browser.path === folder && right.browser.path === "/",
+                                                 () => console.info("smoke test: the SFTP view swapped its sides"))];
+            },
+            () => {
+                view.setSource(0, leftSide.initial);
                 view.setSource(1, rightSide.initial);
             }
         ];
@@ -307,7 +329,14 @@ Item {
             }
 
             OsIconButton {
+                visible: side.other === rightSide
                 iconName: "arrow-left-right"
+                toolTip: qsTr("Swap the sides")
+                onClicked: view.swapSides()
+            }
+
+            OsIconButton {
+                iconName: side.other === rightSide ? "arrow-right" : "arrow-left"
                 toolTip: side.other === rightSide ? qsTr("Copy the selection to the right (F5)") : qsTr("Copy the selection to the left (F5)")
                 enabled: side.pane !== null && side.pane.ready && side.other.pane !== null && side.other.pane.ready
                 onClicked: side.pane.copyToPeer(false)

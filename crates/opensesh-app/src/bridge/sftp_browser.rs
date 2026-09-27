@@ -64,6 +64,8 @@ pub mod qobject {
         #[qproperty(bool, show_hidden, cxx_name = "showHidden", READ, WRITE = set_show_hidden, NOTIFY = listing_changed)]
         #[qproperty(QString, sort_key, cxx_name = "sortKey", READ, WRITE = set_sort_key, NOTIFY = listing_changed)]
         #[qproperty(bool, sort_ascending, cxx_name = "sortAscending", READ, WRITE = set_sort_ascending, NOTIFY = listing_changed)]
+        #[qproperty(f64, space_free, cxx_name = "spaceFree", READ, NOTIFY = space_changed)]
+        #[qproperty(f64, space_total, cxx_name = "spaceTotal", READ, NOTIFY = space_changed)]
         type SftpBrowser = super::SftpBrowserRust;
 
         /// `mode`, `hostId`, `target`, `terminalSession`, `connectionSerial` or `startPath`.
@@ -80,6 +82,11 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "listingChanged"]
         fn listing_changed(self: Pin<&mut SftpBrowser>);
+
+        /// `spaceFree` and `spaceTotal` changed.
+        #[qsignal]
+        #[cxx_name = "spaceChanged"]
+        fn space_changed(self: Pin<&mut SftpBrowser>);
 
         /// Operation `token` ended: `code` empty on success, else an error code and its detail.
         #[qsignal]
@@ -305,6 +312,9 @@ pub struct SftpBrowserRust {
     show_hidden: bool,
     sort_key: QString,
     sort_ascending: bool,
+    /// Bytes free and in all on the server's file system of the folder; -1 when it doesn't say.
+    space_free: f64,
+    space_total: f64,
     fs: Option<Fs>,
     /// Everything in the folder; `rows` is what is shown.
     all: Vec<Entry>,
@@ -346,6 +356,8 @@ impl Default for SftpBrowserRust {
             show_hidden: app::settings().show_hidden,
             sort_key: QString::from("name"),
             sort_ascending: true,
+            space_free: -1.0,
+            space_total: -1.0,
             fs: None,
             all: Vec::new(),
             rows: Vec::new(),
@@ -712,6 +724,7 @@ impl qobject::SftpBrowser {
                         if object.status.to_string() != "ready" || !object.error.is_empty() {
                             object.as_mut().set_status("ready", "", "");
                         }
+                        object.as_mut().query_space(path);
                     }
                     Err(error) => {
                         let lost = error.is_transient();
@@ -722,6 +735,33 @@ impl qobject::SftpBrowser {
                         );
                     }
                 }
+            },
+        );
+    }
+
+    /// Asks the server how much space the folder's file system has (`statvfs@openssh.com`).
+    fn query_space(self: Pin<&mut Self>, path: String) {
+        let Some(remote) = self.fs.as_ref().and_then(Fs::remote).cloned() else {
+            return;
+        };
+        let generation = self.generation;
+        self.spawn(
+            async move { remote.space(&path).await },
+            move |mut object, result| {
+                if object.generation != generation {
+                    return;
+                }
+                #[allow(clippy::cast_precision_loss, reason = "sizes to show")]
+                let (free, total) = match result {
+                    Ok(Some(space)) => (space.available as f64, space.total as f64),
+                    _ => (-1.0, -1.0),
+                };
+                {
+                    let mut state = object.as_mut().rust_mut();
+                    state.space_free = free;
+                    state.space_total = total;
+                }
+                object.space_changed();
             },
         );
     }
