@@ -306,6 +306,27 @@ async fn transfers_both_ways() {
     assert!(!root.path().join("project/sub/deeper").exists());
     assert!(back.path().join("deeper/d.bin").is_file());
 
+    // Within the server: this one has no `cp`, so the files go through the client.
+    remote.mkdir("/copies").await.unwrap();
+    let within = queue.add(Request {
+        from: remote.clone(),
+        sources: vec!["/project".into()],
+        to: remote.clone(),
+        destination: "/copies".into(),
+        options: options(Policy::Ask),
+        remove_sources: false,
+    });
+    let done = events.finished(within).await;
+    assert_eq!(
+        (&done.state, done.files_done),
+        (&State::Done, 3),
+        "{done:?}"
+    );
+    assert_eq!(
+        std::fs::read(root.path().join("copies/project/sub/b.bin")).unwrap(),
+        expected[2].1
+    );
+
     queue.clear_finished();
     assert!(queue.snapshot().is_empty());
 }

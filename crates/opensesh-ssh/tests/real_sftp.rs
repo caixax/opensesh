@@ -345,6 +345,71 @@ async fn an_upload_cut_off_resumes_on_a_new_connection() {
 
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs scripts/ssh-test-servers.sh start"]
+async fn a_copy_within_the_server_uses_cp() {
+    let known = tempfile::tempdir().unwrap();
+    let here = tempfile::tempdir().unwrap();
+    let name = format!("opensesh-copy-{}", std::process::id());
+    let tree = here.path().join(&name);
+    std::fs::create_dir_all(tree.join("sub")).unwrap();
+    let small = write_random(&tree.join("small.bin"), 70_000);
+    let deep = write_random(&tree.join("sub").join("deep.bin"), 3 << 20);
+
+    let connection = connect(OPENSSH, known.path()).await;
+    let remote = Arc::new(Remote::open(Arc::clone(&connection)).await.unwrap());
+    let home = remote.home().to_owned();
+    let fs = Fs::Remote(Arc::clone(&remote));
+    let events = Events::default();
+    let queue = Queue::new(tokio::runtime::Handle::current(), 3, events.sink());
+    let up = queue.add(request(
+        Fs::local(),
+        &tree,
+        fs.clone(),
+        &home,
+        Policy::Overwrite,
+    ));
+    assert_eq!(
+        events.finished(up, Duration::from_secs(120)).await.state,
+        State::Done
+    );
+
+    // Into a folder next to it: `cp -R -p` on the server, times kept.
+    let source = path::join(Style::Posix, &home, &name);
+    let folder = format!("{source}-copies");
+    fs.mkdir(&folder).await.unwrap();
+    let within = queue.add(Request {
+        sources: vec![source.clone()],
+        ..request(fs.clone(), &tree, fs.clone(), &folder, Policy::Ask)
+    });
+    let done = events.finished(within, Duration::from_secs(120)).await;
+    assert_eq!(done.state, State::Done, "{done:?}");
+    assert_eq!(done.files_done, 2);
+    let copy = path::join(Style::Posix, &folder, &name);
+    assert_eq!(
+        remote_sha256(&remote, &path::join(Style::Posix, &copy, "small.bin")).await,
+        small
+    );
+    assert_eq!(
+        remote_sha256(&remote, &format!("{copy}/sub/deep.bin")).await,
+        deep
+    );
+    assert_eq!(
+        fs.stat(&format!("{copy}/sub/deep.bin"))
+            .await
+            .unwrap()
+            .modified,
+        fs.stat(&format!("{source}/sub/deep.bin"))
+            .await
+            .unwrap()
+            .modified
+    );
+
+    fs.remove(&source, true).await.unwrap();
+    fs.remove(&folder, true).await.unwrap();
+    connection.close().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs scripts/ssh-test-servers.sh start"]
 async fn a_server_without_sftp_says_so() {
     let known = tempfile::tempdir().unwrap();
     let connection = connect(OPENSSH_WITHOUT_SFTP, known.path()).await;
