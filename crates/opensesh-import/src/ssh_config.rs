@@ -2,10 +2,12 @@
 //! linked, read-only.
 //!
 //! What is read: `Host` blocks with plain names (each name becomes a host), and in them
-//! `HostName` (`%h` is the name), `User`, `Port`, `IdentityFile` and `ProxyJump`. `Include`
-//! is followed (globs, `~`, paths relative to `~/.ssh`, at most 16 levels, never the same file
-//! twice in a chain). As in OpenSSH, the first value found for an option wins; a name that
-//! appears in several blocks takes what each block adds.
+//! `HostName` (`%h` is the name), `User`, `Port`, `IdentityFile` and `ProxyJump`, and the
+//! forwards (`LocalForward`, `RemoteForward`, `DynamicForward`: `[bind_address:]port`, IPv6 in
+//! brackets), which become tunnels (Sprint 9). `Include` is followed (globs, `~`, paths relative
+//! to `~/.ssh`, at most 16 levels, never the same file twice in a chain). As in OpenSSH, the
+//! first value found for an option wins, except forwards, which add up; a name that appears in
+//! several blocks takes what each block adds.
 //!
 //! What is skipped with a warning: patterns with wildcards or negations (`Host *`, `*.corp`,
 //! `!bastion`), `Match` blocks, options before the first `Host` line, and values that can't be
@@ -17,6 +19,7 @@ use std::path::{Path, PathBuf};
 
 use opensesh_core::hosts::{Host, LINKED_PREFIX, SOURCE_SSH_CONFIG, Source, new_id};
 use opensesh_core::paths::expand_tilde;
+use opensesh_core::tunnels::{Kind, Tunnel};
 
 /// Deepest `Include` chain followed (OpenSSH's limit).
 const MAX_DEPTH: usize = 16;
@@ -36,10 +39,117 @@ pub struct SshHost {
     pub identity_files: Vec<String>,
     /// `ProxyJump` hops, first first (`ProxyJump none` gives none).
     pub proxy_jump: Option<Vec<String>>,
+    /// `LocalForward`, `RemoteForward` and `DynamicForward` lines, in order.
+    pub forwards: Vec<SshForward>,
     /// The file of its first `Host` line.
     pub file: PathBuf,
     /// Its line number (from 1).
     pub line: usize,
+}
+
+/// A forward of a host.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SshForward {
+    /// Local, remote or dynamic.
+    pub kind: Kind,
+    /// The listening address, when given (`*` and an empty one listen everywhere).
+    pub bind_address: Option<String>,
+    /// The listening port.
+    pub bind_port: u16,
+    /// Where connections go (local and remote forwards).
+    pub destination: Option<(String, u16)>,
+    /// Its line.
+    pub line: usize,
+}
+
+/// `[address]`: the address without its brackets; anything else as it is.
+fn unbracket(text: &str) -> &str {
+    text.strip_prefix('[')
+        .and_then(|rest| rest.strip_suffix(']'))
+        .unwrap_or(text)
+}
+
+/// `host:port`, `[v6]:port`, or just `port` (no host) when `host_optional`.
+fn split_host_port(text: &str, host_optional: bool) -> Result<(Option<String>, u16), String> {
+    let port = |text: &str| {
+        text.parse::<u16>()
+            .map_err(|_| format!("{text} is not a port"))
+    };
+    if let Some(rest) = text.strip_prefix('[') {
+        let (address, after) = rest
+            .split_once(']')
+            .ok_or_else(|| format!("{text}: a bracket is not closed"))?;
+        let number = after
+            .strip_prefix(':')
+            .ok_or_else(|| format!("{text}: a port is missing"))?;
+        return Ok((Some(address.to_owned()), port(number)?));
+    }
+    match text.rsplit_once(':') {
+        Some((address, _)) if address.contains(':') => Err(format!(
+            "{text}: an IPv6 address needs brackets ([address]:port)"
+        )),
+        Some((address, number)) => Ok((Some(address.to_owned()), port(number)?)),
+        None if host_optional => Ok((None, port(text)?)),
+        None => Err(format!("{text}: expected host:port")),
+    }
+}
+
+/// The arguments of a forward line.
+fn parse_forward(kind: Kind, args: &[String], line: usize) -> Result<SshForward, String> {
+    let listen = args.first().ok_or("a forward needs a port")?;
+    if listen.starts_with('/') {
+        return Err("forwarding Unix sockets is not supported".to_owned());
+    }
+    let (bind_address, bind_port) = split_host_port(listen, true)?;
+    let bind_address = bind_address.map(|address| unbracket(&address).to_owned());
+    let destination = match (kind, args.get(1)) {
+        (Kind::Dynamic, _) => None,
+        (Kind::Remote, None) => {
+            return Err(
+                "RemoteForward without a destination (a SOCKS proxy on the server) is not supported"
+                    .to_owned(),
+            );
+        }
+        (_, None) => return Err("a destination (host:port) is missing".to_owned()),
+        (_, Some(target)) if target.starts_with('/') => {
+            return Err("forwarding to Unix sockets is not supported".to_owned());
+        }
+        (_, Some(target)) => match split_host_port(target, false)? {
+            (Some(host), port) if !host.is_empty() && port > 0 => Some((host, port)),
+            _ => return Err(format!("{target}: expected host:port")),
+        },
+    };
+    Ok(SshForward {
+        kind,
+        bind_address,
+        bind_port,
+        destination,
+        line,
+    })
+}
+
+impl SshForward {
+    /// As an OpenSesh tunnel through saved host `host`, tied to its sessions as in OpenSSH (the
+    /// forward is up while a session is).
+    #[must_use]
+    pub fn to_tunnel(&self, alias: &str, host: &str) -> Tunnel {
+        let bind_address = match self.bind_address.as_deref() {
+            None => "127.0.0.1".to_owned(),
+            Some("*") => "0.0.0.0".to_owned(),
+            Some(address) => address.to_owned(),
+        };
+        let (destination_host, destination_port) = self.destination.clone().unwrap_or_default();
+        Tunnel {
+            name: format!("{alias} {}", self.bind_port),
+            host: host.to_owned(),
+            bind_address,
+            bind_port: self.bind_port,
+            destination_host,
+            destination_port,
+            tied: true,
+            ..Tunnel::new(self.kind)
+        }
+    }
 }
 
 /// Something that was skipped.
@@ -289,6 +399,26 @@ impl Parser<'_> {
                     );
                 }
                 "include" => self.include(&args, file, line, depth, chain),
+                "localforward" | "remoteforward" | "dynamicforward" => {
+                    let Some(aliases) = self.current.clone() else {
+                        continue;
+                    };
+                    let kind = match keyword.as_str() {
+                        "localforward" => Kind::Local,
+                        "remoteforward" => Kind::Remote,
+                        _ => Kind::Dynamic,
+                    };
+                    match parse_forward(kind, &args, line) {
+                        Ok(forward) => {
+                            for alias in aliases {
+                                if let Some(&index) = self.index.get(&alias) {
+                                    self.config.hosts[index].forwards.push(forward.clone());
+                                }
+                            }
+                        }
+                        Err(message) => self.warn(file, line, message),
+                    }
+                }
                 "hostname" | "user" | "port" | "identityfile" | "proxyjump" => {
                     let Some(aliases) = self.current.clone() else {
                         if !self.warned_outside {
@@ -516,6 +646,82 @@ mod tests {
             Path::new("/home/me/.ssh/config"),
             Path::new("/home/me"),
         )
+    }
+
+    #[test]
+    fn forwards() {
+        let config = parse(
+            "Host db web\n\
+             \x20 LocalForward 5432 db.internal:5432\n\
+             \x20 LocalForward 127.0.0.2:8080 [2001:db8::1]:80\n\
+             \x20 DynamicForward *:1080\n\
+             \x20 RemoteForward [::1]:9000 localhost:3000\n\
+             \x20 LocalForward=8443 intranet:443\n\
+             \x20 LocalForward 9999 /run/app.sock\n\
+             \x20 RemoteForward 7000\n\
+             \x20 LocalForward ::1:80 x:80\n\
+             \x20 LocalForward 99999 x:80\n\
+             \x20 LocalForward 80\n\
+             Host other\n\
+             \x20 DynamicForward 1081\n",
+        );
+        let db = &config.hosts[0];
+        assert_eq!(db.forwards, config.hosts[1].forwards);
+        type Summary<'a> = (Kind, Option<&'a str>, u16, Option<(&'a str, u16)>);
+        let summary: Vec<Summary> = db
+            .forwards
+            .iter()
+            .map(|forward| {
+                (
+                    forward.kind,
+                    forward.bind_address.as_deref(),
+                    forward.bind_port,
+                    forward
+                        .destination
+                        .as_ref()
+                        .map(|(host, port)| (host.as_str(), *port)),
+                )
+            })
+            .collect();
+        assert_eq!(
+            summary,
+            [
+                (Kind::Local, None, 5432, Some(("db.internal", 5432))),
+                (
+                    Kind::Local,
+                    Some("127.0.0.2"),
+                    8080,
+                    Some(("2001:db8::1", 80))
+                ),
+                (Kind::Dynamic, Some("*"), 1080, None),
+                (Kind::Remote, Some("::1"), 9000, Some(("localhost", 3000))),
+                (Kind::Local, None, 8443, Some(("intranet", 443))),
+            ]
+        );
+        assert_eq!(config.hosts[2].forwards.len(), 1);
+        // A socket, a remote SOCKS proxy, IPv6 without brackets, a bad port, no destination.
+        let messages: Vec<&str> = config
+            .warnings
+            .iter()
+            .map(|warning| warning.message.as_str())
+            .collect();
+        assert_eq!(messages.len(), 5, "{messages:?}");
+        assert!(messages[0].contains("Unix sockets"));
+        assert!(messages[1].contains("SOCKS"));
+        assert!(messages[2].contains("brackets"));
+        assert!(messages[3].contains("not a port"));
+        assert!(messages[4].contains("destination"));
+
+        let tunnel = db.forwards[2].to_tunnel("db", "ssh_config:db");
+        assert_eq!(tunnel.kind, Kind::Dynamic);
+        assert_eq!(tunnel.bind_address, "0.0.0.0");
+        assert!(tunnel.tied && tunnel.exposed() && tunnel.problem().is_none());
+        let local = db.forwards[0].to_tunnel("db", "H1");
+        assert_eq!(
+            (local.bind_address.as_str(), local.destination_host.as_str()),
+            ("127.0.0.1", "db.internal")
+        );
+        assert!(local.problem().is_none());
     }
 
     #[test]
