@@ -609,7 +609,8 @@ Item {
         const seed = {
             layout: { pane: id },
             focused: id,
-            panes: [{ id: id, kind: connection.kind, host: connection.host ?? "", target: connection.target ?? "" }]
+            panes: [{ id: id, kind: connection.kind, host: connection.host ?? "", target: connection.target ?? "",
+                    installKey: connection.installKey ?? "" }]
         };
         selectTab(insertTab({ seed: JSON.stringify(seed) }));
         return true;
@@ -701,6 +702,12 @@ Item {
         groupEditor.close();
         sshImport.close();
         quickConnect.close();
+        installKeyDialog.close();
+    }
+
+    // Asks which public key to install on SSH host `id` (see InstallKeyDialog).
+    function installKey(id) {
+        installKeyDialog.show(id);
     }
 
     // Runs `then` (if any) once the vault is open: at once when it isn't locked, else after the
@@ -1320,6 +1327,32 @@ Item {
                 return wait("the reconnected shell", () => state() === "connected",
                             () => console.info("smoke test: an SSH pane asked for the host key and the password, connected and reconnected"));
             },
+            // "Install my key": pick a key, connect in a new tab, the key goes in.
+            () => {
+                shell.installKey("H00000");
+                if (!installKeyDialog.visible || installKeyDialog.choices.length === 0)
+                    smoke.fail("the install key dialog offers no key (" + installKeyDialog.choices.length + " keys)");
+                installKeyDialog.selected = 0;
+                installKeyDialog.install();
+                pane = shell.currentTerminal;
+                if (!pane || pane.installKey.length === 0)
+                    smoke.fail("installing a key opened no pane for it");
+                return wait("the host key card before installing a key", () => question().kind === "hostKey");
+            },
+            () => {
+                pane.terminal.answerPrompt(question().id, "trust-once", []);
+                return wait("the password prompt before installing a key", () => question().kind === "password");
+            },
+            () => {
+                pane.terminal.answerPrompt(question().id, "submit", ["right password"]);
+                return wait("the key to be installed", () => pane.keyInstallResult === "added",
+                            () => console.info("smoke test: a public key was installed on the server"));
+            },
+            () => {
+                shell.closeTab(shell.currentTab);
+                shell.selectTabById(tabId);
+                pane = shell.currentTerminal;
+            },
             () => {
                 if (!shell.connectHost("H00000", "right") || shell.currentWorkspace.paneCount !== 2)
                     smoke.fail("connecting in a split didn't split the tab");
@@ -1866,6 +1899,12 @@ Item {
 
     SshConfigImportDialog {
         id: sshImport
+    }
+
+    InstallKeyDialog {
+        id: installKeyDialog
+
+        shell: shell
     }
 
     UnlockDialog {

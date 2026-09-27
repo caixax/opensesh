@@ -2081,6 +2081,10 @@
         <translation>[Éďíť… ~~]</translation>
     </message>
     <message>
+        <source>Install my key…</source>
+        <translation>[Íñšťáĺĺ mý ķéý… ~~~~~]</translation>
+    </message>
+    <message>
         <source>Duplicate</source>
         <translation>[Ďüþĺíçáťé ~~~]</translation>
     </message>
@@ -2256,6 +2260,37 @@
     <message>
         <source>Set a master password…</source>
         <translation>[Šéť á mášťéŕ þáššŵöŕď… ~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>InstallKeyDialog</name>
+    <message>
+        <source>In an agent · %1 · %2</source>
+        <translation>[Íñ áñ áĝéñť · %1 · %2 ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Install a key on %1</source>
+        <translation>[Íñšťáĺĺ á ķéý öñ %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connect and install</source>
+        <translation>[Çöññéçť áñď íñšťáĺĺ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh connects to the host in a new tab and adds the public key to ~/.ssh/authorized_keys there, unless it is there already. Next time, the key logs you in.</source>
+        <translation>[ÖþéñŠéšĥ çöññéçťš ťö ťĥé ĥöšť íñ á ñéŵ ťáb áñď áďďš ťĥé þübĺíç ķéý ťö ~/.ššĥ/áüťĥöŕížéď_ķéýš ťĥéŕé, üñĺéšš íť íš ťĥéŕé áĺŕéáďý. Ñéxť ťímé, ťĥé ķéý ĺöĝš ýöü íñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keys</source>
+        <translation>[Ķéýš ~~]</translation>
+    </message>
+    <message>
+        <source>No keys yet: generate or import one in the keychain, or start an SSH agent with your key.</source>
+        <translation>[Ñö ķéýš ýéť: ĝéñéŕáťé öŕ ímþöŕť öñé íñ ťĥé ķéýçĥáíñ, öŕ šťáŕť áñ ŠŠĤ áĝéñť ŵíťĥ ýöüŕ ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Open the keychain</source>
+        <translation>[Öþéñ ťĥé ķéýçĥáíñ ~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -7604,6 +7639,18 @@
     <message>
         <source>A program in this terminal copied text to the clipboard.</source>
         <translation>[Å þŕöĝŕám íñ ťĥíš ťéŕmíñáĺ çöþíéď ťéxť ťö ťĥé çĺíþböáŕď. ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Your key was added on %1: it logs you in from now on.</source>
+        <translation>[Ýöüŕ ķéý ŵáš áďďéď öñ %1: íť ĺöĝš ýöü íñ ƒŕöm ñöŵ öñ. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Your key was already on %1.</source>
+        <translation>[Ýöüŕ ķéý ŵáš áĺŕéáďý öñ %1. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Your key couldn&apos;t be installed on %1: %2</source>
+        <translation>[Ýöüŕ ķéý çöüĺďñ&apos;ť bé íñšťáĺĺéď öñ %1: %2 ~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Scrollback</source>

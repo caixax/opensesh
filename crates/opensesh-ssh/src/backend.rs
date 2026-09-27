@@ -10,6 +10,9 @@
 //! never retries by itself.
 //!
 //! Progress and state also go to a [`StatusSink`] for the pane's overlays.
+//!
+//! Once connected, the OS detection and "install my key" ([`Options`]) run on channels of their
+//! own while the shell starts.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -21,6 +24,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
 use crate::SshError;
 use crate::connect::{self, Connection, Note, Notes};
+use crate::copy_id::{self, Installed};
 use crate::log::SessionLog;
 use crate::osdetect;
 use crate::prompt::Asker;
@@ -58,16 +62,32 @@ pub enum Status {
     Ended,
     /// The remote OS, as a host icon name.
     OsDetected(&'static str),
+    /// How installing the public key went ([`Options::install_key`]).
+    KeyInstall(KeyInstall),
+}
+
+/// How installing a public key went.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KeyInstall {
+    /// It was added to `~/.ssh/authorized_keys`.
+    Added,
+    /// It was there already.
+    AlreadyThere,
+    /// Why it wasn't installed.
+    Failed(String),
 }
 
 /// Where the backend reports its status. Must return at once.
 pub type StatusSink = Arc<dyn Fn(Status) + Send + Sync>;
 
 /// Extra behavior of a session.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Options {
     /// Detect the remote OS once connected.
     pub detect_os: bool,
+    /// A public key line to add to the server's `authorized_keys` once connected (the first
+    /// connection only).
+    pub install_key: Option<String>,
 }
 
 enum Command {
@@ -219,11 +239,14 @@ async fn run(
 ) {
     let mut size = session.size;
     let mut failures: u32 = 0;
+    // Installed on the first connection that gets that far.
+    let mut install_key = options.install_key.clone();
     loop {
         let ended = once(
             &spec,
             &session,
-            options,
+            options.detect_os,
+            &mut install_key,
             &asker,
             &status,
             &output,
@@ -321,7 +344,8 @@ fn lost(error: &SshError) -> Ended {
 async fn once(
     spec: &ConnectSpec,
     session: &SessionSpec,
-    options: Options,
+    detect_os: bool,
+    install_key: &mut Option<String>,
     asker: &Asker,
     status: &StatusSink,
     output: &Output,
@@ -379,11 +403,18 @@ async fn once(
         }
     };
     status(Status::Connected);
-    // The OS is detected on its own channel while the shell runs.
+    // The OS is detected, and the key installed, on channels of their own while the shell runs.
+    let key = install_key.take();
     let detection = async {
-        if options.detect_os
-            && let Some(icon) = osdetect::detect(&connection).await
-        {
+        if let Some(line) = key {
+            let result = match copy_id::install(&connection, &line).await {
+                Ok(Installed::Added) => KeyInstall::Added,
+                Ok(Installed::AlreadyThere) => KeyInstall::AlreadyThere,
+                Err(error) => KeyInstall::Failed(error.to_string()),
+            };
+            status(Status::KeyInstall(result));
+        }
+        if detect_os && let Some(icon) = osdetect::detect(&connection).await {
             status(Status::OsDetected(icon));
         }
     };

@@ -367,6 +367,7 @@ fn session_for(
         session,
         options: Options {
             detect_os: auto_icon && resolved.flag("ssh.detect_os"),
+            install_key: None,
         },
     })
 }

@@ -264,6 +264,7 @@ pub mod qobject {
         #[qproperty(QString, profile_id, cxx_name = "profileId", READ, WRITE = set_profile_id, NOTIFY = inputs_changed)]
         #[qproperty(QString, host_id, cxx_name = "hostId", READ, WRITE = set_host_id, NOTIFY = inputs_changed)]
         #[qproperty(QString, ssh_target, cxx_name = "sshTarget", READ, WRITE, NOTIFY = inputs_changed)]
+        #[qproperty(QString, install_key, cxx_name = "installKey", READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, connection, READ, NOTIFY = ssh_changed)]
         #[qproperty(QString, prompt, READ, NOTIFY = ssh_changed)]
         #[qproperty(QStringList, command, READ, WRITE, NOTIFY)]
@@ -386,6 +387,12 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "osDetected"]
         fn os_detected(self: Pin<&mut TerminalItem>, icon: QString);
+
+        /// `installKey` was installed on the server: `result` is `added`, `present` or `failed`
+        /// (with why in `detail`).
+        #[qsignal]
+        #[cxx_name = "keyInstalled"]
+        fn key_installed(self: Pin<&mut TerminalItem>, result: QString, detail: QString);
 
         /// The program ended; `code` is meaningful only when `exitCodeKnown` is true.
         #[qsignal]
@@ -735,7 +742,7 @@ fn ssh_status_json(status: &opensesh_ssh::backend::Status) -> String {
         }),
         Status::Ended => serde_json::json!({ "state": "ended" }),
         // Kept apart by the registry.
-        Status::OsDetected(_) => return String::new(),
+        Status::OsDetected(_) | Status::KeyInstall(_) => return String::new(),
     };
     value.to_string()
 }
@@ -867,6 +874,7 @@ pub struct TerminalItemRust {
     profile_id: QString,
     host_id: QString,
     ssh_target: QString,
+    install_key: QString,
     connection: QString,
     prompt: QString,
     /// The OS was already reported for this session.
@@ -974,6 +982,7 @@ impl Default for TerminalItemRust {
             profile_id: QString::default(),
             host_id: QString::default(),
             ssh_target: QString::default(),
+            install_key: QString::default(),
             connection: QString::default(),
             prompt: QString::default(),
             os_reported: false,
@@ -1454,13 +1463,20 @@ impl qobject::TerminalItem {
         }
         let host = self.host_id.to_string();
         let target = self.ssh_target.to_string();
-        if !host.is_empty() && crate::ssh::is_internal(&host) {
-            return Some(crate::ssh::for_host(&host, options.size, &options.term));
-        }
-        if host.is_empty() && !target.trim().is_empty() {
-            return Some(crate::ssh::for_target(&target, options.size, &options.term));
-        }
-        None
+        let start = if !host.is_empty() && crate::ssh::is_internal(&host) {
+            crate::ssh::for_host(&host, options.size, &options.term)
+        } else if host.is_empty() && !target.trim().is_empty() {
+            crate::ssh::for_target(&target, options.size, &options.term)
+        } else {
+            return None;
+        };
+        let key = self.install_key.to_string();
+        Some(start.map(|mut start| {
+            if !key.trim().is_empty() {
+                start.options.install_key = Some(key);
+            }
+            start
+        }))
     }
 
     /// Mirrors the SSH connection's state and question into `connection` and `prompt`.
@@ -1473,6 +1489,16 @@ impl qobject::TerminalItem {
         {
             self.as_mut().rust_mut().os_reported = true;
             self.as_mut().os_detected(QString::from(icon));
+        }
+        if let Some(result) = entry.take_key_install() {
+            use opensesh_ssh::backend::KeyInstall;
+            let (result, detail) = match result {
+                KeyInstall::Added => ("added", String::new()),
+                KeyInstall::AlreadyThere => ("present", String::new()),
+                KeyInstall::Failed(why) => ("failed", why),
+            };
+            self.as_mut()
+                .key_installed(QString::from(result), QString::from(&detail));
         }
         let connection = view
             .status

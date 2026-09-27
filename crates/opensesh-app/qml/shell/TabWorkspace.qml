@@ -158,6 +158,8 @@ Item {
             host: host,
             target: target,
             commandJson: JSON.stringify(command),
+            // Only the pane that asked for it: never saved with the workspace.
+            installKey: pane.installKey || "",
             label: label,
             profile: profile,
             directory: pane.directory || "",

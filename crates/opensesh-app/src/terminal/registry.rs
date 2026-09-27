@@ -16,7 +16,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
-use opensesh_ssh::backend::Status as SshStatus;
+use opensesh_ssh::backend::{KeyInstall, Status as SshStatus};
 use opensesh_ssh::prompt::{Answer, Asker, Prompt, Request};
 use opensesh_term::backend::{self, BackendError, TermSize};
 use opensesh_term::palette::Palette;
@@ -115,6 +115,7 @@ struct SshState {
     active: bool,
     status: Option<SshStatus>,
     os: Option<&'static str>,
+    key_install: Option<KeyInstall>,
     requests: VecDeque<Request>,
 }
 
@@ -248,6 +249,11 @@ impl SessionEntry {
                 .front()
                 .map(|request| (request.id, request.prompt.clone())),
         })
+    }
+
+    /// How installing the public key went, once (the next call gets `None`).
+    pub fn take_key_install(&self) -> Option<KeyInstall> {
+        lock(&self.state).ssh.key_install.take()
     }
 
     /// Answers question `id` (the connection goes on). `false` when it is no longer waiting.
@@ -493,6 +499,7 @@ fn start_ssh(
             let mut state = lock(&state);
             match status {
                 SshStatus::OsDetected(icon) => state.ssh.os = Some(icon),
+                SshStatus::KeyInstall(result) => state.ssh.key_install = Some(result),
                 status => state.ssh.status = Some(status),
             }
             state.events.ssh = true;

@@ -14,8 +14,9 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use opensesh_ssh::backend::{self, Options, Status};
+use opensesh_ssh::backend::{self, KeyInstall, Options, Status};
 use opensesh_ssh::connect::{self, quiet};
+use opensesh_ssh::copy_id::{self, Installed};
 use opensesh_ssh::prompt::{Answer, Asker, HostKeyKind, Prompt, Request};
 use opensesh_ssh::spec::{
     AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, Reconnect, SessionSpec,
@@ -376,8 +377,25 @@ async fn through_two_jump_hosts() {
     let connection = connect::connect(&spec(dir.path(), hops), &answers.asker, &sink)
         .await
         .unwrap();
-    // The OS is detected on the target, through both jumps.
+    // The OS is detected on the target, through both jumps, and a key installed there once.
     assert_eq!(osdetect::detect(&connection).await, Some("os-debian"));
+    assert_eq!(
+        copy_id::install(&connection, INSTALLED).await.unwrap(),
+        Installed::Added
+    );
+    assert_eq!(
+        copy_id::install(
+            &connection,
+            &format!(
+                "{INSTALLED}
+"
+            )
+        )
+        .await
+        .unwrap(),
+        Installed::AlreadyThere
+    );
+    assert!(copy_id::install(&connection, "garbage").await.is_err());
     connection.close().await;
     // Three host keys asked and remembered.
     assert_eq!(answers.asked.lock().unwrap().len(), 3);
@@ -496,11 +514,13 @@ fn read_until(
 #[test]
 fn the_terminal_backend_reconnects() {
     let runtime = opensesh_ssh::runtime().unwrap();
-    let port = runtime.block_on(serve(Rules {
+    let rules = Rules {
         password: true,
         droppable: true,
         ..Rules::default()
-    }));
+    };
+    let authorized = Arc::clone(&rules.authorized_keys);
+    let port = runtime.block_on(serve(rules));
     let dir = tempfile::tempdir().unwrap();
     // A key trusted once isn't asked about again when the connection comes back.
     let answers = script(|prompt| match prompt {
@@ -529,7 +549,10 @@ fn the_terminal_backend_reconnects() {
     let (backend, events) = backend::start(
         spec(dir.path(), vec![hop(port, password_plan(Some(PASSWORD)))]),
         session,
-        Options { detect_os: true },
+        Options {
+            detect_os: true,
+            install_key: Some(INSTALLED.to_owned()),
+        },
         answers.asker,
         sink,
     )
@@ -568,4 +591,17 @@ fn the_terminal_backend_reconnects() {
     assert!(os_seen.load(Ordering::SeqCst), "{statuses:?}");
     assert_eq!(asked.lock().unwrap().len(), 1);
     assert!(!dir.path().join("known_hosts").exists());
+    // The key went in once, on the first connection only.
+    assert_eq!(*authorized.lock().unwrap(), vec![INSTALLED.to_owned()]);
+    assert_eq!(
+        statuses
+            .iter()
+            .filter(|status| matches!(status, Status::KeyInstall(_)))
+            .collect::<Vec<_>>(),
+        vec![&Status::KeyInstall(KeyInstall::Added)]
+    );
 }
+
+/// The public key "install my key" adds in the backend test.
+const INSTALLED: &str =
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC6tmVU1VE59P7TYx6UJYcZkhy7FRiLjhH6gdK9Sayyd me@laptop";
