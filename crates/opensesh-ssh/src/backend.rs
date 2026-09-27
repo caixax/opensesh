@@ -419,7 +419,14 @@ async fn once(
         }
     };
     let (result, ()) = tokio::join!(
-        shell(&connection, session, output, commands, size),
+        shell(
+            &connection,
+            session,
+            spec.agent_forwarding,
+            output,
+            commands,
+            size
+        ),
         detection
     );
     let ended = result.unwrap_or_else(|error| lost(&error));
@@ -431,6 +438,7 @@ async fn once(
 async fn shell(
     connection: &Connection,
     session: &SessionSpec,
+    agent_forwarding: bool,
     output: &Output,
     commands: &mut UnboundedReceiver<Command>,
     size: &mut TermSize,
@@ -452,6 +460,13 @@ async fn shell(
         )
         .await
         .map_err(|_| refused("a terminal (PTY)"))?;
+    // The server then opens a channel to the agent for each use (ClientHandler carries it).
+    if agent_forwarding {
+        channel
+            .agent_forward(false)
+            .await
+            .map_err(|_| refused("agent forwarding"))?;
+    }
     for (name, value) in &session.env {
         // Servers refuse variables they don't accept (AcceptEnv); that isn't an error.
         let _ = channel.set_env(false, name.as_str(), value.as_str()).await;
