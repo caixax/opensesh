@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
-use opensesh_core::snippets::{Part, Snippet, Step, render};
+use opensesh_core::snippets::{Part, Snippet, Step, parse};
 use opensesh_ssh::log::Cleaner;
 use opensesh_term::session::{Tap, TapId};
 use secrecy::{ExposeSecret, SecretString};
@@ -142,40 +142,69 @@ async fn fetch_secrets(names: &[String]) -> Result<HashMap<String, SecretString>
     Ok(out)
 }
 
-/// Types `text` (filled in) into pane `pane`; `Err` with the missing part.
+/// Types `text` (filled in) into pane `pane`; `Err` with the missing part. The filled-in text,
+/// which may hold a secret, is built once in a buffer of its final size and wiped after.
 fn type_text(
     pane: i32,
     text: &str,
     values: &HashMap<String, String>,
     secrets: &HashMap<String, SecretString>,
 ) -> Result<(), Outcome> {
-    let filled = render(text, |part| match part {
-        Part::Variable(name) => values.get(name).cloned(),
-        Part::Secret(name) => secrets
-            .get(name)
-            .map(|secret| secret.expose_secret().to_owned()),
-        Part::Text(_) => None,
-    })
-    .map_err(|part| Outcome::Stopped {
-        code: "missing",
-        detail: match part {
-            Part::Variable(name) | Part::Secret(name) | Part::Text(name) => name,
-        },
-    })?;
-    let filled = Zeroizing::new(filled);
-    // A newline is Enter.
-    let bytes = Zeroizing::new(
-        filled
-            .replace("\r\n", "\r")
-            .replace('\n', "\r")
-            .into_bytes(),
-    );
+    let bytes = typed_bytes(text, values, secrets)?;
     let entry = registry::get(pane).ok_or(Outcome::Stopped {
         code: "gone",
         detail: String::new(),
     })?;
     entry.session().write(&bytes);
     Ok(())
+}
+
+/// What typing `text` sends: its variables and secrets filled in, and a newline (or `\r\n`) as
+/// Enter. No copy of a secret is left behind: the pieces are borrowed and the buffer, sized once,
+/// is wiped when dropped.
+fn typed_bytes(
+    text: &str,
+    values: &HashMap<String, String>,
+    secrets: &HashMap<String, SecretString>,
+) -> Result<Zeroizing<Vec<u8>>, Outcome> {
+    let parts = parse(text);
+    let mut pieces: Vec<&[u8]> = Vec::with_capacity(parts.len());
+    for part in &parts {
+        let piece = match part {
+            Part::Text(plain) => Some(plain.as_bytes()),
+            Part::Variable(name) => values.get(name).map(String::as_bytes),
+            Part::Secret(name) => secrets
+                .get(name)
+                .map(|secret| secret.expose_secret().as_bytes()),
+        };
+        match piece {
+            Some(piece) => pieces.push(piece),
+            None => {
+                return Err(Outcome::Stopped {
+                    code: "missing",
+                    detail: match part {
+                        Part::Variable(name) | Part::Secret(name) | Part::Text(name) => {
+                            name.clone()
+                        }
+                    },
+                });
+            }
+        }
+    }
+    // Never longer than the pieces: no reallocation leaves a copy behind.
+    let mut bytes = Zeroizing::new(Vec::with_capacity(
+        pieces.iter().map(|piece| piece.len()).sum(),
+    ));
+    let mut after_cr = false;
+    for byte in pieces.into_iter().flatten().copied() {
+        match byte {
+            b'\n' if after_cr => {}
+            b'\n' => bytes.push(b'\r'),
+            other => bytes.push(other),
+        }
+        after_cr = byte == b'\r';
+    }
+    Ok(bytes)
 }
 
 async fn run_in(
@@ -400,5 +429,24 @@ mod tests {
             ]
         );
         assert!(steps_of(&[]).is_empty());
+    }
+
+    #[test]
+    fn typed_text_fills_in_its_values_and_presses_enter_for_newlines() {
+        let values = HashMap::from([("service".to_owned(), "nginx".to_owned())]);
+        let secrets = HashMap::from([("db".to_owned(), SecretString::from("s3cret"))]);
+        let typed = |text: &str| typed_bytes(text, &values, &secrets).map(|bytes| bytes.to_vec());
+        assert_eq!(
+            typed("restart {{service}}\r\n{{secret:db}}\nlast\r").ok(),
+            Some(b"restart nginx\rs3cret\rlast\r".to_vec())
+        );
+        assert!(matches!(
+            typed("{{other}}"),
+            Err(Outcome::Stopped { code: "missing", detail }) if detail == "other"
+        ));
+        assert!(matches!(
+            typed("{{secret:web}}"),
+            Err(Outcome::Stopped { code: "missing", detail }) if detail == "web"
+        ));
     }
 }
