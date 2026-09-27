@@ -54,6 +54,13 @@ pub mod qobject {
         #[qproperty(QString, ssh_log, cxx_name = "sshLog", READ = ssh_log, WRITE = set_ssh_log, NOTIFY = settings_changed)]
         #[qproperty(QString, ssh_logs_dir, cxx_name = "sshLogsDir", READ = ssh_logs_dir, WRITE = set_ssh_logs_dir, NOTIFY = settings_changed)]
         #[qproperty(QString, ssh_logs_folder, cxx_name = "sshLogsFolder", READ = ssh_logs_folder, NOTIFY = settings_changed)]
+        #[qproperty(i32, sftp_parallel, cxx_name = "sftpParallel", READ = sftp_parallel, WRITE = set_sftp_parallel, NOTIFY = settings_changed)]
+        #[qproperty(QString, sftp_policy, cxx_name = "sftpPolicy", READ = sftp_policy, WRITE = set_sftp_policy, NOTIFY = settings_changed)]
+        #[qproperty(bool, sftp_preserve_times, cxx_name = "sftpPreserveTimes", READ = sftp_preserve_times, WRITE = set_sftp_preserve_times, NOTIFY = settings_changed)]
+        #[qproperty(bool, sftp_preserve_permissions, cxx_name = "sftpPreservePermissions", READ = sftp_preserve_permissions, WRITE = set_sftp_preserve_permissions, NOTIFY = settings_changed)]
+        #[qproperty(bool, sftp_show_hidden, cxx_name = "sftpShowHidden", READ = sftp_show_hidden, WRITE = set_sftp_show_hidden, NOTIFY = settings_changed)]
+        #[qproperty(QString, sftp_editor_command, cxx_name = "sftpEditorCommand", READ = sftp_editor_command, WRITE = set_sftp_editor_command, NOTIFY = settings_changed)]
+        #[qproperty(bool, sftp_confirm_delete, cxx_name = "sftpConfirmDelete", READ = sftp_confirm_delete, WRITE = set_sftp_confirm_delete, NOTIFY = settings_changed)]
         #[qproperty(QString, config_path, cxx_name = "configPath", READ = config_path, NOTIFY = status_changed)]
         #[qproperty(bool, read_only, cxx_name = "readOnly", READ = read_only, NOTIFY = status_changed)]
         #[qproperty(QString, read_only_reason, cxx_name = "readOnlyReason", READ = read_only_reason, NOTIFY = status_changed)]
@@ -139,6 +146,20 @@ pub mod qobject {
         fn set_ssh_logs_dir(self: Pin<&mut Self>, value: QString);
         /// The folder session logs actually go to (the default one when `sshLogsDir` is empty).
         fn ssh_logs_folder(self: &Self) -> QString;
+        fn sftp_parallel(self: &Self) -> i32;
+        fn set_sftp_parallel(self: Pin<&mut Self>, value: i32);
+        fn sftp_policy(self: &Self) -> QString;
+        fn set_sftp_policy(self: Pin<&mut Self>, value: QString);
+        fn sftp_preserve_times(self: &Self) -> bool;
+        fn set_sftp_preserve_times(self: Pin<&mut Self>, value: bool);
+        fn sftp_preserve_permissions(self: &Self) -> bool;
+        fn set_sftp_preserve_permissions(self: Pin<&mut Self>, value: bool);
+        fn sftp_show_hidden(self: &Self) -> bool;
+        fn set_sftp_show_hidden(self: Pin<&mut Self>, value: bool);
+        fn sftp_editor_command(self: &Self) -> QString;
+        fn set_sftp_editor_command(self: Pin<&mut Self>, value: QString);
+        fn sftp_confirm_delete(self: &Self) -> bool;
+        fn set_sftp_confirm_delete(self: Pin<&mut Self>, value: bool);
         fn config_path(self: &Self) -> QString;
         fn read_only(self: &Self) -> bool;
         fn read_only_reason(self: &Self) -> QString;
@@ -169,7 +190,7 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
 use opensesh_core::config::{
     self, Accent, Config, Decorations, LastTabAction, RailPosition, SessionLogMode,
-    SidePanelPosition, SshClient, SshSettings, TabsPosition,
+    SidePanelPosition, SshClient, SshSettings, TabsPosition, TransferPolicy,
 };
 use opensesh_core::fsutil;
 use opensesh_core::theme::{Density, ThemeMode};
@@ -312,6 +333,7 @@ impl qobject::AppSettings {
     /// Gives the settings other parts of the app read to them (the SSH defaults of every host).
     fn apply_outside(&self) {
         crate::ssh::apply_settings(&self.config.ssh);
+        crate::sftp::apply_settings(&self.config.sftp);
     }
 
     /// Parses a choice setting coming from QML; logs and ignores unknown values.
@@ -496,6 +518,7 @@ impl qobject::AppSettings {
             "windowDecorations" => names(Decorations::ALL, Decorations::as_str),
             "sshBackend" => names(SshClient::ALL, SshClient::as_str),
             "sshLog" => names(SessionLogMode::ALL, SessionLogMode::as_str),
+            "sftpPolicy" => names(TransferPolicy::ALL, TransferPolicy::as_str),
             other => {
                 tracing::warn!(key = other, "choices() asked for an unknown setting");
                 Vec::new()
@@ -640,6 +663,58 @@ impl qobject::AppSettings {
             ),
             None => QString::default(),
         }
+    }
+    pub fn sftp_parallel(&self) -> i32 {
+        i32::try_from(self.config.sftp.parallel).unwrap_or(3)
+    }
+    pub fn set_sftp_parallel(self: Pin<&mut Self>, value: i32) {
+        match u32::try_from(value)
+            .ok()
+            .filter(|n| (1..=config::MAX_PARALLEL_TRANSFERS).contains(n))
+        {
+            Some(parallel) => self.change(|c| replace(&mut c.sftp.parallel, parallel)),
+            None => {
+                tracing::warn!(value, "ignoring an invalid number of parallel transfers");
+                self.change(|_| false);
+            }
+        }
+    }
+    pub fn sftp_policy(&self) -> QString {
+        qstring(self.config.sftp.policy.as_str())
+    }
+    pub fn set_sftp_policy(self: Pin<&mut Self>, value: QString) {
+        self.set_choice("sftpPolicy", &value, |c| &mut c.sftp.policy);
+    }
+    pub fn sftp_preserve_times(&self) -> bool {
+        self.config.sftp.preserve_times
+    }
+    pub fn set_sftp_preserve_times(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.sftp.preserve_times);
+    }
+    pub fn sftp_preserve_permissions(&self) -> bool {
+        self.config.sftp.preserve_permissions
+    }
+    pub fn set_sftp_preserve_permissions(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.sftp.preserve_permissions);
+    }
+    pub fn sftp_show_hidden(&self) -> bool {
+        self.config.sftp.show_hidden
+    }
+    pub fn set_sftp_show_hidden(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.sftp.show_hidden);
+    }
+    pub fn sftp_editor_command(&self) -> QString {
+        qstring(&self.config.sftp.editor_command)
+    }
+    pub fn set_sftp_editor_command(self: Pin<&mut Self>, value: QString) {
+        let text = value.to_string().trim().to_owned();
+        self.change(|c| replace(&mut c.sftp.editor_command, text));
+    }
+    pub fn sftp_confirm_delete(&self) -> bool {
+        self.config.sftp.confirm_delete
+    }
+    pub fn set_sftp_confirm_delete(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.sftp.confirm_delete);
     }
     pub fn restore_sessions(&self) -> bool {
         self.config.general.restore_sessions

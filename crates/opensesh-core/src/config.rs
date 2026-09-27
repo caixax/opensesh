@@ -118,6 +118,25 @@ choice! {
     default Off
 }
 
+choice! {
+    /// What a transfer does with a file already at the destination (`[sftp] policy`).
+    TransferPolicy {
+        /// Ask, file by file (or once for all).
+        Ask => "ask",
+        /// Replace it.
+        Overwrite => "overwrite",
+        /// Replace it when the source is newer.
+        Newer => "newer",
+        /// Continue a shorter file.
+        Resume => "resume",
+        /// Leave it.
+        Skip => "skip",
+        /// Copy under a new name.
+        Rename => "rename",
+    }
+    default Ask
+}
+
 /// Accent color setting.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Accent {
@@ -265,6 +284,43 @@ pub const MAX_LOCK_AFTER_MINUTES: u32 = 24 * 60;
 /// Longest SSH keepalive interval, in seconds (an hour).
 pub const MAX_KEEPALIVE_SECS: u32 = 3600;
 
+/// Most files a transfer queue copies at once.
+pub const MAX_PARALLEL_TRANSFERS: u32 = 16;
+
+/// `[sftp]` settings (Sprint 8): the file panes and the transfer queue.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SftpSettings {
+    /// Files copied at once (1 to [`MAX_PARALLEL_TRANSFERS`]).
+    pub parallel: u32,
+    /// Files already at the destination.
+    pub policy: TransferPolicy,
+    /// Keep modification times.
+    pub preserve_times: bool,
+    /// Keep permission bits.
+    pub preserve_permissions: bool,
+    /// Show files whose name starts with a dot.
+    pub show_hidden: bool,
+    /// The command that opens a file to edit (`{file}` is its path); empty for the system's
+    /// editor.
+    pub editor_command: String,
+    /// Ask before deleting.
+    pub confirm_delete: bool,
+}
+
+impl Default for SftpSettings {
+    fn default() -> Self {
+        Self {
+            parallel: 3,
+            policy: TransferPolicy::default(),
+            preserve_times: true,
+            preserve_permissions: false,
+            show_hidden: false,
+            editor_command: String::new(),
+            confirm_delete: true,
+        }
+    }
+}
+
 /// `[ssh]` settings (Sprint 7): what SSH hosts use when neither they nor their groups set it,
 /// and where session logs go.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -370,6 +426,8 @@ pub struct Config {
     pub security: Security,
     /// `[ssh]`.
     pub ssh: SshSettings,
+    /// `[sftp]`.
+    pub sftp: SftpSettings,
     /// What this version doesn't know, written back as it was read so a save never deletes a
     /// newer OpenSesh's settings: unknown top-level keys and tables as they are, and the unknown
     /// keys of `[general]` and `[appearance]` as tables under those names. Known keys always
@@ -642,6 +700,36 @@ impl Config {
             reader.string(&mut ssh, "ssh.logs_dir", &mut s.logs_dir);
             reader.unknown(&ssh, "ssh");
         }
+        let mut sftp = reader.section(&mut root, "sftp");
+        {
+            let s = &mut config.sftp;
+            let mut parallel = s.parallel;
+            reader.bounded(
+                &mut sftp,
+                "sftp.parallel",
+                &mut parallel,
+                MAX_PARALLEL_TRANSFERS,
+            );
+            if parallel == 0 {
+                reader.warn(
+                    "sftp.parallel",
+                    "0 is not allowed, keeping the default".to_owned(),
+                );
+            } else {
+                s.parallel = parallel;
+            }
+            reader.choice(&mut sftp, "sftp.policy", &mut s.policy);
+            reader.boolean(&mut sftp, "sftp.preserve_times", &mut s.preserve_times);
+            reader.boolean(
+                &mut sftp,
+                "sftp.preserve_permissions",
+                &mut s.preserve_permissions,
+            );
+            reader.boolean(&mut sftp, "sftp.show_hidden", &mut s.show_hidden);
+            reader.string(&mut sftp, "sftp.editor_command", &mut s.editor_command);
+            reader.boolean(&mut sftp, "sftp.confirm_delete", &mut s.confirm_delete);
+            reader.unknown(&sftp, "sftp");
+        }
         reader.unknown(&root, "");
 
         // Every known key was taken out above (valid or not): what is left is kept as is.
@@ -652,6 +740,7 @@ impl Config {
             ("terminal", terminal),
             ("security", security),
             ("ssh", ssh),
+            ("sftp", sftp),
         ] {
             if !rest.is_empty() {
                 extra.insert(name.to_owned(), Value::Table(rest));
@@ -734,6 +823,22 @@ impl Config {
             .unwrap_or_default();
         ssh.insert("logs_dir".into(), Value::String(self.ssh.logs_dir.clone()));
 
+        let s = &self.sftp;
+        let mut sftp = Table::new();
+        sftp.insert("parallel".into(), Value::Integer(i64::from(s.parallel)));
+        sftp.insert("policy".into(), Value::String(s.policy.as_str().into()));
+        sftp.insert("preserve_times".into(), Value::Boolean(s.preserve_times));
+        sftp.insert(
+            "preserve_permissions".into(),
+            Value::Boolean(s.preserve_permissions),
+        );
+        sftp.insert("show_hidden".into(), Value::Boolean(s.show_hidden));
+        sftp.insert(
+            "editor_command".into(),
+            Value::String(s.editor_command.clone()),
+        );
+        sftp.insert("confirm_delete".into(), Value::Boolean(s.confirm_delete));
+
         // Unknown settings go back where they were read from; known keys take precedence.
         let keep_unknown = |known: &mut Table, unknown: &Table| {
             for (key, value) in unknown {
@@ -748,8 +853,10 @@ impl Config {
                 ("terminal", Value::Table(unknown)) => keep_unknown(&mut terminal, unknown),
                 ("security", Value::Table(unknown)) => keep_unknown(&mut security, unknown),
                 ("ssh", Value::Table(unknown)) => keep_unknown(&mut ssh, unknown),
+                ("sftp", Value::Table(unknown)) => keep_unknown(&mut sftp, unknown),
                 (
-                    "schema_version" | "general" | "appearance" | "terminal" | "security" | "ssh",
+                    "schema_version" | "general" | "appearance" | "terminal" | "security" | "ssh"
+                    | "sftp",
                     _,
                 ) => {}
                 _ => {
@@ -763,6 +870,7 @@ impl Config {
         root.insert("terminal".into(), Value::Table(terminal));
         root.insert("security".into(), Value::Table(security));
         root.insert("ssh".into(), Value::Table(ssh));
+        root.insert("sftp".into(), Value::Table(sftp));
         format!("{HEADER}\n{root}")
     }
 }
@@ -1209,6 +1317,35 @@ mod tests {
         ] {
             let (config, warnings, _) = Config::from_toml_str(&format!("[ssh]\n{bad}\n")).unwrap();
             assert_eq!(config.ssh, SshSettings::default(), "{bad}");
+            assert_eq!(warnings.len(), 1, "{bad}");
+        }
+    }
+
+    #[test]
+    fn sftp_settings() {
+        let (config, warnings, _) = Config::from_toml_str("").unwrap();
+        assert!(warnings.is_empty());
+        assert_eq!(config.sftp, SftpSettings::default());
+        let text = "[sftp]\nparallel = 8\npolicy = \"resume\"\npreserve_times = false\n\
+                    preserve_permissions = true\nshow_hidden = true\n\
+                    editor_command = \"code --wait {file}\"\nconfirm_delete = false\n";
+        let (config, warnings, _) = Config::from_toml_str(text).unwrap();
+        assert!(warnings.is_empty(), "{warnings:?}");
+        assert_eq!(config.sftp.parallel, 8);
+        assert_eq!(config.sftp.policy, TransferPolicy::Resume);
+        assert!(!config.sftp.preserve_times && config.sftp.preserve_permissions);
+        assert!(config.sftp.show_hidden && !config.sftp.confirm_delete);
+        assert_eq!(config.sftp.editor_command, "code --wait {file}");
+        let (again, _, _) = Config::from_toml_str(&config.to_toml_string()).unwrap();
+        assert_eq!(again, config);
+        for bad in [
+            "parallel = 0",
+            "parallel = 17",
+            "policy = \"always\"",
+            "show_hidden = 1",
+        ] {
+            let (config, warnings, _) = Config::from_toml_str(&format!("[sftp]\n{bad}\n")).unwrap();
+            assert_eq!(config.sftp, SftpSettings::default(), "{bad}");
             assert_eq!(warnings.len(), 1, "{bad}");
         }
     }

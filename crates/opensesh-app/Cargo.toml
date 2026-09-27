@@ -20,6 +20,7 @@ anyhow.workspace = true
 cxx.workspace = true
 cxx-qt.workspace = true
 cxx-qt-lib = { workspace = true, features = ["qt_gui", "qt_qml", "qt_quickcontrols"] }
+base64ct.workspace = true
 opensesh-core.workspace = true
 opensesh-import.workspace = true
 opensesh-term.workspace = true

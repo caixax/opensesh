@@ -13,6 +13,7 @@ mod logging;
 mod platform;
 mod saves;
 mod services;
+mod sftp;
 mod ssh;
 mod terminal;
 mod update;

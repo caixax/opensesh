@@ -16,7 +16,8 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
-use opensesh_ssh::backend::{KeyInstall, Status as SshStatus};
+use opensesh_ssh::backend::{KeyInstall, Live, Status as SshStatus};
+use opensesh_ssh::connect::Connection;
 use opensesh_ssh::prompt::{Answer, Asker, Prompt, Request};
 use opensesh_term::backend::{self, BackendError, TermSize};
 use opensesh_term::palette::Palette;
@@ -116,6 +117,7 @@ struct SshState {
     status: Option<SshStatus>,
     os: Option<&'static str>,
     key_install: Option<KeyInstall>,
+    live: Option<Live>,
     requests: VecDeque<Request>,
 }
 
@@ -128,6 +130,8 @@ pub struct SshView {
     pub prompt: Option<(u64, Prompt)>,
     /// The remote OS, as a host icon name, once found.
     pub os: Option<&'static str>,
+    /// The connection while it is up (other channels can use it).
+    pub live: Option<Live>,
 }
 
 /// Shared between the engine's callback and the GUI thread.
@@ -243,12 +247,23 @@ impl SessionEntry {
         state.ssh.active.then(|| SshView {
             status: state.ssh.status.clone(),
             os: state.ssh.os,
+            live: state.ssh.live.clone(),
             prompt: state
                 .ssh
                 .requests
                 .front()
                 .map(|request| (request.id, request.prompt.clone())),
         })
+    }
+
+    /// The SSH connection of this session while it is up.
+    #[must_use]
+    pub fn ssh_connection(&self) -> Option<Arc<Connection>> {
+        lock(&self.state)
+            .ssh
+            .live
+            .as_ref()
+            .map(|live| Arc::clone(&live.0))
     }
 
     /// How installing the public key went, once (the next call gets `None`).
@@ -500,7 +515,13 @@ fn start_ssh(
             match status {
                 SshStatus::OsDetected(icon) => state.ssh.os = Some(icon),
                 SshStatus::KeyInstall(result) => state.ssh.key_install = Some(result),
-                status => state.ssh.status = Some(status),
+                SshStatus::Live(live) => state.ssh.live = Some(live),
+                status => {
+                    if !matches!(status, SshStatus::Connected) {
+                        state.ssh.live = None;
+                    }
+                    state.ssh.status = Some(status);
+                }
             }
             state.events.ssh = true;
             state.wake();

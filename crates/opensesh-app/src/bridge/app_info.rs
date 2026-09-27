@@ -41,12 +41,18 @@ pub mod qobject {
         type AppInfo = super::AppInfoRust;
 
         /// Smoke tests only: starts the in-process SSH test server (user `tester`, password
-        /// `right password`, jumps allowed, "drop" drops the connection) on 127.0.0.1 and returns
-        /// its port; 0 in normal runs or when it can't start. From then on every SSH connection
-        /// of the smoke test goes to it.
+        /// `right password`, jumps allowed, "drop" drops the connection, SFTP over
+        /// `testFolder()/remote`) on 127.0.0.1 and returns its port; 0 in normal runs or when it
+        /// can't start. From then on every SSH connection of the smoke test goes to it.
         #[qinvokable]
         #[cxx_name = "startSshTestServer"]
         fn start_ssh_test_server(self: &Self) -> i32;
+
+        /// Smoke tests only: a temporary folder with `local` and `remote` sample files (the
+        /// server's side), made fresh by `startSshTestServer`; empty in normal runs.
+        #[qinvokable]
+        #[cxx_name = "testFolder"]
+        fn test_folder(self: &Self) -> QString;
     }
 }
 
@@ -81,10 +87,15 @@ impl qobject::AppInfo {
         let Some(runtime) = opensesh_ssh::runtime() else {
             return 0;
         };
+        let folder = test_folder_path();
+        if let Err(error) = sample_files(&folder) {
+            tracing::warn!("no sample files for the smoke test: {error}");
+        }
         let rules = opensesh_ssh::testing::Rules {
             password: true,
             jump: true,
             droppable: true,
+            sftp_root: Some(folder.join("remote")),
             ..opensesh_ssh::testing::Rules::default()
         };
         // Binding a local port takes no time: the smoke test waits for it.
@@ -99,6 +110,65 @@ impl qobject::AppInfo {
             }
         }
     }
+}
+
+impl qobject::AppInfo {
+    /// See the bridge declaration.
+    pub fn test_folder(&self) -> QString {
+        if is_smoke_test() {
+            QString::from(&test_folder_path().display().to_string())
+        } else {
+            QString::default()
+        }
+    }
+}
+
+/// The smoke test's temporary folder (one per process).
+fn test_folder_path() -> PathBuf {
+    std::env::temp_dir().join(format!("opensesh-smoke-{}", std::process::id()))
+}
+
+/// Fresh sample files for the smoke test: a few on each side, and a folder of 300 files.
+fn sample_files(folder: &Path) -> std::io::Result<()> {
+    if folder.exists() {
+        std::fs::remove_dir_all(folder)?;
+    }
+    let remote = folder.join("remote");
+    let local = folder.join("local");
+    std::fs::create_dir_all(remote.join("docs"))?;
+    std::fs::create_dir_all(remote.join("logs"))?;
+    std::fs::create_dir_all(local.join("project"))?;
+    std::fs::write(
+        remote.join("docs").join("readme.txt"),
+        "OpenSesh smoke test
+",
+    )?;
+    std::fs::write(
+        remote.join(".profile"),
+        "# hidden
+",
+    )?;
+    for n in 0..300 {
+        std::fs::write(
+            remote.join("logs").join(format!("app-{n:03}.log")),
+            format!(
+                "line {n}
+"
+            ),
+        )?;
+    }
+    std::fs::write(
+        local.join("project").join("main.rs"),
+        "fn main() {}
+",
+    )?;
+    std::fs::write(
+        local.join("notes.txt"),
+        "upload me
+"
+        .repeat(1000),
+    )?;
+    Ok(())
 }
 
 /// Whether this run is a `--smoke-test`.

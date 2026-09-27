@@ -64,6 +64,27 @@ pub enum Status {
     OsDetected(&'static str),
     /// How installing the public key went ([`Options::install_key`]).
     KeyInstall(KeyInstall),
+    /// The connection is up: other channels can use it (SFTP) until the next status.
+    Live(Live),
+}
+
+/// A session's connection, shared with what opens other channels on it (the SFTP side panel).
+/// Two are equal when they are the same connection.
+#[derive(Clone)]
+pub struct Live(pub Arc<Connection>);
+
+impl PartialEq for Live {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Eq for Live {}
+
+impl std::fmt::Debug for Live {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Live").finish_non_exhaustive()
+    }
 }
 
 /// How installing a public key went.
@@ -402,7 +423,9 @@ async fn once(
             },
         }
     };
+    let connection = Arc::new(connection);
     status(Status::Connected);
+    status(Status::Live(Live(Arc::clone(&connection))));
     // The OS is detected, and the key installed, on channels of their own while the shell runs.
     let key = install_key.take();
     let detection = async {
