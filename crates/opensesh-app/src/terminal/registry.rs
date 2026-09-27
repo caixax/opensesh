@@ -397,8 +397,8 @@ fn hermetic_shell() -> ShellCommand {
 
 /// Starts a local shell with the engine defaults (ADR 0012) and the given size and colors.
 fn start_local(options: LocalOptions, notify: Notify) -> Result<Session, StartError> {
-    // The smoke test never runs a host's program (no network): the hermetic shell stands in.
-    let command = if crate::bridge::app_info::is_smoke_test() {
+    // A test run never runs a host's program (no network): the hermetic shell stands in.
+    let command = if crate::bridge::app_info::is_test_run() {
         hermetic_shell()
     } else if let Some((program, args)) = &options.program {
         args.iter()

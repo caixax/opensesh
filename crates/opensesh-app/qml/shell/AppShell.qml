@@ -41,7 +41,8 @@ pragma ComponentBehavior: Bound
 // togglePalette(), toggleNotifications(), toggleMaximize(), toggleFullScreen(),
 // cycleRegion(step), shortcutText(actionId), smokeSteps(smoke), prepareScreenshot(),
 // prepareSettingsScreenshot(), prepareTerminalScreenshot(), prepareHostsScreenshot(),
-// prepareKeychainScreenshot(), prepareSshScreenshot().
+// prepareKeychainScreenshot(), prepareSshScreenshot(), prepareSftpScreenshots(done),
+// prepareSftpScreenshot(page).
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -1592,6 +1593,114 @@ Item {
         selectTab(insertTab({ startSession: false, seed: JSON.stringify(seed) }));
     }
 
+    // --screenshots: what the SFTP pages show, made for real against the in-process test server
+    // (a screenshot run never reaches the network): the SFTP view with this computer's sample
+    // folder and the saved host H00000, a finished and a failed transfer in the queue, and an SSH
+    // tab to H00000 in its logs folder. `done` runs when all of it is ready (or, with a warning,
+    // after 20 s).
+    function prepareSftpScreenshots(done) {
+        closeHostDialogs();
+        closeKeychainDialogs();
+        palette.close();
+        notifications.close();
+        sshSample = null;
+        while (sessionModel.count > 0)
+            removeTab(sessionModel.count, false);
+        if (AppInfo.startSshTestServer() <= 0) {
+            console.warn("AppShell: no SSH test server for the SFTP screenshots");
+            done();
+            return;
+        }
+        Hosts.loadFixture(60);
+        showView("sftp");
+        const deadline = Date.now() + 20000;
+        const answered = {};
+        // Answers the questions of a connection (host key, password) once each.
+        const answer = (key, promptText, reply) => {
+            const question = promptText.length > 0 ? JSON.parse(promptText) : {};
+            if (question.id === undefined || answered[key] === question.id)
+                return;
+            answered[key] = question.id;
+            if (question.kind === "hostKey")
+                reply(question.id, "trust-once", []);
+            else if (question.kind === "password")
+                reply(question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+        };
+        let stage = "view";
+        let terminal = null;
+        let job = 0;
+        screenshotPoll.poll = () => {
+            const sftp = sftpLoader.item;
+            const left = sftp ? sftp.pane(0) : null;
+            const right = sftp ? sftp.pane(1) : null;
+            if (Date.now() > deadline) {
+                console.warn("AppShell: the SFTP screenshots' setup timed out at", stage);
+                return true;
+            }
+            if (stage === "view") {
+                if (!left || !left.ready)
+                    return false;
+                left.navigate(AppInfo.testFolder() + left.browser.separator + "local");
+                sftp.setSource(1, { mode: "remote", hostId: "H00000", target: "", title: JSON.parse(Hosts.hostJson("H00000") || "{}").name ?? "" });
+                stage = "connect";
+            } else if (stage === "connect") {
+                if (!right)
+                    return false;
+                answer("sftp", right.browser.prompt, (id, action, secrets) => right.browser.answerPrompt(id, action, secrets));
+                if (!right.ready || left.browser.rowOf("notes.txt") < 0)
+                    return false;
+                right.navigate("/logs");
+                job = Transfers.copy(left.browser.paneId, left.browser.pathsOf(["notes.txt"]), right.browser.paneId, "/", false);
+                Transfers.copy(left.browser.paneId, [left.browser.path + left.browser.separator + "missing.txt"], right.browser.paneId, "/", false);
+                stage = "tab";
+            } else if (stage === "tab") {
+                if (right.browser.path !== "/logs" || Transfers.active > 0)
+                    return false;
+                if (!connectHost("H00000", "tab"))
+                    return true;
+                terminal = currentTerminal;
+                stage = "shell";
+            } else if (stage === "shell") {
+                answer("terminal", terminal.terminal.prompt, (id, action, secrets) => terminal.terminal.answerPrompt(id, action, secrets));
+                if (terminal.terminal.screenText().indexOf("test$") < 0)
+                    return false;
+                terminal.terminal.sendText("cd /logs\r");
+                stage = "folder";
+            } else if (stage === "folder") {
+                if (terminal.terminal.shellDirectory !== "/logs")
+                    return false;
+                showView("sftp");
+                return true;
+            }
+            return false;
+        };
+        screenshotPoll.done = done;
+        screenshotPoll.start();
+    }
+
+    // --screenshots: the SFTP view (page "view"), a file's permissions over it ("permissions"),
+    // or the SSH tab with the side panel's files ("panel"); prepareSftpScreenshots ran first.
+    function prepareSftpScreenshot(page) {
+        const sftp = sftpLoader.item;
+        const right = sftp ? sftp.pane(1) : null;
+        if (right)
+            right.closeDialogs();
+        if (page === "panel") {
+            selectTab(sessionModel.count);
+            setSidePanelOpen(true);
+            sidePanel.currentIndex = 0;
+            return;
+        }
+        setSidePanelOpen(false);
+        showView("sftp");
+        if (right && page === "permissions") {
+            right.selectRow(right.browser.rowOf("app-000.log"), 0);
+            right.permissions();
+        } else if (right) {
+            right.clearSelection();
+        }
+    }
+
     // --screenshots: the Keychain view with sample entries at section `page`, or the unlock
     // dialog over it.
     function prepareKeychainScreenshot(page) {
@@ -1644,6 +1753,24 @@ Item {
     Component.onDestruction: WindowRegistry.unregister(shell)
 
     onSidePanelLeftChanged: syncSidePanelWidth()
+
+    // --screenshots: runs `poll` every 100 ms until it returns true, then `done`.
+    Timer {
+        id: screenshotPoll
+
+        property var poll: null
+        property var done: null
+
+        interval: 100
+        repeat: true
+        onTriggered: {
+            if (poll && !poll())
+                return;
+            stop();
+            if (done)
+                done();
+        }
+    }
 
     // UiState.save() is debounced off the GUI thread too; this only batches a drag.
     Timer {

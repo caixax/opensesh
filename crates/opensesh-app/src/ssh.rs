@@ -22,7 +22,7 @@ use opensesh_ssh::spec::{
 use opensesh_term::backend::TermSize;
 use opensesh_vault::known_hosts::KNOWN_HOSTS_FILE;
 
-use crate::bridge::app_info::{is_smoke_test, is_test_run};
+use crate::bridge::app_info::is_test_run;
 use crate::keychain::{self, Job};
 use crate::services;
 
@@ -68,19 +68,20 @@ pub fn logs_dir(data: &Path) -> PathBuf {
         .unwrap_or_else(|| data.join("logs").join("sessions"))
 }
 
-/// Sends every SSH connection of the smoke test to its server on `port`.
+/// Sends every SSH connection of a test run to its server on `port`.
 pub fn set_test_server(port: u16) {
     TEST_SERVER.store(port, Ordering::Relaxed);
 }
 
-/// The smoke test never reaches the network: every hop goes to its test server, as its user.
+/// A test run (a smoke test or screenshots) never reaches the network: every hop goes to its
+/// test server, as its user.
 fn hermetic(mut connect: ConnectSpec) -> Result<ConnectSpec, String> {
-    if !is_smoke_test() {
+    if !is_test_run() {
         return Ok(connect);
     }
     let port = TEST_SERVER.load(Ordering::Relaxed);
     if port == 0 {
-        return Err("the smoke test connects only to its own SSH server".to_owned());
+        return Err("a test run connects only to its own SSH server".to_owned());
     }
     connect.proxy = None;
     for hop in &mut connect.hops {

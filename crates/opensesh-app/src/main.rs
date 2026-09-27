@@ -178,6 +178,7 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
     terminal::registry::shutdown_all();
     // Settings and UI state may still be waiting in the writer's debounce window.
     services::flush();
+    bridge::app_info::remove_test_folder();
     let code = result?;
     tracing::info!(code, "event loop finished");
 
