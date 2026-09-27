@@ -793,6 +793,49 @@ Item {
         }));
     }
 
+    // Runs snippet `id`. `where`: "ask" (the run dialog, always), "auto" (the focused pane, or
+    // the broadcast panes while the tab broadcasts), "pane", "tab" or "broadcast". A snippet
+    // with variables asks for them first. From a view, it runs in the last terminal tab.
+    function runSnippet(id, where) {
+        const snippet = JSON.parse(Snippets.list || "[]").find(entry => entry.id === id);
+        if (!snippet)
+            return false;
+        if (!currentWorkspace) {
+            const index = tabIndexOf(lastSessionTabId);
+            if (index > 0)
+                selectTab(index);
+        }
+        const workspace = currentWorkspace;
+        if (!workspace || workspace.focusedPane <= 0) {
+            Toasts.show(qsTr("Open a terminal to run %1 in.").arg(snippet.name), "warning");
+            return false;
+        }
+        const start = where === "auto" || where === "ask"
+                      ? (workspace.broadcast && workspace.participants.length > 0 ? "broadcast" : "pane")
+                      : where;
+        if (where === "ask" || snippet.variables.length > 0) {
+            snippetRunDialog.show(snippet, workspace, start);
+            return true;
+        }
+        const panes = start === "tab" ? workspace.paneIds : start === "broadcast" ? workspace.participants : [workspace.focusedPane];
+        return Snippets.run(id, "{}", JSON.stringify(panes));
+    }
+
+    // Opens the snippet editor on snippet `id` ("" for a new one).
+    function editSnippet(id) {
+        const snippet = JSON.parse(Snippets.list || "[]").find(entry => entry.id === id) ?? null;
+        snippetEditor.show(snippet);
+    }
+
+    // A macro just recorded (steps as Snippets.recordStop gives them), to review and save.
+    function editRecordedMacro(steps) {
+        snippetEditor.showRecorded(steps);
+    }
+
+    function showSnippetPicker() {
+        snippetPicker.show();
+    }
+
     // Command palette entries to start or stop the tunnels that match `query`.
     function tunnelPaletteEntries(query) {
         const words = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
@@ -1963,6 +2006,64 @@ Item {
 
         interval: 400
         onTriggered: UiState.save()
+    }
+
+    // A snippet stopped in a pane (or before any): say why.
+    Connections {
+        target: Snippets
+        enabled: !shell.detached
+
+        function onRunEnded(id, pane, code, detail) {
+            if (code.length === 0)
+                return;
+            const snippet = JSON.parse(Snippets.list || "[]").find(entry => entry.id === id);
+            const name = snippet ? snippet.name : "";
+            switch (code) {
+            case "gone":
+                Toasts.show(qsTr("%1 stopped: its pane closed.").arg(name), "warning");
+                break;
+            case "timeout":
+                Toasts.show(qsTr("%1 stopped: “%2” didn't appear in time.").arg(name).arg(detail), "warning");
+                break;
+            case "secret-locked":
+                Toasts.show(qsTr("%1 needs the password of %2: unlock the vault first.").arg(name).arg(detail), "warning");
+                break;
+            case "secret-unknown":
+                Toasts.show(qsTr("%1: the keychain has no identity called %2.").arg(name).arg(detail), "danger");
+                break;
+            case "no-secret":
+                Toasts.show(qsTr("%1: the identity %2 has no password.").arg(name).arg(detail), "danger");
+                break;
+            default:
+                Toasts.show(qsTr("%1 stopped: %2 has no value.").arg(name).arg(detail), "warning");
+                break;
+            }
+        }
+    }
+
+    // Each snippet's own shortcut.
+    Instantiator {
+        model: shell.detached ? [] : JSON.parse(Snippets.list || "[]").filter(entry => entry.shortcut.length > 0)
+
+        delegate: Shortcut {
+            required property var modelData
+
+            sequence: modelData.shortcut
+            context: Qt.WindowShortcut
+            onActivated: shell.runSnippet(modelData.id, "auto")
+        }
+    }
+
+    SnippetEditorDialog {
+        id: snippetEditor
+    }
+
+    SnippetRunDialog {
+        id: snippetRunDialog
+    }
+
+    SnippetPicker {
+        id: snippetPicker
     }
 
     // A tunnel that connects out of sight (one that started with OpenSesh) asks something: say

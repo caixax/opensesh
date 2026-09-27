@@ -433,6 +433,21 @@ QtObject {
             onTriggered: root.shell.openSettings("terminal")
         },
         OsAction {
+            actionId: "snippets.quick"
+            text: qsTr("Run a snippet…")
+            defaultShortcut: "Ctrl+Shift+Space"
+            category: root.categoryTerminal
+            iconName: "scroll-text"
+            onTriggered: root.shell.showSnippetPicker()
+        },
+        OsAction {
+            actionId: "snippets.new"
+            text: qsTr("New snippet…")
+            category: root.categoryTerminal
+            iconName: "plus"
+            onTriggered: root.shell.editSnippet("")
+        },
+        OsAction {
             actionId: "view.sidePanel"
             text: qsTr("Toggle side panel")
             defaultShortcut: "Ctrl+Shift+E"
