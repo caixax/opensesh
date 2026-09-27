@@ -122,7 +122,7 @@
   - The first Arch run tested the previous binary: its build step stopped, and the script cut the message off. Built again it was clean, and the whole run passed; the script now keeps the build log and its exit code.
   - One Arch Wayland run ended when WSLg's compositor broke while Qt read the clipboard ("The Wayland connection broke"); three more runs passed.
   - Arch's GCC 16 prints `-Wsfinae-incomplete` warnings from Qt's own headers while building the C++ of the bridges; they are Qt's, not ours.
-- **GitHub Actions:** running on the pushed commits (updated below once it finishes).
+- **GitHub Actions:** green on Ubuntu 24.04, Windows, the Arch, Fedora and Debian 13 containers, and the `ssh` job, where `real_servers.rs` and `real_sftp.rs` (4 and 4 tests, the SFTP ones in 36 s in a debug build) pass against the Ubuntu 24.04 OpenSSH.
 
 ### Deviations
 
