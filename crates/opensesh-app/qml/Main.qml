@@ -416,8 +416,8 @@ Window {
         steps: shell.smokeSteps(smoke)
     }
 
-    // Five series: the shell on the Hosts view, the Settings pages, split terminal tabs, the Hosts
-    // view with generated hosts, then the Keychain with sample entries.
+    // Six series: the shell on the Hosts view, the Settings pages, split terminal tabs, the Hosts
+    // view with generated hosts, the Keychain with sample entries, then SSH panes with sample states.
     ScreenshotRunner {
         id: screenshots
 
@@ -434,7 +434,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "settings"
-        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts", "security"]
+        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts", "ssh", "security"]
         prepare: (mode, density, page) => shell.prepareSettingsScreenshot(page)
         onFinished: terminalScreenshots.start()
     }
@@ -469,8 +469,19 @@ Window {
         prefix: "keychain"
         pages: ["identities", "keys", "agents", "known", "unlock"]
         prepare: (mode, density, page) => shell.prepareKeychainScreenshot(page)
+        onFinished: sshScreenshots.start()
+    }
+
+    ScreenshotRunner {
+        id: sshScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "ssh"
+        pages: ["hostkey", "changed", "code", "disconnected"]
+        prepare: (mode, density, page) => shell.prepareSshScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
-                            + hostsScreenshots.failures + keychainScreenshots.failures > 0 ? 7 : 0)
+                            + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures > 0 ? 7 : 0)
     }
 }

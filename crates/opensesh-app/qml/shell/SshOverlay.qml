@@ -11,6 +11,8 @@ pragma ComponentBehavior: Bound
 //   - Disconnected: a banner at the bottom with the reason and Reconnect (or, when the vault is
 //     locked, Unlock and connect), and the countdown of an automatic reconnection.
 //   terminal: TerminalItem  the pane's terminal (its `connection` and `prompt` JSON)
+//   connectionText, promptText: string  what is shown (default: the terminal's; screenshots set
+//                           samples)
 //   shell: Item             the window's AppShell (unlockVault())
 //   label: string           what the pane connects to, for texts
 //   edgeInset: real         room kept free at the right edge
@@ -30,8 +32,10 @@ Item {
     required property string label
     property real edgeInset: 0
 
-    readonly property var connection: parse(terminal.connection)
-    readonly property var prompt: parse(terminal.prompt)
+    property string connectionText: terminal.connection
+    property string promptText: terminal.prompt
+    readonly property var connection: parse(connectionText)
+    readonly property var prompt: parse(promptText)
     readonly property string phase: connection.state ?? ""
     readonly property bool asking: prompt.kind !== undefined
     readonly property bool busy: !asking && (phase === "connecting" || phase === "authenticating")
@@ -55,7 +59,7 @@ Item {
     }
 
     function focusPrompt() {
-        if (asking && promptLoader.item)
+        if (prompt.kind !== undefined && promptLoader.item)
             promptLoader.item.takeFocus();
     }
 
@@ -76,18 +80,22 @@ Item {
         shell.unlockVault(() => overlay.reconnect());
     }
 
-    onConnectionChanged: {
-        const seconds = connection.retryIn ?? -1;
-        countdown = disconnected ? seconds : -1;
+    // Handlers read `connection` and `prompt` themselves: the properties built on them may not be
+    // up to date yet when a change arrives.
+    function showConnection() {
+        const down = prompt.kind === undefined && connection.state === "disconnected";
+        countdown = down ? (connection.retryIn ?? -1) : -1;
         if (countdown > 0)
             countdownTimer.restart();
         else
             countdownTimer.stop();
     }
+
     // The card is built again for each question (a wrong password gets empty fields), but not
     // when only the connection's state changed.
-    onPromptChanged: {
-        const id = asking ? (prompt.id ?? 0) : -1;
+    function showPrompt() {
+        const question = prompt.kind !== undefined;
+        const id = question ? (prompt.id ?? 0) : -1;
         if (id === shownPrompt)
             return;
         // Keep the keyboard where it was: a focused pane hands it to the question.
@@ -108,9 +116,19 @@ Item {
         default:
             promptLoader.sourceComponent = null;
         }
-        promptLoader.active = asking;
-        if (asking && hadFocus)
+        promptLoader.active = question;
+        if (question && hadFocus)
             Qt.callLater(overlay.focusPrompt);
+    }
+
+    onConnectionChanged: showConnection()
+    onPromptChanged: {
+        showPrompt();
+        showConnection();
+    }
+    Component.onCompleted: {
+        showPrompt();
+        showConnection();
     }
 
     Timer {

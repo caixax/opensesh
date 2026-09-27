@@ -69,6 +69,8 @@ Item {
     // The shell ended with an error (a code other than 0, or killed, or it didn't start).
     property bool failed: false
     property string keyInstallResult: ""
+    // Screenshot runs: a sample SSH state ({connection, prompt} as JSON text) over the demo frame.
+    readonly property var sshSample: !startSession ? shell.sshSample : null
 
     function focusTerminal() {
         terminal.forceActiveFocus(Qt.OtherFocusReason);
@@ -654,11 +656,13 @@ Item {
     // The built-in SSH client's state and questions.
     Loader {
         anchors.fill: terminal
-        active: pane.kind === "ssh" && pane.startSession
+        active: pane.kind === "ssh" && (pane.startSession || pane.sshSample !== null)
         z: 3
 
         sourceComponent: SshOverlay {
             terminal: terminal
+            connectionText: pane.sshSample ? pane.sshSample.connection : terminal.connection
+            promptText: pane.sshSample ? pane.sshSample.prompt : terminal.prompt
             shell: pane.shell
             label: pane.label
             edgeInset: pane.edgeInset

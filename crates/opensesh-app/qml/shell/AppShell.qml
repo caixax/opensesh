@@ -40,7 +40,8 @@ pragma ComponentBehavior: Bound
 // showSshImport(path), closeHostDialogs(), focusInTabStrip(), cycleTab(step), gotoTab(n), toggleSidePanel(),
 // togglePalette(), toggleNotifications(), toggleMaximize(), toggleFullScreen(),
 // cycleRegion(step), shortcutText(actionId), smokeSteps(smoke), prepareScreenshot(),
-// prepareSettingsScreenshot(), prepareTerminalScreenshot(), prepareHostsScreenshot().
+// prepareSettingsScreenshot(), prepareTerminalScreenshot(), prepareHostsScreenshot(),
+// prepareKeychainScreenshot(), prepareSshScreenshot().
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -105,6 +106,8 @@ Item {
     property bool restoreMaximized: false
     // --screenshots: the keychain's sample entries were loaded.
     property bool keychainSampleLoaded: false
+    // Screenshot runs: the sample SSH state panes show ({connection, prompt} as JSON text).
+    property var sshSample: null
 
     readonly property alias commandPalette: palette
 
@@ -1524,6 +1527,40 @@ Item {
             showQuickConnect("deploy@web-0");
     }
 
+    // --screenshots: an SSH pane of a sample host with its connection in state `page`: a new host
+    // key ("hostkey"), a changed one ("changed"), a one-time code ("code") or disconnected
+    // ("disconnected"). The pane shows the demo frame under it.
+    function prepareSshScreenshot(page) {
+        closeHostDialogs();
+        closeKeychainDialogs();
+        palette.close();
+        notifications.close();
+        sidePanelOpen = false;
+        const fingerprint = "SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s";
+        const samples = {
+            hostkey: { prompt: { id: 1, kind: "hostKey", host: "db-01.eu-west", port: 22, keyType: "ssh-ed25519",
+                    fingerprint: fingerprint, changed: false, otherTypes: [] } },
+            changed: { prompt: { id: 1, kind: "hostKey", host: "db-01.eu-west", port: 22, keyType: "ssh-ed25519",
+                    fingerprint: fingerprint, changed: true, knownFingerprint: "SHA256:3Yq8GmT0cVbq1kX2hZr5n7Q0fWv9aLpE4sJd6uHc2Ro",
+                    file: "~/.ssh/known_hosts", line: 12 } }, // lint-qml: allow (sample data for screenshots)
+            code: { prompt: { id: 1, kind: "keyboard", target: "deploy@db-01.eu-west", name: "", instructions: "",
+                    fields: [{ label: qsTr("Verification code:"), echo: false }] } },
+            disconnected: { connection: { state: "disconnected", code: "network", retryIn: 8,
+                    reason: "could not reach 10.0.0.2:22: connection refused" } } // lint-qml: allow (sample data for screenshots)
+        };
+        const sample = samples[page] ?? {};
+        sshSample = {
+            connection: sample.connection ? JSON.stringify(sample.connection) : "",
+            prompt: sample.prompt ? JSON.stringify(sample.prompt) : ""
+        };
+        while (sessionModel.count > 0)
+            removeTab(sessionModel.count, false);
+        Hosts.loadFixture(60);
+        const id = TerminalSessions.allocateId();
+        const seed = { layout: { pane: id }, focused: id, panes: [{ id: id, kind: "ssh", host: "H00001" }] };
+        selectTab(insertTab({ startSession: false, seed: JSON.stringify(seed) }));
+    }
+
     // --screenshots: the Keychain view with sample entries at section `page`, or the unlock
     // dialog over it.
     function prepareKeychainScreenshot(page) {
@@ -1812,6 +1849,7 @@ Item {
             Layout.fillWidth: true
             visible: shell.showStatusBar
             terminal: shell.currentTerminal ? shell.currentTerminal.terminal : null
+            label: shell.currentTerminal ? shell.currentTerminal.label : ""
             workspace: shell.currentTab > 0 ? shell.currentWorkspace : null
 
             onVisibleChanged: {
