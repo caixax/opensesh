@@ -94,6 +94,30 @@ choice! {
     default Auto
 }
 
+choice! {
+    /// Which SSH client connects hosts that don't choose (`[ssh] backend`).
+    SshClient {
+        /// The built-in client.
+        Internal => "internal",
+        /// The system's OpenSSH `ssh`.
+        Openssh => "openssh",
+    }
+    default Internal
+}
+
+choice! {
+    /// Session logs of hosts that don't choose (`[ssh] log`).
+    SessionLogMode {
+        /// No log.
+        Off => "off",
+        /// The text, without escape sequences.
+        Text => "text",
+        /// Everything received, as is.
+        Raw => "raw",
+    }
+    default Off
+}
+
 /// Accent color setting.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Accent {
@@ -238,6 +262,93 @@ pub struct Security {
 /// Longest idle time before the vault locks, in minutes (a day).
 pub const MAX_LOCK_AFTER_MINUTES: u32 = 24 * 60;
 
+/// Longest SSH keepalive interval, in seconds (an hour).
+pub const MAX_KEEPALIVE_SECS: u32 = 3600;
+
+/// `[ssh]` settings (Sprint 7): what SSH hosts use when neither they nor their groups set it,
+/// and where session logs go.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SshSettings {
+    /// The SSH client.
+    pub backend: SshClient,
+    /// Authentication methods in order (`publickey`, `keyboard-interactive`, `password`).
+    pub auth_order: Vec<String>,
+    /// Keepalive interval in seconds (0: none).
+    pub keepalive_secs: u32,
+    /// Reconnect by itself after the connection drops.
+    pub auto_reconnect: bool,
+    /// Detect the remote OS for the automatic icon.
+    pub detect_os: bool,
+    /// Send `LANG` and `LC_*`.
+    pub send_locale: bool,
+    /// Session logs.
+    pub log: SessionLogMode,
+    /// Folder of the session logs; empty for `logs/sessions` in the data folder.
+    pub logs_dir: String,
+}
+
+impl Default for SshSettings {
+    fn default() -> Self {
+        Self {
+            backend: SshClient::default(),
+            auth_order: crate::hosts::DEFAULT_AUTH_ORDER
+                .iter()
+                .map(|method| (*method).to_owned())
+                .collect(),
+            keepalive_secs: 30,
+            auto_reconnect: false,
+            detect_os: true,
+            send_locale: true,
+            log: SessionLogMode::default(),
+            logs_dir: String::new(),
+        }
+    }
+}
+
+impl SshSettings {
+    /// Whether `order` is a usable authentication order: known methods, at least one, none
+    /// twice.
+    #[must_use]
+    pub fn valid_auth_order(order: &[String]) -> bool {
+        !order.is_empty()
+            && order.iter().enumerate().all(|(index, method)| {
+                crate::hosts::DEFAULT_AUTH_ORDER.contains(&method.as_str())
+                    && !order[..index].contains(method)
+            })
+    }
+
+    /// What these settings give every SSH host, as a host table of `hosts.toml` (`ssh.backend`,
+    /// `ssh.auth_order`...): see [`crate::hosts::HostsFile::base`].
+    #[must_use]
+    pub fn host_defaults(&self) -> Table {
+        let mut ssh = Table::new();
+        ssh.insert(
+            "backend".into(),
+            Value::String(self.backend.as_str().into()),
+        );
+        ssh.insert(
+            "auth_order".into(),
+            Value::Array(
+                self.auth_order
+                    .iter()
+                    .map(|method| Value::String(method.clone()))
+                    .collect(),
+            ),
+        );
+        ssh.insert(
+            "keepalive_secs".into(),
+            Value::Integer(i64::from(self.keepalive_secs)),
+        );
+        ssh.insert("auto_reconnect".into(), Value::Boolean(self.auto_reconnect));
+        ssh.insert("detect_os".into(), Value::Boolean(self.detect_os));
+        ssh.insert("send_locale".into(), Value::Boolean(self.send_locale));
+        ssh.insert("log".into(), Value::String(self.log.as_str().into()));
+        let mut host = Table::new();
+        host.insert("ssh".into(), Value::Table(ssh));
+        host
+    }
+}
+
 impl Default for Security {
     fn default() -> Self {
         Self {
@@ -257,6 +368,8 @@ pub struct Config {
     pub terminal: TerminalConfig,
     /// `[security]`.
     pub security: Security,
+    /// `[ssh]`.
+    pub ssh: SshSettings,
     /// What this version doesn't know, written back as it was read so a save never deletes a
     /// newer OpenSesh's settings: unknown top-level keys and tables as they are, and the unknown
     /// keys of `[general]` and `[appearance]` as tables under those names. Known keys always
@@ -511,6 +624,24 @@ impl Config {
             );
             reader.unknown(&security, "security");
         }
+        let mut ssh = reader.section(&mut root, "ssh");
+        {
+            let s = &mut config.ssh;
+            reader.choice(&mut ssh, "ssh.backend", &mut s.backend);
+            reader.auth_order(&mut ssh, "ssh.auth_order", &mut s.auth_order);
+            reader.bounded(
+                &mut ssh,
+                "ssh.keepalive_secs",
+                &mut s.keepalive_secs,
+                MAX_KEEPALIVE_SECS,
+            );
+            reader.boolean(&mut ssh, "ssh.auto_reconnect", &mut s.auto_reconnect);
+            reader.boolean(&mut ssh, "ssh.detect_os", &mut s.detect_os);
+            reader.boolean(&mut ssh, "ssh.send_locale", &mut s.send_locale);
+            reader.choice(&mut ssh, "ssh.log", &mut s.log);
+            reader.string(&mut ssh, "ssh.logs_dir", &mut s.logs_dir);
+            reader.unknown(&ssh, "ssh");
+        }
         reader.unknown(&root, "");
 
         // Every known key was taken out above (valid or not): what is left is kept as is.
@@ -520,6 +651,7 @@ impl Config {
             ("appearance", appearance),
             ("terminal", terminal),
             ("security", security),
+            ("ssh", ssh),
         ] {
             if !rest.is_empty() {
                 extra.insert(name.to_owned(), Value::Table(rest));
@@ -591,6 +723,17 @@ impl Config {
             Value::Integer(i64::from(self.security.lock_after_minutes)),
         );
 
+        let mut ssh = self
+            .ssh
+            .host_defaults()
+            .remove("ssh")
+            .and_then(|value| match value {
+                Value::Table(table) => Some(table),
+                _ => None,
+            })
+            .unwrap_or_default();
+        ssh.insert("logs_dir".into(), Value::String(self.ssh.logs_dir.clone()));
+
         // Unknown settings go back where they were read from; known keys take precedence.
         let keep_unknown = |known: &mut Table, unknown: &Table| {
             for (key, value) in unknown {
@@ -604,7 +747,11 @@ impl Config {
                 ("appearance", Value::Table(unknown)) => keep_unknown(&mut appearance, unknown),
                 ("terminal", Value::Table(unknown)) => keep_unknown(&mut terminal, unknown),
                 ("security", Value::Table(unknown)) => keep_unknown(&mut security, unknown),
-                ("schema_version" | "general" | "appearance" | "terminal" | "security", _) => {}
+                ("ssh", Value::Table(unknown)) => keep_unknown(&mut ssh, unknown),
+                (
+                    "schema_version" | "general" | "appearance" | "terminal" | "security" | "ssh",
+                    _,
+                ) => {}
                 _ => {
                     root.insert(key.clone(), value.clone());
                 }
@@ -615,6 +762,7 @@ impl Config {
         root.insert("appearance".into(), Value::Table(appearance));
         root.insert("terminal".into(), Value::Table(terminal));
         root.insert("security".into(), Value::Table(security));
+        root.insert("ssh".into(), Value::Table(ssh));
         format!("{HEADER}\n{root}")
     }
 }
@@ -760,6 +908,47 @@ impl Reader {
                 key,
                 format!("expected a whole number, found {}", other.type_str()),
             ),
+        }
+    }
+
+    /// A whole number from 0 to `max`.
+    fn bounded(&mut self, table: &mut Table, key: &str, target: &mut u32, max: u32) {
+        match Self::take(table, key) {
+            None => {}
+            Some(Value::Integer(value)) => match u32::try_from(value) {
+                Ok(value) if value <= max => *target = value,
+                _ => self.warn(
+                    key,
+                    format!("{value} is outside 0..={max}, keeping the default"),
+                ),
+            },
+            Some(other) => self.warn(
+                key,
+                format!("expected a whole number, found {}", other.type_str()),
+            ),
+        }
+    }
+
+    /// A list of authentication methods (see [`SshSettings::valid_auth_order`]).
+    fn auth_order(&mut self, table: &mut Table, key: &str, target: &mut Vec<String>) {
+        match Self::take(table, key) {
+            None => {}
+            Some(Value::Array(items)) => {
+                let order: Option<Vec<String>> = items
+                    .iter()
+                    .map(|item| item.as_str().map(|text| text.trim().to_owned()))
+                    .collect();
+                match order.filter(|order| SshSettings::valid_auth_order(order)) {
+                    Some(order) => *target = order,
+                    None => self.warn(
+                        key,
+                        "expected publickey, keyboard-interactive and/or password, keeping the \
+                         default"
+                            .to_owned(),
+                    ),
+                }
+            }
+            Some(other) => self.warn(key, format!("expected a list, found {}", other.type_str())),
         }
     }
 
@@ -984,6 +1173,44 @@ mod tests {
         let kept = parsed.extra["appearance"]["sparkle"].as_bool();
         assert_eq!(kept, Some(true));
         assert_eq!(parsed.extra.len(), 1, "{:?}", parsed.extra);
+    }
+
+    #[test]
+    fn ssh_settings() {
+        let (config, warnings, _) = Config::from_toml_str("").unwrap();
+        assert!(warnings.is_empty());
+        assert_eq!(config.ssh, SshSettings::default());
+        let text = "[ssh]\nbackend = \"openssh\"\nauth_order = [\"password\", \"publickey\"]\n\
+                    keepalive_secs = 0\nauto_reconnect = true\ndetect_os = false\n\
+                    send_locale = false\nlog = \"raw\"\nlogs_dir = \"/var/log/me\"\n";
+        let (config, warnings, _) = Config::from_toml_str(text).unwrap();
+        assert!(warnings.is_empty(), "{warnings:?}");
+        assert_eq!(config.ssh.backend, SshClient::Openssh);
+        assert_eq!(config.ssh.auth_order, vec!["password", "publickey"]);
+        assert_eq!(config.ssh.keepalive_secs, 0);
+        assert!(config.ssh.auto_reconnect && !config.ssh.detect_os && !config.ssh.send_locale);
+        assert_eq!(config.ssh.log, SessionLogMode::Raw);
+        assert_eq!(config.ssh.logs_dir, "/var/log/me");
+        let (again, _, _) = Config::from_toml_str(&config.to_toml_string()).unwrap();
+        assert_eq!(again, config);
+        let defaults = config.ssh.host_defaults();
+        let ssh = defaults["ssh"].as_table().unwrap();
+        assert_eq!(ssh["backend"].as_str(), Some("openssh"));
+        assert_eq!(ssh["keepalive_secs"].as_integer(), Some(0));
+        assert!(!ssh.contains_key("logs_dir"));
+        for bad in [
+            "auth_order = []",
+            "auth_order = [\"password\", \"password\"]",
+            "auth_order = [\"gssapi\"]",
+            "auth_order = \"password\"",
+            "keepalive_secs = 7200",
+            "keepalive_secs = -1",
+            "log = \"everything\"",
+        ] {
+            let (config, warnings, _) = Config::from_toml_str(&format!("[ssh]\n{bad}\n")).unwrap();
+            assert_eq!(config.ssh, SshSettings::default(), "{bad}");
+            assert_eq!(warnings.len(), 1, "{bad}");
+        }
     }
 
     #[test]

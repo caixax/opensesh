@@ -115,6 +115,10 @@ OsDialog {
             return qsTr("Off");
         if (Array.isArray(value))
             return value.length > 0 ? value.join(", ") : qsTr("none");
+        if (typeof value === "object" && value !== null) {
+            const names = Object.keys(value);
+            return names.length > 0 ? names.map(name => qsTr("%1=%2").arg(name).arg(value[name])).join("; ") : qsTr("none");
+        }
         return String(value);
     }
 
@@ -146,6 +150,12 @@ OsDialog {
             return qsTr("Each jump host is a saved host or user@host:port, separated by commas.");
         case "group":
             return qsTr("That group no longer exists.");
+        case "ssh.auth_order":
+            return qsTr("Use publickey, keyboard-interactive and password, separated by commas.");
+        case "ssh.proxy":
+            return qsTr("Use socks5://host:port or http://host:port.");
+        case "ssh.env":
+            return qsTr("Names are letters, digits and _, as in NAME=value; OTHER=value.");
         default:
             return qsTr("This host can't be saved as it is.");
         }
@@ -291,7 +301,6 @@ OsDialog {
                             helpText: {
                                 switch (dialog.protocol) {
                                 case "ssh":
-                                    return qsTr("Connects with the system's OpenSSH client until the built-in one arrives.");
                                 case "local":
                                     return "";
                                 case "sftp":
@@ -389,7 +398,7 @@ OsDialog {
                                 text: identity.user.length > 0 ? qsTr("%1 (%2)").arg(identity.name).arg(identity.user) : identity.name,
                                 value: identity.id
                             })))
-                            helpText: qsTr("A user name with a password and/or a key from the keychain. OpenSSH uses its user name until the built-in client arrives.")
+                            helpText: qsTr("A user name with a password and/or a key from the keychain. The OpenSSH client only uses its user name.")
                         }
 
                         EditorTextRow {
@@ -405,7 +414,8 @@ OsDialog {
                             editor: dialog
                             path: "identity_file"
                             label: qsTr("Private key file")
-                            placeholder: qsTr("the keys OpenSSH tries by itself")
+                            placeholder: qsTr("~/.ssh/id_ed25519, id_ecdsa or id_rsa, after the agent's keys")
+                            helpText: qsTr("A certificate next to it (key-cert.pub) is used too.")
                         }
 
                         OsFormRow {
@@ -419,8 +429,26 @@ OsDialog {
                             }
                         }
 
+                        EditorTextRow {
+                            editor: dialog
+                            path: "ssh.auth_order"
+                            type: "list"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Authentication order")
+                            helpText: qsTr("The methods to try, in order: publickey (the identity's key, the key file, the agent), keyboard-interactive (one-time codes) and password.")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "ssh.agent_socket"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Agent")
+                            placeholder: qsTr("SSH_AUTH_SOCK, else the system's agent")
+                            helpText: qsTr("A socket path or a Windows pipe name (\\\\.\\pipe\\...), for an agent other than the usual one.")
+                        }
+
                         Note {
-                            text: qsTr("Passwords and keys stay in the encrypted vault; hosts.toml only names the identity.")
+                            text: qsTr("Passwords and keys stay in the encrypted vault; hosts.toml only names the identity. The vault is opened only when a connection needs them.")
                         }
                     }
                 }
@@ -447,7 +475,34 @@ OsDialog {
                             visible: dialog.protocol === "ssh"
                             label: qsTr("SSH client")
                             options: [{ text: qsTr("Built-in"), value: "internal" }, { text: qsTr("OpenSSH"), value: "openssh" }]
-                            helpText: qsTr("Until the built-in client arrives, OpenSesh connects with OpenSSH either way.")
+                            helpText: qsTr("The system's OpenSSH client is there for what the built-in one doesn't do (Kerberos, smart cards, Match exec). It uses its own settings: most options here don't apply to it.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "ssh.legacy_algorithms"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Legacy algorithms")
+                            options: dialog.onOff
+                            helpText: qsTr("For old servers: SHA-1 key exchange and signatures, CBC ciphers and hmac-sha1. They are weaker; turn them on only for a server that needs them.")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "ssh.proxy"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Proxy")
+                            placeholder: qsTr("socks5://host:1080 or http://host:8080")
+                            helpText: qsTr("For the first hop (a jump host, or this host).")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "ssh.proxy_command"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Proxy command")
+                            placeholder: qsTr("nc -X connect -x proxy:3128 %h %p")
+                            helpText: qsTr("A program whose input and output carry the connection, instead of the proxy (%h host, %p port, %r user).")
                         }
 
                         EditorTextRow {
@@ -485,7 +540,36 @@ OsDialog {
                             options: [{ text: qsTr("Off"), value: "off" }, { text: qsTr("Untrusted"), value: "untrusted" },
                                 { text: qsTr("Trusted"), value: "trusted" }]
                             helpText: dialog.revision >= 0 && dialog.value("ssh.x11") === "trusted"
-                                      ? qsTr("Trusted forwarding gives remote programs full access to your display.") : ""
+                                      ? qsTr("Trusted forwarding gives remote programs full access to your display. Only the OpenSSH client forwards X11 for now.")
+                                      : qsTr("Only the OpenSSH client forwards X11 for now.")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "ssh.env"
+                            type: "map"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Environment")
+                            placeholder: qsTr("NAME=value; OTHER=value")
+                            helpText: qsTr("Sent to the server, which only sets what its AcceptEnv allows.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "ssh.send_locale"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Send the language settings")
+                            options: dialog.onOff
+                            helpText: qsTr("LANG and LC_* from this computer, as OpenSSH sends them.")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "ssh.command"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Remote command")
+                            placeholder: qsTr("the login shell")
+                            helpText: qsTr("Runs instead of the shell, like ssh host command.")
                         }
 
                         EditorTextRow {
@@ -493,7 +577,35 @@ OsDialog {
                             path: "ssh.startup_snippet"
                             visible: dialog.protocol === "ssh"
                             label: qsTr("Startup snippet")
-                            helpText: qsTr("Runs once the shell is ready; snippets arrive in Sprint 10.")
+                            helpText: qsTr("Typed once the shell is ready, on every connection.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "ssh.auto_reconnect"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Reconnect by itself")
+                            options: dialog.onOff
+                            helpText: qsTr("After the connection drops, tries again after 1, 2, 4, 8 and 16 seconds. Enter reconnects at any time.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "ssh.log"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Session log")
+                            options: [{ text: qsTr("Off"), value: "off" }, { text: qsTr("Text"), value: "text" },
+                                { text: qsTr("Raw (with escape codes)"), value: "raw" }]
+                            helpText: qsTr("Saved in the logs/sessions folder of OpenSesh's data folder, one file per connection.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "ssh.detect_os"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Detect the OS")
+                            options: dialog.onOff
+                            helpText: qsTr("Reads /etc/os-release once connected, for the automatic icon.")
                         }
 
                         EditorTextRow {

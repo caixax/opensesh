@@ -7,7 +7,8 @@
 //   inheritKey: string  the inherited key shown in the placeholder (default: `path`; empty for
 //                       none)
 //   field: string       the validation field whose problem shows under it (default: `path`)
-//   type: string        "text", "int" or "list" (comma-separated; `none` is an empty list)
+//   type: string        "text", "int", "list" (comma-separated; `none` is an empty list) or
+//                       "map" (`NAME=value` pairs separated by semicolons; `none` is empty)
 //   placeholder: string placeholder when nothing is inherited
 // Functions: focusField().
 import QtQuick
@@ -38,6 +39,18 @@ OsFormRow {
                 return [];
             return trimmed.split(",").map(item => item.trim()).filter(item => item.length > 0);
         }
+        if (type === "map") {
+            const map = {};
+            if (trimmed.toLowerCase() === "none")
+                return map;
+            for (const pair of trimmed.split(";")) {
+                const at = pair.indexOf("=");
+                const name = (at < 0 ? pair : pair.slice(0, at)).trim();
+                if (name.length > 0)
+                    map[name] = at < 0 ? "" : pair.slice(at + 1).trim();
+            }
+            return map;
+        }
         return text;
     }
 
@@ -51,6 +64,8 @@ OsFormRow {
             input.text = "";
         else if (Array.isArray(value))
             input.text = value.length === 0 ? "none" : value.join(", "); // lint-qml: allow (the keyword typed for no jump hosts)
+        else if (typeof value === "object")
+            input.text = Object.keys(value).length === 0 ? "none" : Object.keys(value).map(name => name + "=" + value[name]).join("; "); // lint-qml: allow (the keyword and the pairs as typed)
         else
             input.text = String(value);
     }

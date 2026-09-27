@@ -143,7 +143,10 @@ Item {
         let command = [];
         let label = "";
         if (kind === "ssh") {
-            command = host.length > 0 && Hosts.usesOpenSsh(host) ? Hosts.connectCommand(host) : [];
+            if (host.length > 0)
+                command = Hosts.usesOpenSsh(host) ? Hosts.connectCommand(host) : [];
+            else
+                command = AppSettings.sshBackend === "openssh" ? Hosts.targetCommand(target) : [];
             label = host.length > 0 ? (JSON.parse(Hosts.hostJson(host) || "{}").name || target) : target;
         }
         // Local panes take the profile of new tabs; a host's panes let the host's chain decide.
