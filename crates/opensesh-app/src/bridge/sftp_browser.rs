@@ -312,6 +312,8 @@ pub struct SftpBrowserRust {
     started: bool,
     /// Grows with each listing asked for: a late answer to an older one is dropped.
     generation: u64,
+    /// The folder of the listing in flight, if any: a refresh meanwhile lists it, not `path`.
+    listing: Option<String>,
     /// Grows with each connection attempt, likewise.
     attempt: u64,
     next_token: i32,
@@ -349,6 +351,7 @@ impl Default for SftpBrowserRust {
             rows: Vec::new(),
             started: false,
             generation: 0,
+            listing: None,
             attempt: 0,
             next_token: 0,
             requests: VecDeque::new(),
@@ -684,6 +687,7 @@ impl qobject::SftpBrowser {
         let generation = {
             let mut state = self.as_mut().rust_mut();
             state.generation += 1;
+            state.listing = Some(path.clone());
             state.generation
         };
         self.as_mut().set_busy(true);
@@ -697,6 +701,7 @@ impl qobject::SftpBrowser {
                 if object.generation != generation {
                     return;
                 }
+                object.as_mut().rust_mut().listing = None;
                 object.as_mut().set_busy(false);
                 match result {
                     Ok((path, entries)) => {
@@ -795,7 +800,10 @@ impl qobject::SftpBrowser {
 
     /// See the bridge declaration.
     pub fn refresh(self: Pin<&mut Self>) {
-        let path = self.path.to_string();
+        let path = self
+            .listing
+            .clone()
+            .unwrap_or_else(|| self.path.to_string());
         let path = if path.is_empty() && self.remote {
             "~".to_owned()
         } else {
