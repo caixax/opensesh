@@ -1,0 +1,15 @@
+[package]
+name = "x11-forwarding-spike"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Sprint 7 spike: X11 forwarding with russh, a fake cookie for the server and the real one for the local display"
+license = "GPL-3.0-or-later"
+
+# A throwaway program: its own workspace, not part of the app's.
+[workspace]
+
+[dependencies]
+getrandom = "=0.4.3"
+russh = { version = "=0.63.3", default-features = false, features = ["ring", "flate2", "rsa"] }
+tokio = { version = "=1.53.1", features = ["rt-multi-thread", "net", "io-util", "macros", "process"] }

@@ -135,7 +135,9 @@ KbdInteractiveAuthentication yes
 UsePAM yes
 AllowTcpForwarding yes
 AllowAgentForwarding yes
-X11Forwarding no
+# For spikes/x11-forwarding (the server also needs xauth to store the cookie).
+X11Forwarding yes
+X11UseLocalhost yes
 PrintMotd no
 LogLevel VERBOSE
 Subsystem sftp internal-sftp
