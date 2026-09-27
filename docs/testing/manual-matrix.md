@@ -24,7 +24,7 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 | Debian 13 (WSLg) | 6.8.2 (distro) | ✅ 542 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
 | Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ 542 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
 | Arch Linux (WSLg) | 6.11.2 (distro) | ✅ 542 | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ OpenSSH 10.5p1, Dropbear 2026.94 |
-| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ⏳ | ⏳ | — | ⏳ Ubuntu 24.04 packages |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ Ubuntu 24.04 packages |
 
 ### Manual checks
 
