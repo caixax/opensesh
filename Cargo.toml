@@ -124,6 +124,8 @@ windows-sys = "0.61.2"
 
 # Tests
 tempfile = "3.27.0"
+# A stream of connections for russh's agent server in the SSH tests.
+futures = "0.3.34"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
