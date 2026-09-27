@@ -800,6 +800,8 @@ OsDialog {
                                     id: notesArea
 
                                     width: notesFlick.width
+                                    // A template TextArea keeps a one-line implicit height: it grows with its text.
+                                    implicitHeight: contentHeight + topPadding + bottomPadding
                                     visible: !previewSwitch.checked
                                     readOnly: dialog.readOnly
                                     wrapMode: TextEdit.Wrap
