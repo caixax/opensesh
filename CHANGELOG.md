@@ -6,6 +6,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 8: SFTP ([ADR 0028](docs/adr/0028-sftp.md)).**
+  - **The SFTP view:** two panes, each this computer, a saved host or `user@host` (connecting with the same prompt cards as a terminal pane), with a transfer queue below. F5 and F6 copy or move the selection to the other side; the sides swap.
+  - **The side panel's files (Ctrl+Shift+E):** the files of the focused terminal, on a new channel of an SSH pane's connection (no second login, again after a reconnection), or this computer for a local shell. "Follow the terminal" goes where the shell goes (OSC 7); for servers whose shell doesn't say, OpenSesh shows a few lines for `~/.bashrc` or `~/.zshrc`, and adds them there only when asked.
+  - **File panes:** breadcrumbs or a typed path, sortable columns (name, size, modified, permissions, owner), hidden files (Ctrl+H), multi-selection with the mouse and the keyboard, and a 10,000-entry folder that stays smooth. New folder and file, rename, delete (with confirmation), permissions (an rwx grid and octal), symbolic links, properties, a quick look at text and images (Space), copy, cut and paste, and the server's free space.
+  - **Transfers:** one queue for every window, several files at once (3 by default), with progress, speed and ETA; pause, resume, cancel, retry (after a lost connection, on the new one) and clear. Partial files continue where they stopped once their end matches. A file already there asks (replace, replace if newer, continue, skip, keep both, for one file or all) or follows the setting. Times, and optionally permissions, are kept. Copies within one server run `cp -R -p` there.
+  - **Drag and drop:** files from the file manager are uploaded, files move between the panes, and this computer's files drag out to other applications.
+  - **Editing a server's file:** it opens in the editor of Settings > SFTP or the system's; each save is uploaded after checking that nobody changed the server's copy meanwhile (replace it, take theirs, or wait); when the server refuses, "Save with sudo" is offered with a warning.
+  - **Settings > SFTP:** files at once, what to do with a file already there, keeping times and permissions, hidden files, following the terminal, confirming deletes, and the editor command.
+  - **Tests against a real server:** 1 GiB both ways with the same SHA-256 on both sides, an upload cut off and resumed on a new connection, a copy within the server, and a server without SFTP ([how](docs/testing/ssh-servers.md)), in CI and in WSL.
+  - **SCP spike** ([`spikes/scp-fallback`](spikes/scp-fallback/README.md)): copying with SCP over an exec channel for servers without SFTP; the app says "This server has no SFTP" for now.
 - **Sprint 7: SSH ([ADR 0027](docs/adr/0027-ssh-client.md)).**
   - **The built-in SSH client** (`russh`): SSH hosts and quick connections connect with it in tabs and splits. Hosts that choose `openssh` still run the system's `ssh`.
   - **Questions in the pane,** each pane on its own: a card with the fingerprint of a new host key (trust once, or trust and remember), a warning that stops the connection when a known key changed, passwords, key passphrases and keyboard-interactive prompts (one-time codes). A chip shows the progress through each hop.
@@ -33,6 +43,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - The host and group editors have an Identity field.
+- Test runs (`--smoke-test`, `--screenshots`) keep settings changes in memory, connect only to their in-process SSH server, and remove their temporary folder at exit.
 - The minimum Rust version is 1.89, for `russh` 0.63.3 ([ADR 0026](docs/adr/0026-msrv-1.89-for-russh.md)).
 - `deny.toml` and `.cargo/audit.toml` accept RUSTSEC-2023-0071 (the `rsa` crate, no fixed release) with its reason: the vault uses RSA locally, and the SSH client only signs with it, once per connection ([ADR 0027](docs/adr/0027-ssh-client.md)).
 - The status bar shows an SSH pane's state and host instead of "Local terminal".
