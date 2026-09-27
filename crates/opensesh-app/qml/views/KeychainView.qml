@@ -8,8 +8,9 @@ pragma ComponentBehavior: Bound
 //   private key, rename, delete.
 // - Agents: the keys of the running SSH agents (SSH_AUTH_SOCK, the Windows OpenSSH agent,
 //   Pageant), read-only.
-// - Known hosts: ~/.ssh/known_hosts and OpenSesh's own file, read-only until the SSH client
-//   (Sprint 7) checks and adds host keys.
+// - Known hosts: ~/.ssh/known_hosts (only read) and OpenSesh's own file, where the SSH client
+//   saves the keys the user trusts; the search finds hashed names too (typed in full); entries of
+//   OpenSesh's file can be removed.
 // Every change goes through the Keychain singleton; the dialogs live in the shell.
 // Functions: showSection(id), smokeSteps(smoke).
 import QtQuick
@@ -60,9 +61,12 @@ Item {
         default: {
             const out = [];
             for (const file of knownFiles) {
-                out.push({ kind: "header", title: file.path, subtitle: file.problem, state: "" });
-                for (const entry of file.entries.filter(entry => hit([entry.hosts, entry.keyType, entry.fingerprint, entry.comment])))
-                    out.push(Object.assign({ kind: "knownHost" }, entry));
+                const note = file.own ? qsTr("OpenSesh's file: the keys you trust are saved here.")
+                                      : qsTr("Only read: OpenSesh never changes it.");
+                out.push({ kind: "header", title: file.path, subtitle: file.problem.length > 0 ? file.problem : note, state: "" });
+                for (const entry of file.entries.filter(entry => hit([entry.hosts, entry.keyType, entry.fingerprint, entry.comment])
+                                                                 || (q.length > 0 && entry.nameMatch)))
+                    out.push(Object.assign({ kind: "knownHost", own: file.own === true, path: file.path }, entry));
             }
             return out;
         }
@@ -119,6 +123,8 @@ Item {
             identityMenu.popup(item, 0, item.height);
         else if (row.kind === "key")
             keyMenu.popup(item, 0, item.height);
+        else if (row.kind === "knownHost")
+            knownHostMenu.popup(item, 0, item.height);
     }
 
     function askDelete(row) {
@@ -130,7 +136,9 @@ Item {
         const row = target;
         if (!row)
             return;
-        const token = row.kind === "identity" ? Keychain.deleteIdentity(row.id) : Keychain.deleteKey(row.id);
+        const token = row.kind === "identity" ? Keychain.deleteIdentity(row.id)
+                    : row.kind === "knownHost" ? Keychain.forgetKnownHost(row.line, row.fingerprint)
+                    : Keychain.deleteKey(row.id);
         KeychainTasks.run(token, (code, detail) => {
             if (code.length > 0)
                 Toasts.show(KeychainTasks.message(code, detail), "danger");
@@ -210,7 +218,19 @@ Item {
                     console.info("smoke test: the keychain kept an identity and a key, locked, waited after wrong passwords, then unlocked");
             }),
             () => showSection("agents"),
-            () => showSection("known"),
+            // The sample known hosts (test runs read no file).
+            () => track(Keychain.loadSample()),
+            wait(() => showSection("known")),
+            () => search.text = "git.example.com", // lint-qml: allow (a sample host name)
+            () => track(Keychain.searchKnownHosts("git.example.com")),
+            wait(() => {
+                // The sample has git.example.com in the clear and hashed.
+                if (!rows.some(row => row.kind === "knownHost" && row.hashed))
+                    smoke.fail("the known hosts search didn't find the hashed entry");
+                search.text = "";
+            }),
+            () => openMenu(rows.find(row => row.kind === "knownHost"), list.itemAtIndex(1) ?? list),
+            () => knownHostMenu.close(),
             () => showSection("identities")
         ];
     }
@@ -440,10 +460,27 @@ Item {
 
             SettingsNotice {
                 Layout.fillWidth: true
-                visible: view.section === "known"
+                visible: view.section === "known" && !view.sectionEmpty
                 kind: "info"
-                title: qsTr("Read-only for now")
-                lines: [qsTr("Checking host keys, and adding or removing them, arrive with the built-in SSH client (Sprint 7).")]
+                title: qsTr("How host keys are checked")
+                lines: [qsTr("A server's key is checked against both files. A new one is shown for you to trust; a changed one stops the connection until you decide. Hashed names are found by typing the full host name.")]
+            }
+
+            // The search reads the files again to match hashed names (after typing pauses).
+            Timer {
+                id: knownSearch
+
+                interval: 250
+                onTriggered: Keychain.searchKnownHosts(search.text.trim())
+            }
+
+            Connections {
+                target: search
+
+                function onTextChanged() {
+                    if (view.section === "known")
+                        knownSearch.restart();
+                }
             }
 
             Item {
@@ -550,7 +587,7 @@ Item {
                             onClicked: {
                                 if (rowItem.modelData.kind === "identity")
                                     view.shell.editIdentity(rowItem.modelData.id);
-                                else if (rowItem.modelData.kind === "key")
+                                else if (rowItem.modelData.kind === "key" || rowItem.modelData.kind === "knownHost")
                                     view.openMenu(rowItem.modelData, row);
                             }
                             Keys.onMenuPressed: view.openMenu(rowItem.modelData, row)
@@ -592,6 +629,7 @@ Item {
 
                             OsIconButton {
                                 visible: rowItem.modelData.kind === "identity" || rowItem.modelData.kind === "key"
+                                         || rowItem.modelData.kind === "knownHost"
                                 iconName: "ellipsis"
                                 toolTip: qsTr("More actions")
                                 onClicked: view.openMenu(rowItem.modelData, row)
@@ -616,7 +654,7 @@ Item {
                                    ? qsTr("Generate a new key, or import one made by ssh-keygen or PuTTY. Private keys are kept in the encrypted vault.")
                                    : view.section === "agents"
                                      ? qsTr("No running SSH agent holds keys. OpenSesh asks SSH_AUTH_SOCK on Linux, and the Windows OpenSSH agent and Pageant on Windows.")
-                                     : qsTr("~/.ssh/known_hosts is empty or missing.")
+                                     : qsTr("No server keys are known yet. The first connection to a server shows its key's fingerprint for you to trust.")
 
                     OsButton {
                         visible: view.section === "identities"
@@ -712,6 +750,28 @@ Item {
         }
     }
 
+    OsContextMenu {
+        id: knownHostMenu
+
+        OsMenuItem {
+            text: qsTr("Copy the fingerprint")
+            iconName: "copy"
+            onTriggered: {
+                Platform.copyText(view.target.fingerprint);
+                Toasts.show(qsTr("Fingerprint copied."), "success");
+            }
+        }
+
+        OsMenuSeparator {}
+
+        OsMenuItem {
+            text: view.target !== null && view.target.own === false ? qsTr("Remove (only in OpenSesh's file)") : qsTr("Remove…")
+            iconName: "trash-2"
+            enabled: view.target !== null && view.target.own === true
+            onTriggered: view.askDelete(view.target)
+        }
+    }
+
     OsDialog {
         id: renameDialog
 
@@ -739,9 +799,10 @@ Item {
         id: deleteDialog
 
         readonly property bool isKey: view.target !== null && view.target.kind === "key"
+        readonly property bool isHost: view.target !== null && view.target.kind === "knownHost"
 
-        title: isKey ? qsTr("Delete key?") : qsTr("Delete identity?")
-        acceptText: qsTr("Delete")
+        title: isHost ? qsTr("Remove this host key?") : isKey ? qsTr("Delete key?") : qsTr("Delete identity?")
+        acceptText: isHost ? qsTr("Remove") : qsTr("Delete")
         dangerous: true
 
         onAccepted: view.deleteTarget()
@@ -754,6 +815,9 @@ Item {
                 wrapMode: Text.Wrap
                 elide: Text.ElideNone
                 text: view.target === null ? ""
+                    : deleteDialog.isHost
+                      ? qsTr("The %1 key of %2 is removed from OpenSesh's known_hosts. The next connection shows the server's key for you to trust again.")
+                            .arg(view.target.keyType).arg(view.target.hashed ? qsTr("this hashed host") : view.target.hosts)
                     : deleteDialog.isKey
                       ? qsTr("“%1” and its private key are deleted from the vault. Servers that trust it keep its public key until you remove it there.").arg(view.target.name)
                       : qsTr("“%1” and its saved password are deleted. Hosts and groups that use it are left without an identity.").arg(view.target.name)

@@ -107,6 +107,10 @@ OsDialog {
             text = qsTr("Off");
         else if (Array.isArray(info.value))
             text = info.value.length > 0 ? info.value.join(", ") : qsTr("none");
+        else if (typeof info.value === "object") {
+            const names = Object.keys(info.value);
+            text = names.length > 0 ? names.map(name => qsTr("%1=%2").arg(name).arg(info.value[name])).join("; ") : qsTr("none");
+        }
         return info.origin === "group" ? qsTr("%1 (from %2)").arg(text).arg(info.groupName) : qsTr("%1 (default)").arg(text);
     }
 
@@ -125,6 +129,12 @@ OsDialog {
             return qsTr("Use a port from 1 to 65535.");
         case "jump":
             return qsTr("Each jump host is a saved host or user@host:port, separated by commas.");
+        case "ssh.auth_order":
+            return qsTr("Use publickey, keyboard-interactive and password, separated by commas.");
+        case "ssh.proxy":
+            return qsTr("Use socks5://host:port or http://host:port.");
+        case "ssh.env":
+            return qsTr("Names are letters, digits and _, as in NAME=value; OTHER=value.");
         default:
             return qsTr("This group can't be saved as it is.");
         }
@@ -249,6 +259,47 @@ OsDialog {
 
                 EditorTextRow {
                     editor: dialog
+                    path: "defaults.ssh.auth_order"
+                    inheritKey: "ssh.auth_order"
+                    field: "ssh.auth_order"
+                    type: "list"
+                    label: qsTr("Authentication order")
+                }
+
+                EditorChoiceRow {
+                    editor: dialog
+                    path: "defaults.ssh.backend"
+                    inheritKey: "ssh.backend"
+                    label: qsTr("SSH client")
+                    options: [{ text: qsTr("Built-in"), value: "internal" }, { text: qsTr("OpenSSH"), value: "openssh" }]
+                }
+
+                EditorChoiceRow {
+                    editor: dialog
+                    path: "defaults.ssh.legacy_algorithms"
+                    inheritKey: "ssh.legacy_algorithms"
+                    label: qsTr("Legacy algorithms")
+                    options: dialog.onOff
+                }
+
+                EditorTextRow {
+                    editor: dialog
+                    path: "defaults.ssh.proxy"
+                    inheritKey: "ssh.proxy"
+                    field: "ssh.proxy"
+                    label: qsTr("Proxy")
+                    placeholder: qsTr("socks5://host:1080 or http://host:8080")
+                }
+
+                EditorTextRow {
+                    editor: dialog
+                    path: "defaults.ssh.proxy_command"
+                    inheritKey: "ssh.proxy_command"
+                    label: qsTr("Proxy command")
+                }
+
+                EditorTextRow {
+                    editor: dialog
                     path: "defaults.ssh.keepalive_secs"
                     inheritKey: "ssh.keepalive_secs"
                     type: "int"
@@ -280,6 +331,70 @@ OsDialog {
                     label: qsTr("X11 forwarding")
                     options: [{ text: qsTr("Off"), value: "off" }, { text: qsTr("Untrusted"), value: "untrusted" },
                         { text: qsTr("Trusted"), value: "trusted" }]
+                }
+
+                EditorTextRow {
+                    editor: dialog
+                    path: "defaults.ssh.env"
+                    inheritKey: "ssh.env"
+                    field: "ssh.env"
+                    type: "map"
+                    label: qsTr("Environment")
+                    placeholder: qsTr("NAME=value; OTHER=value")
+                }
+
+                EditorChoiceRow {
+                    editor: dialog
+                    path: "defaults.ssh.send_locale"
+                    inheritKey: "ssh.send_locale"
+                    label: qsTr("Send the language settings")
+                    options: dialog.onOff
+                }
+
+                EditorTextRow {
+                    editor: dialog
+                    path: "defaults.ssh.command"
+                    inheritKey: "ssh.command"
+                    label: qsTr("Remote command")
+                }
+
+                EditorTextRow {
+                    editor: dialog
+                    path: "defaults.ssh.startup_snippet"
+                    inheritKey: "ssh.startup_snippet"
+                    label: qsTr("Startup snippet")
+                }
+
+                EditorChoiceRow {
+                    editor: dialog
+                    path: "defaults.ssh.auto_reconnect"
+                    inheritKey: "ssh.auto_reconnect"
+                    label: qsTr("Reconnect by itself")
+                    options: dialog.onOff
+                }
+
+                EditorChoiceRow {
+                    editor: dialog
+                    path: "defaults.ssh.log"
+                    inheritKey: "ssh.log"
+                    label: qsTr("Session log")
+                    options: [{ text: qsTr("Off"), value: "off" }, { text: qsTr("Text"), value: "text" },
+                        { text: qsTr("Raw (with escape codes)"), value: "raw" }]
+                }
+
+                EditorChoiceRow {
+                    editor: dialog
+                    path: "defaults.ssh.detect_os"
+                    inheritKey: "ssh.detect_os"
+                    label: qsTr("Detect the OS")
+                    options: dialog.onOff
+                }
+
+                EditorTextRow {
+                    editor: dialog
+                    path: "defaults.ssh.agent_socket"
+                    inheritKey: "ssh.agent_socket"
+                    label: qsTr("Agent")
                 }
 
                 EditorChoiceRow {

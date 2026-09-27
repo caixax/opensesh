@@ -148,6 +148,16 @@ pub enum Job {
     ListAgents,
     /// Read the known hosts files.
     ReadKnownHosts,
+    /// Read them again, marking the entries whose names (hashed ones too) match a host name.
+    SearchKnownHosts(String),
+    /// Remove an entry from OpenSesh's own file: its line, and its fingerprint to check it is
+    /// still the same entry.
+    ForgetKnownHost {
+        /// 1-based line.
+        line: usize,
+        /// Its key's fingerprint.
+        fingerprint: String,
+    },
     /// Test runs: fill the keychain with sample entries.
     LoadSample,
 }
@@ -261,6 +271,7 @@ pub fn spawn(
                 store,
                 config_dir: dirs.map(|(config, _)| config),
                 sample: false,
+                known_query: String::new(),
             };
             for warning in &worker.keychain.warnings {
                 tracing::warn!("keychain.toml: {warning}");
@@ -286,6 +297,8 @@ struct Worker {
     config_dir: Option<PathBuf>,
     /// Test runs: sample agents and known hosts instead of none.
     sample: bool,
+    /// The host name the known hosts are searched for.
+    known_query: String,
 }
 
 fn error_outcome(error: &KeychainOpError) -> (String, String) {
@@ -468,6 +481,16 @@ impl Worker {
             Job::ReadKnownHosts => {
                 outcome.known_hosts = Some(self.known_hosts());
                 Ok(String::new())
+            }
+            Job::SearchKnownHosts(query) => {
+                self.known_query = query.trim().to_owned();
+                outcome.known_hosts = Some(self.known_hosts());
+                Ok(String::new())
+            }
+            Job::ForgetKnownHost { line, fingerprint } => {
+                let result = self.forget_known_host(line, &fingerprint);
+                outcome.known_hosts = Some(self.known_hosts());
+                result.map(|()| String::new())
             }
             Job::LoadSample => {
                 self.load_sample();
@@ -652,34 +675,63 @@ impl Worker {
         Json::Array(listings).to_string()
     }
 
+    /// Removes line `line` of OpenSesh's `known_hosts` if it still holds the key `fingerprint`.
+    fn forget_known_host(&self, line: usize, fingerprint: &str) -> Result<(), KeychainOpError> {
+        let Some(config) = &self.config_dir else {
+            return Err(KeychainOpError::ReadOnly);
+        };
+        let path = config.join(KNOWN_HOSTS_FILE);
+        let current = known_hosts::read(&path).map_err(|source| KeychainOpError::Read {
+            path: path.display().to_string(),
+            source,
+        })?;
+        if !current
+            .entries
+            .iter()
+            .any(|entry| entry.line == line && entry.fingerprint == fingerprint)
+        {
+            return Err(KeychainOpError::NotFound(format!("line {line}")));
+        }
+        known_hosts::forget(&path, &[line]).map_err(|source| KeychainOpError::Write {
+            path: path.display().to_string(),
+            source,
+        })
+    }
+
+    /// The known hosts files as JSON: `[{path, own, problem, badLines, entries: [{line, marker,
+    /// hosts, hashed, keyType, fingerprint, comment, nameMatch}]}]`, where `nameMatch` says the
+    /// entry is for the host name searched for (hashed names included).
     fn known_hosts(&self) -> String {
         let mut files = Vec::new();
         if self.sample {
             files.push((
                 "~/.ssh/known_hosts".to_owned(),
+                false,
                 known_hosts::parse(SAMPLE_KNOWN_HOSTS),
                 String::new(),
             ));
         } else if let Some(config) = &self.config_dir {
             let mut paths = Vec::new();
             if let Some(home) = opensesh_core::paths::home_dir() {
-                paths.push(home.join(".ssh").join("known_hosts"));
+                paths.push((home.join(".ssh").join("known_hosts"), false));
             }
-            paths.push(config.join(KNOWN_HOSTS_FILE));
-            for path in paths {
+            paths.push((config.join(KNOWN_HOSTS_FILE), true));
+            for (path, own) in paths {
                 let (parsed, problem) = match known_hosts::read(&path) {
                     Ok(parsed) => (parsed, String::new()),
                     Err(error) => (known_hosts::KnownHosts::default(), error.to_string()),
                 };
-                files.push((path.display().to_string(), parsed, problem));
+                files.push((path.display().to_string(), own, parsed, problem));
             }
         }
+        let query = self.known_query.as_str();
         Json::Array(
             files
                 .into_iter()
-                .map(|(path, parsed, problem)| {
+                .map(|(path, own, parsed, problem)| {
                     json!({
                         "path": path,
+                        "own": own,
                         "problem": problem,
                         "badLines": parsed.bad_lines,
                         "entries": parsed.entries.iter().map(|entry| json!({
@@ -690,6 +742,7 @@ impl Worker {
                             "keyType": entry.key_type,
                             "fingerprint": entry.fingerprint,
                             "comment": entry.comment,
+                            "nameMatch": !query.is_empty() && entry.matches(query),
                         })).collect::<Vec<_>>(),
                     })
                 })
@@ -745,7 +798,7 @@ impl Worker {
 
 const SAMPLE_KNOWN_HOSTS: &str = "\
 git.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC6tmVU1VE59P7TYx6UJYcZkhy7FRiLjhH6gdK9Sayyd\n\
-|1|F1E1KeoE/eEWhi10WpGv4OdiO6Y=|3988QV0VE8wmZL7suNrYQLITLCg= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC6tmVU1VE59P7TYx6UJYcZkhy7FRiLjhH6gdK9Sayyd\n\
+|1|Bg0JkOhjsAZ1cHDIN96yLWUJg6E=|+Iq3MogBlxkRt8wQyK4+V04fVqg= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC6tmVU1VE59P7TYx6UJYcZkhy7FRiLjhH6gdK9Sayyd\n\
 10.0.1.21,web-01 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBHqfppNX5vS4eX9GvOQ7/uKZTWCq4n8c+F08fjstuFzIG8eYZpH/MeS1Hy6h1tNPNIaUvc04G0Ks90zScCvDXpk=\n\
 @cert-authority *.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC6tmVU1VE59P7TYx6UJYcZkhy7FRiLjhH6gdK9Sayyd\n";
 

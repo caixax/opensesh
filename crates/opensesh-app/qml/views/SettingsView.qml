@@ -59,8 +59,7 @@ FocusScope {
             id: "ssh",
             text: qsTr("SSH"),
             iconName: "server",
-            description: qsTr("SSH defaults: authentication, agent, keep-alive, algorithms and known hosts."),
-            sprint: 7
+            description: qsTr("SSH defaults: the client, authentication, keepalive, reconnection and session logs.")
         },
         {
             id: "sftp",
@@ -336,6 +335,8 @@ FocusScope {
                     return themesPage;
                 case "shortcuts":
                     return shortcutsPage;
+                case "ssh":
+                    return sshPage;
                 case "security":
                     return securityPage;
                 case "about":
@@ -391,6 +392,12 @@ FocusScope {
         id: shortcutsPage
 
         SettingsShortcutsPage {}
+    }
+
+    Component {
+        id: sshPage
+
+        SettingsSshPage {}
     }
 
     Component {

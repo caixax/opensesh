@@ -188,6 +188,18 @@ pub mod qobject {
         #[cxx_name = "refreshKnownHosts"]
         fn refresh_known_hosts(self: Pin<&mut Self>) -> i32;
 
+        /// Reads them again, marking entries for host name `query` (`nameMatch`), hashed ones
+        /// too.
+        #[qinvokable]
+        #[cxx_name = "searchKnownHosts"]
+        fn search_known_hosts(self: Pin<&mut Self>, query: &QString) -> i32;
+
+        /// Removes an entry of OpenSesh's own `known_hosts` (its line and fingerprint, as
+        /// listed); `~/.ssh/known_hosts` is never changed.
+        #[qinvokable]
+        #[cxx_name = "forgetKnownHost"]
+        fn forget_known_host(self: Pin<&mut Self>, line: i32, fingerprint: &QString) -> i32;
+
         /// Test runs only: sample identities, keys, agents and known hosts.
         #[qinvokable]
         #[cxx_name = "loadSample"]
@@ -524,6 +536,22 @@ impl qobject::Keychain {
     /// See the bridge declaration.
     pub fn refresh_known_hosts(self: Pin<&mut Self>) -> i32 {
         self.submit(Job::ReadKnownHosts)
+    }
+
+    /// See the bridge declaration.
+    pub fn search_known_hosts(self: Pin<&mut Self>, query: &QString) -> i32 {
+        self.submit(Job::SearchKnownHosts(query.to_string()))
+    }
+
+    /// See the bridge declaration.
+    pub fn forget_known_host(self: Pin<&mut Self>, line: i32, fingerprint: &QString) -> i32 {
+        if is_test_run() {
+            return self.refuse_in_tests();
+        }
+        self.submit(Job::ForgetKnownHost {
+            line: usize::try_from(line).unwrap_or(0),
+            fingerprint: fingerprint.to_string(),
+        })
     }
 
     /// See the bridge declaration.

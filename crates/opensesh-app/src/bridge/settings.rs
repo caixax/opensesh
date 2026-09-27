@@ -45,6 +45,15 @@ pub mod qobject {
         #[qproperty(QString, window_decorations, cxx_name = "windowDecorations", READ = window_decorations, WRITE = set_window_decorations, NOTIFY = settings_changed)]
         #[qproperty(QString, terminal_profile, cxx_name = "terminalProfile", READ = terminal_profile, WRITE = set_terminal_profile, NOTIFY = settings_changed)]
         #[qproperty(i32, lock_after_minutes, cxx_name = "lockAfterMinutes", READ = lock_after_minutes, WRITE = set_lock_after_minutes, NOTIFY = settings_changed)]
+        #[qproperty(QString, ssh_backend, cxx_name = "sshBackend", READ = ssh_backend, WRITE = set_ssh_backend, NOTIFY = settings_changed)]
+        #[qproperty(QStringList, ssh_auth_order, cxx_name = "sshAuthOrder", READ = ssh_auth_order, WRITE = set_ssh_auth_order, NOTIFY = settings_changed)]
+        #[qproperty(i32, ssh_keepalive_secs, cxx_name = "sshKeepaliveSecs", READ = ssh_keepalive_secs, WRITE = set_ssh_keepalive_secs, NOTIFY = settings_changed)]
+        #[qproperty(bool, ssh_auto_reconnect, cxx_name = "sshAutoReconnect", READ = ssh_auto_reconnect, WRITE = set_ssh_auto_reconnect, NOTIFY = settings_changed)]
+        #[qproperty(bool, ssh_detect_os, cxx_name = "sshDetectOs", READ = ssh_detect_os, WRITE = set_ssh_detect_os, NOTIFY = settings_changed)]
+        #[qproperty(bool, ssh_send_locale, cxx_name = "sshSendLocale", READ = ssh_send_locale, WRITE = set_ssh_send_locale, NOTIFY = settings_changed)]
+        #[qproperty(QString, ssh_log, cxx_name = "sshLog", READ = ssh_log, WRITE = set_ssh_log, NOTIFY = settings_changed)]
+        #[qproperty(QString, ssh_logs_dir, cxx_name = "sshLogsDir", READ = ssh_logs_dir, WRITE = set_ssh_logs_dir, NOTIFY = settings_changed)]
+        #[qproperty(QString, ssh_logs_folder, cxx_name = "sshLogsFolder", READ = ssh_logs_folder, NOTIFY = settings_changed)]
         #[qproperty(QString, config_path, cxx_name = "configPath", READ = config_path, NOTIFY = status_changed)]
         #[qproperty(bool, read_only, cxx_name = "readOnly", READ = read_only, NOTIFY = status_changed)]
         #[qproperty(QString, read_only_reason, cxx_name = "readOnlyReason", READ = read_only_reason, NOTIFY = status_changed)]
@@ -112,6 +121,24 @@ pub mod qobject {
         fn set_terminal_profile(self: Pin<&mut Self>, value: QString);
         fn lock_after_minutes(self: &Self) -> i32;
         fn set_lock_after_minutes(self: Pin<&mut Self>, value: i32);
+        fn ssh_backend(self: &Self) -> QString;
+        fn set_ssh_backend(self: Pin<&mut Self>, value: QString);
+        fn ssh_auth_order(self: &Self) -> QStringList;
+        fn set_ssh_auth_order(self: Pin<&mut Self>, value: QStringList);
+        fn ssh_keepalive_secs(self: &Self) -> i32;
+        fn set_ssh_keepalive_secs(self: Pin<&mut Self>, value: i32);
+        fn ssh_auto_reconnect(self: &Self) -> bool;
+        fn set_ssh_auto_reconnect(self: Pin<&mut Self>, value: bool);
+        fn ssh_detect_os(self: &Self) -> bool;
+        fn set_ssh_detect_os(self: Pin<&mut Self>, value: bool);
+        fn ssh_send_locale(self: &Self) -> bool;
+        fn set_ssh_send_locale(self: Pin<&mut Self>, value: bool);
+        fn ssh_log(self: &Self) -> QString;
+        fn set_ssh_log(self: Pin<&mut Self>, value: QString);
+        fn ssh_logs_dir(self: &Self) -> QString;
+        fn set_ssh_logs_dir(self: Pin<&mut Self>, value: QString);
+        /// The folder session logs actually go to (the default one when `sshLogsDir` is empty).
+        fn ssh_logs_folder(self: &Self) -> QString;
         fn config_path(self: &Self) -> QString;
         fn read_only(self: &Self) -> bool;
         fn read_only_reason(self: &Self) -> QString;
@@ -141,7 +168,8 @@ use std::time::Duration;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
 use opensesh_core::config::{
-    self, Accent, Config, Decorations, LastTabAction, RailPosition, SidePanelPosition, TabsPosition,
+    self, Accent, Config, Decorations, LastTabAction, RailPosition, SessionLogMode,
+    SidePanelPosition, SshClient, SshSettings, TabsPosition,
 };
 use opensesh_core::fsutil;
 use opensesh_core::theme::{Density, ThemeMode};
@@ -276,8 +304,14 @@ impl qobject::AppSettings {
         // Always notify: an invalid value from QML must snap the control back.
         self.as_mut().settings_changed();
         if changed {
+            self.apply_outside();
             self.save();
         }
+    }
+
+    /// Gives the settings other parts of the app read to them (the SSH defaults of every host).
+    fn apply_outside(&self) {
+        crate::ssh::apply_settings(&self.config.ssh);
     }
 
     /// Parses a choice setting coming from QML; logs and ignores unknown values.
@@ -388,6 +422,7 @@ impl qobject::AppSettings {
                     state.config = *config;
                     state.warnings = warnings;
                 }
+                self.apply_outside();
                 self.as_mut().set_protection(if read_only {
                     Protection::NewerSchema
                 } else {
@@ -459,6 +494,8 @@ impl qobject::AppSettings {
             "sidePanelPosition" => names(SidePanelPosition::ALL, SidePanelPosition::as_str),
             "tabsPosition" => names(TabsPosition::ALL, TabsPosition::as_str),
             "windowDecorations" => names(Decorations::ALL, Decorations::as_str),
+            "sshBackend" => names(SshClient::ALL, SshClient::as_str),
+            "sshLog" => names(SessionLogMode::ALL, SessionLogMode::as_str),
             other => {
                 tracing::warn!(key = other, "choices() asked for an unknown setting");
                 Vec::new()
@@ -484,6 +521,7 @@ impl qobject::AppSettings {
         };
         let changed = replace(&mut self.as_mut().rust_mut().config, defaults);
         self.as_mut().settings_changed();
+        self.apply_outside();
         if changed || replace_broken {
             self.save();
         }
@@ -524,6 +562,83 @@ impl qobject::AppSettings {
                 tracing::warn!(value, "ignoring invalid idle lock time");
                 self.change(|_| false);
             }
+        }
+    }
+    pub fn ssh_backend(&self) -> QString {
+        qstring(self.config.ssh.backend.as_str())
+    }
+    pub fn set_ssh_backend(self: Pin<&mut Self>, value: QString) {
+        self.set_choice("sshBackend", &value, |c| &mut c.ssh.backend);
+    }
+    pub fn ssh_auth_order(&self) -> QStringList {
+        qstring_list(self.config.ssh.auth_order.iter().cloned())
+    }
+    pub fn set_ssh_auth_order(self: Pin<&mut Self>, value: QStringList) {
+        let order: Vec<String> = value
+            .iter()
+            .map(|method| method.to_string().trim().to_owned())
+            .collect();
+        if SshSettings::valid_auth_order(&order) {
+            self.change(|c| replace(&mut c.ssh.auth_order, order));
+        } else {
+            tracing::warn!(?order, "ignoring an invalid authentication order from QML");
+            self.change(|_| false);
+        }
+    }
+    pub fn ssh_keepalive_secs(&self) -> i32 {
+        i32::try_from(self.config.ssh.keepalive_secs).unwrap_or(i32::MAX)
+    }
+    pub fn set_ssh_keepalive_secs(self: Pin<&mut Self>, value: i32) {
+        match u32::try_from(value)
+            .ok()
+            .filter(|secs| *secs <= config::MAX_KEEPALIVE_SECS)
+        {
+            Some(secs) => self.change(|c| replace(&mut c.ssh.keepalive_secs, secs)),
+            None => {
+                tracing::warn!(value, "ignoring an invalid keepalive interval");
+                self.change(|_| false);
+            }
+        }
+    }
+    pub fn ssh_auto_reconnect(&self) -> bool {
+        self.config.ssh.auto_reconnect
+    }
+    pub fn set_ssh_auto_reconnect(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.ssh.auto_reconnect);
+    }
+    pub fn ssh_detect_os(&self) -> bool {
+        self.config.ssh.detect_os
+    }
+    pub fn set_ssh_detect_os(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.ssh.detect_os);
+    }
+    pub fn ssh_send_locale(&self) -> bool {
+        self.config.ssh.send_locale
+    }
+    pub fn set_ssh_send_locale(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.ssh.send_locale);
+    }
+    pub fn ssh_log(&self) -> QString {
+        qstring(self.config.ssh.log.as_str())
+    }
+    pub fn set_ssh_log(self: Pin<&mut Self>, value: QString) {
+        self.set_choice("sshLog", &value, |c| &mut c.ssh.log);
+    }
+    pub fn ssh_logs_dir(&self) -> QString {
+        qstring(&self.config.ssh.logs_dir)
+    }
+    pub fn set_ssh_logs_dir(self: Pin<&mut Self>, value: QString) {
+        let text = value.to_string().trim().to_owned();
+        self.change(|c| replace(&mut c.ssh.logs_dir, text));
+    }
+    pub fn ssh_logs_folder(&self) -> QString {
+        match services::get() {
+            Some(services) => QString::from(
+                &crate::ssh::logs_dir(services.paths.data_dir())
+                    .display()
+                    .to_string(),
+            ),
+            None => QString::default(),
         }
     }
     pub fn restore_sessions(&self) -> bool {

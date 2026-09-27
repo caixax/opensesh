@@ -740,6 +740,10 @@
         <translation>[ñöñé ~~]</translation>
     </message>
     <message>
+        <source>%1=%2</source>
+        <translation>[%1=%2 ~~]</translation>
+    </message>
+    <message>
         <source>%1 (from %2)</source>
         <translation>[%1 (ƒŕöm %2) ~~~~]</translation>
     </message>
@@ -766,6 +770,18 @@
     <message>
         <source>Each jump host is a saved host or user@host:port, separated by commas.</source>
         <translation>[Éáçĥ ĵümþ ĥöšť íš á šávéď ĥöšť öŕ üšéŕ@ĥöšť:þöŕť, šéþáŕáťéď bý çömmáš. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use publickey, keyboard-interactive and password, separated by commas.</source>
+        <translation>[Üšé þübĺíçķéý, ķéýböáŕď-íñťéŕáçťívé áñď þáššŵöŕď, šéþáŕáťéď bý çömmáš. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use socks5://host:port or http://host:port.</source>
+        <translation>[Üšé šöçķš5://ĥöšť:þöŕť öŕ ĥťťþ://ĥöšť:þöŕť. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Names are letters, digits and _, as in NAME=value; OTHER=value.</source>
+        <translation>[Ñáméš áŕé ĺéťťéŕš, ďíĝíťš áñď _, áš íñ ÑÅMÉ=váĺüé; ÖŤĤÉŔ=váĺüé. ~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>This group can&apos;t be saved as it is.</source>
@@ -852,6 +868,38 @@
         <translation>[Ťéŕmíñáĺ þŕöƒíĺé ~~~~~]</translation>
     </message>
     <message>
+        <source>Authentication order</source>
+        <translation>[Åüťĥéñťíçáťíöñ öŕďéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>SSH client</source>
+        <translation>[ŠŠĤ çĺíéñť ~~~]</translation>
+    </message>
+    <message>
+        <source>Built-in</source>
+        <translation>[Büíĺť-íñ ~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSSH</source>
+        <translation>[ÖþéñŠŠĤ ~~~]</translation>
+    </message>
+    <message>
+        <source>Legacy algorithms</source>
+        <translation>[Ĺéĝáçý áĺĝöŕíťĥmš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Proxy</source>
+        <translation>[Þŕöxý ~~]</translation>
+    </message>
+    <message>
+        <source>socks5://host:1080 or http://host:8080</source>
+        <translation>[šöçķš5://ĥöšť:1080 öŕ ĥťťþ://ĥöšť:8080 ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Proxy command</source>
+        <translation>[Þŕöxý çömmáñď ~~~~]</translation>
+    </message>
+    <message>
         <source>Keepalive (seconds)</source>
         <translation>[Ķééþáĺívé (šéçöñďš) ~~~~~~]</translation>
     </message>
@@ -878,6 +926,50 @@
     <message>
         <source>Trusted</source>
         <translation>[Ťŕüšťéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Environment</source>
+        <translation>[Éñvíŕöñméñť ~~~~]</translation>
+    </message>
+    <message>
+        <source>NAME=value; OTHER=value</source>
+        <translation>[ÑÅMÉ=váĺüé; ÖŤĤÉŔ=váĺüé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Send the language settings</source>
+        <translation>[Šéñď ťĥé ĺáñĝüáĝé šéťťíñĝš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remote command</source>
+        <translation>[Ŕémöťé çömmáñď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Startup snippet</source>
+        <translation>[Šťáŕťüþ šñíþþéť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reconnect by itself</source>
+        <translation>[Ŕéçöññéçť bý íťšéĺƒ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Session log</source>
+        <translation>[Šéššíöñ ĺöĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>[Ťéxť ~~]</translation>
+    </message>
+    <message>
+        <source>Raw (with escape codes)</source>
+        <translation>[Ŕáŵ (ŵíťĥ éšçáþé çöďéš) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Detect the OS</source>
+        <translation>[Ďéťéçť ťĥé ÖŠ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Agent</source>
+        <translation>[Åĝéñť ~~]</translation>
     </message>
     <message>
         <source>SFTP follows the terminal</source>
@@ -1121,6 +1213,10 @@
         <translation>[ñöñé ~~]</translation>
     </message>
     <message>
+        <source>%1=%2</source>
+        <translation>[%1=%2 ~~]</translation>
+    </message>
+    <message>
         <source>%1 (from %2)</source>
         <translation>[%1 (ƒŕöm %2) ~~~~]</translation>
     </message>
@@ -1159,6 +1255,18 @@
     <message>
         <source>That group no longer exists.</source>
         <translation>[Ťĥáť ĝŕöüþ ñö ĺöñĝéŕ éxíšťš. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use publickey, keyboard-interactive and password, separated by commas.</source>
+        <translation>[Üšé þübĺíçķéý, ķéýböáŕď-íñťéŕáçťívé áñď þáššŵöŕď, šéþáŕáťéď bý çömmáš. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use socks5://host:port or http://host:port.</source>
+        <translation>[Üšé šöçķš5://ĥöšť:þöŕť öŕ ĥťťþ://ĥöšť:þöŕť. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Names are letters, digits and _, as in NAME=value; OTHER=value.</source>
+        <translation>[Ñáméš áŕé ĺéťťéŕš, ďíĝíťš áñď _, áš íñ ÑÅMÉ=váĺüé; ÖŤĤÉŔ=váĺüé. ~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>This host can&apos;t be saved as it is.</source>
@@ -1329,8 +1437,128 @@
         <translation>[Þŕöťöçöĺ ~~~]</translation>
     </message>
     <message>
-        <source>Connects with the system&apos;s OpenSSH client until the built-in one arrives.</source>
-        <translation>[Çöññéçťš ŵíťĥ ťĥé šýšťém&apos;š ÖþéñŠŠĤ çĺíéñť üñťíĺ ťĥé büíĺť-íñ öñé áŕŕívéš. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>A user name with a password and/or a key from the keychain. The OpenSSH client only uses its user name.</source>
+        <translation>[Å üšéŕ ñámé ŵíťĥ á þáššŵöŕď áñď/öŕ á ķéý ƒŕöm ťĥé ķéýçĥáíñ. Ťĥé ÖþéñŠŠĤ çĺíéñť öñĺý üšéš íťš üšéŕ ñámé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>~/.ssh/id_ed25519, id_ecdsa or id_rsa, after the agent&apos;s keys</source>
+        <translation>[~/.ššĥ/íď_éď25519, íď_éçďšá öŕ íď_ŕšá, áƒťéŕ ťĥé áĝéñť&apos;š ķéýš ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A certificate next to it (key-cert.pub) is used too.</source>
+        <translation>[Å çéŕťíƒíçáťé ñéxť ťö íť (ķéý-çéŕť.þüb) íš üšéď ťöö. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The system&apos;s OpenSSH client is there for what the built-in one doesn&apos;t do (Kerberos, smart cards, Match exec). It uses its own settings: most options here don&apos;t apply to it.</source>
+        <translation>[Ťĥé šýšťém&apos;š ÖþéñŠŠĤ çĺíéñť íš ťĥéŕé ƒöŕ ŵĥáť ťĥé büíĺť-íñ öñé ďöéšñ&apos;ť ďö (Ķéŕbéŕöš, šmáŕť çáŕďš, Máťçĥ éxéç). Íť üšéš íťš öŵñ šéťťíñĝš: möšť öþťíöñš ĥéŕé ďöñ&apos;ť áþþĺý ťö íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Legacy algorithms</source>
+        <translation>[Ĺéĝáçý áĺĝöŕíťĥmš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>For old servers: SHA-1 key exchange and signatures, CBC ciphers and hmac-sha1. They are weaker; turn them on only for a server that needs them.</source>
+        <translation>[Föŕ öĺď šéŕvéŕš: ŠĤÅ-1 ķéý éxçĥáñĝé áñď šíĝñáťüŕéš, ÇBÇ çíþĥéŕš áñď ĥmáç-šĥá1. Ťĥéý áŕé ŵéáķéŕ; ťüŕñ ťĥém öñ öñĺý ƒöŕ á šéŕvéŕ ťĥáť ñééďš ťĥém. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Proxy</source>
+        <translation>[Þŕöxý ~~]</translation>
+    </message>
+    <message>
+        <source>socks5://host:1080 or http://host:8080</source>
+        <translation>[šöçķš5://ĥöšť:1080 öŕ ĥťťþ://ĥöšť:8080 ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>For the first hop (a jump host, or this host).</source>
+        <translation>[Föŕ ťĥé ƒíŕšť ĥöþ (á ĵümþ ĥöšť, öŕ ťĥíš ĥöšť). ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Proxy command</source>
+        <translation>[Þŕöxý çömmáñď ~~~~]</translation>
+    </message>
+    <message>
+        <source>nc -X connect -x proxy:3128 %h %p</source>
+        <translation>[ñç -X çöññéçť -x þŕöxý:3128 %ĥ %þ ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A program whose input and output carry the connection, instead of the proxy (%h host, %p port, %r user).</source>
+        <translation>[Å þŕöĝŕám ŵĥöšé íñþüť áñď öüťþüť çáŕŕý ťĥé çöññéçťíöñ, íñšťéáď öƒ ťĥé þŕöxý (%ĥ ĥöšť, %þ þöŕť, %ŕ üšéŕ). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Trusted forwarding gives remote programs full access to your display. Only the OpenSSH client forwards X11 for now.</source>
+        <translation>[Ťŕüšťéď ƒöŕŵáŕďíñĝ ĝívéš ŕémöťé þŕöĝŕámš ƒüĺĺ áççéšš ťö ýöüŕ ďíšþĺáý. Öñĺý ťĥé ÖþéñŠŠĤ çĺíéñť ƒöŕŵáŕďš X11 ƒöŕ ñöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Only the OpenSSH client forwards X11 for now.</source>
+        <translation>[Öñĺý ťĥé ÖþéñŠŠĤ çĺíéñť ƒöŕŵáŕďš X11 ƒöŕ ñöŵ. ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Environment</source>
+        <translation>[Éñvíŕöñméñť ~~~~]</translation>
+    </message>
+    <message>
+        <source>NAME=value; OTHER=value</source>
+        <translation>[ÑÅMÉ=váĺüé; ÖŤĤÉŔ=váĺüé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Sent to the server, which only sets what its AcceptEnv allows.</source>
+        <translation>[Šéñť ťö ťĥé šéŕvéŕ, ŵĥíçĥ öñĺý šéťš ŵĥáť íťš ÅççéþťÉñv áĺĺöŵš. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Send the language settings</source>
+        <translation>[Šéñď ťĥé ĺáñĝüáĝé šéťťíñĝš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>LANG and LC_* from this computer, as OpenSSH sends them.</source>
+        <translation>[ĹÅÑĜ áñď ĹÇ_* ƒŕöm ťĥíš çömþüťéŕ, áš ÖþéñŠŠĤ šéñďš ťĥém. ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remote command</source>
+        <translation>[Ŕémöťé çömmáñď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>the login shell</source>
+        <translation>[ťĥé ĺöĝíñ šĥéĺĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Runs instead of the shell, like ssh host command.</source>
+        <translation>[Ŕüñš íñšťéáď öƒ ťĥé šĥéĺĺ, ĺíķé ššĥ ĥöšť çömmáñď. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Typed once the shell is ready, on every connection.</source>
+        <translation>[Ťýþéď öñçé ťĥé šĥéĺĺ íš ŕéáďý, öñ évéŕý çöññéçťíöñ. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reconnect by itself</source>
+        <translation>[Ŕéçöññéçť bý íťšéĺƒ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>After the connection drops, tries again after 1, 2, 4, 8 and 16 seconds. Enter reconnects at any time.</source>
+        <translation>[Åƒťéŕ ťĥé çöññéçťíöñ ďŕöþš, ťŕíéš áĝáíñ áƒťéŕ 1, 2, 4, 8 áñď 16 šéçöñďš. Éñťéŕ ŕéçöññéçťš áť áñý ťímé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Session log</source>
+        <translation>[Šéššíöñ ĺöĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>[Ťéxť ~~]</translation>
+    </message>
+    <message>
+        <source>Raw (with escape codes)</source>
+        <translation>[Ŕáŵ (ŵíťĥ éšçáþé çöďéš) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved in the logs/sessions folder of OpenSesh&apos;s data folder, one file per connection.</source>
+        <translation>[Šávéď íñ ťĥé ĺöĝš/šéššíöñš ƒöĺďéŕ öƒ ÖþéñŠéšĥ&apos;š ďáťá ƒöĺďéŕ, öñé ƒíĺé þéŕ çöññéçťíöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Detect the OS</source>
+        <translation>[Ďéťéçť ťĥé ÖŠ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Reads /etc/os-release once connected, for the automatic icon.</source>
+        <translation>[Ŕéáďš /éťç/öš-ŕéĺéášé öñçé çöññéçťéď, ƒöŕ ťĥé áüťömáťíç íçöñ. ~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Saved now; the file browser arrives in Sprint 8.</source>
@@ -1417,10 +1645,6 @@
         <translation>[%1 (%2) ~~~]</translation>
     </message>
     <message>
-        <source>A user name with a password and/or a key from the keychain. OpenSSH uses its user name until the built-in client arrives.</source>
-        <translation>[Å üšéŕ ñámé ŵíťĥ á þáššŵöŕď áñď/öŕ á ķéý ƒŕöm ťĥé ķéýçĥáíñ. ÖþéñŠŠĤ üšéš íťš üšéŕ ñámé üñťíĺ ťĥé büíĺť-íñ çĺíéñť áŕŕívéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>User</source>
         <translation>[Üšéŕ ~~]</translation>
     </message>
@@ -1429,20 +1653,36 @@
         <translation>[ťĥé íďéñťíťý&apos;š, éĺšé ťĥé ĺöçáĺ üšéŕ ñámé ~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Passwords and keys stay in the encrypted vault; hosts.toml only names the identity.</source>
-        <translation>[Þáššŵöŕďš áñď ķéýš šťáý íñ ťĥé éñçŕýþťéď váüĺť; ĥöšťš.ťömĺ öñĺý ñáméš ťĥé íďéñťíťý. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>Private key file</source>
         <translation>[Þŕíváťé ķéý ƒíĺé ~~~~~]</translation>
     </message>
     <message>
-        <source>the keys OpenSSH tries by itself</source>
-        <translation>[ťĥé ķéýš ÖþéñŠŠĤ ťŕíéš bý íťšéĺƒ ~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>Choose a key file…</source>
         <translation>[Çĥööšé á ķéý ƒíĺé… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Authentication order</source>
+        <translation>[Åüťĥéñťíçáťíöñ öŕďéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The methods to try, in order: publickey (the identity&apos;s key, the key file, the agent), keyboard-interactive (one-time codes) and password.</source>
+        <translation>[Ťĥé méťĥöďš ťö ťŕý, íñ öŕďéŕ: þübĺíçķéý (ťĥé íďéñťíťý&apos;š ķéý, ťĥé ķéý ƒíĺé, ťĥé áĝéñť), ķéýböáŕď-íñťéŕáçťívé (öñé-ťímé çöďéš) áñď þáššŵöŕď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Agent</source>
+        <translation>[Åĝéñť ~~]</translation>
+    </message>
+    <message>
+        <source>SSH_AUTH_SOCK, else the system&apos;s agent</source>
+        <translation>[ŠŠĤ_ÅÜŤĤ_ŠÖÇĶ, éĺšé ťĥé šýšťém&apos;š áĝéñť ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A socket path or a Windows pipe name (\.pipe...), for an agent other than the usual one.</source>
+        <translation>[Å šöçķéť þáťĥ öŕ á Ŵíñďöŵš þíþé ñámé (\.þíþé...), ƒöŕ áñ áĝéñť öťĥéŕ ťĥáñ ťĥé üšüáĺ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passwords and keys stay in the encrypted vault; hosts.toml only names the identity. The vault is opened only when a connection needs them.</source>
+        <translation>[Þáššŵöŕďš áñď ķéýš šťáý íñ ťĥé éñçŕýþťéď váüĺť; ĥöšťš.ťömĺ öñĺý ñáméš ťĥé íďéñťíťý. Ťĥé váüĺť íš öþéñéď öñĺý ŵĥéñ á çöññéçťíöñ ñééďš ťĥém. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Jump hosts</source>
@@ -1467,10 +1707,6 @@
     <message>
         <source>OpenSSH</source>
         <translation>[ÖþéñŠŠĤ ~~~]</translation>
-    </message>
-    <message>
-        <source>Until the built-in client arrives, OpenSesh connects with OpenSSH either way.</source>
-        <translation>[Üñťíĺ ťĥé büíĺť-íñ çĺíéñť áŕŕívéš, ÖþéñŠéšĥ çöññéçťš ŵíťĥ ÖþéñŠŠĤ éíťĥéŕ ŵáý. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Keepalive (seconds)</source>
@@ -1505,16 +1741,8 @@
         <translation>[Ťŕüšťéď ~~~]</translation>
     </message>
     <message>
-        <source>Trusted forwarding gives remote programs full access to your display.</source>
-        <translation>[Ťŕüšťéď ƒöŕŵáŕďíñĝ ĝívéš ŕémöťé þŕöĝŕámš ƒüĺĺ áççéšš ťö ýöüŕ ďíšþĺáý. ~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>Startup snippet</source>
         <translation>[Šťáŕťüþ šñíþþéť ~~~~~]</translation>
-    </message>
-    <message>
-        <source>Runs once the shell is ready; snippets arrive in Sprint 10.</source>
-        <translation>[Ŕüñš öñçé ťĥé šĥéĺĺ íš ŕéáďý; šñíþþéťš áŕŕívé íñ Šþŕíñť 10. ~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Speed (baud)</source>
@@ -2375,6 +2603,14 @@
         <translation>[Ķñöŵñ ĥöšťš ~~~~]</translation>
     </message>
     <message>
+        <source>OpenSesh&apos;s file: the keys you trust are saved here.</source>
+        <translation>[ÖþéñŠéšĥ&apos;š ƒíĺé: ťĥé ķéýš ýöü ťŕüšť áŕé šávéď ĥéŕé. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Only read: OpenSesh never changes it.</source>
+        <translation>[Öñĺý ŕéáď: ÖþéñŠéšĥ ñévéŕ çĥáñĝéš íť. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>OpenSSH agent (Windows)</source>
         <translation>[ÖþéñŠŠĤ áĝéñť (Ŵíñďöŵš) ~~~~~~~]</translation>
     </message>
@@ -2503,12 +2739,16 @@
         <translation>[Šömé éñťŕíéš öƒ ķéýçĥáíñ.ťömĺ ŵéŕé ƒíxéď öŕ šķíþþéď ~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Read-only for now</source>
-        <translation>[Ŕéáď-öñĺý ƒöŕ ñöŵ ~~~~~~]</translation>
+        <source>How host keys are checked</source>
+        <translation>[Ĥöŵ ĥöšť ķéýš áŕé çĥéçķéď ~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Checking host keys, and adding or removing them, arrive with the built-in SSH client (Sprint 7).</source>
-        <translation>[Çĥéçķíñĝ ĥöšť ķéýš, áñď áďďíñĝ öŕ ŕémövíñĝ ťĥém, áŕŕívé ŵíťĥ ťĥé büíĺť-íñ ŠŠĤ çĺíéñť (Šþŕíñť 7). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>A server&apos;s key is checked against both files. A new one is shown for you to trust; a changed one stops the connection until you decide. Hashed names are found by typing the full host name.</source>
+        <translation>[Å šéŕvéŕ&apos;š ķéý íš çĥéçķéď áĝáíñšť böťĥ ƒíĺéš. Å ñéŵ öñé íš šĥöŵñ ƒöŕ ýöü ťö ťŕüšť; á çĥáñĝéď öñé šťöþš ťĥé çöññéçťíöñ üñťíĺ ýöü ďéçíďé. Ĥášĥéď ñáméš áŕé ƒöüñď bý ťýþíñĝ ťĥé ƒüĺĺ ĥöšť ñámé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>No server keys are known yet. The first connection to a server shows its key&apos;s fingerprint for you to trust.</source>
+        <translation>[Ñö šéŕvéŕ ķéýš áŕé ķñöŵñ ýéť. Ťĥé ƒíŕšť çöññéçťíöñ ťö á šéŕvéŕ šĥöŵš íťš ķéý&apos;š ƒíñĝéŕþŕíñť ƒöŕ ýöü ťö ťŕüšť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Hashed host name</source>
@@ -2579,10 +2819,6 @@
         <translation>[Ñö ŕüññíñĝ ŠŠĤ áĝéñť ĥöĺďš ķéýš. ÖþéñŠéšĥ ášķš ŠŠĤ_ÅÜŤĤ_ŠÖÇĶ öñ Ĺíñüx, áñď ťĥé Ŵíñďöŵš ÖþéñŠŠĤ áĝéñť áñď Þáĝéáñť öñ Ŵíñďöŵš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>~/.ssh/known_hosts is empty or missing.</source>
-        <translation>[~/.ššĥ/ķñöŵñ_ĥöšťš íš émþťý öŕ míššíñĝ. ~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>Edit…</source>
         <translation>[Éďíť… ~~]</translation>
     </message>
@@ -2601,6 +2837,22 @@
     <message>
         <source>Rename…</source>
         <translation>[Ŕéñámé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Copy the fingerprint</source>
+        <translation>[Çöþý ťĥé ƒíñĝéŕþŕíñť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Fingerprint copied.</source>
+        <translation>[Fíñĝéŕþŕíñť çöþíéď. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remove (only in OpenSesh&apos;s file)</source>
+        <translation>[Ŕémövé (öñĺý íñ ÖþéñŠéšĥ&apos;š ƒíĺé) ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remove…</source>
+        <translation>[Ŕémövé… ~~~]</translation>
     </message>
     <message>
         <source>Rename key</source>
@@ -2623,8 +2875,24 @@
         <translation>[Ďéĺéťé íďéñťíťý? ~~~~~]</translation>
     </message>
     <message>
+        <source>Remove this host key?</source>
+        <translation>[Ŕémövé ťĥíš ĥöšť ķéý? ~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Delete</source>
         <translation>[Ďéĺéťé ~~]</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>[Ŕémövé ~~]</translation>
+    </message>
+    <message>
+        <source>The %1 key of %2 is removed from OpenSesh&apos;s known_hosts. The next connection shows the server&apos;s key for you to trust again.</source>
+        <translation>[Ťĥé %1 ķéý öƒ %2 íš ŕémövéď ƒŕöm ÖþéñŠéšĥ&apos;š ķñöŵñ_ĥöšťš. Ťĥé ñéxť çöññéçťíöñ šĥöŵš ťĥé šéŕvéŕ&apos;š ķéý ƒöŕ ýöü ťö ťŕüšť áĝáíñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>this hashed host</source>
+        <translation>[ťĥíš ĥášĥéď ĥöšť ~~~~~]</translation>
     </message>
     <message>
         <source>“%1” and its private key are deleted from the vault. Servers that trust it keep its public key until you remove it there.</source>
@@ -5823,6 +6091,149 @@
     </message>
 </context>
 <context>
+    <name>SettingsSshPage</name>
+    <message>
+        <source>SSH</source>
+        <translation>[ŠŠĤ ~]</translation>
+    </message>
+    <message>
+        <source>What SSH hosts use unless their group or the host itself says otherwise. Quick connections use these too.</source>
+        <translation>[Ŵĥáť ŠŠĤ ĥöšťš üšé üñĺéšš ťĥéíŕ ĝŕöüþ öŕ ťĥé ĥöšť íťšéĺƒ šáýš öťĥéŕŵíšé. Qüíçķ çöññéçťíöñš üšé ťĥéšé ťöö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connections</source>
+        <translation>[Çöññéçťíöñš ~~~~]</translation>
+    </message>
+    <message>
+        <source>SSH client</source>
+        <translation>[ŠŠĤ çĺíéñť ~~~]</translation>
+    </message>
+    <message>
+        <source>The system&apos;s ssh runs in the terminal with its own settings (~/.ssh/config): most options here don&apos;t apply to it.</source>
+        <translation>[Ťĥé šýšťém&apos;š ššĥ ŕüñš íñ ťĥé ťéŕmíñáĺ ŵíťĥ íťš öŵñ šéťťíñĝš (~/.ššĥ/çöñƒíĝ): möšť öþťíöñš ĥéŕé ďöñ&apos;ť áþþĺý ťö íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The system&apos;s OpenSSH client is there for what the built-in one doesn&apos;t do (Kerberos, smart cards, Match exec).</source>
+        <translation>[Ťĥé šýšťém&apos;š ÖþéñŠŠĤ çĺíéñť íš ťĥéŕé ƒöŕ ŵĥáť ťĥé büíĺť-íñ öñé ďöéšñ&apos;ť ďö (Ķéŕbéŕöš, šmáŕť çáŕďš, Máťçĥ éxéç). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Built-in</source>
+        <translation>[Büíĺť-íñ ~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSSH</source>
+        <translation>[ÖþéñŠŠĤ ~~~]</translation>
+    </message>
+    <message>
+        <source>Authentication order</source>
+        <translation>[Åüťĥéñťíçáťíöñ öŕďéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>publickey (the identity&apos;s key, the key file, the agent), keyboard-interactive (one-time codes) and password, separated by commas.</source>
+        <translation>[þübĺíçķéý (ťĥé íďéñťíťý&apos;š ķéý, ťĥé ķéý ƒíĺé, ťĥé áĝéñť), ķéýböáŕď-íñťéŕáçťívé (öñé-ťímé çöďéš) áñď þáššŵöŕď, šéþáŕáťéď bý çömmáš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use each of publickey, keyboard-interactive and password at most once.</source>
+        <translation>[Üšé éáçĥ öƒ þübĺíçķéý, ķéýböáŕď-íñťéŕáçťívé áñď þáššŵöŕď áť möšť öñçé. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keepalive</source>
+        <translation>[Ķééþáĺívé ~~~]</translation>
+    </message>
+    <message>
+        <source>Seconds between keepalive messages, which also notice a dead connection. 0 turns them off.</source>
+        <translation>[Šéçöñďš béťŵééñ ķééþáĺívé méššáĝéš, ŵĥíçĥ áĺšö ñöťíçé á ďéáď çöññéçťíöñ. 0 ťüŕñš ťĥém öƒƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keepalive in seconds</source>
+        <translation>[Ķééþáĺívé íñ šéçöñďš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reconnect by itself</source>
+        <translation>[Ŕéçöññéçť bý íťšéĺƒ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>After the connection drops, tries again after 1, 2, 4, 8 and 16 seconds. Enter reconnects at any time.</source>
+        <translation>[Åƒťéŕ ťĥé çöññéçťíöñ ďŕöþš, ťŕíéš áĝáíñ áƒťéŕ 1, 2, 4, 8 áñď 16 šéçöñďš. Éñťéŕ ŕéçöññéçťš áť áñý ťímé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Send the language settings</source>
+        <translation>[Šéñď ťĥé ĺáñĝüáĝé šéťťíñĝš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>LANG and LC_* from this computer, as OpenSSH sends them; the server may ignore them.</source>
+        <translation>[ĹÅÑĜ áñď ĹÇ_* ƒŕöm ťĥíš çömþüťéŕ, áš ÖþéñŠŠĤ šéñďš ťĥém; ťĥé šéŕvéŕ máý íĝñöŕé ťĥém. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Detect the OS</source>
+        <translation>[Ďéťéçť ťĥé ÖŠ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Reads /etc/os-release once connected, over a separate channel, for the icon of hosts set to Automatic.</source>
+        <translation>[Ŕéáďš /éťç/öš-ŕéĺéášé öñçé çöññéçťéď, övéŕ á šéþáŕáťé çĥáññéĺ, ƒöŕ ťĥé íçöñ öƒ ĥöšťš šéť ťö Åüťömáťíç. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Session logs</source>
+        <translation>[Šéššíöñ ĺöĝš ~~~~]</translation>
+    </message>
+    <message>
+        <source>A file per connection with what the server sent. Logs keep whatever the screen showed, secrets printed there included.</source>
+        <translation>[Å ƒíĺé þéŕ çöññéçťíöñ ŵíťĥ ŵĥáť ťĥé šéŕvéŕ šéñť. Ĺöĝš ķééþ ŵĥáťévéŕ ťĥé šçŕééñ šĥöŵéď, šéçŕéťš þŕíñťéď ťĥéŕé íñçĺüďéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Log sessions</source>
+        <translation>[Ĺöĝ šéššíöñš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>[Öƒƒ ~]</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>[Ťéxť ~~]</translation>
+    </message>
+    <message>
+        <source>Raw</source>
+        <translation>[Ŕáŵ ~]</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>[Föĺďéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Text logs leave out colors and other escape codes; raw logs keep everything, for replaying.</source>
+        <translation>[Ťéxť ĺöĝš ĺéávé öüť çöĺöŕš áñď öťĥéŕ éšçáþé çöďéš; ŕáŵ ĺöĝš ķééþ évéŕýťĥíñĝ, ƒöŕ ŕéþĺáýíñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose…</source>
+        <translation>[Çĥööšé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Use the default</source>
+        <translation>[Üšé ťĥé ďéƒáüĺť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>[Öþéñ ~~]</translation>
+    </message>
+    <message>
+        <source>Known hosts</source>
+        <translation>[Ķñöŵñ ĥöšťš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Server keys are checked against ~/.ssh/known_hosts and OpenSesh&apos;s own file; the keys you trust are saved in OpenSesh&apos;s.</source>
+        <translation>[Šéŕvéŕ ķéýš áŕé çĥéçķéď áĝáíñšť ~/.ššĥ/ķñöŵñ_ĥöšťš áñď ÖþéñŠéšĥ&apos;š öŵñ ƒíĺé; ťĥé ķéýš ýöü ťŕüšť áŕé šávéď íñ ÖþéñŠéšĥ&apos;š. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Show in the keychain</source>
+        <translation>[Šĥöŵ íñ ťĥé ķéýçĥáíñ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Folder for session logs</source>
+        <translation>[Föĺďéŕ ƒöŕ šéššíöñ ĺöĝš ~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>SettingsTerminalPage</name>
     <message>
         <source>Thin</source>
@@ -6647,8 +7058,8 @@
         <translation>[ŠŠĤ ~]</translation>
     </message>
     <message>
-        <source>SSH defaults: authentication, agent, keep-alive, algorithms and known hosts.</source>
-        <translation>[ŠŠĤ ďéƒáüĺťš: áüťĥéñťíçáťíöñ, áĝéñť, ķééþ-áĺívé, áĺĝöŕíťĥmš áñď ķñöŵñ ĥöšťš. ~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>SSH defaults: the client, authentication, keepalive, reconnection and session logs.</source>
+        <translation>[ŠŠĤ ďéƒáüĺťš: ťĥé çĺíéñť, áüťĥéñťíçáťíöñ, ķééþáĺívé, ŕéçöññéçťíöñ áñď šéššíöñ ĺöĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>SFTP</source>

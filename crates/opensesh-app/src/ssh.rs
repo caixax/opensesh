@@ -7,8 +7,8 @@
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::{Arc, LazyLock, PoisonError, RwLock};
 use std::time::Duration;
 
 use opensesh_core::hosts::target::{self, ProxyKind};
@@ -42,6 +42,31 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// The port of the smoke test's SSH server (0 until it starts).
 static TEST_SERVER: AtomicU16 = AtomicU16::new(0);
+
+/// Where session logs go when Settings > SSH names a folder (else `logs/sessions` in the data
+/// folder).
+static LOGS_DIR: LazyLock<RwLock<Option<PathBuf>>> = LazyLock::new(|| RwLock::new(None));
+
+/// Applies the `[ssh]` settings: the defaults of every host and the session logs folder.
+pub fn apply_settings(settings: &opensesh_core::config::SshSettings) {
+    crate::hosts::set_defaults(settings.host_defaults());
+    let folder = settings.logs_dir.trim();
+    let folder = (!folder.is_empty()).then(|| match opensesh_core::paths::home_dir() {
+        Some(home) => opensesh_core::paths::expand_tilde(folder, &home),
+        None => PathBuf::from(folder),
+    });
+    *LOGS_DIR.write().unwrap_or_else(PoisonError::into_inner) = folder;
+}
+
+/// The folder session logs go to.
+#[must_use]
+pub fn logs_dir(data: &Path) -> PathBuf {
+    LOGS_DIR
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone()
+        .unwrap_or_else(|| data.join("logs").join("sessions"))
+}
 
 /// Sends every SSH connection of the smoke test to its server on `port`.
 pub fn set_test_server(port: u16) {
@@ -268,13 +293,23 @@ pub fn is_internal(id: &str) -> bool {
 ///
 /// A message when the host is unknown, not SSH, or has a bad jump or proxy.
 pub fn for_host(id: &str, size: TermSize, term: &str) -> Result<SshStart, String> {
+    let library = crate::hosts::current();
+    let host = library.file.host(id).ok_or("the host no longer exists")?;
+    session_for(&library.file, host, size, term)
+}
+
+/// The session of `host` (saved, or made from quick-connect text) with what it, its groups and
+/// the app's defaults say.
+fn session_for(
+    file: &HostsFile,
+    host: &Host,
+    size: TermSize,
+    term: &str,
+) -> Result<SshStart, String> {
     let services = services::get().ok_or("the app isn't ready")?;
     let config = services.paths.config_dir();
     let data = services.paths.data_dir();
     let home = opensesh_core::paths::home_dir();
-    let library = crate::hosts::current();
-    let file = &library.file;
-    let host = file.host(id).ok_or("the host no longer exists")?;
     let resolved = file.resolve(host);
     let mut hops = Vec::new();
     for reference in resolved.jump() {
@@ -305,7 +340,7 @@ pub fn for_host(id: &str, size: TermSize, term: &str) -> Result<SshStart, String
     let log = match resolved.session_log() {
         SessionLog::Off => None,
         mode => Some(LogSpec {
-            path: data.join("logs").join("sessions").join(format!(
+            path: logs_dir(data).join(format!(
                 "{}_{}.log",
                 safe_name(&host.name),
                 opensesh_ssh::log::timestamp(now_secs())
@@ -325,7 +360,8 @@ pub fn for_host(id: &str, size: TermSize, term: &str) -> Result<SshStart, String
         },
         log,
     };
-    let auto_icon = host.icon.is_empty() || host.icon == "auto";
+    // Only a saved host has an icon to show the OS with.
+    let auto_icon = !host.id.is_empty() && (host.icon.is_empty() || host.icon == "auto");
     Ok(SshStart {
         connect: hermetic(connect)?,
         session,
@@ -341,49 +377,21 @@ pub fn for_host(id: &str, size: TermSize, term: &str) -> Result<SshStart, String
 ///
 /// A message when the text isn't an SSH target.
 pub fn for_target(text: &str, size: TermSize, term: &str) -> Result<SshStart, String> {
-    let services = services::get().ok_or("the app isn't ready")?;
-    let home = opensesh_core::paths::home_dir();
     let parsed = target::parse(text).map_err(|error| error.to_string())?;
     if parsed.protocol != Protocol::Ssh {
         return Err(format!("{} isn't an SSH target", parsed.protocol.as_str()));
     }
     let library = crate::hosts::current();
-    let mut hops = Vec::new();
-    for reference in &parsed.jump {
-        hops.push(jump_hop(&library.file, reference, home.as_deref())?);
-    }
-    hops.push(Hop {
-        host: parsed.host.clone(),
-        port: parsed.port.unwrap_or(22),
-        user: parsed.user.clone().unwrap_or_else(local_user),
-        auth: AuthPlan {
-            agent: !is_test_run(),
-            fallback_key_files: home.as_deref().map(default_keys).unwrap_or_default(),
-            ..AuthPlan::default()
-        },
-    });
-    let connect = ConnectSpec {
-        hops,
-        proxy: None,
-        legacy: false,
-        compression: false,
-        keepalive: Some(Duration::from_secs(30)),
-        connect_timeout: CONNECT_TIMEOUT,
-        known_hosts: known_hosts(services.paths.config_dir(), home.as_deref()),
-        agent_forwarding: false,
-        agent_socket: None,
+    // An unsaved host: no group, so the app's defaults apply.
+    let host = Host {
+        name: parsed.host.clone(),
+        address: parsed.host,
+        port: parsed.port,
+        user: parsed.user,
+        jump: Some(parsed.jump),
+        ..Host::default()
     };
-    let session = SessionSpec {
-        term: term.to_owned(),
-        size,
-        env: locale_env(),
-        ..SessionSpec::default()
-    };
-    Ok(SshStart {
-        connect: hermetic(connect)?,
-        session,
-        options: Options::default(),
-    })
+    session_for(&library.file, &host, size, term)
 }
 
 #[cfg(test)]

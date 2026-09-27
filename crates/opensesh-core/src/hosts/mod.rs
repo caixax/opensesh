@@ -574,6 +574,9 @@ pub struct HostsFile {
     pub read_only: bool,
     /// Top-level keys this version doesn't know.
     pub extra: Table,
+    /// The app's defaults (Settings > SSH, `[ssh]` of `config.toml`) as a host table: what a
+    /// key resolves to when no group sets it, before the built-in value. Never saved here.
+    pub base: Table,
 }
 
 /// Where a resolved value comes from.
@@ -887,6 +890,7 @@ impl HostsFile {
             sources,
             read_only,
             extra: root,
+            base: Table::new(),
         };
         file.check(&mut warnings);
         Ok((file, warnings))
@@ -1141,7 +1145,8 @@ impl HostsFile {
     }
 
     /// What a host of `protocol` in `group` gets for each inherited key when it sets nothing:
-    /// the nearest group that sets it, else the built-in default.
+    /// the nearest group that sets it, else the app's default ([`HostsFile::base`]), else the
+    /// built-in one.
     #[must_use]
     pub fn inherited(
         &self,
@@ -1171,7 +1176,9 @@ impl HostsFile {
                         origin: Origin::Group(id.clone()),
                     },
                     None => Resolved {
-                        value: builtin(key, protocol),
+                        value: lookup(&self.base, key)
+                            .cloned()
+                            .or_else(|| builtin(key, protocol)),
                         origin: Origin::Default,
                     },
                 };
@@ -1673,6 +1680,37 @@ mod tests {
         let mut prod = file.group("01J9ZG0000PROD").unwrap().clone();
         prod.parent = Some("WEB".into());
         assert_eq!(file.validate_group(&prod), vec![("parent", "invalid")]);
+    }
+
+    #[test]
+    fn app_defaults_sit_between_groups_and_built_in_values() {
+        let mut file = HostsFile::default();
+        let mut group = Group {
+            id: "G".into(),
+            name: "g".into(),
+            ..Group::default()
+        };
+        group.defaults.ssh.keepalive_secs = Some(10);
+        file.groups.push(group);
+        file.hosts.push(Host {
+            id: "H".into(),
+            name: "h".into(),
+            address: "h".into(),
+            group: Some("G".into()),
+            ..Host::default()
+        });
+        let config = crate::config::SshSettings {
+            keepalive_secs: 99,
+            detect_os: false,
+            ..crate::config::SshSettings::default()
+        };
+        file.base = config.host_defaults();
+        let resolved = file.resolve(&file.hosts[0]);
+        assert_eq!(resolved.keepalive_secs(), 10);
+        assert!(!resolved.flag("ssh.detect_os"));
+        assert_eq!(resolved.fields["ssh.detect_os"].origin, Origin::Default);
+        // The app's defaults are never written to hosts.toml.
+        assert!(!file.to_toml_string().unwrap().contains("detect_os"));
     }
 
     #[test]
