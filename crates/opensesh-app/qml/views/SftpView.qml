@@ -24,6 +24,156 @@ Item {
         (side === 0 ? leftSide : rightSide).use(source);
     }
 
+    // Functions for SmokeTest.steps, after the SSH steps started the test server and loaded the
+    // hosts fixture: the smoke test's local folder on the left, the saved host H00000 on the right
+    // (the test server's folder, on a connection of its own); then a folder made, a file uploaded,
+    // uploaded again (a question, "keep both"), renamed, made read-only and writable again,
+    // downloaded, and everything deleted. Any error of a pane fails the run.
+    function smokeSteps(smoke) {
+        const timeout = 15000;
+        let deadline = 0;
+        let left = null;
+        let right = null;
+        let answered = -1;
+        let job = 0;
+        const failOnError = (token, code, detail) => {
+            if (code.length > 0)
+                smoke.fail("an SFTP pane reported " + code + " " + detail);
+        };
+        const waitFor = (what, condition, next) => {
+            const poll = () => {
+                if (condition())
+                    return next ? next() : [];
+                if (Date.now() > deadline) {
+                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what);
+                    return [];
+                }
+                return [poll];
+            };
+            return poll;
+        };
+        const wait = (what, condition, next) => {
+            deadline = Date.now() + timeout;
+            return [waitFor(what, condition, next)];
+        };
+        const entry = (pane, name) => JSON.parse(pane.browser.entryJson(pane.browser.rowOf(name)) || "{}");
+        const jobState = id => {
+            const found = JSON.parse(Transfers.jobs || "[]").find(item => item.id === id);
+            return found ? found.state : "";
+        };
+        // Answers the right pane's questions (host key, password) until it lists its files.
+        const connectRight = () => {
+            const question = right.browser.prompt.length > 0 ? JSON.parse(right.browser.prompt) : {};
+            if (question.id !== undefined && question.id !== answered) {
+                answered = question.id;
+                if (question.kind === "hostKey")
+                    right.browser.answerPrompt(question.id, "trust-once", []);
+                else if (question.kind === "password")
+                    right.browser.answerPrompt(question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+                else
+                    smoke.fail("the SFTP pane asked something unexpected: " + right.browser.prompt);
+            }
+            if (right.browser.status === "error")
+                smoke.fail("the SFTP pane couldn't connect: " + right.browser.error + " " + right.browser.errorDetail);
+            if (right.ready)
+                return [];
+            if (Date.now() > deadline) {
+                smoke.fail("timed out after " + timeout / 1000 + " s waiting for the SFTP pane to connect");
+                return [];
+            }
+            return [connectRight];
+        };
+        return [
+            () => {
+                left = view.pane(0);
+                return wait("the local pane", () => left !== null && left.ready);
+            },
+            () => {
+                left.browser.done.connect(failOnError);
+                left.navigate(AppInfo.testFolder() + left.browser.separator + "local");
+                return wait("the smoke test's local folder", () => left.browser.rowOf("notes.txt") >= 0);
+            },
+            () => {
+                view.setSource(1, { mode: "remote", hostId: "H00000", target: "", title: "H00000" }); // lint-qml: allow (a fixture host id)
+                right = view.pane(1);
+                if (!right || right.browser.remote !== true)
+                    smoke.fail("the right pane isn't a server's");
+                deadline = Date.now() + timeout;
+                return [connectRight];
+            },
+            () => {
+                right.browser.done.connect(failOnError);
+                if (right.browser.rowOf("docs") < 0 || right.browser.rowOf("logs") < 0)
+                    smoke.fail("the server's folder lists " + right.browser.allNames().join(", "));
+                if (right.browser.rowOf(".profile") >= 0 || right.browser.hiddenCount < 1)
+                    smoke.fail("a hidden file is listed, or not counted");
+                right.browser.mkdir("incoming");
+                return wait("the new folder", () => right.browser.rowOf("incoming") >= 0);
+            },
+            () => {
+                right.navigate("/incoming");
+                return wait("the new folder to open", () => right.browser.path === "/incoming" && right.browser.count === 0);
+            },
+            () => {
+                job = Transfers.copy(left.browser.paneId, left.browser.pathsOf(["notes.txt"]), right.browser.paneId, "/incoming", false);
+                if (job <= 0)
+                    smoke.fail("an upload wasn't queued");
+                return wait("the upload", () => jobState(job) === "done" && right.browser.rowOf("notes.txt") >= 0);
+            },
+            () => {
+                if (entry(right, "notes.txt").size !== 10000)
+                    smoke.fail("the uploaded file's size is " + entry(right, "notes.txt").size);
+                if (AppSettings.sftpPolicy !== "ask")
+                    return [];
+                // The same file again: a question, answered "keep both".
+                job = Transfers.copy(left.browser.paneId, left.browser.pathsOf(["notes.txt"]), right.browser.paneId, "/incoming", false);
+                return wait("the question about the file already there", () => Transfers.question.indexOf("notes.txt") >= 0, () => {
+                    Transfers.answer(job, "rename", false);
+                    return wait("the second copy", () => jobState(job) === "done" && right.browser.rowOf("notes (1).txt") >= 0,
+                                () => console.info("smoke test: a file already there was asked about and kept both"));
+                });
+            },
+            () => {
+                right.browser.rename(right.browser.rowOf("notes.txt"), "renamed.txt");
+                return wait("the renamed file", () => right.browser.rowOf("renamed.txt") >= 0);
+            },
+            () => {
+                right.browser.chmod(right.browser.pathsOf(["renamed.txt"]), 0o444);
+                return wait("the read-only file", () => (entry(right, "renamed.txt").mode & 0o222) === 0);
+            },
+            () => {
+                right.browser.chmod(right.browser.pathsOf(["renamed.txt"]), 0o644);
+                return wait("the writable file", () => (entry(right, "renamed.txt").mode & 0o200) !== 0);
+            },
+            () => {
+                job = Transfers.copy(right.browser.paneId, right.browser.pathsOf(["renamed.txt"]), left.browser.paneId, left.browser.path, false);
+                return wait("the download", () => jobState(job) === "done" && left.browser.rowOf("renamed.txt") >= 0);
+            },
+            () => {
+                if (entry(left, "renamed.txt").size !== 10000)
+                    smoke.fail("the downloaded file's size is " + entry(left, "renamed.txt").size);
+                left.browser.remove(left.browser.pathsOf(["renamed.txt"]));
+                right.navigate("/");
+                return wait("the local file deleted and the server's home", () => left.browser.rowOf("renamed.txt") < 0 && right.browser.path === "/"
+                            && right.browser.rowOf("incoming") >= 0);
+            },
+            () => {
+                right.browser.remove(["/incoming"]);
+                return wait("the server's folder deleted", () => right.browser.rowOf("incoming") < 0);
+            },
+            () => {
+                Transfers.clearFinished();
+                return wait("finished transfers to leave the queue", () => JSON.parse(Transfers.jobs || "[]").length === 0);
+            },
+            () => {
+                left.browser.done.disconnect(failOnError);
+                right.browser.done.disconnect(failOnError);
+                console.info("smoke test: the SFTP view listed, made, uploaded, downloaded, renamed, changed and deleted files on the test server");
+                view.setSource(1, rightSide.initial);
+            }
+        ];
+    }
+
     RowLayout {
         id: sides
 
