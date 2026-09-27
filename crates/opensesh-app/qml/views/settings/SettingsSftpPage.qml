@@ -1,6 +1,7 @@
 // Settings > SFTP (Sprint 8): the transfer queue (files at once, what to do with files already at
-// the destination, keeping times and permissions), the file panes (hidden files, confirming
-// deletes) and the editor for remote files. Everything is `[sftp]` in config.toml.
+// the destination, keeping times and permissions), the file panes (hidden files, following the
+// terminal, confirming deletes) and the editor for remote files. Everything is `[sftp]` in
+// config.toml.
 import QtQuick
 import cc.caixa.opensesh
 
@@ -86,6 +87,17 @@ SettingsPage {
                 checked: AppSettings.sftpShowHidden
                 Accessible.name: qsTr("Show hidden files")
                 onToggled: AppSettings.sftpShowHidden = checked
+            }
+        }
+
+        SettingsRow {
+            label: qsTr("Follow the terminal")
+            helpText: qsTr("The side panel's files go where the terminal's shell goes.")
+
+            OsSwitch {
+                checked: AppSettings.sftpFollowTerminal
+                Accessible.name: qsTr("Follow the terminal")
+                onToggled: AppSettings.sftpFollowTerminal = checked
             }
         }
 

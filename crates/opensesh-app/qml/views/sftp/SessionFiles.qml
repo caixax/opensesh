@@ -16,7 +16,7 @@ Item {
     id: files
 
     property Item terminalPane: null
-    property bool follow: true
+    readonly property bool follow: AppSettings.sftpFollowTerminal
     readonly property TerminalItem terminal: terminalPane ? terminalPane.terminal : null
     readonly property bool builtInSsh: terminalPane !== null && terminalPane.kind === "ssh" && terminal !== null
                                        && terminal.command.length === 0
@@ -52,7 +52,7 @@ Item {
                 text: qsTr("Follow the terminal")
                 checked: files.follow
                 onToggled: {
-                    files.follow = checked;
+                    AppSettings.sftpFollowTerminal = checked;
                     if (checked && files.pane && files.shellFolder.length > 0)
                         files.pane.navigate(files.shellFolder);
                 }

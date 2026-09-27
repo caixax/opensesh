@@ -305,6 +305,8 @@ pub struct SftpSettings {
     pub editor_command: String,
     /// Ask before deleting.
     pub confirm_delete: bool,
+    /// The side panel's files go where the terminal's shell goes (OSC 7).
+    pub follow_terminal: bool,
 }
 
 impl Default for SftpSettings {
@@ -317,6 +319,7 @@ impl Default for SftpSettings {
             show_hidden: false,
             editor_command: String::new(),
             confirm_delete: true,
+            follow_terminal: true,
         }
     }
 }
@@ -728,6 +731,7 @@ impl Config {
             reader.boolean(&mut sftp, "sftp.show_hidden", &mut s.show_hidden);
             reader.string(&mut sftp, "sftp.editor_command", &mut s.editor_command);
             reader.boolean(&mut sftp, "sftp.confirm_delete", &mut s.confirm_delete);
+            reader.boolean(&mut sftp, "sftp.follow_terminal", &mut s.follow_terminal);
             reader.unknown(&sftp, "sftp");
         }
         reader.unknown(&root, "");
@@ -838,6 +842,7 @@ impl Config {
             Value::String(s.editor_command.clone()),
         );
         sftp.insert("confirm_delete".into(), Value::Boolean(s.confirm_delete));
+        sftp.insert("follow_terminal".into(), Value::Boolean(s.follow_terminal));
 
         // Unknown settings go back where they were read from; known keys take precedence.
         let keep_unknown = |known: &mut Table, unknown: &Table| {
@@ -1328,13 +1333,15 @@ mod tests {
         assert_eq!(config.sftp, SftpSettings::default());
         let text = "[sftp]\nparallel = 8\npolicy = \"resume\"\npreserve_times = false\n\
                     preserve_permissions = true\nshow_hidden = true\n\
-                    editor_command = \"code --wait {file}\"\nconfirm_delete = false\n";
+                    editor_command = \"code --wait {file}\"\nconfirm_delete = false\n\
+                    follow_terminal = false\n";
         let (config, warnings, _) = Config::from_toml_str(text).unwrap();
         assert!(warnings.is_empty(), "{warnings:?}");
         assert_eq!(config.sftp.parallel, 8);
         assert_eq!(config.sftp.policy, TransferPolicy::Resume);
         assert!(!config.sftp.preserve_times && config.sftp.preserve_permissions);
         assert!(config.sftp.show_hidden && !config.sftp.confirm_delete);
+        assert!(!config.sftp.follow_terminal);
         assert_eq!(config.sftp.editor_command, "code --wait {file}");
         let (again, _, _) = Config::from_toml_str(&config.to_toml_string()).unwrap();
         assert_eq!(again, config);
