@@ -194,6 +194,46 @@ pub async fn open_remote(
     Ok(Remote::open(connection).await?)
 }
 
+/// The mark that says the shell integration is in an rc file.
+const INTEGRATION_MARK: &str = "opensesh shell integration";
+
+/// A few lines for a shell's rc file that report the current folder to the terminal (OSC 7)
+/// before each prompt: `bash` or `zsh`.
+#[must_use]
+pub fn shell_integration(shell: &str) -> &'static str {
+    match shell {
+        "zsh" => concat!(
+            "# opensesh shell integration: tell the terminal the current folder (OSC 7)\n",
+            r#"__opensesh_osc7() { printf '\033]7;file://%s%s\033\\' "$HOST" "$PWD"; }"#,
+            "\n",
+            "precmd_functions+=(__opensesh_osc7)\n",
+        ),
+        _ => concat!(
+            "# opensesh shell integration: tell the terminal the current folder (OSC 7)\n",
+            r#"__opensesh_osc7() { printf '\033]7;file://%s%s\033\\' "${HOSTNAME:-$(hostname)}" "$PWD"; }"#,
+            "\n",
+            r#"PROMPT_COMMAND="__opensesh_osc7${PROMPT_COMMAND:+;$PROMPT_COMMAND}""#,
+            "\n",
+        ),
+    }
+}
+
+/// The command that appends [`shell_integration`] to the user's `~/.bashrc` or `~/.zshrc` on
+/// the server, unless it is there already.
+#[must_use]
+pub fn install_integration_command(shell: &str) -> String {
+    let file = if shell == "zsh" {
+        "\"$HOME/.zshrc\""
+    } else {
+        "\"$HOME/.bashrc\""
+    };
+    format!(
+        "grep -qs {mark} {file} || printf '\\n%s' {snippet} >> {file}",
+        mark = opensesh_ssh::sftp::path::shell_quote(INTEGRATION_MARK),
+        snippet = opensesh_ssh::sftp::path::shell_quote(shell_integration(shell)),
+    )
+}
+
 /// A private folder for the copies of files being edited (under the cache folder, `0700` on
 /// Linux): one sub-folder per edit, so two files of the same name don't meet.
 ///
@@ -294,6 +334,21 @@ mod tests {
             ["say", r#"a "b""#, "f"]
         );
         assert!(editor_command("   ", "f").is_empty());
+    }
+
+    #[test]
+    fn shell_integration_snippets() {
+        let bash = shell_integration("bash");
+        assert!(bash.contains(INTEGRATION_MARK));
+        assert!(bash.contains(r"printf '\033]7;file://%s%s\033\\'"));
+        assert!(bash.contains("PROMPT_COMMAND=\"__opensesh_osc7"));
+        assert!(shell_integration("zsh").contains("precmd_functions+=(__opensesh_osc7)"));
+        let command = install_integration_command("bash");
+        assert!(
+            command
+                .starts_with("grep -qs 'opensesh shell integration' \"$HOME/.bashrc\" || printf")
+        );
+        assert!(command.ends_with(">> \"$HOME/.bashrc\""));
     }
 
     #[test]
