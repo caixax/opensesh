@@ -4,12 +4,13 @@ The SSH client (`crates/opensesh-ssh`) has three layers of tests:
 
 - **Unit tests** in the crate: algorithm lists, proxy handshakes against fake proxies, the
   ProxyCommand parser, the session log's text cleaner, OS release parsing.
-- **An in-process server** (`opensesh_ssh::testing`, `tests/server.rs`, `tests/sftp.rs`): every
-  authentication method, new, changed and revoked host keys, keyboard-interactive, three hops,
-  the agent, "install my key", the terminal backend's reconnection, and SFTP over a temporary
-  folder. They run everywhere with `cargo test`, and the app's smoke test uses the same server.
-- **Real servers** (`tests/real_servers.rs`, `tests/real_sftp.rs`): OpenSSH and Dropbear started
-  by `scripts/ssh-test-servers.sh`. They are ignored by default.
+- **An in-process server** (`opensesh_ssh::testing`, `tests/server.rs`, `tests/sftp.rs`,
+  `tests/tunnel.rs`): every authentication method, new, changed and revoked host keys,
+  keyboard-interactive, three hops, the agent, "install my key", the terminal backend's
+  reconnection, SFTP over a temporary folder, and the three kinds of tunnels. They run
+  everywhere with `cargo test`, and the app's smoke test uses the same server.
+- **Real servers** (`tests/real_servers.rs`, `tests/real_sftp.rs`, `tests/real_tunnels.rs`):
+  OpenSSH and Dropbear started by `scripts/ssh-test-servers.sh`. They are ignored by default.
 
 ## The servers
 
@@ -34,7 +35,7 @@ of `/etc/pam.d/sshd` that asks that user, and only that user, for the one-time c
 ```sh
 sudo scripts/ssh-test-servers.sh start
 eval "$(ssh-agent -s)" && ssh-add /tmp/opensesh-ssh-servers/client_ed25519
-cargo test -p opensesh-ssh --test real_servers --test real_sftp -- --ignored --test-threads 1
+cargo test -p opensesh-ssh --test real_servers --test real_sftp --test real_tunnels -- --ignored --test-threads 1
 sudo scripts/ssh-test-servers.sh stop
 ```
 
@@ -53,7 +54,12 @@ The tests cover:
 - SFTP on OpenSSH: a 1 GiB file uploaded and downloaded through the transfer queue, with the same
   SHA-256 here, on the server (`sha256sum` over an exec channel) and back; an upload whose
   connection is closed partway, resumed on a new connection from the part that arrived; and the
-  server on 2225 refusing the SFTP subsystem, which the app reports as "no SFTP".
+  server on 2225 refusing the SFTP subsystem, which the app reports as "no SFTP";
+- tunnels through OpenSSH, with `curl` (which must be installed): a local forward, a SOCKS5
+  proxy (the name resolved by the server) and a remote forward (sshd listening on its loopback)
+  to an HTTP server of the test; then an independent tunnel whose `sshd-session` is killed
+  (`kill -9 $PPID` on an exec channel) comes back by itself, its local port still there and its
+  remote forward asked for again.
 
 On 2026-09-27 in the archlinux distro (release build), 1 GiB went up at 627 MiB/s and came down
 at 692 MiB/s over the loopback; a debug build (as in CI) managed 223 and 124 MiB/s.
