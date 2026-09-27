@@ -900,6 +900,19 @@ SettingsPage {
 
         TerminalOptionRow {
             page: page
+            key: "paste_protection"
+            label: qsTr("Check pastes")
+            note: qsTr("Before pasting, show what looks risky: lines that run at once, hidden or look-alike characters, downloads run by a shell, writes to shell profiles, destructive commands. The text can be edited there.")
+
+            OsSwitch {
+                checked: page.values.paste_protection !== false
+                Accessible.name: qsTr("Check pastes")
+                onToggled: page.set("paste_protection", checked)
+            }
+        }
+
+        TerminalOptionRow {
+            page: page
             key: "paste_line_delay_ms"
             label: qsTr("Paste delay")
             note: qsTr("Pause between the lines of a paste, in milliseconds, for slow devices. Escape or Ctrl+C stops a slow paste.")
