@@ -5,6 +5,7 @@ members = [
     "crates/opensesh-term",
     "crates/opensesh-import",
     "crates/opensesh-vault",
+    "crates/opensesh-ssh",
     "crates/opensesh-cli",
     "crates/opensesh-app",
     "xtask",
@@ -14,6 +15,7 @@ default-members = [
     "crates/opensesh-term",
     "crates/opensesh-import",
     "crates/opensesh-vault",
+    "crates/opensesh-ssh",
     "crates/opensesh-cli",
     "crates/opensesh-app",
 ]
@@ -37,6 +39,7 @@ opensesh-core = { path = "crates/opensesh-core" }
 opensesh-import = { path = "crates/opensesh-import" }
 opensesh-term = { path = "crates/opensesh-term" }
 opensesh-vault = { path = "crates/opensesh-vault" }
+opensesh-ssh = { path = "crates/opensesh-ssh" }
 
 # Qt bridge (KDAB cxx-qt)
 cxx = "1.0.202"
@@ -98,6 +101,13 @@ hmac = "0.12.1"
 sha1 = "0.10.7"
 # The system keyring: Credential Manager on Windows, Secret Service on Linux (ADR 0023).
 keyring = "4.2.0"
+
+# SSH client (Sprint 7, opensesh-ssh; ADR 0027). `ring` instead of the default `aws-lc-rs`, which
+# needs NASM or CMake on some platforms; `des` for the legacy 3des-cbc cipher. 0.63.3 needs Rust
+# 1.89 (ADR 0026).
+russh = { version = "0.63.3", default-features = false, features = ["ring", "flate2", "rsa", "des"] }
+# The async runtime of the SSH client, off the GUI thread (PLAN §2).
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "process", "fs"] }
 
 # xtask only (regex is also used by opensesh-term)
 flate2 = "1.1.10"
