@@ -11,8 +11,9 @@ use crate::connect::Connection;
 /// the kernel name (macOS, FreeBSD). A server without `sh` (Windows) fails, which says Windows.
 pub const COMMAND: &str = "cat /etc/os-release 2>/dev/null; echo __uname__; uname -s 2>/dev/null";
 
-/// How long the detection may take.
-const TIMEOUT: Duration = Duration::from_secs(5);
+/// How long the detection may take. It runs beside the shell, so a slow login (a first PAM
+/// session) only delays the icon.
+const TIMEOUT: Duration = Duration::from_secs(15);
 
 /// The icon for what [`COMMAND`] printed (`os-debian`, `os-apple`...), `None` when unknown.
 #[must_use]

@@ -4,6 +4,8 @@
 #   checks  - fmt, QML lint, icon pipeline reproducibility, cargo-deny, cargo-audit
 #   linux   - Ubuntu 24.04 with Qt from aqtinstall: clippy, tests, build, offscreen smoke test
 #   distro  - Arch, Fedora and Debian 13 containers with their own Qt packages
+#   ssh     - the SSH client against real OpenSSH and Dropbear servers (scripts/ssh-test-servers.sh):
+#             two jump hosts with an agent, a one-time code through PAM, reconnection
 #   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, bundled ConPTY, offscreen
 #             smoke test
 name: CI
@@ -198,6 +200,36 @@ jobs:
         shell: bash
         timeout-minutes: 3
         run: target/debug/opensesh-app --gallery --smoke-test
+
+  ssh:
+    name: SSH against OpenSSH and Dropbear
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libdbus-1-dev
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: ssh-servers
+      - name: Build the tests
+        run: cargo test --locked -p opensesh-ssh --test real_servers --no-run
+      - name: Start OpenSSH and Dropbear
+        run: sudo scripts/ssh-test-servers.sh start
+      - name: Tests against the servers
+        run: |
+          eval "$(ssh-agent -s)"
+          ssh-add /tmp/opensesh-ssh-servers/client_ed25519
+          cargo test --locked -p opensesh-ssh --test real_servers -- --ignored --test-threads 1
+      - name: Server logs
+        if: failure()
+        run: sudo tail -n 60 /tmp/opensesh-ssh-servers/*.log
+      - name: Stop the servers
+        if: always()
+        run: sudo scripts/ssh-test-servers.sh stop
 
   windows:
     name: Windows (MSVC, aqtinstall Qt)
