@@ -186,13 +186,15 @@ fn a_user_certificate_then_agent_forwarding() {
         ))
         .unwrap();
     runtime.block_on(connection.close());
-    // The agent reaches the server's `ssh-add -l` through the forwarded channel.
+    // The agent reaches the server's `ssh-add -l` through the forwarded channel; the environment
+    // arrives (AcceptEnv).
     let forwarding = ConnectSpec {
         agent_forwarding: true,
         ..spec(dir.path(), vec![hop(OPENSSH_KEY_ONLY, agent())])
     };
     let session = SessionSpec {
-        command: Some("ssh-add -l".to_owned()),
+        command: Some("ssh-add -l && echo \"env=$OPENSESH_TEST\"".to_owned()),
+        env: vec![("OPENSESH_TEST".to_owned(), "forty-two".to_owned())],
         ..SessionSpec::default()
     };
     let sink: backend::StatusSink = Arc::new(|_| {});
@@ -203,6 +205,7 @@ fn a_user_certificate_then_agent_forwarding() {
             .any(|event| matches!(event, BackendEvent::Exited(_)))
     });
     assert!(text.contains("opensesh-test-client"), "{text:?}");
+    assert!(text.contains("env=forty-two"), "{text:?}");
     assert!(all.contains(&BackendEvent::Exited(Some(0))), "{all:?}");
 }
 
