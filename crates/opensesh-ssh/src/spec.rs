@@ -1,7 +1,9 @@
 //! What to connect to and what to run there. The app builds these from a saved host (with what
 //! its groups give it and its identity) or from quick-connect text.
 
+use std::future::Future;
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -46,6 +48,31 @@ impl AuthMethod {
     }
 }
 
+/// Secrets fetched when a connection needs them (the identity's password and key, from the
+/// vault): never held by the connection between attempts.
+#[derive(Default)]
+pub struct Secrets {
+    /// The password.
+    pub password: Option<SecretString>,
+    /// Decrypted keys.
+    pub keys: Vec<Arc<PrivateKey>>,
+}
+
+impl std::fmt::Debug for Secrets {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Secrets")
+            .field("password", &self.password.is_some())
+            .field("keys", &self.keys.len())
+            .finish()
+    }
+}
+
+/// Where a hop's secrets come from at connection time.
+pub trait SecretSource: Send + Sync {
+    /// The secrets, or why they aren't available (for example a locked vault).
+    fn fetch(&self) -> Pin<Box<dyn Future<Output = Result<Secrets, SshError>> + Send + '_>>;
+}
+
 /// How to authenticate to one server. `Debug` shows no secret.
 #[derive(Clone, Default)]
 pub struct AuthPlan {
@@ -60,6 +87,10 @@ pub struct AuthPlan {
     pub key_files: Vec<PathBuf>,
     /// Try the SSH agent's keys.
     pub agent: bool,
+    /// Key files tried after the agent, when present (OpenSSH's default `~/.ssh/id_*`).
+    pub fallback_key_files: Vec<PathBuf>,
+    /// More secrets, fetched at connection time (the identity's password and key).
+    pub source: Option<Arc<dyn SecretSource>>,
     /// The agent to use instead of the usual one (like OpenSSH's `IdentityAgent`): a Unix socket
     /// path, or a named pipe (`\\.\pipe\...`) on Windows.
     pub agent_socket: Option<String>,
@@ -73,6 +104,8 @@ impl std::fmt::Debug for AuthPlan {
             .field("keys", &self.keys.len())
             .field("key_files", &self.key_files)
             .field("agent", &self.agent)
+            .field("fallback_key_files", &self.fallback_key_files)
+            .field("source", &self.source.is_some())
             .field("agent_socket", &self.agent_socket)
             .finish()
     }

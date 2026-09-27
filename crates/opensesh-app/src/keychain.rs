@@ -32,10 +32,38 @@ const AGENT_TIMEOUT: Duration = Duration::from_secs(3);
 /// Largest key file read for an import.
 const MAX_KEY_FILE: u64 = 1024 * 1024;
 
+/// An identity's secrets for a connection (the SSH client), or why they aren't available.
+pub type ConnectionSecrets = Result<IdentitySecrets, &'static str>;
+
+/// What a connection gets from an identity. `Debug` shows no secret.
+#[derive(Default)]
+pub struct IdentitySecrets {
+    /// The password.
+    pub password: Option<SecretString>,
+    /// The private key, in OpenSSH's binary encoding.
+    pub key: Option<Zeroizing<Vec<u8>>>,
+}
+
+impl std::fmt::Debug for IdentitySecrets {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IdentitySecrets")
+            .field("password", &self.password.is_some())
+            .field("key", &self.key.is_some())
+            .finish()
+    }
+}
+
 /// Something for the worker to do.
 pub enum Job {
     /// `keychain.toml` changed on disk.
     Reload,
+    /// An identity's secrets for a connection; answered on `reply`, not through QML.
+    ConnectionSecrets {
+        /// The identity id.
+        identity: String,
+        /// Where the answer goes.
+        reply: tokio::sync::oneshot::Sender<ConnectionSecrets>,
+    },
     /// Unlock with the key in the system keyring, when there is one.
     UnlockWithKeyring,
     /// Create the vault: with a password, protected by it; without, held by the keyring.
@@ -239,6 +267,10 @@ pub fn spawn(
             }
             publish(&worker.keychain.file);
             while let Ok((token, job)) = jobs.recv() {
+                if let Job::ConnectionSecrets { identity, reply } = job {
+                    let _ = reply.send(worker.connection_secrets(&identity));
+                    continue;
+                }
                 let outcome = worker.run(job);
                 publish(&worker.keychain.file);
                 send(token, outcome);
@@ -265,12 +297,60 @@ fn error_outcome(error: &KeychainOpError) -> (String, String) {
     (error.code().to_owned(), detail)
 }
 
+/// The worker's job queue, for the rest of the app (the SSH client asks it for secrets).
+static JOBS: std::sync::Mutex<Option<std::sync::mpsc::Sender<(i32, Job)>>> =
+    std::sync::Mutex::new(None);
+
+/// Remembers the worker's queue (called once it is running).
+pub fn set_jobs(sender: std::sync::mpsc::Sender<(i32, Job)>) {
+    *JOBS.lock().unwrap_or_else(PoisonError::into_inner) = Some(sender);
+}
+
+/// Queues `job` on the keychain worker; `false` when it isn't running.
+pub fn request(job: Job) -> bool {
+    JOBS.lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .as_ref()
+        .is_some_and(|sender| sender.send((0, job)).is_ok())
+}
+
 impl Worker {
+    /// The password and key of identity `id`: `locked` when the vault holds them and is locked,
+    /// `unknown` for an identity that doesn't exist.
+    fn connection_secrets(&mut self, id: &str) -> ConnectionSecrets {
+        let Some(identity) = self.keychain.file.identity(id).cloned() else {
+            return Err("unknown");
+        };
+        let needs_vault = identity.password.is_some() || identity.key.is_some();
+        if needs_vault && self.keychain.vault.status() == Status::Locked {
+            // Opens by itself when the keyring holds (or remembers) the key.
+            let _ = self.keychain.vault.unlock_with_keyring();
+        }
+        if needs_vault && self.keychain.vault.status() != Status::Unlocked {
+            return Err("locked");
+        }
+        let password = identity
+            .password
+            .is_some()
+            .then(|| self.keychain.identity_password(id).ok())
+            .flatten();
+        let key = identity
+            .key
+            .as_deref()
+            .and_then(|key| self.keychain.private_key(key).ok())
+            .and_then(|key| keys::to_vault(&key).ok());
+        Ok(IdentitySecrets { password, key })
+    }
+
     fn run(&mut self, job: Job) -> Outcome {
         let mut outcome = Outcome::default();
         let result: Result<String, KeychainOpError> = match job {
             Job::Reload => {
                 self.keychain.reload();
+                Ok(String::new())
+            }
+            Job::ConnectionSecrets { identity, reply } => {
+                let _ = reply.send(self.connection_secrets(&identity));
                 Ok(String::new())
             }
             Job::UnlockWithKeyring => self
