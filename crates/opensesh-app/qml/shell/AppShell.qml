@@ -1834,6 +1834,7 @@ Item {
 
                 parent: shell.sidePanelLeft ? leftSlot : rightSlot
                 anchors.fill: parent
+                terminalPane: shell.currentTab > 0 ? shell.currentTerminal : null
                 onCloseRequested: shell.setSidePanelOpen(false)
             }
 
@@ -1943,6 +1944,17 @@ Item {
         id: installKeyDialog
 
         shell: shell
+    }
+
+    // Questions of the transfer queue and of remote edits: once, in the main window.
+    Loader {
+        active: !shell.detached
+        sourceComponent: TransferQuestionDialog {}
+    }
+
+    Loader {
+        active: !shell.detached
+        sourceComponent: RemoteEditDialogs {}
     }
 
     UnlockDialog {

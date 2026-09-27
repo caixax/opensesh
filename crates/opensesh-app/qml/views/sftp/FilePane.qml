@@ -278,6 +278,16 @@ FocusScope {
     }
     Component.onCompleted: browser.start()
 
+    // A finished transfer may have changed this folder.
+    Connections {
+        target: Transfers
+
+        function onFinished() {
+            if (pane.ready)
+                browser.refresh();
+        }
+    }
+
     SftpBrowser {
         id: browser
 

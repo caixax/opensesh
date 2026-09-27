@@ -65,8 +65,7 @@ FocusScope {
             id: "sftp",
             text: qsTr("SFTP"),
             iconName: "folder-sync",
-            description: qsTr("File transfer defaults: the dual-pane browser, conflicts and permissions."),
-            sprint: 8
+            description: qsTr("Transfers, the file panes and editing server files.")
         },
         {
             id: "security",
@@ -337,6 +336,8 @@ FocusScope {
                     return shortcutsPage;
                 case "ssh":
                     return sshPage;
+                case "sftp":
+                    return sftpPage;
                 case "security":
                     return securityPage;
                 case "about":
@@ -398,6 +399,12 @@ FocusScope {
         id: sshPage
 
         SettingsSshPage {}
+    }
+
+    Component {
+        id: sftpPage
+
+        SettingsSftpPage {}
     }
 
     Component {
