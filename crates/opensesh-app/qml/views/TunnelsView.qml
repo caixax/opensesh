@@ -17,6 +17,38 @@ Item {
 
     readonly property Item shell: WindowRegistry.mainShell
     readonly property var tunnels: JSON.parse(Tunnels.list || "[]")
+    // What a row shows while its tunnel is going away.
+    readonly property var blank: ({ id: "", name: "", kind: "local", host: "", target: "", hostName: "",
+                                    bindAddress: "", bindPort: 0, destinationHost: "", destinationPort: 0,
+                                    tied: false, autostart: false, reconnect: true, exposed: false, on: false,
+                                    state: "stopped", port: 0, code: "", detail: "", retryIn: 0, sent: 0,
+                                    received: 0, open: 0, total: 0, prompt: "" })
+
+    // The rows follow the tunnels by id, so a row (and its open menu) stays while its tunnel's
+    // counters change every second.
+    function syncRows() {
+        const ids = tunnels.map(entry => entry.id);
+        for (let row = rows.count - 1; row >= 0; --row) {
+            if (ids.indexOf(rows.get(row).tunnelId) < 0)
+                rows.remove(row);
+        }
+        ids.forEach((id, index) => {
+            let at = -1;
+            for (let row = 0; row < rows.count; ++row) {
+                if (rows.get(row).tunnelId === id) {
+                    at = row;
+                    break;
+                }
+            }
+            if (at < 0)
+                rows.insert(index, { tunnelId: id });
+            else if (at !== index)
+                rows.move(at, index, 1);
+        });
+    }
+
+    onTunnelsChanged: syncRows()
+    Component.onCompleted: syncRows()
 
     function tunnel(id) {
         return tunnels.find(entry => entry.id === id) ?? null;
@@ -244,6 +276,17 @@ Item {
                 });
             },
             () => wait("the traffic counters", () => view.tunnel(ids.local).total >= 1 && view.tunnel(ids.local).received > 0),
+            // More traffic: the row stays the same item (a menu open on it would stay open).
+            () => {
+                const row = list.itemAtIndex(0);
+                const total = view.tunnel(ids.local).total;
+                get(view.tunnel(ids.local).port);
+                return wait("more traffic", () => fetched() && view.tunnel(ids.local).total > total, () => {
+                    if (row === null || list.itemAtIndex(0) !== row)
+                        smoke.fail("the tunnel's row was made again when its counters changed");
+                    return [];
+                });
+            },
             // Tied to H00000: waits, runs with a terminal session, waits again when it closes.
             () => {
                 ids.tied = make("Smoke tied", { kind: "local", tied: true });
@@ -368,7 +411,9 @@ Item {
             Layout.fillHeight: true
             clip: true
             spacing: Theme.spacingXs
-            model: view.tunnels
+            model: ListModel {
+                id: rows
+            }
             currentIndex: 0
             activeFocusOnTab: true
             keyNavigationEnabled: true
@@ -426,8 +471,9 @@ Item {
     component TunnelRow: Rectangle {
         id: row
 
-        required property var modelData
+        required property string tunnelId
         required property int index
+        readonly property var modelData: view.tunnel(tunnelId) ?? view.blank
 
         width: ListView.view ? ListView.view.width : 0
         implicitHeight: rowLayout.implicitHeight + 2 * Theme.spacingSm
