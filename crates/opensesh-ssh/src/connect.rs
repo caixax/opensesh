@@ -119,6 +119,13 @@ impl ClientHandler {
                 ));
                 return false;
             }
+            _ if self
+                .known_hosts
+                .trusted_once
+                .contains(&self.host, self.port, &blob) =>
+            {
+                return true;
+            }
             HostKeyStatus::New { other_types } => HostKeyKind::New { other_types },
             HostKeyStatus::Changed {
                 file,
@@ -139,7 +146,12 @@ impl ClientHandler {
             kind,
         };
         match prompt::ask(&self.asker, Prompt::HostKey(question)).await {
-            Answer::TrustOnce => true,
+            Answer::TrustOnce => {
+                self.known_hosts
+                    .trusted_once
+                    .add(&self.host, self.port, blob);
+                true
+            }
             Answer::TrustAndRemember => {
                 let path = self.known_hosts.own.clone();
                 let (host, port) = (self.host.clone(), self.port);

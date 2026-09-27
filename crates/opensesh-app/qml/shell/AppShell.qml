@@ -1243,13 +1243,16 @@ Item {
         ];
     }
 
-    // Functions for SmokeTest.steps: a saved host connected through a pane (the smoke test runs
-    // the hermetic shell instead of ssh), a split to the same host, and a request from another
-    // process.
+    // Functions for SmokeTest.steps: a saved host connected with the built-in SSH client (every
+    // connection of the smoke test goes to the in-process test server, never the network): the
+    // host key card, a wrong then a right password, the remote shell, a dropped connection and
+    // Enter to reconnect (the key trusted once isn't asked again); then a split to the same host
+    // and a request from another process.
     function hostSmokeSteps(smoke) {
         const timeout = 15000;
         let deadline = 0;
         let tabId = 0;
+        let pane = null;
         const waitFor = (what, condition, next) => {
             const poll = () => {
                 if (condition())
@@ -1262,22 +1265,60 @@ Item {
             };
             return poll;
         };
+        const wait = (what, condition, next) => {
+            deadline = Date.now() + timeout;
+            return [waitFor(what, condition, next)];
+        };
+        const question = () => pane && pane.terminal.prompt.length > 0 ? JSON.parse(pane.terminal.prompt) : {};
+        const state = () => pane && pane.terminal.connection.length > 0 ? JSON.parse(pane.terminal.connection).state : "";
+        const screen = () => pane ? pane.terminal.screenText() : "";
         return [
             () => {
+                if (AppInfo.startSshTestServer() <= 0)
+                    smoke.fail("the SSH test server didn't start");
                 Hosts.loadFixture(40);
                 const command = Hosts.connectCommand("H00000");
                 if (command[0] !== "ssh" || command[command.length - 1] !== "deploy@10.0.0.1")
                     smoke.fail("the ssh command of a fixture host is wrong: " + JSON.stringify(command));
+                if (Hosts.usesOpenSsh("H00000"))
+                    smoke.fail("a host uses OpenSSH without asking for it");
                 if (!shell.connectHost("H00000", "tab"))
                     smoke.fail("connecting to a saved host opened nothing");
                 tabId = shell.currentTabId;
-                const pane = shell.currentTerminal;
-                if (!pane || pane.kind !== "ssh" || pane.host !== "H00000" || pane.terminal.command[0] !== "ssh")
-                    smoke.fail("the pane doesn't connect to the host");
+                pane = shell.currentTerminal;
+                if (!pane || pane.kind !== "ssh" || pane.host !== "H00000" || pane.terminal.command.length !== 0)
+                    smoke.fail("the pane doesn't connect to the host with the built-in client");
                 if (!(WindowRegistry.openHosts["H00000"] > 0))
                     smoke.fail("the Hosts view wouldn't show the open session");
-                deadline = Date.now() + timeout;
-                return [waitFor("the host's session", () => pane.terminal.running)];
+                return wait("the host key card", () => question().kind === "hostKey");
+            },
+            () => {
+                const card = question();
+                if (card.changed || !String(card.fingerprint).startsWith("SHA256:"))
+                    smoke.fail("the host key card is wrong: " + pane.terminal.prompt);
+                pane.terminal.answerPrompt(card.id, "trust-once", []);
+                return wait("the password prompt", () => question().kind === "password");
+            },
+            () => {
+                pane.terminal.answerPrompt(question().id, "submit", ["not the password"]);
+                return wait("the password prompt after a wrong password", () => question().kind === "password" && question().retry === true);
+            },
+            () => {
+                pane.terminal.answerPrompt(question().id, "submit", ["right password"]);
+                return wait("the remote shell", () => state() === "connected" && screen().indexOf("test$") >= 0);
+            },
+            () => {
+                pane.terminal.sendText("drop\r");
+                return wait("the disconnected banner", () => state() === "disconnected");
+            },
+            () => {
+                pane.terminal.sendText("\r");
+                return wait("the password prompt of the reconnection", () => question().kind === "password");
+            },
+            () => {
+                pane.terminal.answerPrompt(question().id, "submit", ["right password"]);
+                return wait("the reconnected shell", () => state() === "connected",
+                            () => console.info("smoke test: an SSH pane asked for the host key and the password, connected and reconnected"));
             },
             () => {
                 if (!shell.connectHost("H00000", "right") || shell.currentWorkspace.paneCount !== 2)

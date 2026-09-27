@@ -12,10 +12,12 @@
 //! [`SessionEntry::take_events`]. Nothing here calls Qt while holding a lock, except the waker,
 //! which only posts an event.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
+use opensesh_ssh::backend::Status as SshStatus;
+use opensesh_ssh::prompt::{Answer, Asker, Prompt, Request};
 use opensesh_term::backend::{self, BackendError, TermSize};
 use opensesh_term::palette::Palette;
 use opensesh_term::pty;
@@ -23,6 +25,8 @@ use opensesh_term::session::{
     Notice, Notify, Session, SessionConfig, SessionError, SessionOptions,
 };
 use opensesh_term::shell::ShellCommand;
+
+use crate::ssh::SshStart;
 
 /// Queues the attached item's `drain` on the GUI thread. Returns `false` when the item is gone
 /// (the closure was not queued).
@@ -92,14 +96,37 @@ pub struct Events {
     pub exited: bool,
     /// The program set the clipboard (OSC 52): the latest text.
     pub clipboard: Option<String>,
+    /// An SSH connection's state or question changed.
+    pub ssh: bool,
 }
 
 impl Events {
     /// Whether anything happened.
     #[must_use]
     pub fn any(&self) -> bool {
-        self.dirty || self.bell || self.info || self.exited || self.clipboard.is_some()
+        self.dirty || self.bell || self.info || self.exited || self.clipboard.is_some() || self.ssh
     }
+}
+
+/// An SSH session's state: its status and the questions waiting for the user (the first one is
+/// shown).
+#[derive(Default)]
+struct SshState {
+    active: bool,
+    status: Option<SshStatus>,
+    os: Option<&'static str>,
+    requests: VecDeque<Request>,
+}
+
+/// What a pane shows about its SSH connection.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SshView {
+    /// The connection's state, once known.
+    pub status: Option<SshStatus>,
+    /// The question to show, with its id.
+    pub prompt: Option<(u64, Prompt)>,
+    /// The remote OS, as a host icon name, once found.
+    pub os: Option<&'static str>,
 }
 
 /// Shared between the engine's callback and the GUI thread.
@@ -107,6 +134,7 @@ impl Events {
 struct SessionState {
     info: SessionInfo,
     events: Events,
+    ssh: SshState,
     /// The attached item: its token and its waker.
     attachment: Option<(u64, Waker)>,
     /// A wake-up is queued and not yet taken by the attached item.
@@ -189,10 +217,10 @@ pub fn next_token() -> u64 {
 
 impl SessionEntry {
     /// Starts a session with `start`, which gets the notify callback to pass to
-    /// `Session::start`.
+    /// `Session::start` and the entry's shared state (for an SSH backend's questions).
     fn start_with(
         id: i32,
-        start: impl FnOnce(Notify) -> Result<Session, StartError>,
+        start: impl FnOnce(Notify, &Arc<Mutex<SessionState>>) -> Result<Session, StartError>,
     ) -> Result<Self, StartError> {
         let state = Arc::new(Mutex::new(SessionState::default()));
         let notify: Notify = {
@@ -203,8 +231,46 @@ impl SessionEntry {
                 state.wake();
             })
         };
-        let session = start(notify)?;
+        let session = start(notify, &state)?;
         Ok(Self { id, session, state })
+    }
+
+    /// The SSH connection's state and current question; `None` for other sessions.
+    #[must_use]
+    pub fn ssh(&self) -> Option<SshView> {
+        let state = lock(&self.state);
+        state.ssh.active.then(|| SshView {
+            status: state.ssh.status.clone(),
+            os: state.ssh.os,
+            prompt: state
+                .ssh
+                .requests
+                .front()
+                .map(|request| (request.id, request.prompt.clone())),
+        })
+    }
+
+    /// Answers question `id` (the connection goes on). `false` when it is no longer waiting.
+    pub fn answer(&self, id: u64, answer: Answer) -> bool {
+        let request = {
+            let mut state = lock(&self.state);
+            let position = state
+                .ssh
+                .requests
+                .iter()
+                .position(|request| request.id == id);
+            let request = position.and_then(|position| state.ssh.requests.remove(position));
+            state.events.ssh = true;
+            state.wake();
+            request
+        };
+        match request {
+            Some(request) => {
+                request.answer(answer);
+                true
+            }
+            None => false,
+        }
     }
 
     /// The tab id this session belongs to.
@@ -352,7 +418,7 @@ pub fn open_replay(
     options: LocalOptions,
 ) -> Result<(i32, Arc<SessionEntry>), StartError> {
     let id = NEXT_PREVIEW.fetch_sub(1, Ordering::Relaxed);
-    let entry = open_with(id, move |notify| {
+    let entry = open_with(id, move |notify, _state| {
         let (backend, events) = backend::replay(bytes);
         let config = SessionConfig {
             size: options.size,
@@ -376,13 +442,80 @@ pub fn get(id: i32) -> Option<Arc<SessionEntry>> {
 /// # Errors
 /// [`StartError`] if a thread for the new session could not be created.
 pub fn open_local(id: i32, options: LocalOptions) -> Result<Arc<SessionEntry>, StartError> {
-    open_with(id, |notify| start_local(options, notify))
+    open_with(id, |notify, _state| start_local(options, notify))
+}
+
+/// The session of tab `id`, starting an SSH session for it if there is none yet.
+///
+/// # Errors
+/// [`StartError`] if the SSH runtime or the engine thread could not be started.
+pub fn open_ssh(
+    id: i32,
+    options: LocalOptions,
+    ssh: SshStart,
+) -> Result<Arc<SessionEntry>, StartError> {
+    open_with(id, |notify, state| start_ssh(options, ssh, notify, state))
+}
+
+/// Ends the session of tab `id` (if any) and starts a new SSH session for it.
+///
+/// # Errors
+/// [`StartError`] if the new session could not be started.
+pub fn restart_ssh(
+    id: i32,
+    options: LocalOptions,
+    ssh: SshStart,
+) -> Result<Arc<SessionEntry>, StartError> {
+    close(id);
+    open_ssh(id, options, ssh)
+}
+
+/// Starts an SSH session: questions and state go to the entry's shared state and wake the item.
+fn start_ssh(
+    options: LocalOptions,
+    mut ssh: SshStart,
+    notify: Notify,
+    state: &Arc<Mutex<SessionState>>,
+) -> Result<Session, StartError> {
+    lock(state).ssh.active = true;
+    let asker: Asker = {
+        let state = Arc::clone(state);
+        Arc::new(move |request: Request| {
+            let mut state = lock(&state);
+            state.ssh.requests.push_back(request);
+            state.events.ssh = true;
+            state.wake();
+        })
+    };
+    let status: opensesh_ssh::backend::StatusSink = {
+        let state = Arc::clone(state);
+        Arc::new(move |status| {
+            let mut state = lock(&state);
+            match status {
+                SshStatus::OsDetected(icon) => state.ssh.os = Some(icon),
+                status => state.ssh.status = Some(status),
+            }
+            state.events.ssh = true;
+            state.wake();
+        })
+    };
+    ssh.session.size = options.size;
+    ssh.session.term.clone_from(&options.term);
+    let (backend, events) =
+        opensesh_ssh::backend::start(ssh.connect, ssh.session, ssh.options, asker, status)?;
+    let config = SessionConfig {
+        size: options.size,
+        palette: options.palette,
+        options: options.options,
+        ..SessionConfig::default()
+    };
+    Ok(Session::start(backend, events, config, notify)?)
 }
 
 /// [`open_local`] with any way of starting the session (tests use a replay backend).
 fn open_with(
     id: i32,
-    start: impl FnOnce(Notify) -> Result<Session, StartError>,
+    start: impl FnOnce(Notify, &Arc<Mutex<SessionState>>) -> Result<Session, StartError>,
 ) -> Result<Arc<SessionEntry>, StartError> {
     let mut sessions = sessions();
     if let Some(entry) = sessions.get(&id) {
@@ -452,7 +585,7 @@ mod tests {
 
     fn replay(id: i32, bytes: &[u8]) -> Arc<SessionEntry> {
         let bytes = bytes.to_vec();
-        open_with(id, move |notify| {
+        open_with(id, move |notify, _state| {
             let (backend, events) = backend::replay(bytes);
             let config = SessionConfig {
                 size: TermSize::new(20, 4),
@@ -488,7 +621,7 @@ mod tests {
         let entry = replay(id, b"hello");
         assert_eq!(entry.id(), id);
         // Opening the same id again returns the same session.
-        let again = open_with(id, |_| unreachable!("the session exists")).unwrap();
+        let again = open_with(id, |_, _| unreachable!("the session exists")).unwrap();
         assert!(Arc::ptr_eq(&entry, &again));
         assert!(get(id).is_some());
         assert!(close(id));

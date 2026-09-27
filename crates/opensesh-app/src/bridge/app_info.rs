@@ -39,6 +39,14 @@ pub mod qobject {
         #[qproperty(QUrl, logs_folder, cxx_name = "logsFolder", READ, CONSTANT)]
         #[qproperty(QUrl, config_folder, cxx_name = "configFolder", READ, CONSTANT)]
         type AppInfo = super::AppInfoRust;
+
+        /// Smoke tests only: starts the in-process SSH test server (user `tester`, password
+        /// `right password`, jumps allowed, "drop" drops the connection) on 127.0.0.1 and returns
+        /// its port; 0 in normal runs or when it can't start. From then on every SSH connection
+        /// of the smoke test goes to it.
+        #[qinvokable]
+        #[cxx_name = "startSshTestServer"]
+        fn start_ssh_test_server(self: &Self) -> i32;
     }
 }
 
@@ -63,6 +71,35 @@ pub struct Startup {
 }
 
 static STARTUP: OnceLock<Startup> = OnceLock::new();
+
+impl qobject::AppInfo {
+    /// See the bridge declaration.
+    pub fn start_ssh_test_server(&self) -> i32 {
+        if !is_smoke_test() {
+            return 0;
+        }
+        let Some(runtime) = opensesh_ssh::runtime() else {
+            return 0;
+        };
+        let rules = opensesh_ssh::testing::Rules {
+            password: true,
+            jump: true,
+            droppable: true,
+            ..opensesh_ssh::testing::Rules::default()
+        };
+        // Binding a local port takes no time: the smoke test waits for it.
+        match runtime.block_on(opensesh_ssh::testing::serve(rules)) {
+            Ok(port) => {
+                crate::ssh::set_test_server(port);
+                i32::from(port)
+            }
+            Err(error) => {
+                tracing::warn!("could not start the SSH test server: {error}");
+                0
+            }
+        }
+    }
+}
 
 /// Whether this run is a `--smoke-test`.
 #[must_use]

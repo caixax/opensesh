@@ -5,7 +5,8 @@ pragma ComponentBehavior: Bound
 // the search bar (Ctrl+Shift+F), the context menu (right click or the Menu key), the bell in the
 // profile's style and a banner when the shell ends with an error. A shell that exits with code 0
 // closes its pane. Panes stay alive while hidden (another tab, or another pane maximized), so
-// their shells keep running.
+// their shells keep running. An `ssh` pane without a command connects with the built-in client,
+// whose state and questions show in an SshOverlay; the OS it finds becomes the host's icon.
 //
 // Broadcast (MultiExec): while the tab broadcasts, what is typed or pasted in a pane that
 // receives broadcast input also goes to the other receiving panes. Those panes, and only those,
@@ -228,6 +229,7 @@ Item {
         anchors.fill: parent
         sessionId: pane.startSession ? pane.paneId : 0
         hostId: pane.host
+        sshTarget: pane.kind === "ssh" && pane.host.length === 0 ? pane.target : ""
         command: JSON.parse(pane.commandJson || "[]")
         demo: !pane.startSession
         demoDark: Theme.dark
@@ -272,6 +274,10 @@ Item {
         onRunningChanged: {
             if (running)
                 pane.failed = false;
+        }
+        onOsDetected: icon => {
+            if (pane.host.length > 0)
+                Hosts.setDetectedOs(pane.host, icon);
         }
         onContextMenuRequested: (x, y) => contextMenu.popup(terminal, x, y)
     }
@@ -595,9 +601,12 @@ Item {
 
                 Layout.fillWidth: true
                 text: {
-                    if (terminal.startError.length > 0)
-                        return pane.kind === "ssh" ? qsTr("ssh could not start: %1. Install the OpenSSH client; the built-in one arrives in a later version.").arg(terminal.startError)
-                                                   : qsTr("The shell could not start: %1").arg(terminal.startError);
+                    if (terminal.startError.length > 0) {
+                        if (pane.kind !== "ssh")
+                            return qsTr("The shell could not start: %1").arg(terminal.startError);
+                        return terminal.command.length > 0 ? qsTr("ssh could not start: %1. Install the OpenSSH client, or let the host use the built-in client.").arg(terminal.startError)
+                                                           : qsTr("Can't connect to %1: %2").arg(pane.label).arg(terminal.startError);
+                    }
                     if (pane.kind === "ssh")
                         return terminal.exitCodeKnown ? qsTr("The connection to %1 ended (code %2).").arg(pane.label).arg(pane.exitCodeText(terminal.exitCode))
                                                       : qsTr("The connection to %1 was ended.").arg(pane.label);
@@ -625,6 +634,22 @@ Item {
                 Keys.onReturnPressed: pane.closePane()
                 Keys.onEnterPressed: pane.closePane()
             }
+        }
+    }
+
+    // The built-in SSH client's state and questions.
+    Loader {
+        anchors.fill: terminal
+        active: pane.kind === "ssh" && pane.startSession
+        z: 3
+
+        sourceComponent: SshOverlay {
+            terminal: terminal
+            shell: pane.shell
+            label: pane.label
+            edgeInset: pane.edgeInset
+            onAnswered: pane.focusTerminal()
+            onCloseRequested: pane.closePane()
         }
     }
 

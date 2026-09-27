@@ -88,7 +88,7 @@ fn spec(dir: &Path, hops: Vec<Hop>) -> ConnectSpec {
         connect_timeout: Duration::from_secs(10),
         known_hosts: KnownHostsFiles {
             own: dir.join("known_hosts"),
-            user: None,
+            ..KnownHostsFiles::default()
         },
         agent_forwarding: false,
         agent_socket: None,
@@ -502,10 +502,12 @@ fn the_terminal_backend_reconnects() {
         ..Rules::default()
     }));
     let dir = tempfile::tempdir().unwrap();
+    // A key trusted once isn't asked about again when the connection comes back.
     let answers = script(|prompt| match prompt {
-        Prompt::HostKey(_) => Answer::TrustAndRemember,
+        Prompt::HostKey(_) => Answer::TrustOnce,
         other => panic!("unexpected {other:?}"),
     });
+    let asked = Arc::clone(&answers.asked);
     let statuses = Arc::new(Mutex::new(Vec::new()));
     let log = Arc::clone(&statuses);
     let os_seen = Arc::new(AtomicBool::new(false));
@@ -564,4 +566,6 @@ fn the_terminal_backend_reconnects() {
     );
     assert!(statuses.contains(&Status::Ended));
     assert!(os_seen.load(Ordering::SeqCst), "{statuses:?}");
+    assert_eq!(asked.lock().unwrap().len(), 1);
+    assert!(!dir.path().join("known_hosts").exists());
 }

@@ -184,9 +184,12 @@ Item {
         hostMenu.popup(item, x, y);
     }
 
+    // The host's icon; `auto` shows the OS the SSH client found, else one for the protocol.
     function iconFor(host) {
         if (host.icon && host.icon !== "auto")
             return host.icon;
+        if (host.detectedIcon)
+            return host.detectedIcon;
         switch (host.protocol) {
         case "rdp":
         case "vnc":

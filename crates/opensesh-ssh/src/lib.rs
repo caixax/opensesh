@@ -56,6 +56,9 @@ pub enum SshError {
     /// The user cancelled a prompt.
     #[error("cancelled")]
     Cancelled,
+    /// The saved secrets (the vault) are locked: unlock them and try again.
+    #[error("the vault is locked: unlock it, then press Enter to connect")]
+    SecretsLocked,
     /// The SSH protocol failed.
     #[error("SSH error: {0}")]
     Protocol(String),
@@ -96,6 +99,7 @@ impl SshError {
             Self::HostKey { .. } => "host-key",
             Self::Auth { .. } => "auth",
             Self::Cancelled => "cancelled",
+            Self::SecretsLocked => "locked",
             Self::Protocol(_) => "protocol",
             Self::Refused { .. } => "refused",
             Self::Timeout { .. } => "timeout",

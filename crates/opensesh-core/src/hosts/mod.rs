@@ -7,10 +7,12 @@
 //! - [`search`]: fuzzy search, filters and sorting.
 //! - [`target`]: the quick-connect parser and the OpenSSH command line.
 //! - [`recent`]: recent connections.
+//! - [`detected`]: the operating system the SSH client found on each host.
 //!
 //! Secrets are never stored here: a host or group names an identity of the keychain
 //! (`keychain.toml`, Sprint 6), whose password and key live in the vault.
 
+pub mod detected;
 pub mod recent;
 pub mod search;
 pub mod target;
@@ -149,6 +151,17 @@ pub enum SshBackend {
     Internal,
     /// The system's OpenSSH `ssh`.
     Openssh,
+}
+
+impl SshBackend {
+    /// The name in files.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Internal => "internal",
+            Self::Openssh => "openssh",
+        }
+    }
 }
 
 /// X11 forwarding.
