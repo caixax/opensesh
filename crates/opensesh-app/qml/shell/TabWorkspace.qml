@@ -134,7 +134,8 @@ Item {
         updateFocusedItem();
     }
 
-    // A pane model row from a seed pane: an `ssh` pane gets its command now.
+    // A pane model row from a seed pane: an `ssh` pane of a host that uses OpenSSH gets its
+    // command now; the built-in client needs none (the pane's TerminalItem connects).
     function paneRow(pane) {
         const kind = pane.kind || "local";
         const host = pane.host || "";
@@ -142,7 +143,7 @@ Item {
         let command = [];
         let label = "";
         if (kind === "ssh") {
-            command = host.length > 0 ? Hosts.connectCommand(host) : Hosts.targetCommand(target);
+            command = host.length > 0 && Hosts.usesOpenSsh(host) ? Hosts.connectCommand(host) : [];
             label = host.length > 0 ? (JSON.parse(Hosts.hostJson(host) || "{}").name || target) : target;
         }
         // Local panes take the profile of new tabs; a host's panes let the host's chain decide.

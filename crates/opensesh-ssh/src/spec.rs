@@ -4,7 +4,7 @@
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use opensesh_term::backend::TermSize;
@@ -195,12 +195,45 @@ impl std::fmt::Debug for Proxy {
 }
 
 /// The `known_hosts` files: OpenSesh's own (read and written) and the user's (read only).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct KnownHostsFiles {
     /// OpenSesh's file, where accepted keys go.
     pub own: PathBuf,
     /// `~/.ssh/known_hosts`, if there is a home folder.
     pub user: Option<PathBuf>,
+    /// Keys trusted once, for this connection's reconnections.
+    pub trusted_once: TrustedOnce,
+}
+
+/// A host, its port and a key's wire encoding.
+type TrustedKey = (String, u16, Vec<u8>);
+
+/// Host keys the user trusted once: kept in memory while the connection (and its reconnections)
+/// lives, never written. Clones share the list.
+#[derive(Debug, Clone, Default)]
+pub struct TrustedOnce(Arc<Mutex<Vec<TrustedKey>>>);
+
+impl TrustedOnce {
+    /// Whether `key` (its wire encoding) was trusted for `host`:`port`.
+    #[must_use]
+    pub fn contains(&self, host: &str, port: u16, key: &[u8]) -> bool {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .iter()
+            .any(|(known, known_port, blob)| known == host && *known_port == port && blob == key)
+    }
+
+    /// Trusts `key` for `host`:`port` from now on.
+    pub fn add(&self, host: &str, port: u16, key: Vec<u8>) {
+        if !self.contains(host, port, &key) {
+            self.0.lock().unwrap_or_else(PoisonError::into_inner).push((
+                host.to_owned(),
+                port,
+                key,
+            ));
+        }
+    }
 }
 
 /// A connection: its hops (jump hosts first, the target last) and the transport options.

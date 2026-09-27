@@ -263,6 +263,9 @@ pub mod qobject {
         #[qproperty(bool, dark, READ, WRITE = set_dark, NOTIFY = dark_changed)]
         #[qproperty(QString, profile_id, cxx_name = "profileId", READ, WRITE = set_profile_id, NOTIFY = inputs_changed)]
         #[qproperty(QString, host_id, cxx_name = "hostId", READ, WRITE = set_host_id, NOTIFY = inputs_changed)]
+        #[qproperty(QString, ssh_target, cxx_name = "sshTarget", READ, WRITE, NOTIFY = inputs_changed)]
+        #[qproperty(QString, connection, READ, NOTIFY = ssh_changed)]
+        #[qproperty(QString, prompt, READ, NOTIFY = ssh_changed)]
         #[qproperty(QStringList, command, READ, WRITE, NOTIFY)]
         #[qproperty(QString, start_error, cxx_name = "startError", READ, NOTIFY = session_info_changed)]
         #[qproperty(i32, settings_revision, cxx_name = "settingsRevision", READ, WRITE = set_settings_revision, NOTIFY = inputs_changed)]
@@ -374,6 +377,16 @@ pub mod qobject {
         #[qsignal]
         fn bell(self: Pin<&mut TerminalItem>);
 
+        /// The SSH connection's state (`connection`) or its question (`prompt`) changed.
+        #[qsignal]
+        #[cxx_name = "sshChanged"]
+        fn ssh_changed(self: Pin<&mut TerminalItem>);
+
+        /// The SSH session found the remote OS (a host icon name, e.g. `os-debian`).
+        #[qsignal]
+        #[cxx_name = "osDetected"]
+        fn os_detected(self: Pin<&mut TerminalItem>, icon: QString);
+
         /// The program ended; `code` is meaningful only when `exitCodeKnown` is true.
         #[qsignal]
         fn exited(self: Pin<&mut TerminalItem>, code: i32);
@@ -479,6 +492,17 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "sendText"]
         fn send_text(self: Pin<&mut TerminalItem>, text: &QString);
+
+        /// Answers the SSH question `id`: `action` is `trust-once`, `trust-save`, `submit` (with
+        /// `secrets`, one per field) or `cancel`. Returns whether it was still waiting.
+        #[qinvokable]
+        #[cxx_name = "answerPrompt"]
+        fn answer_prompt(
+            self: Pin<&mut TerminalItem>,
+            id: i32,
+            action: &QString,
+            secrets: &QStringList,
+        ) -> bool;
 
         /// Called by the renderer on the render thread, GUI thread blocked (see the C++ base).
         #[cxx_override]
@@ -685,6 +709,87 @@ use crate::terminal::interaction::{
 use crate::terminal::profiles::{self, DEFAULT_FONT, Resolved};
 use crate::terminal::registry::{self, LocalOptions, SessionEntry, SessionInfo, Waker};
 use crate::terminal::{demo, preview};
+
+/// The pane's view of an SSH connection's state, as JSON for QML.
+fn ssh_status_json(status: &opensesh_ssh::backend::Status) -> String {
+    use opensesh_ssh::backend::Status;
+    let value = match status {
+        Status::Connecting {
+            index,
+            count,
+            label,
+        } => serde_json::json!({
+            "state": "connecting", "index": index, "count": count, "label": label,
+        }),
+        Status::Authenticating { label } => serde_json::json!({
+            "state": "authenticating", "label": label,
+        }),
+        Status::Connected => serde_json::json!({ "state": "connected" }),
+        Status::Disconnected {
+            code,
+            reason,
+            retry_in,
+        } => serde_json::json!({
+            "state": "disconnected", "code": code, "reason": reason,
+            "retryIn": retry_in.map_or(-1, |secs| i64::try_from(secs).unwrap_or(-1)),
+        }),
+        Status::Ended => serde_json::json!({ "state": "ended" }),
+        // Kept apart by the registry.
+        Status::OsDetected(_) => return String::new(),
+    };
+    value.to_string()
+}
+
+/// An SSH question as JSON for QML (no secret is in a question).
+fn ssh_prompt_json(id: u64, prompt: &opensesh_ssh::prompt::Prompt) -> String {
+    use opensesh_ssh::prompt::{HostKeyKind, Prompt};
+    let id = i64::try_from(id).unwrap_or(0);
+    let value = match prompt {
+        Prompt::HostKey(question) => {
+            let (changed, known, file, line, others) = match &question.kind {
+                HostKeyKind::New { other_types } => {
+                    (false, String::new(), String::new(), 0, other_types.clone())
+                }
+                HostKeyKind::Changed {
+                    known_fingerprint,
+                    file,
+                    line,
+                } => (
+                    true,
+                    known_fingerprint.clone(),
+                    file.clone(),
+                    *line,
+                    Vec::new(),
+                ),
+            };
+            serde_json::json!({
+                "id": id, "kind": "hostKey", "host": question.host, "port": question.port,
+                "keyType": question.key_type, "fingerprint": question.fingerprint,
+                "changed": changed, "knownFingerprint": known, "file": file, "line": line,
+                "otherTypes": others,
+            })
+        }
+        Prompt::Password { target, retry } => serde_json::json!({
+            "id": id, "kind": "password", "target": target, "retry": retry,
+        }),
+        Prompt::Passphrase { key, retry } => serde_json::json!({
+            "id": id, "kind": "passphrase", "key": key, "retry": retry,
+        }),
+        Prompt::KeyboardInteractive {
+            target,
+            name,
+            instructions,
+            fields,
+        } => serde_json::json!({
+            "id": id, "kind": "keyboard", "target": target, "name": name,
+            "instructions": instructions,
+            "fields": fields.iter().map(|field| serde_json::json!({
+                "label": field.label, "echo": field.echo,
+            })).collect::<Vec<_>>(),
+        }),
+    };
+    value.to_string()
+}
 use qobject::{
     QList_i32, QStringList, TerminalCell, TerminalCursorShape, TerminalFontOptions,
     TerminalFrameInfo, TerminalFrameRequest, TerminalMouseEvent, TerminalWheelEvent,
@@ -761,6 +866,11 @@ pub struct TerminalItemRust {
     dark: bool,
     profile_id: QString,
     host_id: QString,
+    ssh_target: QString,
+    connection: QString,
+    prompt: QString,
+    /// The OS was already reported for this session.
+    os_reported: bool,
     command: QStringList,
     start_error: QString,
     settings_revision: i32,
@@ -863,6 +973,10 @@ impl Default for TerminalItemRust {
             dark: true,
             profile_id: QString::default(),
             host_id: QString::default(),
+            ssh_target: QString::default(),
+            connection: QString::default(),
+            prompt: QString::default(),
+            os_reported: false,
             command: QStringList::default(),
             start_error: QString::default(),
             settings_revision: 0,
@@ -1332,6 +1446,81 @@ impl qobject::TerminalItem {
         self.as_mut().inputs_changed();
     }
 
+    /// The SSH session this item starts, if it starts one: the built-in client for a saved SSH
+    /// host (unless it uses OpenSSH, which runs as `command`) or for quick-connect text.
+    fn ssh_start(&self, options: &LocalOptions) -> Option<Result<crate::ssh::SshStart, String>> {
+        if !self.command.is_empty() {
+            return None;
+        }
+        let host = self.host_id.to_string();
+        let target = self.ssh_target.to_string();
+        if !host.is_empty() && crate::ssh::is_internal(&host) {
+            return Some(crate::ssh::for_host(&host, options.size, &options.term));
+        }
+        if host.is_empty() && !target.trim().is_empty() {
+            return Some(crate::ssh::for_target(&target, options.size, &options.term));
+        }
+        None
+    }
+
+    /// Mirrors the SSH connection's state and question into `connection` and `prompt`.
+    fn publish_ssh(mut self: Pin<&mut Self>, entry: &SessionEntry) {
+        let Some(view) = entry.ssh() else {
+            return;
+        };
+        if let Some(icon) = view.os
+            && !self.os_reported
+        {
+            self.as_mut().rust_mut().os_reported = true;
+            self.as_mut().os_detected(QString::from(icon));
+        }
+        let connection = view
+            .status
+            .as_ref()
+            .map(ssh_status_json)
+            .unwrap_or_default();
+        let prompt = view
+            .prompt
+            .as_ref()
+            .map(|(id, prompt)| ssh_prompt_json(*id, prompt))
+            .unwrap_or_default();
+        let changed =
+            self.connection.to_string() != connection || self.prompt.to_string() != prompt;
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.connection = QString::from(&connection);
+            state.prompt = QString::from(&prompt);
+        }
+        if changed {
+            self.as_mut().ssh_changed();
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn answer_prompt(
+        self: Pin<&mut Self>,
+        id: i32,
+        action: &QString,
+        secrets: &QStringList,
+    ) -> bool {
+        use opensesh_ssh::prompt::Answer;
+        let Some(entry) = self.entry() else {
+            return false;
+        };
+        let answer = match action.to_string().as_str() {
+            "trust-once" => Answer::TrustOnce,
+            "trust-save" => Answer::TrustAndRemember,
+            "submit" => Answer::Secrets(
+                secrets
+                    .iter()
+                    .map(|secret| secrecy::SecretString::from(secret.to_string()))
+                    .collect(),
+            ),
+            _ => Answer::Cancel,
+        };
+        entry.answer(u64::try_from(id).unwrap_or(0), answer)
+    }
+
     /// See the bridge declaration.
     pub fn set_host_id(mut self: Pin<&mut Self>, value: QString) {
         if self.host_id == value {
@@ -1536,11 +1725,18 @@ impl qobject::TerminalItem {
                     return;
                 };
                 let options = self.as_mut().rust_mut().local_options(size);
-                match registry::open_local(id, options) {
+                let opened = match self.ssh_start(&options) {
+                    Some(Ok(ssh)) => {
+                        registry::open_ssh(id, options, ssh).map_err(|error| error.to_string())
+                    }
+                    Some(Err(message)) => Err(message),
+                    None => registry::open_local(id, options).map_err(|error| error.to_string()),
+                };
+                match opened {
                     Ok(entry) => entry,
                     Err(error) => {
-                        tracing::error!(id, %error, "could not start a local terminal");
-                        self.as_mut().rust_mut().start_error = QString::from(&error.to_string());
+                        tracing::error!(id, %error, "could not start a terminal");
+                        self.as_mut().rust_mut().start_error = QString::from(&error);
                         self.as_mut().publish_info(
                             &SessionInfo {
                                 exit: Some(None),
@@ -1589,6 +1785,8 @@ impl qobject::TerminalItem {
         session.focus_changed(focused);
         entry.attach(token, waker);
         self.as_mut().publish_info(&entry.info(), true);
+        self.as_mut().rust_mut().os_reported = false;
+        self.as_mut().publish_ssh(&entry);
         self.update();
     }
 
@@ -1614,6 +1812,14 @@ impl qobject::TerminalItem {
         }
         self.as_mut().publish_info(&SessionInfo::default(), false);
         self.as_mut().set_has_selection_value(false);
+        if !self.connection.is_empty() || !self.prompt.is_empty() {
+            {
+                let mut state = self.as_mut().rust_mut();
+                state.connection = QString::default();
+                state.prompt = QString::default();
+            }
+            self.as_mut().ssh_changed();
+        }
         self.update();
     }
 
@@ -1643,6 +1849,9 @@ impl qobject::TerminalItem {
         }
         if events.bell {
             self.as_mut().bell();
+        }
+        if events.ssh {
+            self.as_mut().publish_ssh(&entry);
         }
         if let Some(text) = events.clipboard {
             self.as_mut()
@@ -2043,17 +2252,24 @@ impl qobject::TerminalItem {
             return false;
         }
         self.as_mut().detach();
-        tracing::info!(id, "restarting a local terminal");
+        tracing::info!(id, "restarting a terminal");
         let options = self.as_mut().rust_mut().local_options(size);
-        match registry::restart_local(id, options) {
+        let restarted = match self.ssh_start(&options) {
+            Some(Ok(ssh)) => {
+                registry::restart_ssh(id, options, ssh).map_err(|error| error.to_string())
+            }
+            Some(Err(message)) => Err(message),
+            None => registry::restart_local(id, options).map_err(|error| error.to_string()),
+        };
+        match restarted {
             Ok(entry) => {
                 self.as_mut().rust_mut().start_error = QString::default();
                 self.as_mut().attach(entry);
                 true
             }
             Err(error) => {
-                tracing::error!(id, %error, "could not restart a local terminal");
-                self.as_mut().rust_mut().start_error = QString::from(&error.to_string());
+                tracing::error!(id, %error, "could not restart a terminal");
+                self.as_mut().rust_mut().start_error = QString::from(&error);
                 self.as_mut().session_info_changed();
                 false
             }

@@ -55,7 +55,7 @@ pub mod qobject {
         /// `linked` or a group id), optionally one `protocol` and one `tag`, sorted by `sort` (`name`,
         /// `address`, `recent`, `group`) when there is no text: a JSON list of summaries
         /// (`id`, `name`, `protocol`, `address`, `target`, `tags`, `favorite`, `color`, `icon`,
-        /// `group`, `groupPath`, `linked`, `sprint`).
+        /// `detectedIcon`, `group`, `groupPath`, `linked`, `sprint`).
         #[qinvokable]
         fn search(
             self: Pin<&mut Self>,
@@ -149,6 +149,18 @@ pub mod qobject {
         #[cxx_name = "connectCommand"]
         fn connect_command(self: &Self, id: &QString) -> QStringList;
 
+        /// Whether SSH host `id` connects with the system's OpenSSH (`ssh.backend`) rather than
+        /// the built-in client.
+        #[qinvokable]
+        #[cxx_name = "usesOpenSsh"]
+        fn uses_openssh(self: &Self, id: &QString) -> bool;
+
+        /// Records the operating system found on host `id` (an icon name such as `os-debian`),
+        /// shown while its icon is `auto`.
+        #[qinvokable]
+        #[cxx_name = "setDetectedOs"]
+        fn set_detected_os(self: Pin<&mut Self>, id: &QString, icon: &QString);
+
         /// Quick-connect text parsed: `{ok, error, protocol, user, host, port, jump, text
         /// (canonical), sprint (0 when it connects today)}`.
         #[qinvokable]
@@ -219,11 +231,13 @@ use std::time::Duration;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
 use opensesh_core::fsutil;
+use opensesh_core::hosts::detected::{DETECTED_FILE, DetectedOs};
 use opensesh_core::hosts::recent::{RECENT_FILE, RecentList};
 use opensesh_core::hosts::search::{self, Query, Scope, Searcher, Sort, natural_cmp, sample_hosts};
 use opensesh_core::hosts::target::{self, SshArgs};
 use opensesh_core::hosts::{
-    Group, HOSTS_FILE, Host, HostsFile, Origin, Protocol, SOURCE_SSH_CONFIG, Source, new_id,
+    Group, HOSTS_FILE, Host, HostsFile, Origin, Protocol, SOURCE_SSH_CONFIG, Source, SshBackend,
+    new_id,
 };
 use opensesh_core::watch::FileWatcher;
 use opensesh_import::ssh_config::{self, SshConfig};
@@ -254,6 +268,7 @@ pub struct HostsRust {
     data_dir: Option<PathBuf>,
     home: PathBuf,
     recent: RecentList,
+    detected: DetectedOs,
     searcher: Searcher,
     /// Summary JSON of each host, in the library's order.
     summaries: Vec<String>,
@@ -337,7 +352,7 @@ fn target_text(file: &HostsFile, host: &Host) -> String {
     text
 }
 
-fn summary(file: &HostsFile, host: &Host) -> String {
+fn summary(file: &HostsFile, host: &Host, detected: &DetectedOs) -> String {
     json!({
         "id": host.id,
         "name": host.name,
@@ -356,6 +371,7 @@ fn summary(file: &HostsFile, host: &Host) -> String {
             host.color.clone()
         },
         "icon": host.icon,
+        "detectedIcon": detected.get(&host.id).unwrap_or_default(),
         "group": host.group.clone().unwrap_or_default(),
         "groupPath": host.group.as_deref().map(|id| file.group_path(id)).unwrap_or_default(),
         "linked": host.is_linked(),
@@ -569,7 +585,11 @@ impl qobject::Hosts {
     fn publish(mut self: Pin<&mut Self>, file: HostsFile) {
         let published = library::publish(file);
         let file = &published.file;
-        let summaries: Vec<String> = file.hosts.iter().map(|host| summary(file, host)).collect();
+        let summaries: Vec<String> = file
+            .hosts
+            .iter()
+            .map(|host| summary(file, host, &self.detected))
+            .collect();
         let tags: Vec<Json> = search::tags(file)
             .into_iter()
             .map(|(tag, count)| json!({ "tag": tag, "count": count }))
@@ -692,6 +712,21 @@ impl qobject::Hosts {
         if self.as_mut().rust_mut().saves.take_reload() {
             self.reload_in_background();
         }
+    }
+
+    fn save_detected(&self) {
+        let (Some(dir), Some(services)) = (self.data_dir.clone(), services::get()) else {
+            return;
+        };
+        if is_test_run() {
+            return;
+        }
+        services.writer.write(
+            dir.join(DETECTED_FILE),
+            self.detected.to_toml_string().into_bytes(),
+            0,
+            None,
+        );
     }
 
     fn save_recent(self: Pin<&mut Self>) {
@@ -1202,6 +1237,57 @@ impl qobject::Hosts {
     }
 
     /// See the bridge declaration.
+    pub fn uses_openssh(&self, id: &QString) -> bool {
+        let id = id.to_string();
+        let library = self.file();
+        library.file.host(&id).is_some_and(|host| {
+            host.protocol == Protocol::Ssh
+                && library.file.resolve(host).string("ssh.backend")
+                    == Some(SshBackend::Openssh.as_str())
+        })
+    }
+
+    /// See the bridge declaration.
+    pub fn set_detected_os(mut self: Pin<&mut Self>, id: &QString, icon: &QString) {
+        let id = id.to_string();
+        let library = self.file();
+        let Some((index, host)) = library
+            .file
+            .hosts
+            .iter()
+            .enumerate()
+            .find(|(_, host)| host.id == id)
+        else {
+            return;
+        };
+        if !self
+            .as_mut()
+            .rust_mut()
+            .detected
+            .set(&id, &icon.to_string())
+        {
+            return;
+        }
+        // Hosts that are gone don't keep an entry.
+        let known: HashSet<&str> = library
+            .file
+            .hosts
+            .iter()
+            .map(|host| host.id.as_str())
+            .collect();
+        self.as_mut()
+            .rust_mut()
+            .detected
+            .retain(|id| known.contains(id));
+        self.save_detected();
+        let text = summary(&library.file, host, &self.detected);
+        if let Some(slot) = self.as_mut().rust_mut().summaries.get_mut(index) {
+            *slot = text;
+        }
+        self.as_mut().changed();
+    }
+
+    /// See the bridge declaration.
     pub fn parse_target(&self, text: &QString) -> QString {
         let value = match target::parse(&text.to_string()) {
             Ok(target) => json!({
@@ -1542,6 +1628,7 @@ impl cxx_qt::Initialize for qobject::Hosts {
         // Two small files read at startup, before the first frame.
         let disk = load_disk(&config, &home);
         let recent = RecentList::load(&data.join(RECENT_FILE));
+        let detected = DetectedOs::load(&data.join(DETECTED_FILE));
         let files = disk.linked.files.clone();
         {
             let mut state = self.as_mut().rust_mut();
@@ -1550,6 +1637,7 @@ impl cxx_qt::Initialize for qobject::Hosts {
             state.data_dir = Some(data);
             state.home = home;
             state.recent = recent;
+            state.detected = detected;
             state.locked = disk.locked;
             state.file_problems = disk.problems;
             state.linked_problems = disk
@@ -1622,7 +1710,8 @@ mod tests {
             "#,
         )
         .unwrap();
-        let value: Json = serde_json::from_str(&summary(&file, &file.hosts[0])).unwrap();
+        let value: Json =
+            serde_json::from_str(&summary(&file, &file.hosts[0], &DetectedOs::default())).unwrap();
         assert_eq!(value["target"], "deploy@[fe80::1]:2222");
         assert_eq!(value["color"], "teal");
         assert_eq!(value["groupPath"], "Prod");

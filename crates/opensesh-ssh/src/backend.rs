@@ -308,7 +308,10 @@ fn lost(error: &SshError) -> Ended {
         reason: error.to_string(),
         final_error: matches!(
             error,
-            SshError::HostKey { .. } | SshError::Auth { .. } | SshError::Cancelled
+            SshError::HostKey { .. }
+                | SshError::Auth { .. }
+                | SshError::Cancelled
+                | SshError::SecretsLocked
         ),
     }
 }

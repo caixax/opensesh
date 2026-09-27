@@ -6871,6 +6871,145 @@
     </message>
 </context>
 <context>
+    <name>SshOverlay</name>
+    <message>
+        <source>Authenticating as %1…</source>
+        <translation>[Åüťĥéñťíçáťíñĝ áš %1… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connecting to %1 (%2 of %3)…</source>
+        <translation>[Çöññéçťíñĝ ťö %1 (%2 öƒ %3)… ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connecting to %1…</source>
+        <translation>[Çöññéçťíñĝ ťö %1… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The vault is locked: unlock it to use the password and key saved for %1.</source>
+        <translation>[Ťĥé váüĺť íš ĺöçķéď: üñĺöçķ íť ťö üšé ťĥé þáššŵöŕď áñď ķéý šávéď ƒöŕ %1. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Disconnected from %1: %2</source>
+        <translation>[Ďíšçöññéçťéď ƒŕöm %1: %2 ~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Reconnecting in %n s…</source>
+        <translation>
+            <numerusform>[Ŕéçöññéçťíñĝ íñ %n š… ~~~~~~~]</numerusform>
+            <numerusform>[Ŕéçöññéçťíñĝ íñ %n š… ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Unlock and connect</source>
+        <translation>[Üñĺöçķ áñď çöññéçť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reconnect</source>
+        <translation>[Ŕéçöññéçť ~~~]</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>[Çĺöšé ~~]</translation>
+    </message>
+    <message>
+        <source>%1 %2</source>
+        <comment>a caption, then a key&apos;s fingerprint</comment>
+        <translation>[%1 %2 ~~]</translation>
+    </message>
+    <message>
+        <source>The host key of %1 changed</source>
+        <translation>[Ťĥé ĥöšť ķéý öƒ %1 çĥáñĝéď ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>First connection to %1</source>
+        <translation>[Fíŕšť çöññéçťíöñ ťö %1 ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server&apos;s key isn&apos;t the one saved in %1 (line %2). Someone may be intercepting the connection, or the server was reinstalled. Don&apos;t connect unless you know why it changed.</source>
+        <translation>[Ťĥé šéŕvéŕ&apos;š ķéý íšñ&apos;ť ťĥé öñé šávéď íñ %1 (ĺíñé %2). Šöméöñé máý bé íñťéŕçéþťíñĝ ťĥé çöññéçťíöñ, öŕ ťĥé šéŕvéŕ ŵáš ŕéíñšťáĺĺéď. Ďöñ&apos;ť çöññéçť üñĺéšš ýöü ķñöŵ ŵĥý íť çĥáñĝéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh doesn&apos;t know this server&apos;s key yet. Check that its fingerprint is the server&apos;s before you trust it.</source>
+        <translation>[ÖþéñŠéšĥ ďöéšñ&apos;ť ķñöŵ ťĥíš šéŕvéŕ&apos;š ķéý ýéť. Çĥéçķ ťĥáť íťš ƒíñĝéŕþŕíñť íš ťĥé šéŕvéŕ&apos;š béƒöŕé ýöü ťŕüšť íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved:</source>
+        <translation>[Šávéď: ~~]</translation>
+    </message>
+    <message>
+        <source>Now:</source>
+        <translation>[Ñöŵ: ~~]</translation>
+    </message>
+    <message>
+        <source>Keys of other types are known for this host (%1): the server may have a new key.</source>
+        <translation>[Ķéýš öƒ öťĥéŕ ťýþéš áŕé ķñöŵñ ƒöŕ ťĥíš ĥöšť (%1): ťĥé šéŕvéŕ máý ĥávé á ñéŵ ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Trust and remember</source>
+        <translation>[Ťŕüšť áñď ŕémémbéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Don&apos;t connect</source>
+        <translation>[Ďöñ&apos;ť çöññéçť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çáñçéĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Connect once</source>
+        <translation>[Çöññéçť öñçé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Replace the saved key</source>
+        <translation>[Ŕéþĺáçé ťĥé šávéď ķéý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passphrase for a key</source>
+        <translation>[Þáššþĥŕášé ƒöŕ á ķéý ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Password for %1</source>
+        <translation>[Þáššŵöŕď ƒöŕ %1 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passphrase</source>
+        <translation>[Þáššþĥŕášé ~~~]</translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation>[Þáššŵöŕď ~~~]</translation>
+    </message>
+    <message>
+        <source>Wrong passphrase. Try again.</source>
+        <translation>[Ŵŕöñĝ þáššþĥŕášé. Ťŕý áĝáíñ. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Wrong password. Try again.</source>
+        <translation>[Ŵŕöñĝ þáššŵöŕď. Ťŕý áĝáíñ. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use the key</source>
+        <translation>[Üšé ťĥé ķéý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation>[Çöññéçť ~~~]</translation>
+    </message>
+    <message>
+        <source>Skip this key</source>
+        <translation>[Šķíþ ťĥíš ķéý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Verification for %1</source>
+        <translation>[Véŕíƒíçáťíöñ ƒöŕ %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Continue</source>
+        <translation>[Çöñťíñüé ~~~]</translation>
+    </message>
+</context>
+<context>
     <name>StatusBar</name>
     <message>
         <source>System</source>
@@ -7116,12 +7255,16 @@
         <translation>[Çĺöšé šéáŕçĥ (Éšçáþé) ~~~~~~~]</translation>
     </message>
     <message>
-        <source>ssh could not start: %1. Install the OpenSSH client; the built-in one arrives in a later version.</source>
-        <translation>[ššĥ çöüĺď ñöť šťáŕť: %1. Íñšťáĺĺ ťĥé ÖþéñŠŠĤ çĺíéñť; ťĥé büíĺť-íñ öñé áŕŕívéš íñ á ĺáťéŕ véŕšíöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>The shell could not start: %1</source>
         <translation>[Ťĥé šĥéĺĺ çöüĺď ñöť šťáŕť: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>ssh could not start: %1. Install the OpenSSH client, or let the host use the built-in client.</source>
+        <translation>[ššĥ çöüĺď ñöť šťáŕť: %1. Íñšťáĺĺ ťĥé ÖþéñŠŠĤ çĺíéñť, öŕ ĺéť ťĥé ĥöšť üšé ťĥé büíĺť-íñ çĺíéñť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Can&apos;t connect to %1: %2</source>
+        <translation>[Çáñ&apos;ť çöññéçť ťö %1: %2 ~~~~~~~]</translation>
     </message>
     <message>
         <source>The connection to %1 ended (code %2).</source>
