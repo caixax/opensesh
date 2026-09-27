@@ -1,6 +1,6 @@
 # ADR 0022: SSH hosts connect through OpenSSH until the built-in client
 
-- **Status:** accepted
+- **Status:** accepted; since Sprint 7 the built-in client is the default and OpenSSH the opt-in backend ([ADR 0027](0027-ssh-client.md))
 - **Date:** 2026-09-26
 - **Sprint:** 5
 
