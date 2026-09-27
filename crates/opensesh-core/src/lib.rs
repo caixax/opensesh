@@ -16,6 +16,7 @@ pub mod paths;
 pub mod state;
 pub mod terminal;
 pub mod theme;
+pub mod tunnels;
 pub mod watch;
 pub mod workspace;
 pub mod writer;
