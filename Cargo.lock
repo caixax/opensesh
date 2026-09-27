@@ -2341,6 +2341,7 @@ dependencies = [
  "opensesh-core",
  "opensesh-term",
  "opensesh-vault",
+ "pageant",
  "russh",
  "secrecy",
  "tempfile",

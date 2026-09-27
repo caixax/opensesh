@@ -106,6 +106,8 @@ keyring = "4.2.0"
 # needs NASM or CMake on some platforms; `des` for the legacy 3des-cbc cipher. 0.63.3 needs Rust
 # 1.89 (ADR 0026).
 russh = { version = "0.63.3", default-features = false, features = ["ring", "flate2", "rsa", "des"] }
+# Pageant on Windows (named pipe or WM_COPYDATA), the agent russh itself uses; signing only.
+pageant = "0.2.3"
 # The async runtime of the SSH client, off the GUI thread (PLAN §2).
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "process", "fs"] }
 

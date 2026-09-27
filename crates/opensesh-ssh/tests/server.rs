@@ -454,6 +454,50 @@ async fn agent_with(key: &PrivateKey, dir: &Path) -> String {
     address
 }
 
+/// Pageant on Windows: with no agent pipe named, the client finds Pageant (after the OpenSSH
+/// agent, which may not run) and signs with its keys. Run with a Pageant holding any key.
+#[cfg(windows)]
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs a running Pageant with a key"]
+async fn pageant_signs() {
+    let mut pageant = russh::keys::agent::client::AgentClient::connect_pageant()
+        .await
+        .unwrap();
+    let keys: Vec<_> = pageant
+        .request_identities()
+        .await
+        .unwrap()
+        .into_iter()
+        .filter_map(|identity| match identity {
+            russh::keys::agent::AgentIdentity::PublicKey { key, .. } => Some(key),
+            russh::keys::agent::AgentIdentity::Certificate { .. } => None,
+        })
+        .collect();
+    assert!(!keys.is_empty(), "Pageant holds no key");
+    let port = serve(Rules {
+        keys,
+        ..Rules::default()
+    })
+    .await;
+    let dir = tempfile::tempdir().unwrap();
+    let answers = script(|prompt| match prompt {
+        Prompt::HostKey(_) => Answer::TrustOnce,
+        other => panic!("unexpected {other:?}"),
+    });
+    let plan = AuthPlan {
+        agent: true,
+        ..AuthPlan::default()
+    };
+    let connection = connect::connect(
+        &spec(dir.path(), vec![hop(port, plan)]),
+        &answers.asker,
+        &quiet(),
+    )
+    .await
+    .unwrap();
+    connection.close().await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn the_agent_signs() {
     let client = key("p256", None);
