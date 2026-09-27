@@ -230,13 +230,17 @@ impl Handler for ClientHandler {
     }
 }
 
-/// Carries a forwarded agent channel to the local agent.
+/// Carries a forwarded agent channel to the local agent (the first one that answers).
 async fn forward_to_agent(channel: Channel<Msg>, socket: Option<String>) {
     let mut stream = channel.into_stream();
-    let result = match local_agent_stream(socket.as_deref()).await {
-        Ok(mut agent) => tokio::io::copy_bidirectional(&mut stream, &mut agent)
-            .await
-            .map(|_| ()),
+    let result = match local_agent_streams(socket.as_deref()).await {
+        Ok(mut agents) if !agents.is_empty() => {
+            let mut agent = agents.swap_remove(0);
+            tokio::io::copy_bidirectional(&mut stream, &mut agent)
+                .await
+                .map(|_| ())
+        }
+        Ok(_) => Err(std::io::Error::other("no SSH agent")),
         Err(error) => Err(std::io::Error::other(error.to_string())),
     };
     if let Err(error) = result {
@@ -244,9 +248,10 @@ async fn forward_to_agent(channel: Channel<Msg>, socket: Option<String>) {
     }
 }
 
-/// A stream to the local agent: `socket` when given, else SSH_AUTH_SOCK on Unix, and on Windows
-/// SSH_AUTH_SOCK's named pipe or the OpenSSH agent's pipe.
-async fn local_agent_stream(socket: Option<&str>) -> Result<Box<dyn Transport>, SshError> {
+/// Streams to the local agents, in the order they are tried: `socket` when given, else
+/// SSH_AUTH_SOCK on Unix; on Windows SSH_AUTH_SOCK's named pipe, or else the OpenSSH agent's pipe
+/// and Pageant (each one that is running). An error when none can be reached.
+async fn local_agent_streams(socket: Option<&str>) -> Result<Vec<Box<dyn Transport>>, SshError> {
     let local = |message: String| SshError::Local {
         what: "the SSH agent".to_owned(),
         message,
@@ -262,20 +267,34 @@ async fn local_agent_stream(socket: Option<&str>) -> Result<Box<dyn Transport>, 
         let stream = tokio::net::UnixStream::connect(path)
             .await
             .map_err(|error| local(error.to_string()))?;
-        Ok(Box::new(stream))
+        Ok(vec![Box::new(stream)])
     }
     #[cfg(windows)]
     {
-        let pipe = socket
+        let named = socket
             .map(str::to_owned)
             .or_else(|| std::env::var("SSH_AUTH_SOCK").ok())
             .filter(|value| value.starts_with(r"\\.\pipe\") || value.starts_with("//./pipe/"))
-            .map(|value| value.replace('/', r"\"))
-            .unwrap_or_else(|| opensesh_vault::agent::OPENSSH_PIPE.to_owned());
-        let stream = tokio::net::windows::named_pipe::ClientOptions::new()
-            .open(&pipe)
-            .map_err(|error| local(error.to_string()))?;
-        Ok(Box::new(stream))
+            .map(|value| value.replace('/', r"\"));
+        let open = |pipe: &str| tokio::net::windows::named_pipe::ClientOptions::new().open(pipe);
+        if let Some(pipe) = named {
+            let stream = open(&pipe).map_err(|error| local(error.to_string()))?;
+            return Ok(vec![Box::new(stream)]);
+        }
+        let mut streams: Vec<Box<dyn Transport>> = Vec::new();
+        let mut problems = Vec::new();
+        match open(opensesh_vault::agent::OPENSSH_PIPE) {
+            Ok(stream) => streams.push(Box::new(stream)),
+            Err(error) => problems.push(format!("OpenSSH agent: {error}")),
+        }
+        match pageant::PageantStream::new().await {
+            Ok(stream) => streams.push(Box::new(stream)),
+            Err(error) => problems.push(format!("Pageant: {error}")),
+        }
+        if streams.is_empty() {
+            return Err(local(problems.join("; ")));
+        }
+        Ok(streams)
     }
 }
 
@@ -667,34 +686,36 @@ async fn agent_keys(
         what: "the SSH agent".to_owned(),
         message: error.to_string(),
     };
-    let mut agent = AgentClient::connect(local_agent_stream(socket).await?);
-    let identities = agent.request_identities().await.map_err(agent_error)?;
     let mut last = None;
-    for identity in identities {
-        let result = match identity {
-            AgentIdentity::PublicKey { key, .. } => {
-                let hash = if key.algorithm().is_rsa() {
-                    handle.best_supported_rsa_hash().await?.flatten()
-                } else {
-                    None
-                };
-                handle
-                    .authenticate_publickey_with(user, key, hash, &mut agent)
-                    .await
+    for stream in local_agent_streams(socket).await? {
+        let mut agent = AgentClient::connect(stream);
+        let identities = agent.request_identities().await.map_err(agent_error)?;
+        for identity in identities {
+            let result = match identity {
+                AgentIdentity::PublicKey { key, .. } => {
+                    let hash = if key.algorithm().is_rsa() {
+                        handle.best_supported_rsa_hash().await?.flatten()
+                    } else {
+                        None
+                    };
+                    handle
+                        .authenticate_publickey_with(user, key, hash, &mut agent)
+                        .await
+                }
+                AgentIdentity::Certificate { certificate, .. } => {
+                    handle
+                        .authenticate_certificate_with(user, certificate, None, &mut agent)
+                        .await
+                }
+            };
+            let result = result.map_err(|error| SshError::Local {
+                what: "signing with the SSH agent".to_owned(),
+                message: error.to_string(),
+            })?;
+            match Step::from(result) {
+                Step::Failed(next) => last = Some(Step::Failed(next)),
+                other => return Ok(Some(other)),
             }
-            AgentIdentity::Certificate { certificate, .. } => {
-                handle
-                    .authenticate_certificate_with(user, certificate, None, &mut agent)
-                    .await
-            }
-        };
-        let result = result.map_err(|error| SshError::Local {
-            what: "signing with the SSH agent".to_owned(),
-            message: error.to_string(),
-        })?;
-        match Step::from(result) {
-            Step::Failed(next) => last = Some(Step::Failed(next)),
-            other => return Ok(Some(other)),
         }
     }
     Ok(last)
