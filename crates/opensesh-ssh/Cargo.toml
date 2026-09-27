@@ -1,0 +1,30 @@
+[package]
+name = "opensesh-ssh"
+description = "OpenSesh SSH client: connections, host keys, authentication, jump hosts and the terminal backend (no Qt)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+base64ct.workspace = true
+crossbeam-channel.workspace = true
+opensesh-core.workspace = true
+opensesh-term.workspace = true
+opensesh-vault.workspace = true
+russh.workspace = true
+secrecy.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
