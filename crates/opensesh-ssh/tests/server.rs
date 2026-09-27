@@ -19,7 +19,7 @@ use opensesh_ssh::connect::{self, quiet};
 use opensesh_ssh::copy_id::{self, Installed};
 use opensesh_ssh::prompt::{Answer, Asker, HostKeyKind, Prompt, Request};
 use opensesh_ssh::spec::{
-    AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, Reconnect, SessionSpec,
+    AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, LogSpec, Reconnect, SessionSpec,
 };
 use opensesh_ssh::testing::{self, CODE, PASSWORD, Rules, USER};
 use opensesh_ssh::{SshError, osdetect};
@@ -582,12 +582,17 @@ fn the_terminal_backend_reconnects() {
         }
         log.lock().unwrap().push(status);
     });
+    let log_path = dir.path().join("logs").join("session.log");
     let session = SessionSpec {
         startup: Some("echo started".into()),
         reconnect: Reconnect {
             automatic: false,
             max_attempts: 3,
         },
+        log: Some(LogSpec {
+            path: log_path.clone(),
+            raw: false,
+        }),
         ..SessionSpec::default()
     };
     let (backend, events) = backend::start(
@@ -635,6 +640,18 @@ fn the_terminal_backend_reconnects() {
     assert!(os_seen.load(Ordering::SeqCst), "{statuses:?}");
     assert_eq!(asked.lock().unwrap().len(), 1);
     assert!(!dir.path().join("known_hosts").exists());
+    // The session log has the text of both connections, without escape sequences.
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let logged = loop {
+        let text = std::fs::read_to_string(&log_path).unwrap_or_default();
+        if text.contains("exit") || std::time::Instant::now() > deadline {
+            break text;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    };
+    assert!(logged.contains("hello"), "{logged:?}");
+    assert!(logged.matches("test$").count() >= 2, "{logged:?}");
+    assert!(!logged.contains(''), "{logged:?}");
     // The key went in once, on the first connection only.
     assert_eq!(*authorized.lock().unwrap(), vec![INSTALLED.to_owned()]);
     assert_eq!(

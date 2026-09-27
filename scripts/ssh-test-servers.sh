@@ -143,6 +143,7 @@ KbdInteractiveAuthentication yes
 UsePAM yes
 AllowTcpForwarding yes
 AllowAgentForwarding yes
+AcceptEnv LANG LC_* OPENSESH_*
 # For spikes/x11-forwarding (the server also needs xauth to store the cookie).
 X11Forwarding yes
 X11UseLocalhost yes

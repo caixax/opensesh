@@ -41,8 +41,9 @@ The tests cover:
 
 - OpenSSH with a key file, Dropbear with a password, a wrong password refused;
 - a key that isn't in `authorized_keys` getting in with its certificate (`<key>-cert.pub`, from
-  a user CA the server trusts), then agent forwarding: `ssh-add -l` on the server lists the
-  local agent's key;
+  a user CA the server trusts);
+- agent forwarding and the environment: `ssh-add -l` on the server lists the local agent's key,
+  and a variable the server accepts (`AcceptEnv`) arrives;
 - OpenSSH → Dropbear → OpenSSH (two jump hosts), every hop authenticated by the agent, and the
   target asking for a one-time code after the key (the code comes from `oathtool`);
 - the terminal backend through Dropbear to the MFA target: the session's `sshd-session` is
