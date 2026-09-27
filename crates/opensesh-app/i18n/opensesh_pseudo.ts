@@ -491,6 +491,10 @@
         <translation>[Çöññéçť ťö %1 ~~~~]</translation>
     </message>
     <message>
+        <source>Verification code:</source>
+        <translation>[Véŕíƒíçáťíöñ çöďé: ~~~~~~]</translation>
+    </message>
+    <message>
         <source>Terminal</source>
         <translation>[Ťéŕmíñáĺ ~~~]</translation>
     </message>
@@ -7476,6 +7480,22 @@
     <message>
         <source>No active session</source>
         <translation>[Ñö áçťívé šéššíöñ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connecting to %1…</source>
+        <translation>[Çöññéçťíñĝ ťö %1… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Authenticating on %1…</source>
+        <translation>[Åüťĥéñťíçáťíñĝ öñ %1… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Disconnected from %1</source>
+        <translation>[Ďíšçöññéçťéď ƒŕöm %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connected to %1</source>
+        <translation>[Çöññéçťéď ťö %1 ~~~~~]</translation>
     </message>
     <message>
         <source>Local terminal</source>

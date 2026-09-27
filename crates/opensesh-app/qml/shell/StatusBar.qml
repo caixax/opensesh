@@ -1,9 +1,11 @@
 // Status bar (PLAN §5.3). Left: the session status: the current terminal's working directory
-// when the shell reports it (OSC 7), else its title (a live monitor arrives in Sprint 11), and
-// while the tab broadcasts, how many panes receive the input (click to stop).
+// when the shell reports it (OSC 7), else the state of an SSH connection, else its title (a live
+// monitor arrives in Sprint 11), and while the tab broadcasts, how many panes receive the input
+// (click to stop).
 // Right: with a master password, the vault's lock (click to lock or unlock), the notifications
 // button with the unread count, a theme quick switch (System -> Dark -> Light) and the version.
 //   terminal: TerminalItem   the focused terminal of the current tab, or null
+//   label: string            what that terminal connects to (a host's name), if anything
 //   workspace: TabWorkspace  the current tab, or null
 import QtQuick
 import cc.caixa.opensesh
@@ -12,14 +14,31 @@ Rectangle {
     id: bar
 
     property TerminalItem terminal: null
+    property string label: ""
     property Item workspace: null
+    // The built-in SSH client's state of the terminal ("" for other sessions).
+    readonly property string sshState: terminal && terminal.connection.length > 0 ? JSON.parse(terminal.connection).state ?? "" : ""
     readonly property int receiving: workspace && workspace.broadcast ? workspace.participants.length : 0
     readonly property string sessionText: {
         if (!terminal)
             return qsTr("No active session");
         if (terminal.workingDirectory.length > 0)
             return terminal.workingDirectory;
-        return terminal.title.length > 0 ? terminal.title : qsTr("Local terminal");
+        switch (sshState) {
+        case "connecting":
+            return qsTr("Connecting to %1…").arg(label);
+        case "authenticating":
+            return qsTr("Authenticating on %1…").arg(label);
+        case "disconnected":
+            return qsTr("Disconnected from %1").arg(label);
+        case "connected":
+            return terminal.title.length > 0 ? terminal.title : qsTr("Connected to %1").arg(label);
+        default:
+            break;
+        }
+        if (terminal.title.length > 0)
+            return terminal.title;
+        return label.length > 0 ? label : qsTr("Local terminal");
     }
 
     readonly property real buttonSize: Theme.statusBarHeight - Theme.spacingXs
@@ -54,7 +73,9 @@ Rectangle {
             width: Theme.spacingSm
             height: width
             radius: width / 2
-            color: !bar.terminal ? Theme.textDisabled : bar.terminal.running ? Theme.success : Theme.danger
+            color: !bar.terminal ? Theme.textDisabled
+                 : bar.sshState === "connecting" || bar.sshState === "authenticating" ? Theme.warning
+                 : bar.sshState === "disconnected" || !bar.terminal.running ? Theme.danger : Theme.success
         }
 
         OsText {
