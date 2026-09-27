@@ -70,9 +70,10 @@ Item {
         answered();
     }
 
-    // Enter is what the connection waits for to try again.
+    // Enter is what the connection waits for to try again. Not written "\r": qmlcachegen 6.11
+    // copies a carriage return into the generated C++ as is, which GCC can't compile.
     function reconnect() {
-        terminal.sendText("\r");
+        terminal.sendText(String.fromCharCode(13));
         terminal.forceActiveFocus(Qt.OtherFocusReason);
     }
 
