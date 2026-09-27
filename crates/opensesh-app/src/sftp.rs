@@ -241,9 +241,14 @@ pub fn install_integration_command(shell: &str) -> String {
 ///
 /// When the folder can't be created.
 pub fn edit_dir(serial: u64) -> std::io::Result<PathBuf> {
-    let base = crate::services::get()
-        .map(|services| services.paths.cache_dir().join("edit"))
-        .unwrap_or_else(|| std::env::temp_dir().join("opensesh-edit"));
+    // A test run leaves the cache alone: its copies go in its own folder.
+    let base = if let Some(folder) = crate::bridge::app_info::test_run_folder() {
+        folder.join("edit")
+    } else {
+        crate::services::get()
+            .map(|services| services.paths.cache_dir().join("edit"))
+            .unwrap_or_else(|| std::env::temp_dir().join("opensesh-edit"))
+    };
     let dir = base.join(serial.to_string());
     std::fs::create_dir_all(&dir)?;
     #[cfg(unix)]

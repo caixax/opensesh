@@ -863,7 +863,11 @@ fn edit_serial_base() -> u64 {
 }
 
 /// Opens `file` with the configured editor command; `false` when there is none (or it failed).
+/// A test run never starts a program: the file counts as opened.
 fn open_with_command(file: &std::path::Path) -> bool {
+    if crate::bridge::app_info::is_test_run() {
+        return true;
+    }
     let command = app::settings().editor_command;
     let words = app::editor_command(&command, &file.display().to_string());
     let Some((program, args)) = words.split_first() else {

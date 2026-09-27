@@ -55,6 +55,12 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "testFolder"]
         fn test_folder(self: &Self) -> QString;
+
+        /// Test runs only: writes `text` to `path` inside `testFolder()` (an editor saving a
+        /// file, for the smoke test); false anywhere else.
+        #[qinvokable]
+        #[cxx_name = "writeTestFile"]
+        fn write_test_file(self: &Self, path: &QString, text: &QString) -> bool;
     }
 }
 
@@ -123,11 +129,30 @@ impl qobject::AppInfo {
             QString::default()
         }
     }
+
+    /// See the bridge declaration.
+    pub fn write_test_file(&self, path: &QString, text: &QString) -> bool {
+        let Some(folder) = test_run_folder() else {
+            return false;
+        };
+        let path = PathBuf::from(path.to_string());
+        let inside = path
+            .components()
+            .all(|part| part != std::path::Component::ParentDir)
+            && path.starts_with(&folder);
+        inside && std::fs::write(&path, text.to_string()).is_ok()
+    }
 }
 
 /// A test run's temporary folder (one per process).
 fn test_folder_path() -> PathBuf {
     std::env::temp_dir().join(format!("opensesh-smoke-{}", std::process::id()))
+}
+
+/// The folder a test run keeps its files in (removed at exit); `None` in normal runs.
+#[must_use]
+pub fn test_run_folder() -> Option<PathBuf> {
+    is_test_run().then(test_folder_path)
 }
 
 /// Removes a test run's temporary folder, if the run made one.
