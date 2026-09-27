@@ -255,7 +255,7 @@ fn proxy_of(text: Option<&str>, command: Option<&str>) -> Result<Option<Proxy>, 
 }
 
 /// A file name part made of the host's name (letters, digits, `-` and `_`).
-fn safe_name(name: &str) -> String {
+pub fn safe_name(name: &str) -> String {
     let cleaned: String = name
         .chars()
         .map(|c| {

@@ -19,7 +19,7 @@ pragma ComponentBehavior: Bound
 // host, target, profile, directory, fontZoom, highlightOn}], broadcast, broadcastExcluded,
 // syncScroll, pasteConfirmed}`; empty for one new local pane. A pane of kind `ssh` connects to
 // saved host `host` or to quick-connect `target` (its command is worked out when it opens, so a
-// restored workspace uses the host as it is now). A tab moved to another window takes its seed from
+// restored workspace uses the host as it is now); a `player` pane plays the recording `target`. A tab moved to another window takes its seed from
 // `capture(true)` and attaches to the running sessions; a restored workspace brings new ids, so
 // new shells start in the saved directories.
 //   shell: Item            the AppShell (currentTabId, updateTab(), closeTabById(),
@@ -147,6 +147,8 @@ Item {
             else
                 command = AppSettings.sshBackend === "openssh" ? Hosts.targetCommand(target) : [];
             label = host.length > 0 ? (JSON.parse(Hosts.hostJson(host) || "{}").name || target) : target;
+        } else if (kind === "player") {
+            label = target.split(/[\\/]/).pop();
         }
         // Local panes take the profile of new tabs; a host's panes let the host's chain decide.
         const profile = pane.profile && pane.profile.length > 0 ? pane.profile
@@ -233,7 +235,8 @@ Item {
         const next = Layouts.split(layout, target, axis, newId, true);
         if (next.length === 0)
             return 0;
-        const copy = connection ?? (source ? { kind: source.kind, host: source.host, target: source.target } : {});
+        // A copy of a recording's player is a local shell.
+        const copy = connection ?? (source && source.kind !== "player" ? { kind: source.kind, host: source.host, target: source.target } : {});
         const sameKind = source && (copy.kind ?? "local") === source.kind && (copy.host ?? "") === source.host;
         paneModel.append(paneRow({
             id: newId,

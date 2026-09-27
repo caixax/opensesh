@@ -11,6 +11,7 @@ mod hosts;
 mod keychain;
 mod logging;
 mod platform;
+mod recordings;
 mod saves;
 mod services;
 mod sftp;

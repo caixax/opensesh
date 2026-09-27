@@ -186,6 +186,18 @@ pub mod qobject {
         #[cxx_name = "recordTarget"]
         fn record_target(self: Pin<&mut Self>, text: &QString);
 
+        /// The recent connections, the newest first (the History view): a JSON list of `{kind:
+        /// "host", at, host (a summary, see search)}` and `{kind: "target", at, target}`; `at` in
+        /// seconds since the Unix epoch. Hosts deleted since are left out.
+        #[qinvokable]
+        #[cxx_name = "recentConnections"]
+        fn recent_connections(self: &Self) -> QString;
+
+        /// Forgets every recent connection.
+        #[qinvokable]
+        #[cxx_name = "clearRecent"]
+        fn clear_recent(self: Pin<&mut Self>);
+
         /// The usual `~/.ssh/config` path.
         #[qinvokable]
         #[cxx_name = "defaultSshConfig"]
@@ -353,6 +365,10 @@ fn target_text(file: &HostsFile, host: &Host) -> String {
 }
 
 fn summary(file: &HostsFile, host: &Host, detected: &DetectedOs) -> String {
+    summary_value(file, host, detected).to_string()
+}
+
+fn summary_value(file: &HostsFile, host: &Host, detected: &DetectedOs) -> Json {
     json!({
         "id": host.id,
         "name": host.name,
@@ -377,7 +393,6 @@ fn summary(file: &HostsFile, host: &Host, detected: &DetectedOs) -> String {
         "linked": host.is_linked(),
         "sprint": host.protocol.available_in().unwrap_or(0),
     })
-    .to_string()
 }
 
 /// The groups as a tree, depth first with children by name.
@@ -1403,6 +1418,41 @@ impl qobject::Hosts {
     }
 
     /// See the bridge declaration.
+    pub fn recent_connections(&self) -> QString {
+        let library = self.file();
+        let list: Vec<Json> = self
+            .recent
+            .entries()
+            .iter()
+            .filter_map(|entry| {
+                if entry.host.is_empty() {
+                    return Some(
+                        json!({ "kind": "target", "at": entry.at, "target": entry.target }),
+                    );
+                }
+                let host = library.file.host(&entry.host)?;
+                Some(json!({
+                    "kind": "host",
+                    "at": entry.at,
+                    "host": summary_value(&library.file, host, &self.detected),
+                }))
+            })
+            .collect();
+        QString::from(&Json::Array(list).to_string())
+    }
+
+    /// See the bridge declaration.
+    pub fn clear_recent(mut self: Pin<&mut Self>) {
+        if self.recent.entries().is_empty() {
+            return;
+        }
+        self.as_mut().rust_mut().recent = RecentList::default();
+        self.as_mut().save_recent();
+        self.as_mut().refresh_recent();
+        self.changed();
+    }
+
+    /// See the bridge declaration.
     pub fn default_ssh_config(&self) -> QString {
         QString::from(&self.home.join(".ssh").join("config").display().to_string())
     }
@@ -1608,8 +1658,9 @@ impl qobject::Hosts {
             state.file_problems.clear();
             state.linked_problems.clear();
             state.recent = RecentList::default();
-            state.recent.touch_host("H00003", 1);
-            state.recent.touch_host("H00011", 2);
+            // This morning and last night (UTC), for the History view's screenshot.
+            state.recent.touch_host("H00003", 1_790_450_000);
+            state.recent.touch_host("H00011", 1_790_496_000);
         }
         self.publish(file);
     }
