@@ -117,6 +117,27 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacingXs
 
+        // Transfers running: how many and how fast; a click shows the queue (the SFTP view).
+        OsButton {
+            id: transfersButton
+
+            anchors.verticalCenter: parent.verticalCenter
+            visible: Transfers.active > 0
+            implicitHeight: bar.buttonSize
+            leftPadding: Theme.spacingSm
+            rightPadding: Theme.spacingSm
+            variant: "ghost"
+            iconName: "arrow-left-right"
+            text: Transfers.speed > 0 ? qsTr("%1 · %2").arg(Transfers.active).arg(FileFormat.speed(Transfers.speed)) : String(Transfers.active)
+            Accessible.name: qsTr("%n transfer(s) running", "", Transfers.active)
+            onClicked: WindowRegistry.mainShell.showView("sftp")
+
+            OsTooltip {
+                visible: transfersButton.hovered
+                text: qsTr("%n transfer(s) running. Click to see them.", "", Transfers.active)
+            }
+        }
+
         OsIconButton {
             id: vaultButton
 

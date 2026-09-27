@@ -41,9 +41,12 @@ OsDialog {
         }
     }
 
+    // A fixed size the dialog shrinks to fit the window (OsDialog caps it).
     Item {
-        implicitWidth: Math.min(Theme.spacingXxl * 22, dialog.maxWidth - dialog.leftPadding - dialog.rightPadding)
-        implicitHeight: Math.min(Theme.spacingXxl * 14, dialog.maxHeight - Theme.spacingXxl * 3)
+        implicitWidth: Theme.spacingXxl * 22
+        implicitHeight: Theme.spacingXxl * 14
+        width: parent ? parent.width : implicitWidth
+        height: parent ? parent.height : implicitHeight
 
         OsProgress {
             anchors.centerIn: parent

@@ -1,6 +1,8 @@
-// Collapsible side panel (PLAN §5.3): contextual tools for the current session in three tabs,
-// SFTP, Info and Snippets. Placeholders until those features land (Sprints 8, 11 and 10).
+// Collapsible side panel (PLAN §5.3): contextual tools for the current session in three tabs:
+// SFTP (the files of the focused terminal, SessionFiles), Info and Snippets (placeholders until
+// Sprints 11 and 10).
 //   currentIndex: int       selected tab
+//   terminalPane: Item      the current tab's focused TerminalPane, or null
 //   signal closeRequested   the header close button was clicked
 import QtQuick
 import QtQuick.Layouts
@@ -10,6 +12,8 @@ Rectangle {
     id: panel
 
     property int currentIndex: 0
+    property Item terminalPane: null
+    readonly property alias files: sessionFiles
 
     signal closeRequested
 
@@ -82,10 +86,10 @@ Rectangle {
         width: parent.width
         currentIndex: panel.currentIndex
 
-        OsEmptyState {
-            iconName: "folder-sync"
-            title: qsTr("SFTP")
-            description: qsTr("The file browser for the current session arrives in Sprint 8.")
+        SessionFiles {
+            id: sessionFiles
+
+            terminalPane: panel.visible && panel.currentIndex === 0 ? panel.terminalPane : null
         }
 
         OsEmptyState {
