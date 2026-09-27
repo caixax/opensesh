@@ -159,10 +159,11 @@ impl PtyShared {
     fn hang_up(&self) {
         let process = self.process();
         if !process.exited
-            && let Some(pid) = process.pid {
-                // The shell is a session leader (portable-pty calls setsid): pgid == pid.
-                let _ = rustix::process::kill_process_group(pid, rustix::process::Signal::HUP);
-            }
+            && let Some(pid) = process.pid
+        {
+            // The shell is a session leader (portable-pty calls setsid): pgid == pid.
+            let _ = rustix::process::kill_process_group(pid, rustix::process::Signal::HUP);
+        }
         if let Some(wake) = &process.wake {
             let _ = rustix::io::write(wake, &[1]);
         }
@@ -426,15 +427,14 @@ impl Io {
             // The foreground job may be in another process group (and may ignore the shell's
             // hangup); the kernel only hangs it up once every PTY descriptor is closed.
             if let Some(writer) = &self.writer
-                && let Ok(group) = rustix::termios::tcgetpgrp(writer) {
-                    // Read from the terminal now, so not a stale (reusable) id.
-                    if Some(group) != self.shell_pid {
-                        let _ = rustix::process::kill_process_group(
-                            group,
-                            rustix::process::Signal::HUP,
-                        );
-                    }
+                && let Ok(group) = rustix::termios::tcgetpgrp(writer)
+            {
+                // Read from the terminal now, so not a stale (reusable) id.
+                if Some(group) != self.shell_pid {
+                    let _ =
+                        rustix::process::kill_process_group(group, rustix::process::Signal::HUP);
                 }
+            }
         }
         #[cfg(windows)]
         {
