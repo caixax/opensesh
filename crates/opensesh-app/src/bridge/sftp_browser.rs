@@ -132,6 +132,31 @@ pub mod qobject {
         #[cxx_name = "rowOf"]
         fn row_of(self: &SftpBrowser, name: &QString) -> i32;
 
+        /// The name of row `row` (empty when out of range).
+        #[qinvokable]
+        #[cxx_name = "nameAt"]
+        fn name_at(self: &SftpBrowser, row: i32) -> QString;
+
+        /// The names of rows `from` to `to`, both included, in either order.
+        #[qinvokable]
+        #[cxx_name = "namesBetween"]
+        fn names_between(self: &SftpBrowser, from: i32, to: i32) -> QStringList;
+
+        /// Every shown name.
+        #[qinvokable]
+        #[cxx_name = "allNames"]
+        fn all_names(self: &SftpBrowser) -> QStringList;
+
+        /// `names` as full paths in the current folder.
+        #[qinvokable]
+        #[cxx_name = "pathsOf"]
+        fn paths_of(self: &SftpBrowser, names: &QStringList) -> QStringList;
+
+        /// Moves `path` (of this pane's files) into `folder`, keeping its name.
+        #[qinvokable]
+        #[cxx_name = "moveInto"]
+        fn move_into(self: Pin<&mut SftpBrowser>, path: &QString, folder: &QString) -> i32;
+
         /// Opens row `row`: a folder (or a link to one) is listed and `true` returned; a file
         /// returns `false` (the view decides what opening it means).
         #[qinvokable]
@@ -805,6 +830,50 @@ impl qobject::SftpBrowser {
             .position(|entry| entry.name == name)
             .and_then(|row| i32::try_from(row).ok())
             .unwrap_or(-1)
+    }
+
+    /// See the bridge declaration.
+    pub fn name_at(&self, row: i32) -> QString {
+        self.row(row)
+            .map(|entry| QString::from(&entry.name))
+            .unwrap_or_default()
+    }
+
+    /// See the bridge declaration.
+    pub fn names_between(&self, from: i32, to: i32) -> QStringList {
+        let (low, high) = if from <= to { (from, to) } else { (to, from) };
+        let low = usize::try_from(low.max(0)).unwrap_or(0);
+        let high = usize::try_from(high.max(0)).unwrap_or(0);
+        self.rows
+            .iter()
+            .skip(low)
+            .take(high.saturating_sub(low) + 1)
+            .map(|entry| QString::from(&entry.name))
+            .collect()
+    }
+
+    /// See the bridge declaration.
+    pub fn all_names(&self) -> QStringList {
+        self.rows
+            .iter()
+            .map(|entry| QString::from(&entry.name))
+            .collect()
+    }
+
+    /// See the bridge declaration.
+    pub fn paths_of(&self, names: &QStringList) -> QStringList {
+        names
+            .iter()
+            .map(|name| QString::from(&self.full(&name.to_string())))
+            .collect()
+    }
+
+    /// See the bridge declaration.
+    pub fn move_into(self: Pin<&mut Self>, from: &QString, folder: &QString) -> i32 {
+        let style = self.style();
+        let from = from.to_string();
+        let to = path::join(style, &folder.to_string(), &path::file_name(style, &from));
+        self.operation(move |fs| async move { fs.rename(&from, &to).await })
     }
 
     /// See the bridge declaration.

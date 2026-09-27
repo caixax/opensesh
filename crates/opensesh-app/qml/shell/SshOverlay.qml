@@ -10,7 +10,9 @@ pragma ComponentBehavior: Bound
 //     are cleared.
 //   - Disconnected: a banner at the bottom with the reason and Reconnect (or, when the vault is
 //     locked, Unlock and connect), and the countdown of an automatic reconnection.
-//   terminal: TerminalItem  the pane's terminal (its `connection` and `prompt` JSON)
+//   terminal: QtObject      where the questions come from: a TerminalItem, or a file pane's
+//                           SftpBrowser (`connection`, `prompt`, `answerPrompt()`)
+//   banner: bool            show the disconnected banner (terminals; file panes say it their way)
 //   connectionText, promptText: string  what is shown (default: the terminal's; screenshots set
 //                           samples)
 //   shell: Item             the window's AppShell (unlockVault())
@@ -27,10 +29,11 @@ import cc.caixa.opensesh
 Item {
     id: overlay
 
-    required property TerminalItem terminal
+    required property QtObject terminal
     required property Item shell
     required property string label
     property real edgeInset: 0
+    property bool banner: true
 
     property string connectionText: terminal.connection
     property string promptText: terminal.prompt
@@ -39,7 +42,7 @@ Item {
     readonly property string phase: connection.state ?? ""
     readonly property bool asking: prompt.kind !== undefined
     readonly property bool busy: !asking && (phase === "connecting" || phase === "authenticating")
-    readonly property bool disconnected: !asking && phase === "disconnected"
+    readonly property bool disconnected: banner && !asking && phase === "disconnected"
     // Seconds left before the automatic reconnection (-1: none).
     property int countdown: -1
     // The question on the card (its id; -1 for none).
@@ -100,7 +103,7 @@ Item {
         if (id === shownPrompt)
             return;
         // Keep the keyboard where it was: a focused pane hands it to the question.
-        const hadFocus = terminal.activeFocus || promptLoader.activeFocus;
+        const hadFocus = terminal.activeFocus === true || promptLoader.activeFocus;
         shownPrompt = id;
         promptLoader.active = false;
         switch (prompt.kind) {
