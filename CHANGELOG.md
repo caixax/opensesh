@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **Sprint 9: tunnels ([ADR 0029](docs/adr/0029-tunnels.md)).**
+  - **Local (`-L`), remote (`-R`) and dynamic (`-D`, a SOCKS5 proxy) forwarding** through the built-in SSH client, saved in `tunnels.toml`.
+  - **The Tunnels view:** each tunnel with a switch, its route in words, what it is doing (running, connecting, waiting for a session, retrying, failed) and its traffic (bytes each way, connections), and a menu to edit, duplicate, copy its address or delete it. A tunnel that listens beyond localhost is marked, and saving one asks first.
+  - **Independent or tied to a host:** a tunnel runs on a connection of its own (through a saved host or `user@host`), can start with OpenSesh and reconnects by itself (1, 2, 4… up to every 30 s); or it runs while a terminal session to its host is connected, on that session's connection.
+  - **Questions** of a tunnel's own connection (host key, password) wait in its row, with an Answer button; a tunnel that started by itself says so with a notification.
+  - **Import from `~/.ssh/config`:** its `LocalForward`, `RemoteForward` and `DynamicForward` lines become tunnels tied to their hosts.
+  - **Command palette:** start and stop each tunnel. The status bar shows how many run.
+  - **Tests:** `curl` through each kind of tunnel, in-process and against OpenSSH, and a tunnel that comes back by itself after its session is killed ([how](docs/testing/ssh-servers.md)).
+
 ## [0.1.3] - 2026-09-27
 
 ### Added

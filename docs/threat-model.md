@@ -1,6 +1,6 @@
 # Threat model
 
-This document says what OpenSesh protects, from whom, how, and where it stops. It is kept up to date as features arrive (PLAN §8). It was last reviewed in Sprint 8 (SFTP).
+This document says what OpenSesh protects, from whom, how, and where it stops. It is kept up to date as features arrive (PLAN §8). It was last reviewed in Sprint 9 (tunnels).
 
 ## What is worth protecting
 
@@ -80,7 +80,15 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - **File names are untrusted:** listings, symlink targets and the names in a recursive download come from the server. A download writes only under the folder the user chose: a name that isn't one plain name (empty, `.`, `..`, with a `/`, and on Windows with a `\` or `:`) is left out of listings and downloads, and a file with such a name isn't opened for editing, so a server can't place a file elsewhere (the CVE-2019-6111 kind of attack; the SCP spike refuses such names too). Symlinks to folders are not followed in recursive copies (no loops, nothing outside the tree).
 - **Shell commands on the server** run only for what the user asked: a copy within the server (`cp -R -p`), the shell integration (added to `~/.bashrc` or `~/.zshrc` only after the user confirms), and "Save with sudo". Paths go in single quotes; nothing from a listing is run.
 - **Following the terminal's folder** (OSC 7) only moves the side panel's listing: a server can make it show another folder, not run anything or write anywhere.
+- **Remote forwards:** a server can open `forwarded-tcpip` channels at any time; the client only accepts them for a port it asked to forward, and connects them only to that tunnel's destination. Others are refused.
 - **RSA signing** (RUSTSEC-2023-0071, see Dependencies): a server could time the client's RSA signatures, one per connection.
+
+### Tunnels
+
+- **Listening beyond localhost** (PLAN §8): a tunnel listens on `127.0.0.1` unless the user sets another address. One that listens on anything but a loopback address is marked in the Tunnels view, and the editor asks once before saving it, saying who could use it: anyone on the network could reach the server's network through a local or dynamic tunnel, or reach this computer through a remote one (when the server's `GatewayPorts` allows it).
+- **The SOCKS proxy** of a dynamic tunnel asks for no authentication, like `ssh -D`: anything that can reach its port can use it, which is why it listens on the loopback by default.
+- **Programs on this computer** can use a running local or dynamic tunnel, as with OpenSSH: they are inside the boundary above.
+- **`tunnels.toml`** holds no secrets: a tunnel names a saved host (whose identity holds them) or `user@host` text. Someone who can write the file can add a tunnel, but it starts only if it is marked to start with the app and its host's authentication succeeds; a tunnel added this way that listens beyond localhost is marked like any other.
 
 ### Tampering with files
 
