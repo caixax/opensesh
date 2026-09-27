@@ -22,6 +22,9 @@ Item {
         function onEditEvent(id, what, name, detail) {
             switch (what) {
             case "saved":
+                // A conflict settled some other way needs no answer any more.
+                if (conflictDialog.visible && conflictDialog.edit === id)
+                    conflictDialog.close();
                 Toasts.show(qsTr("%1 saved to the server.").arg(name), "success");
                 break;
             case "conflict":

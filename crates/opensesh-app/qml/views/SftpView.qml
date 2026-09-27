@@ -46,6 +46,18 @@ Item {
         let right = null;
         let answered = -1;
         let job = 0;
+        let edit = 0;
+        let editLocal = "";
+        const editEvents = [];
+        const onEditReady = (id, local, opened) => {
+            if (id === edit)
+                editLocal = opened ? local : "";
+        };
+        const onEditEvent = (id, what) => {
+            if (id === edit)
+                editEvents.push(what);
+        };
+        const saves = () => editEvents.filter(what => what === "saved").length;
         const failOnError = (token, code, detail) => {
             if (code.length > 0)
                 smoke.fail("an SFTP pane reported " + code + " " + detail);
@@ -154,6 +166,55 @@ Item {
             () => {
                 right.browser.chmod(right.browser.pathsOf(["renamed.txt"]), 0o644);
                 return wait("the writable file", () => (entry(right, "renamed.txt").mode & 0o200) !== 0);
+            },
+            // Editing a server's file: a private copy (in the test folder; a test run opens no
+            // editor), each save uploaded, a server copy changed meanwhile is a conflict, and
+            // "replace it with mine" uploads anyway.
+            () => {
+                Transfers.editReady.connect(onEditReady);
+                Transfers.editEvent.connect(onEditEvent);
+                edit = Transfers.edit(right.browser.paneId, "/docs/readme.txt");
+                if (edit <= 0)
+                    smoke.fail("editing a server's file didn't start");
+                return wait("the private copy", () => editLocal.length > 0);
+            },
+            () => {
+                if (editLocal.indexOf(AppInfo.testFolder()) !== 0)
+                    smoke.fail("the private copy is outside the test folder: " + editLocal);
+                if (!AppInfo.writeTestFile(editLocal, "edited in the smoke test\n"))
+                    smoke.fail("the private copy couldn't be written");
+                return wait("the save to reach the server", () => saves() === 1);
+            },
+            () => {
+                right.navigate("/docs");
+                return wait("the saved file", () => right.browser.path === "/docs" && entry(right, "readme.txt").size === 25);
+            },
+            () => {
+                // Someone else changes the server's copy.
+                right.browser.remove(right.browser.pathsOf(["readme.txt"]));
+                return wait("the server's copy to go", () => right.browser.rowOf("readme.txt") < 0, () => {
+                    right.browser.createFile("readme.txt");
+                    return wait("another server copy", () => right.browser.rowOf("readme.txt") >= 0);
+                });
+            },
+            () => {
+                AppInfo.writeTestFile(editLocal, "mine\n");
+                return wait("the conflict", () => editEvents.indexOf("conflict") >= 0);
+            },
+            () => {
+                Transfers.resolveEdit(edit, "overwrite");
+                return wait("the save after the conflict", () => saves() === 2, () => {
+                    right.browser.refresh();
+                    return wait("the server's copy replaced", () => entry(right, "readme.txt").size === 5);
+                });
+            },
+            () => {
+                Transfers.stopEdit(edit);
+                Transfers.editReady.disconnect(onEditReady);
+                Transfers.editEvent.disconnect(onEditEvent);
+                console.info("smoke test: a server's file was edited: saved, changed on the server meanwhile, replaced");
+                right.navigate("/incoming");
+                return wait("the upload folder again", () => right.browser.path === "/incoming");
             },
             () => {
                 job = Transfers.copy(right.browser.paneId, right.browser.pathsOf(["renamed.txt"]), left.browser.paneId, left.browser.path, false);
