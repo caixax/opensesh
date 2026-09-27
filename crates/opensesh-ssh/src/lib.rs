@@ -8,6 +8,7 @@
 //! - [`connect`]: host key checks, authentication, and jump host chains.
 //! - [`backend`]: a terminal backend over an SSH session channel, with reconnection.
 //! - [`log`], [`osdetect`], [`copy_id`]: session logs, the remote OS, installing a public key.
+//! - [`sftp`]: files over SSH, and the transfer queue.
 //! - [`testing`]: a tiny SSH server for tests and the app's smoke test.
 //!
 //! Everything runs on one tokio runtime ([`runtime`]) off the GUI thread. Secrets (passwords,
@@ -21,6 +22,7 @@ pub mod log;
 pub mod osdetect;
 pub mod prompt;
 pub mod proxy;
+pub mod sftp;
 pub mod spec;
 pub mod testing;
 

@@ -2,9 +2,14 @@
 //! a user [`USER`] with the password [`PASSWORD`] and/or keys, an optional one-time code after a
 //! key ([`CODE`]), `direct-tcpip` for jump hosts, and a shell that prints `test$ ` and echoes what
 //! it gets ("exit" ends it with status 3, "drop" drops the connection). It also answers the OS
-//! detection command and "install my key" (into [`Rules::authorized_keys`]). Nothing here runs
-//! unless a test or the smoke test starts it.
+//! detection command and "install my key" (into [`Rules::authorized_keys`]), and serves SFTP
+//! over a folder when [`Rules::sftp_root`] names one. Nothing here runs unless a test or the
+//! smoke test starts it.
 
+mod sftp;
+
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
@@ -39,9 +44,10 @@ pub struct Rules {
     pub host_key: Option<PrivateKey>,
     /// The `authorized_keys` lines "install my key" added (shared with the test).
     pub authorized_keys: Arc<Mutex<Vec<String>>>,
+    /// Serve SFTP with this folder as `/` (none: no SFTP subsystem).
+    pub sftp_root: Option<PathBuf>,
 }
 
-#[derive(Clone)]
 struct Server {
     rules: Rules,
     key_accepted: bool,
@@ -51,6 +57,8 @@ struct Server {
     sessions: Vec<ChannelId>,
     /// Channels running the "install my key" script.
     installs: Vec<ChannelId>,
+    /// Session channels that may still ask for the SFTP subsystem.
+    channels: HashMap<ChannelId, Channel<Msg>>,
 }
 
 fn methods(rules: &Rules, key_accepted: bool) -> MethodSet {
@@ -164,7 +172,32 @@ impl Handler for Server {
         _session: &mut Session,
     ) -> Result<(), Self::Error> {
         self.sessions.push(channel.id());
+        if self.rules.sftp_root.is_some() {
+            self.channels.insert(channel.id(), channel);
+        }
         reply.accept().await;
+        Ok(())
+    }
+
+    async fn subsystem_request(
+        &mut self,
+        channel: ChannelId,
+        name: &str,
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        match (
+            name,
+            self.rules.sftp_root.clone(),
+            self.channels.remove(&channel),
+        ) {
+            ("sftp", Some(root), Some(stream)) => {
+                // Its bytes are SFTP's from now on, not the tiny shell's.
+                self.sessions.retain(|id| *id != channel);
+                session.channel_success(channel)?;
+                russh_sftp::server::run(stream.into_stream(), sftp::Server::new(root)).await;
+            }
+            _ => session.channel_failure(channel)?,
+        }
         Ok(())
     }
 
@@ -206,6 +239,7 @@ impl Handler for Server {
         _modes: &[(russh::Pty, u32)],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
+        self.channels.remove(&channel);
         session.channel_success(channel)?;
         Ok(())
     }
@@ -215,6 +249,7 @@ impl Handler for Server {
         channel: ChannelId,
         session: &mut Session,
     ) -> Result<(), Self::Error> {
+        self.channels.remove(&channel);
         session.channel_success(channel)?;
         session.data(channel, b"test$ ".to_vec())?;
         Ok(())
@@ -226,6 +261,7 @@ impl Handler for Server {
         command: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
+        self.channels.remove(&channel);
         session.channel_success(channel)?;
         if command == osdetect::COMMAND.as_bytes() {
             session.data(channel, b"ID=debian\n__uname__\nLinux\n".to_vec())?;
@@ -234,6 +270,12 @@ impl Handler for Server {
             session.close(channel)?;
         } else if command == copy_id::SCRIPT.as_bytes() {
             self.installs.push(channel);
+        } else {
+            // No other command exists here, as in a shell without it.
+            session.extended_data(channel, 1, b"sh: command not found\n".to_vec())?;
+            session.exit_status_request(channel, 127)?;
+            session.eof(channel)?;
+            session.close(channel)?;
         }
         Ok(())
     }
@@ -321,6 +363,7 @@ pub async fn serve(rules: Rules) -> std::io::Result<u16> {
                 typed: Vec::new(),
                 sessions: Vec::new(),
                 installs: Vec::new(),
+                channels: HashMap::new(),
             };
             let config = Arc::clone(&config);
             tokio::spawn(async move {
