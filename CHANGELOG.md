@@ -6,6 +6,20 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 7: SSH ([ADR 0027](docs/adr/0027-ssh-client.md)).**
+  - **The built-in SSH client** (`russh`): SSH hosts and quick connections connect with it in tabs and splits. Hosts that choose `openssh` still run the system's `ssh`.
+  - **Questions in the pane,** each pane on its own: a card with the fingerprint of a new host key (trust once, or trust and remember), a warning that stops the connection when a known key changed, passwords, key passphrases and keyboard-interactive prompts (one-time codes). A chip shows the progress through each hop.
+  - **Host keys:** checked against `~/.ssh/known_hosts` (hashed names, ports, wildcards, `@revoked`) and OpenSesh's own `known_hosts`, where trusted keys go.
+  - **Authentication** in a per-host order: the identity's key from the vault, the key file (and its `-cert.pub` certificate), the agents (`SSH_AUTH_SOCK`, the Windows OpenSSH agent, Pageant), then OpenSSH's default key files; keyboard-interactive; the identity's password or one typed in the pane. A locked vault is opened only when a connection needs it ("Unlock and connect").
+  - **Connections:** jump hosts of any length (saved hosts or `user@host:port`), SOCKS5 and HTTP proxies or a proxy command for the first hop, keepalive, compression, and a per-host "legacy algorithms" switch for old servers.
+  - **Sessions:** the host's environment and the locale, a remote command or a startup snippet, agent forwarding (off by default, with a warning), and an optional session log (text or raw). When the connection drops, the pane says why and Enter reconnects; hosts can reconnect by themselves.
+  - **OS detection:** hosts with the automatic icon show the OS they run (from `/etc/os-release`).
+  - **Install my key** (host menu): picks a key from the keychain or an agent and adds it to the server's `authorized_keys`.
+  - **Settings > SSH:** the client, authentication order, keepalive, reconnection, language settings, OS detection and session logs for every host that doesn't set them.
+  - **Editors:** the host and group editors have every new SSH option.
+  - **Keychain > Known hosts:** the search finds hashed names typed in full, and entries of OpenSesh's file can be removed.
+  - **Tests against real servers:** OpenSSH and Dropbear, two jump hosts with an agent, a TOTP code after a key, a user certificate, agent forwarding and reconnection ([how](docs/testing/ssh-servers.md)), in CI and in WSL.
+  - **X11 forwarding spike** ([`spikes/x11-forwarding`](spikes/x11-forwarding/README.md)): works onto X.Org and Xwayland; in the app in Sprint 15.
 - **Sprint 6: keychain and vault.**
   - **Vault ([ADR 0023](docs/adr/0023-vault-and-key-holders.md), [format](docs/vault-format.md)):** passwords and private keys are encrypted in `vault.bin` (XChaCha20-Poly1305). Its key is held by the system keyring (Credential Manager on Windows, the Secret Service on Linux) or by an optional master password (Argon2id, 64 MiB). "Remember on this computer" opens a password-protected vault without typing it. The master password can be set, changed or removed at any time without re-entering secrets. A vault whose password is lost can be reset.
   - **Locking:** a vault with a master password locks after a chosen time without using OpenSesh (15 minutes by default) or on request, from the status bar, the command palette or Settings. After three wrong passwords each attempt waits longer (5 seconds, doubling to 5 minutes), also after a restart.
@@ -19,7 +33,9 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - The host and group editors have an Identity field.
-- `deny.toml` and `.cargo/audit.toml` accept RUSTSEC-2023-0071 (the `rsa` crate, no fixed release) with its reason: RSA is only used locally so far (ADR 0024).
+- The minimum Rust version is 1.89, for `russh` 0.63.3 ([ADR 0026](docs/adr/0026-msrv-1.89-for-russh.md)).
+- `deny.toml` and `.cargo/audit.toml` accept RUSTSEC-2023-0071 (the `rsa` crate, no fixed release) with its reason: the vault uses RSA locally, and the SSH client only signs with it, once per connection ([ADR 0027](docs/adr/0027-ssh-client.md)).
+- The status bar shows an SSH pane's state and host instead of "Local terminal".
 
 ## [0.1.2] - 2026-09-26
 
