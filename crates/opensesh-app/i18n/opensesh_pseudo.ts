@@ -543,6 +543,38 @@
         <translation>[Méťŕíçš ~~~]</translation>
     </message>
     <message>
+        <source>Restart a service</source>
+        <translation>[Ŕéšťáŕť á šéŕvíçé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Restarts it and shows how it is doing</source>
+        <translation>[Ŕéšťáŕťš íť áñď šĥöŵš ĥöŵ íť íš ďöíñĝ ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Follow the app log</source>
+        <translation>[Föĺĺöŵ ťĥé áþþ ĺöĝ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Disk usage</source>
+        <translation>[Ďíšķ üšáĝé ~~~]</translation>
+    </message>
+    <message>
+        <source>Database shell</source>
+        <translation>[Ďáťábášé šĥéĺĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Types the password of db-prod from the keychain</source>
+        <translation>[Ťýþéš ťĥé þáššŵöŕď öƒ ďb-þŕöď ƒŕöm ťĥé ķéýçĥáíñ ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Deploy the web app</source>
+        <translation>[Ďéþĺöý ťĥé ŵéb áþþ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>web-01</source>
+        <translation>[ŵéb-01 ~~]</translation>
+    </message>
+    <message>
         <source>%1 stopped: its pane closed.</source>
         <translation>[%1 šťöþþéď: íťš þáñé çĺöšéď. ~~~~~~~~~]</translation>
     </message>
@@ -8427,6 +8459,10 @@
     <message>
         <source>Text</source>
         <translation>[Ťéxť ~~]</translation>
+    </message>
+    <message>
+        <source>Kind</source>
+        <translation>[Ķíñď ~~]</translation>
     </message>
     <message>
         <source>Macro (steps)</source>

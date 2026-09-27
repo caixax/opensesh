@@ -85,8 +85,10 @@ OsDialog {
         id: form
 
         implicitWidth: dialog.fieldWidth
-        // A fixed cap: the dialog's maxHeight falls back to its own height before it has a window.
-        implicitHeight: Math.min(formColumn.implicitHeight, Theme.spacingXxl * 12)
+        // Capped by the window (the overlay), not by the dialog's maxHeight: that one falls back to
+        // the dialog's own height before it has a window, a binding loop.
+        implicitHeight: Math.min(formColumn.implicitHeight,
+                                 Math.max(Theme.spacingXxl * 8, (dialog.parent ? dialog.parent.height : 0) - Theme.spacingXxl * 7))
         contentHeight: formColumn.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -172,7 +174,7 @@ OsDialog {
 
             OsFormRow {
                 width: parent.width
-                label: qsTr("Type")
+                label: qsTr("Kind")
 
                 OsComboBox {
                     readonly property var choices: [
@@ -185,7 +187,7 @@ OsDialog {
                     textRole: "text"
                     valueRole: "value"
                     currentIndex: dialog.draft.macro ? 1 : 0
-                    Accessible.name: qsTr("Type")
+                    Accessible.name: qsTr("Kind")
                     onActivated: {
                         dialog.set("macro", currentValue);
                         if (currentValue && (dialog.draft.steps ?? []).length === 0 && (dialog.draft.text ?? "").length > 0)
@@ -222,6 +224,8 @@ OsDialog {
                             id: textArea
 
                             width: textFlick.width
+                            // A template TextArea keeps a one-line implicit height: it grows with its text.
+                            implicitHeight: contentHeight + topPadding + bottomPadding
                             wrapMode: TextEdit.WrapAnywhere
                             color: Theme.text
                             selectionColor: Theme.selection
@@ -298,7 +302,8 @@ OsDialog {
                             from: 1
                             to: 600000
                             stepSize: 100
-                            value: stepRow.modelData.kind === "wait" ? stepRow.modelData.timeout : stepRow.modelData.ms
+                            // A step that types text has neither (this box is hidden for it).
+                            value: (stepRow.modelData.kind === "wait" ? stepRow.modelData.timeout : stepRow.modelData.ms) ?? from
                             Accessible.name: stepRow.modelData.kind === "wait" ? qsTr("Timeout of step %1 in milliseconds").arg(stepRow.index + 1)
                                                                                : qsTr("Pause of step %1 in milliseconds").arg(stepRow.index + 1)
                             onValueModified: dialog.setStep(stepRow.index, stepRow.modelData.kind === "wait" ? "timeout" : "ms", value)

@@ -416,8 +416,9 @@ Window {
         steps: shell.smokeSteps(smoke)
     }
 
-    // Six series: the shell on the Hosts view, the Settings pages, split terminal tabs, the Hosts
-    // view with generated hosts, the Keychain with sample entries, then SSH panes with sample states.
+    // The series: the shell on the Hosts view, the Settings pages, split terminal tabs, the Hosts
+    // view with generated hosts, the Keychain with sample entries, SSH panes with sample states,
+    // the SFTP and Tunnels views, then snippets, the paste review and History.
     ScreenshotRunner {
         id: screenshots
 
@@ -502,9 +503,23 @@ Window {
         prefix: "tunnels"
         pages: ["view", "editor", "import"]
         prepare: (mode, density, page) => shell.prepareTunnelsScreenshot(page)
+        onFinished: {
+            shell.prepareSnippetsScreenshots();
+            snippetsScreenshots.start();
+        }
+    }
+
+    ScreenshotRunner {
+        id: snippetsScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "snippets"
+        pages: ["view", "editor", "picker", "paste", "player", "history"]
+        prepare: (mode, density, page) => shell.prepareSnippetsScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
                             + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures
-                            + sftpScreenshots.failures + tunnelsScreenshots.failures > 0 ? 7 : 0)
+                            + sftpScreenshots.failures + tunnelsScreenshots.failures + snippetsScreenshots.failures > 0 ? 7 : 0)
     }
 }
