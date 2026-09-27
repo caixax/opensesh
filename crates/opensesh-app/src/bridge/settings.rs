@@ -61,6 +61,7 @@ pub mod qobject {
         #[qproperty(bool, sftp_show_hidden, cxx_name = "sftpShowHidden", READ = sftp_show_hidden, WRITE = set_sftp_show_hidden, NOTIFY = settings_changed)]
         #[qproperty(QString, sftp_editor_command, cxx_name = "sftpEditorCommand", READ = sftp_editor_command, WRITE = set_sftp_editor_command, NOTIFY = settings_changed)]
         #[qproperty(bool, sftp_confirm_delete, cxx_name = "sftpConfirmDelete", READ = sftp_confirm_delete, WRITE = set_sftp_confirm_delete, NOTIFY = settings_changed)]
+        #[qproperty(bool, sftp_follow_terminal, cxx_name = "sftpFollowTerminal", READ = sftp_follow_terminal, WRITE = set_sftp_follow_terminal, NOTIFY = settings_changed)]
         #[qproperty(QString, config_path, cxx_name = "configPath", READ = config_path, NOTIFY = status_changed)]
         #[qproperty(bool, read_only, cxx_name = "readOnly", READ = read_only, NOTIFY = status_changed)]
         #[qproperty(QString, read_only_reason, cxx_name = "readOnlyReason", READ = read_only_reason, NOTIFY = status_changed)]
@@ -160,6 +161,8 @@ pub mod qobject {
         fn set_sftp_editor_command(self: Pin<&mut Self>, value: QString);
         fn sftp_confirm_delete(self: &Self) -> bool;
         fn set_sftp_confirm_delete(self: Pin<&mut Self>, value: bool);
+        fn sftp_follow_terminal(self: &Self) -> bool;
+        fn set_sftp_follow_terminal(self: Pin<&mut Self>, value: bool);
         fn config_path(self: &Self) -> QString;
         fn read_only(self: &Self) -> bool;
         fn read_only_reason(self: &Self) -> QString;
@@ -357,8 +360,12 @@ impl qobject::AppSettings {
         self.change(|config| replace(slot(config), value));
     }
 
-    /// Queues an atomic save of the current config.
+    /// Queues an atomic save of the current config (not in test runs: they keep changes in
+    /// memory).
     fn save(mut self: Pin<&mut Self>) {
+        if crate::bridge::app_info::is_test_run() {
+            return;
+        }
         let Some(path) = self.path.clone() else {
             return;
         };
@@ -715,6 +722,12 @@ impl qobject::AppSettings {
     }
     pub fn set_sftp_confirm_delete(self: Pin<&mut Self>, value: bool) {
         self.set_flag(value, |c| &mut c.sftp.confirm_delete);
+    }
+    pub fn sftp_follow_terminal(&self) -> bool {
+        self.config.sftp.follow_terminal
+    }
+    pub fn set_sftp_follow_terminal(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.sftp.follow_terminal);
     }
     pub fn restore_sessions(&self) -> bool {
         self.config.general.restore_sessions
