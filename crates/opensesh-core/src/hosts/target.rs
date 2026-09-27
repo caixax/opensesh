@@ -613,6 +613,87 @@ impl HostsFile {
     }
 }
 
+/// The kind of a proxy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProxyKind {
+    /// SOCKS5.
+    Socks5,
+    /// HTTP CONNECT.
+    Http,
+}
+
+/// A proxy written as `socks5://[user@]host[:port]` or `http://[user@]host[:port]`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProxyUrl {
+    /// SOCKS5 or HTTP.
+    pub kind: ProxyKind,
+    /// The proxy host.
+    pub host: String,
+    /// The proxy port (1080 for SOCKS5 and 8080 for HTTP when not given).
+    pub port: u16,
+    /// A user name, if given.
+    pub user: Option<String>,
+}
+
+/// Parses a proxy URL (see [`ProxyUrl`]).
+///
+/// # Errors
+///
+/// [`TargetError::UnknownScheme`] for another scheme, and the errors of a host and port.
+pub fn parse_proxy(text: &str) -> Result<ProxyUrl, TargetError> {
+    let text = text.trim();
+    let (scheme, rest) = text
+        .split_once("://")
+        .ok_or_else(|| TargetError::UnknownScheme(text.to_owned()))?;
+    let (kind, default_port) = match scheme.to_ascii_lowercase().as_str() {
+        "socks5" | "socks5h" | "socks" => (ProxyKind::Socks5, 1080),
+        "http" => (ProxyKind::Http, 8080),
+        other => return Err(TargetError::UnknownScheme(other.to_owned())),
+    };
+    let rest = rest.trim_end_matches('/');
+    let (user, address) = match rest.rsplit_once('@') {
+        Some((user, address)) => (Some(user.to_owned()), address),
+        None => (None, rest),
+    };
+    if let Some(user) = &user {
+        check_user(user)?;
+    }
+    let (host, port) = split_host_port(address)?;
+    check_name(&host)?;
+    Ok(ProxyUrl {
+        kind,
+        host,
+        port: port.unwrap_or(default_port),
+        user,
+    })
+}
+
+/// `host`, `host:port`, `[v6]` or `[v6]:port`.
+fn split_host_port(text: &str) -> Result<(String, Option<u16>), TargetError> {
+    let port_of = |port: &str| {
+        port.parse::<u16>()
+            .ok()
+            .filter(|port| *port > 0)
+            .ok_or_else(|| TargetError::BadPort(port.to_owned()))
+    };
+    if let Some(inner) = text.strip_prefix('[') {
+        let (host, after) = inner
+            .split_once(']')
+            .ok_or_else(|| TargetError::BadName(text.to_owned()))?;
+        let port = match after.strip_prefix(':') {
+            Some(port) => Some(port_of(port)?),
+            None if after.is_empty() => None,
+            None => return Err(TargetError::BadName(text.to_owned())),
+        };
+        return Ok((host.to_owned(), port));
+    }
+    match text.rsplit_once(':') {
+        Some((host, port)) if !host.contains(':') => Ok((host.to_owned(), Some(port_of(port)?))),
+        _ if text.is_empty() => Err(TargetError::MissingHost),
+        _ => Ok((text.to_owned(), None)),
+    }
+}
+
 /// Quotes `arg` for a POSIX shell when it has anything but safe characters.
 #[must_use]
 pub fn shell_quote(arg: &str) -> String {
@@ -633,6 +714,21 @@ mod tests {
 
     fn target(text: &str) -> Target {
         parse(text).unwrap_or_else(|error| panic!("{text}: {error}"))
+    }
+
+    #[test]
+    fn proxies() {
+        let socks = parse_proxy("socks5://me@proxy.lan").unwrap();
+        assert_eq!(socks.kind, ProxyKind::Socks5);
+        assert_eq!((socks.host.as_str(), socks.port), ("proxy.lan", 1080));
+        assert_eq!(socks.user.as_deref(), Some("me"));
+        let http = parse_proxy("http://[::1]:3128/").unwrap();
+        assert_eq!(http.kind, ProxyKind::Http);
+        assert_eq!((http.host.as_str(), http.port), ("::1", 3128));
+        assert!(parse_proxy("ftp://x").is_err());
+        assert!(parse_proxy("proxy:1080").is_err());
+        assert!(parse_proxy("socks5://proxy:0").is_err());
+        assert!(parse_proxy("http://-oProxyCommand=x").is_err());
     }
 
     #[test]

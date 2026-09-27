@@ -575,6 +575,7 @@ impl cxx_qt::Initialize for qobject::Keychain {
                 Err(error) => tracing::warn!("keychain.toml won't hot-reload: {error}"),
             }
         }
+        crate::keychain::set_jobs(sender.clone());
         self.as_mut().rust_mut().jobs = Some(sender);
         // The vault opens by itself when the keyring holds its key (or remembers it).
         self.as_mut().submit(Job::UnlockWithKeyring);

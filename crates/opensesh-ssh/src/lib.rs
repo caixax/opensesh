@@ -8,6 +8,7 @@
 //! - [`connect`]: host key checks, authentication, and jump host chains.
 //! - [`backend`]: a terminal backend over an SSH session channel, with reconnection.
 //! - [`log`], [`osdetect`], [`copy_id`]: session logs, the remote OS, installing a public key.
+//! - [`testing`]: a tiny SSH server for tests and the app's smoke test.
 //!
 //! Everything runs on one tokio runtime ([`runtime`]) off the GUI thread. Secrets (passwords,
 //! passphrases, answers to prompts, private keys) are never logged or put in error messages.
@@ -21,6 +22,7 @@ pub mod osdetect;
 pub mod prompt;
 pub mod proxy;
 pub mod spec;
+pub mod testing;
 
 use std::sync::OnceLock;
 

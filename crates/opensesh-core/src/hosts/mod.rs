@@ -190,6 +190,31 @@ pub enum FlowControl {
     Hardware,
 }
 
+/// A session log.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SessionLog {
+    /// No log.
+    #[default]
+    Off,
+    /// Clean text (escape sequences removed).
+    Text,
+    /// Everything the server printed, escape sequences included.
+    Raw,
+}
+
+impl SessionLog {
+    /// The name in files.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Text => "text",
+            Self::Raw => "raw",
+        }
+    }
+}
+
 /// SSH options a host or a group sets (each one optional: unset means inherited).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SshOptions {
@@ -208,9 +233,42 @@ pub struct SshOptions {
     /// Compression.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compression: Option<bool>,
-    /// A snippet to run once the shell is ready (Sprint 10).
+    /// Text typed into the shell once it is ready (the snippet library arrives in Sprint 10).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub startup_snippet: Option<String>,
+    /// Also offer old algorithms (SHA-1, CBC) for old equipment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legacy_algorithms: Option<bool>,
+    /// Authentication methods in order: `publickey`, `keyboard-interactive`, `password`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auth_order: Option<Vec<String>>,
+    /// A proxy for the first hop: `socks5://[user@]host:port` or `http://[user@]host:port`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proxy: Option<String>,
+    /// A command that carries the connection (`%h`, `%p`, `%r`), like OpenSSH's ProxyCommand.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proxy_command: Option<String>,
+    /// Environment variables to send (the server's `AcceptEnv` decides).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub env: Option<BTreeMap<String, String>>,
+    /// Send `LANG` and `LC_*`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub send_locale: Option<bool>,
+    /// A command to run instead of the login shell.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    /// Reconnect by itself after the connection is lost.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_reconnect: Option<bool>,
+    /// Keep a log of the session.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub log: Option<SessionLog>,
+    /// Ask the server which OS it runs, for the host's icon.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detect_os: Option<bool>,
+    /// The SSH agent to use instead of the usual one (like OpenSSH's `IdentityAgent`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_socket: Option<String>,
 }
 
 impl SshOptions {
@@ -530,9 +588,23 @@ pub const INHERITED_KEYS: &[&str] = &[
     "ssh.keepalive_secs",
     "ssh.compression",
     "ssh.startup_snippet",
+    "ssh.legacy_algorithms",
+    "ssh.auth_order",
+    "ssh.proxy",
+    "ssh.proxy_command",
+    "ssh.env",
+    "ssh.send_locale",
+    "ssh.command",
+    "ssh.auto_reconnect",
+    "ssh.log",
+    "ssh.detect_os",
+    "ssh.agent_socket",
     "sftp.follow_cwd",
     "sftp.start_dir",
 ];
+
+/// Authentication methods in their default order.
+pub const DEFAULT_AUTH_ORDER: [&str; 3] = ["publickey", "keyboard-interactive", "password"];
 
 /// The built-in value of an inherited key (`None` for the protocol's port, no user, no key).
 fn builtin(key: &str, protocol: Protocol) -> Option<Value> {
@@ -542,10 +614,26 @@ fn builtin(key: &str, protocol: Protocol) -> Option<Value> {
             .map(|port| Value::Integer(i64::from(port))),
         "jump" => Some(Value::Array(Vec::new())),
         "ssh.backend" => Some(Value::String("internal".to_owned())),
-        "ssh.agent_forwarding" | "ssh.compression" => Some(Value::Boolean(false)),
+        "ssh.agent_forwarding"
+        | "ssh.compression"
+        | "ssh.legacy_algorithms"
+        | "ssh.auto_reconnect" => Some(Value::Boolean(false)),
+        "ssh.send_locale" | "ssh.detect_os" => Some(Value::Boolean(true)),
         "ssh.x11" => Some(Value::String("off".to_owned())),
         "ssh.keepalive_secs" => Some(Value::Integer(30)),
-        "ssh.startup_snippet" => Some(Value::String(String::new())),
+        "ssh.startup_snippet"
+        | "ssh.proxy"
+        | "ssh.proxy_command"
+        | "ssh.command"
+        | "ssh.agent_socket" => Some(Value::String(String::new())),
+        "ssh.auth_order" => Some(Value::Array(
+            DEFAULT_AUTH_ORDER
+                .iter()
+                .map(|method| Value::String((*method).to_owned()))
+                .collect(),
+        )),
+        "ssh.env" => Some(Value::Table(Table::new())),
+        "ssh.log" => Some(Value::String("off".to_owned())),
         "sftp.follow_cwd" => Some(Value::Boolean(true)),
         "sftp.start_dir" => Some(Value::String("~".to_owned())),
         _ => None,
@@ -608,6 +696,48 @@ impl ResolvedHost {
     #[must_use]
     pub fn flag(&self, key: &str) -> bool {
         self.value(key).and_then(Value::as_bool).unwrap_or(false)
+    }
+
+    /// A list of strings, trimmed, without empty entries.
+    #[must_use]
+    pub fn list(&self, key: &str) -> Vec<String> {
+        self.value(key)
+            .and_then(Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(|item| item.trim().to_owned())
+                    .filter(|item| !item.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// A table of strings (environment variables), sorted by name.
+    #[must_use]
+    pub fn string_map(&self, key: &str) -> BTreeMap<String, String> {
+        self.value(key)
+            .and_then(Value::as_table)
+            .map(|table| {
+                table
+                    .iter()
+                    .filter_map(|(name, value)| {
+                        value.as_str().map(|value| (name.clone(), value.to_owned()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// The session log setting.
+    #[must_use]
+    pub fn session_log(&self) -> SessionLog {
+        match self.string("ssh.log") {
+            Some("text") => SessionLog::Text,
+            Some("raw") => SessionLog::Raw,
+            _ => SessionLog::Off,
+        }
     }
 
     /// The user name.
@@ -1159,6 +1289,7 @@ impl HostsFile {
         {
             problems.push(("group", "unknown"));
         }
+        check_ssh(&host.ssh, &mut problems);
         problems
     }
 
@@ -1194,6 +1325,7 @@ impl HostsFile {
         }) {
             problems.push(("jump", "invalid"));
         }
+        check_ssh(&defaults.ssh, &mut problems);
         problems
     }
 
@@ -1237,6 +1369,33 @@ fn entries<T: for<'de> Deserialize<'de>>(
             }
         })
         .collect()
+}
+
+/// Field problems of SSH options (`ssh.proxy`, `ssh.auth_order`, `ssh.env`).
+fn check_ssh(ssh: &SshOptions, problems: &mut Vec<(&'static str, &'static str)>) {
+    if ssh
+        .proxy
+        .as_deref()
+        .map(str::trim)
+        .is_some_and(|proxy| !proxy.is_empty() && target::parse_proxy(proxy).is_err())
+    {
+        problems.push(("ssh.proxy", "invalid"));
+    }
+    if ssh.auth_order.as_ref().is_some_and(|order| {
+        order.is_empty()
+            || order
+                .iter()
+                .any(|method| !DEFAULT_AUTH_ORDER.contains(&method.trim()))
+    }) {
+        problems.push(("ssh.auth_order", "invalid"));
+    }
+    if ssh.env.as_ref().is_some_and(|env| {
+        env.keys().any(|name| {
+            name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
+    }) {
+        problems.push(("ssh.env", "invalid"));
+    }
 }
 
 fn check_defaults(defaults: &HostDefaults, label: &str, warnings: &mut Vec<Warning>) {

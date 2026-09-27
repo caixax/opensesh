@@ -315,6 +315,24 @@ pub async fn authenticate(
     hop: &Hop,
     asker: &Asker,
 ) -> Result<(), SshError> {
+    // Secrets from the source join the plan for this attempt only.
+    let fetched;
+    let hop = match &hop.auth.source {
+        Some(source) => {
+            let secrets = source.fetch().await?;
+            let mut with = hop.clone();
+            with.auth.source = None;
+            if with.auth.password.is_none() {
+                with.auth.password = secrets.password;
+            }
+            let mut keys = secrets.keys;
+            keys.append(&mut with.auth.keys);
+            with.auth.keys = keys;
+            fetched = with;
+            &fetched
+        }
+        None => hop,
+    };
     let mut remaining = match handle.authenticate_none(&hop.user).await? {
         AuthResult::Success => return Ok(()),
         AuthResult::Failure {
@@ -435,9 +453,27 @@ impl<'a> AuthSession<'a> {
         }
         if self.hop.auth.agent {
             match agent_keys(handle, &user, self.hop.auth.agent_socket.as_deref()).await {
+                Ok(Some(Step::Failed(next))) => last = Step::Failed(next),
                 Ok(Some(step)) => return Ok(step),
                 Ok(None) => {}
                 Err(error) => tracing::info!("the SSH agent could not be used: {error}"),
+            }
+        }
+        for file in &self.hop.auth.fallback_key_files {
+            if !file.is_file() {
+                continue;
+            }
+            let Some(key) = load_key_file(file, asker).await? else {
+                continue;
+            };
+            let key = Arc::new(key);
+            let hash = Self::rsa_hash(handle, &key).await?;
+            let result = handle
+                .authenticate_publickey(&user, PrivateKeyWithHashAlg::new(key, hash))
+                .await?;
+            match Step::from(result) {
+                Step::Failed(next) => last = Step::Failed(next),
+                other => return Ok(other),
             }
         }
         Ok(last)
