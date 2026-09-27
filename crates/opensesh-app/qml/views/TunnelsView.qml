@@ -6,7 +6,7 @@ pragma ComponentBehavior: Bound
 // it. A tunnel that listens beyond this computer (or, for a remote one, beyond the server) is
 // marked; one that asks something (a host key, a password) has an Answer button.
 // Keys in the list: Up/Down, Space (switch), Enter (edit), Delete, Ctrl+N (new).
-// Functions: newTunnel(), edit(id), answer(id), smokeSteps(smoke), showSample(page).
+// Functions: newTunnel(), edit(id), answer(id), showImport(), closeDialogs(), smokeSteps(smoke).
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -116,6 +116,15 @@ Item {
         question.show(id);
     }
 
+    function showImport() {
+        importDialog.show();
+    }
+
+    function closeDialogs() {
+        for (const dialog of [editor, importDialog, question, deleteDialog])
+            dialog.close();
+    }
+
     function copyAddress(entry) {
         Platform.copyText(entry.kind === "dynamic" ? "socks5h://" + listening(entry) : listening(entry));
         Toasts.show(qsTr("Copied %1.").arg(listening(entry)), "success");
@@ -126,12 +135,182 @@ Item {
         deleteDialog.open();
     }
 
-    Connections {
-        target: Tunnels
-
-        function onNeedsAnswer(id, name) {
-            Toasts.show(qsTr("The tunnel %1 needs an answer to connect.").arg(name), "warning");
-        }
+    // Functions for SmokeTest.steps, after the SSH steps started the test server and loaded the
+    // hosts fixture (H00000 goes to the test server): a tunnel of each kind on its own connection
+    // (its questions answered in its row), HTTP through the local and remote ones to the test
+    // HTTP server, a tunnel tied to H00000 that runs only while a terminal session to it is up,
+    // the editor, the import dialog, duplicate and delete. Nothing is written.
+    function smokeSteps(smoke) {
+        const timeout = 20000;
+        let deadline = 0;
+        let web = 0;
+        const ids = {};
+        const answered = {};
+        let body = "";
+        let tabId = 0;
+        let pane = null;
+        const waitFor = (what, condition, next) => {
+            const poll = () => {
+                if (condition())
+                    return next ? next() : [];
+                if (Date.now() > deadline) {
+                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what + ": " + Tunnels.list);
+                    return [];
+                }
+                return [poll];
+            };
+            return poll;
+        };
+        const wait = (what, condition, next) => {
+            deadline = Date.now() + timeout;
+            return [waitFor(what, condition, next)];
+        };
+        const make = (name, fields) => {
+            const id = Tunnels.save(JSON.stringify(Object.assign({
+                name: name,
+                host: "H00000",
+                target: "",
+                bindAddress: "127.0.0.1",
+                bindPort: 0,
+                destinationHost: "127.0.0.1",
+                destinationPort: web,
+                tied: false,
+                autostart: false,
+                reconnect: true
+            }, fields)));
+            if (id.length === 0)
+                smoke.fail("the tunnel " + name + " wasn't saved");
+            return id;
+        };
+        // Answers a tunnel's questions (host key, password) until it runs.
+        const running = id => {
+            const entry = view.tunnel(id);
+            if (!entry)
+                return false;
+            if (entry.prompt.length > 0) {
+                const question = JSON.parse(entry.prompt);
+                if (answered[id] !== question.id) {
+                    answered[id] = question.id;
+                    if (question.kind === "hostKey")
+                        Tunnels.answerPrompt(id, question.id, "trust-once", []);
+                    else
+                        Tunnels.answerPrompt(id, question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+                }
+            }
+            if (entry.state === "failed")
+                smoke.fail("the tunnel " + entry.name + " failed: " + entry.code + " " + entry.detail);
+            return entry.state === "running" && entry.port > 0;
+        };
+        const get = port => {
+            body = "";
+            const request = new XMLHttpRequest();
+            request.onreadystatechange = () => {
+                if (request.readyState === XMLHttpRequest.DONE)
+                    body = request.status === 200 ? request.responseText : String(request.status);
+            };
+            request.open("GET", "http://127.0.0.1:" + port + "/");
+            request.send();
+        };
+        const fetched = () => body === "OpenSesh tunnel test"; // lint-qml: allow (the test HTTP server's answer)
+        return [
+            () => {
+                web = AppInfo.startHttpTestServer();
+                if (web <= 0)
+                    smoke.fail("the HTTP test server didn't start");
+                ids.local = make("Smoke local", { kind: "local" });
+                ids.remote = make("Smoke remote", { kind: "remote" });
+                ids.dynamic = make("Smoke SOCKS", { kind: "dynamic" });
+                for (const key of ["local", "remote", "dynamic"])
+                    Tunnels.setOn(ids[key], true);
+                // The first question also shows in its dialog.
+                return wait("a tunnel's question", () => tunnels.some(entry => entry.prompt.length > 0), () => {
+                    view.answer(tunnels.find(entry => entry.prompt.length > 0).id);
+                    return [];
+                });
+            },
+            () => {
+                question.close();
+                return wait("the three tunnels to run", () => running(ids.local) && running(ids.remote) && running(ids.dynamic));
+            },
+            () => {
+                get(view.tunnel(ids.local).port);
+                return wait("HTTP through the local tunnel", fetched);
+            },
+            () => {
+                get(view.tunnel(ids.remote).port);
+                return wait("HTTP through the remote tunnel", fetched, () => {
+                    console.info("smoke test: local, remote and dynamic tunnels ran on their own connection and carried HTTP");
+                    return [];
+                });
+            },
+            () => wait("the traffic counters", () => view.tunnel(ids.local).total >= 1 && view.tunnel(ids.local).received > 0),
+            // Tied to H00000: waits, runs with a terminal session, waits again when it closes.
+            () => {
+                ids.tied = make("Smoke tied", { kind: "local", tied: true });
+                Tunnels.setOn(ids.tied, true);
+                return wait("the tied tunnel to wait", () => view.tunnel(ids.tied).state === "waiting");
+            },
+            () => {
+                if (!view.shell.connectHost("H00000", "tab"))
+                    smoke.fail("connecting to H00000 opened nothing");
+                tabId = view.shell.currentTabId;
+                pane = view.shell.currentTerminal;
+                const answeredPane = {};
+                return wait("the tied tunnel to run with the session", () => {
+                    const promptText = pane ? pane.terminal.prompt : "";
+                    if (promptText.length > 0) {
+                        const question = JSON.parse(promptText);
+                        if (answeredPane.id !== question.id) {
+                            answeredPane.id = question.id;
+                            if (question.kind === "hostKey")
+                                pane.terminal.answerPrompt(question.id, "trust-once", []);
+                            else
+                                pane.terminal.answerPrompt(question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+                        }
+                    }
+                    return view.tunnel(ids.tied).state === "running";
+                });
+            },
+            () => {
+                get(view.tunnel(ids.tied).port);
+                return wait("HTTP through the tied tunnel", fetched);
+            },
+            () => {
+                view.shell.closeTabById(tabId);
+                view.shell.showView("tunnels");
+                return wait("the tied tunnel to wait again", () => view.tunnel(ids.tied).state === "waiting", () => {
+                    console.info("smoke test: a tunnel tied to a host ran with its terminal session");
+                    return [];
+                });
+            },
+            () => {
+                editor.show(view.tunnel(ids.local));
+                if (editor.problem.length > 0)
+                    smoke.fail("the editor finds a problem in a saved tunnel: " + editor.problem);
+                editor.set("bindAddress", "0.0.0.0");
+                if (!editor.exposed)
+                    smoke.fail("the editor doesn't see 0.0.0.0 as exposed");
+                editor.set("destinationPort", 0);
+                if (editor.problem.length === 0)
+                    smoke.fail("the editor accepts a destination port of 0");
+            },
+            () => {
+                editor.close();
+                importDialog.show();
+            },
+            () => {
+                importDialog.close();
+                const copy = Tunnels.duplicate(ids.dynamic);
+                if (copy.length === 0 || view.tunnel(copy).on)
+                    smoke.fail("duplicating a tunnel failed");
+                for (const id of Object.values(ids).concat([copy]))
+                    Tunnels.remove(id);
+                return wait("the tunnels to go", () => Tunnels.count === 0, () => {
+                    console.info("smoke test: the tunnel editor, the import dialog, duplicate and delete work");
+                    return [];
+                });
+            }
+        ];
     }
 
     ColumnLayout {

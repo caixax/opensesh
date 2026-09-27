@@ -42,7 +42,7 @@ pragma ComponentBehavior: Bound
 // cycleRegion(step), shortcutText(actionId), smokeSteps(smoke), prepareScreenshot(),
 // prepareSettingsScreenshot(), prepareTerminalScreenshot(), prepareHostsScreenshot(),
 // prepareKeychainScreenshot(), prepareSshScreenshot(), prepareSftpScreenshots(done),
-// prepareSftpScreenshot(page).
+// prepareSftpScreenshot(page), prepareTunnelsScreenshots(done), prepareTunnelsScreenshot(page).
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -793,6 +793,30 @@ Item {
         }));
     }
 
+    // Command palette entries to start or stop the tunnels that match `query`.
+    function tunnelPaletteEntries(query) {
+        const words = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+        return JSON.parse(Tunnels.list || "[]")
+            .filter(tunnel => {
+                const text = [tunnel.name, tunnel.hostName, tunnel.kind, tunnel.bindPort, tunnel.destinationHost,
+                              qsTr("tunnel")].join(" ").toLowerCase();
+                return words.every(word => text.indexOf(word) >= 0);
+            })
+            .slice(0, 6)
+            .map(tunnel => ({
+                action: {
+                    text: (tunnel.on ? qsTr("Stop tunnel %1") : qsTr("Start tunnel %1"))
+                        .arg(tunnel.name.length > 0 ? tunnel.name : tunnel.hostName + ":" + tunnel.bindPort),
+                    category: qsTr("Tunnels"),
+                    iconName: "waypoints",
+                    shortcut: "",
+                    enabled: true,
+                    actionId: ""
+                },
+                run: () => Tunnels.setOn(tunnel.id, !tunnel.on)
+            }));
+    }
+
     function cycleTab(step) {
         const first = detached ? 1 : 0;
         const count = sessionModel.count + 1 - first;
@@ -1041,6 +1065,7 @@ Item {
             () => shell.splitSmokeSteps(smoke),
             () => shell.hostSmokeSteps(smoke),
             () => shell.sftpSmokeSteps(smoke),
+            () => shell.tunnelSmokeSteps(smoke),
             () => openTab("the second shell's first output"),
             () => {
                 pane.terminal.sendText("exit\r");
@@ -1431,6 +1456,22 @@ Item {
         ];
     }
 
+    // Functions for SmokeTest.steps: the Tunnels view's (TunnelsView.smokeSteps), after the SSH
+    // steps started the test server.
+    function tunnelSmokeSteps(smoke) {
+        return [
+            () => shell.showView("tunnels"),
+            () => {
+                const tunnels = tunnelsLoader.item;
+                if (!tunnels || typeof tunnels.smokeSteps !== "function") {
+                    smoke.fail("the Tunnels view didn't load");
+                    return [];
+                }
+                return tunnels.smokeSteps(smoke);
+            }
+        ];
+    }
+
     // Functions for SmokeTest.steps: instantiate every view, overlay and layout variant, then
     // run the terminal steps.
     function smokeSteps(smoke) {
@@ -1725,6 +1766,109 @@ Item {
         }
     }
 
+    // --screenshots: sample tunnels for the Tunnels pages, run for real against the in-process
+    // test server (never the network): three running (one with traffic), one tied to a host
+    // with no session (waiting), one that listens on every interface (off), and one whose port
+    // is taken (failed). `done` runs when they are there (or, with a warning, after 20 s).
+    function prepareTunnelsScreenshots(done) {
+        palette.close();
+        notifications.close();
+        sidePanelOpen = false;
+        while (sessionModel.count > 0)
+            removeTab(sessionModel.count, false);
+        if (AppInfo.startSshTestServer() <= 0) {
+            console.warn("AppShell: no SSH test server for the Tunnels screenshots");
+            done();
+            return;
+        }
+        Hosts.loadFixture(60);
+        showView("tunnels");
+        const web = AppInfo.startHttpTestServer();
+        const make = fields => Tunnels.save(JSON.stringify(Object.assign({
+            host: "H00000",
+            target: "",
+            bindAddress: "127.0.0.1",
+            bindPort: 0,
+            destinationHost: "127.0.0.1",
+            destinationPort: web,
+            tied: false,
+            autostart: false,
+            reconnect: true
+        }, fields)));
+        const staging = make({ name: qsTr("Staging web"), kind: "local", bindPort: 18081 });
+        const running = [staging,
+                         make({ name: qsTr("Preview for the team"), kind: "remote", destinationHost: "localhost" }), // lint-qml: allow (sample data for screenshots)
+                         make({ name: qsTr("SOCKS through web-01"), kind: "dynamic", bindPort: 11080 })];
+        // Another host than the one of the SFTP screenshots' SSH tab: no session, so it waits.
+        const grafana = make({ name: qsTr("Grafana"), kind: "local", host: "H00001", bindPort: 13000, // lint-qml: allow (sample data for screenshots)
+                               destinationHost: "grafana.internal", destinationPort: 3000, tied: true, autostart: true }); // lint-qml: allow (sample data for screenshots)
+        make({ name: qsTr("Shared dev server"), kind: "local", bindAddress: "0.0.0.0", bindPort: 18080, // lint-qml: allow (sample data for screenshots)
+               destinationHost: "dev.internal", destinationPort: 8080 }); // lint-qml: allow (sample data for screenshots)
+        const metrics = make({ name: qsTr("Metrics"), kind: "local", bindPort: 18081, destinationHost: "metrics.internal", // lint-qml: allow (sample data for screenshots)
+                               destinationPort: 9090 });
+        for (const id of running.concat([grafana]))
+            Tunnels.setOn(id, true);
+        const deadline = Date.now() + 20000;
+        const answered = {};
+        let requests = 0;
+        let stage = "running";
+        const entry = id => JSON.parse(Tunnels.list || "[]").find(tunnel => tunnel.id === id) ?? {};
+        screenshotPoll.poll = () => {
+            if (Date.now() > deadline) {
+                console.warn("AppShell: the Tunnels screenshots' setup timed out at", stage, Tunnels.list);
+                return true;
+            }
+            for (const tunnel of JSON.parse(Tunnels.list || "[]")) {
+                if (tunnel.prompt.length === 0)
+                    continue;
+                const question = JSON.parse(tunnel.prompt);
+                if (answered[tunnel.id] === question.id)
+                    continue;
+                answered[tunnel.id] = question.id;
+                if (question.kind === "hostKey")
+                    Tunnels.answerPrompt(tunnel.id, question.id, "trust-once", []);
+                else
+                    Tunnels.answerPrompt(tunnel.id, question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+            }
+            if (stage === "running") {
+                if (!running.every(id => entry(id).state === "running"))
+                    return false;
+                // Some traffic through the first one.
+                if (requests < 3) {
+                    requests += 1;
+                    const request = new XMLHttpRequest();
+                    request.open("GET", "http://127.0.0.1:" + entry(staging).port + "/");
+                    request.send();
+                    return false;
+                }
+                Tunnels.setOn(metrics, true);
+                stage = "failed";
+            } else if (stage === "failed") {
+                return entry(metrics).state === "failed" && entry(staging).total >= 3;
+            }
+            return false;
+        };
+        screenshotPoll.done = done;
+        screenshotPoll.start();
+    }
+
+    // --screenshots: the Tunnels view (page "view"), the editor of the tunnel that listens on
+    // every interface ("editor"), or the import dialog ("import").
+    function prepareTunnelsScreenshot(page) {
+        const tunnels = tunnelsLoader.item;
+        showView("tunnels");
+        if (!tunnels)
+            return;
+        tunnels.closeDialogs();
+        if (page === "editor") {
+            const shared = JSON.parse(Tunnels.list || "[]").find(tunnel => tunnel.bindAddress === "0.0.0.0");
+            if (shared)
+                tunnels.edit(shared.id);
+        } else if (page === "import") {
+            tunnels.showImport();
+        }
+    }
+
     // --screenshots: the Keychain view with sample entries at section `page`, or the unlock
     // dialog over it.
     function prepareKeychainScreenshot(page) {
@@ -1802,6 +1946,18 @@ Item {
 
         interval: 400
         onTriggered: UiState.save()
+    }
+
+    // A tunnel that connects out of sight (one that started with OpenSesh) asks something: say
+    // so, unless the Tunnels view, where its row has an Answer button, is in front.
+    Connections {
+        target: Tunnels
+        enabled: !shell.detached
+
+        function onNeedsAnswer(id, name) {
+            if (shell.currentTab !== 0 || shell.activeView !== "tunnels")
+                Toasts.show(qsTr("The tunnel %1 needs an answer to connect: see Tunnels.").arg(name), "warning");
+        }
     }
 
     ListModel {
@@ -1955,6 +2111,8 @@ Item {
                             sourceComponent: SftpView {}
                         }
                         ViewLoader {
+                            id: tunnelsLoader
+
                             viewId: "tunnels"
                             currentView: shell.activeView
                             sourceComponent: TunnelsView {}
@@ -2049,7 +2207,7 @@ Item {
 
         topOffset: titleRegion.height + Theme.spacingLg
         shortcutText: action => shell.shortcutText(action.actionId)
-        extraResults: query => shell.hostPaletteEntries(query)
+        extraResults: query => shell.hostPaletteEntries(query).concat(shell.tunnelPaletteEntries(query))
     }
 
     NotificationsPanel {

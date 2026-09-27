@@ -491,9 +491,20 @@ Window {
         prefix: "sftp"
         pages: ["view", "permissions", "panel"]
         prepare: (mode, density, page) => shell.prepareSftpScreenshot(page)
+        onFinished: shell.prepareTunnelsScreenshots(() => tunnelsScreenshots.start())
+    }
+
+    ScreenshotRunner {
+        id: tunnelsScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "tunnels"
+        pages: ["view", "editor", "import"]
+        prepare: (mode, density, page) => shell.prepareTunnelsScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
                             + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures
-                            + sftpScreenshots.failures > 0 ? 7 : 0)
+                            + sftpScreenshots.failures + tunnelsScreenshots.failures > 0 ? 7 : 0)
     }
 }
