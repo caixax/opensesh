@@ -140,34 +140,17 @@ fn sample_files(folder: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(local.join("project"))?;
     std::fs::write(
         remote.join("docs").join("readme.txt"),
-        "OpenSesh smoke test
-",
+        "OpenSesh smoke test\n",
     )?;
-    std::fs::write(
-        remote.join(".profile"),
-        "# hidden
-",
-    )?;
+    std::fs::write(remote.join(".profile"), "# hidden\n")?;
     for n in 0..300 {
         std::fs::write(
             remote.join("logs").join(format!("app-{n:03}.log")),
-            format!(
-                "line {n}
-"
-            ),
+            format!("line {n}\n"),
         )?;
     }
-    std::fs::write(
-        local.join("project").join("main.rs"),
-        "fn main() {}
-",
-    )?;
-    std::fs::write(
-        local.join("notes.txt"),
-        "upload me
-"
-        .repeat(1000),
-    )?;
+    std::fs::write(local.join("project").join("main.rs"), "fn main() {}\n")?;
+    std::fs::write(local.join("notes.txt"), "upload me\n".repeat(1000))?;
     Ok(())
 }
 

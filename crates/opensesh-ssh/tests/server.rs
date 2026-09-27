@@ -384,15 +384,9 @@ async fn through_two_jump_hosts() {
         Installed::Added
     );
     assert_eq!(
-        copy_id::install(
-            &connection,
-            &format!(
-                "{INSTALLED}
-"
-            )
-        )
-        .await
-        .unwrap(),
+        copy_id::install(&connection, &format!("{INSTALLED}\n"))
+            .await
+            .unwrap(),
         Installed::AlreadyThere
     );
     assert!(copy_id::install(&connection, "garbage").await.is_err());
