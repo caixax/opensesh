@@ -320,7 +320,11 @@ struct PlayState {
     speed: f64,
     /// Where it is, in seconds of the recording (pauses shortened).
     position: f64,
+    /// How long it plays (known once the file is read).
+    duration: f64,
     restart: bool,
+    /// Where to jump to (back means from the start again, the screen cleared).
+    seek: Option<f64>,
     stop: bool,
 }
 
@@ -328,7 +332,6 @@ struct PlayState {
 #[derive(Debug, Clone)]
 pub struct PlayerControl {
     state: Arc<(Mutex<PlayState>, Condvar)>,
-    duration: f64,
 }
 
 impl PlayerControl {
@@ -344,9 +347,8 @@ impl PlayerControl {
 
     /// Plays (from the start again once it reached the end).
     pub fn play(&self) {
-        let duration = self.duration;
         self.change(|state| {
-            if state.position >= duration {
+            if state.duration > 0.0 && state.position >= state.duration {
                 state.restart = true;
             }
             state.playing = true;
@@ -371,6 +373,14 @@ impl PlayerControl {
         });
     }
 
+    /// Jumps to `seconds` (clamped to the recording), playing or paused as it was: everything
+    /// before it shows at once.
+    pub fn seek(&self, seconds: f64) {
+        if seconds.is_finite() {
+            self.change(|state| state.seek = Some(seconds.max(0.0)));
+        }
+    }
+
     /// Whether it plays now.
     #[must_use]
     pub fn playing(&self) -> bool {
@@ -383,10 +393,10 @@ impl PlayerControl {
         self.read(|state| state.position)
     }
 
-    /// How long it plays, in seconds (pauses shortened).
+    /// How long it plays, in seconds (pauses shortened; 0 until the file is read).
     #[must_use]
     pub fn duration(&self) -> f64 {
-        self.duration
+        self.read(|state| state.duration)
     }
 
     /// The speed.
@@ -411,36 +421,47 @@ fn timeline(cast: &Cast) -> Vec<(f64, String)> {
     out
 }
 
-/// A backend that prints `cast` again at its pace (paused at first); input is ignored. The
-/// terminal keeps its own size: a recording made at another size may wrap differently.
-#[must_use]
-pub fn player(
-    cast: &Cast,
-) -> (
-    Box<dyn TerminalBackend>,
-    Receiver<BackendEvent>,
-    PlayerControl,
-) {
-    let events = timeline(cast);
-    let duration = events.last().map_or(0.0, |(time, _)| *time);
-    let (sender, receiver) = crossbeam_channel::unbounded();
-    let control = PlayerControl {
+fn new_control() -> PlayerControl {
+    PlayerControl {
         state: Arc::new((
             Mutex::new(PlayState {
                 playing: false,
                 speed: 1.0,
                 position: 0.0,
+                duration: 0.0,
                 restart: false,
+                seek: None,
                 stop: false,
             }),
             Condvar::new(),
         )),
-        duration,
-    };
+    }
+}
+
+/// Starts the player thread with what `load` gives (read there, off the caller's thread).
+fn start_player(
+    load: impl FnOnce() -> Result<Cast, String> + Send + 'static,
+) -> (
+    Box<dyn TerminalBackend>,
+    Receiver<BackendEvent>,
+    PlayerControl,
+) {
+    let (sender, receiver) = crossbeam_channel::unbounded();
+    let control = new_control();
     let shared = control.clone();
     let spawned = std::thread::Builder::new()
         .name("opensesh-player".to_owned())
-        .spawn(move || play(&events, &sender, &shared));
+        .spawn(move || match load() {
+            Ok(cast) => {
+                let events = timeline(&cast);
+                let duration = events.last().map_or(0.0, |(time, _)| *time);
+                shared.change(|state| state.duration = duration);
+                play(&events, &sender, &shared);
+            }
+            Err(message) => {
+                let _ = sender.send(BackendEvent::Error(message));
+            }
+        });
     if let Err(error) = spawned {
         tracing::warn!("the player could not start: {error}");
     }
@@ -453,6 +474,37 @@ pub fn player(
     )
 }
 
+/// A backend that prints `cast` again at its pace (paused at first); input is ignored. The
+/// terminal keeps its own size: a recording made at another size may wrap differently.
+#[must_use]
+pub fn player(
+    cast: &Cast,
+) -> (
+    Box<dyn TerminalBackend>,
+    Receiver<BackendEvent>,
+    PlayerControl,
+) {
+    let cast = cast.clone();
+    start_player(move || Ok(cast))
+}
+
+/// [`player`] for the recording in `path`, read on the player's thread; a file that can't be
+/// read or isn't a recording shows why in the terminal.
+#[must_use]
+pub fn player_file(
+    path: std::path::PathBuf,
+) -> (
+    Box<dyn TerminalBackend>,
+    Receiver<BackendEvent>,
+    PlayerControl,
+) {
+    start_player(move || {
+        let text = std::fs::read_to_string(&path)
+            .map_err(|error| format!("{}: {error}", path.display()))?;
+        read(&text).map_err(|error| format!("{}: {error}", path.display()))
+    })
+}
+
 fn play(events: &[(f64, String)], sender: &Sender<BackendEvent>, control: &PlayerControl) {
     let (lock, wake) = &*control.state;
     let mut next = 0;
@@ -462,26 +514,37 @@ fn play(events: &[(f64, String)], sender: &Sender<BackendEvent>, control: &Playe
         if state.stop {
             return;
         }
-        if state.restart {
-            state.restart = false;
-            state.position = 0.0;
-            next = 0;
-            // A full reset (RIS) clears the screen and the modes the recording set.
-            if sender
-                .send(BackendEvent::Output(b"\x1bc".to_vec()))
-                .is_err()
-            {
-                return;
-            }
-        }
+        let restart = std::mem::take(&mut state.restart);
+        let target = if restart {
+            state.seek = None;
+            Some(0.0)
+        } else {
+            state.seek.take()
+        };
         let now = Instant::now();
-        if state.playing {
+        let mut catch_up = false;
+        if let Some(target) = target {
+            let target = target.min(state.duration);
+            if restart || target < state.position {
+                next = 0;
+                // A full reset (RIS) clears the screen and the modes the recording set.
+                if sender
+                    .send(BackendEvent::Output(b"\x1bc".to_vec()))
+                    .is_err()
+                {
+                    return;
+                }
+            }
+            state.position = target;
+            catch_up = true;
+        } else if state.playing {
             state.position += now.duration_since(last).as_secs_f64() * state.speed;
         }
         last = now;
-        // Everything due goes out at once (nothing while paused, not even what is due at 0).
+        // Everything due goes out at once (while paused, only what a jump went past; not even
+        // what is due at 0).
         while let Some((time, text)) = events.get(next) {
-            if !state.playing || *time > state.position {
+            if !(state.playing || catch_up) || *time > state.position {
                 break;
             }
             if sender
@@ -496,7 +559,7 @@ fn play(events: &[(f64, String)], sender: &Sender<BackendEvent>, control: &Playe
             None => {
                 // The end: it stops there.
                 state.playing = false;
-                state.position = state.position.min(control.duration).max(control.duration);
+                state.position = state.duration;
                 None
             }
             Some((time, _)) if state.playing => Some(Duration::from_secs_f64(
@@ -671,5 +734,65 @@ mod tests {
         control.pause();
         backend.shutdown();
         assert!(backend.write(b"ignored").is_ok());
+    }
+
+    fn printed_until(events: &Receiver<BackendEvent>, end: &str) -> String {
+        let mut printed = String::new();
+        while let Ok(BackendEvent::Output(bytes)) = events.recv_timeout(Duration::from_secs(2)) {
+            printed.push_str(&String::from_utf8(bytes).unwrap());
+            if printed.ends_with(end) {
+                break;
+            }
+        }
+        printed
+    }
+
+    #[test]
+    fn a_jump_shows_everything_before_it_and_back_starts_over() {
+        let cast = read(
+            "{\"version\": 2, \"width\": 80, \"height\": 24}\n\
+             [0.0, \"o\", \"one \"]\n\
+             [1.0, \"o\", \"two \"]\n\
+             [2.0, \"o\", \"three\"]\n",
+        )
+        .unwrap();
+        let (_backend, events, control) = player(&cast);
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while control.duration() == 0.0 {
+            assert!(Instant::now() < deadline, "the duration is known once read");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!((control.duration() - 2.0).abs() < 1e-9);
+        // Forward while paused: what it went past, at once, and it stays paused.
+        control.seek(1.5);
+        assert_eq!(printed_until(&events, "two "), "one two ");
+        assert!(!control.playing());
+        assert!((control.position() - 1.5).abs() < 1e-9);
+        // Back: a reset, then everything up to there again.
+        control.seek(0.5);
+        assert_eq!(printed_until(&events, "one "), "\x1bcone ");
+        // Past the end: all of it.
+        control.seek(60.0);
+        assert_eq!(printed_until(&events, "three"), "two three");
+        assert!((control.position() - 2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_file_that_is_not_a_recording_says_why() {
+        let folder = std::env::temp_dir().join(format!("opensesh-cast-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let path = folder.join("broken.cast");
+        std::fs::write(&path, "not a recording").unwrap();
+        let (_backend, events, _control) = player_file(path.clone());
+        match events.recv_timeout(Duration::from_secs(2)).unwrap() {
+            BackendEvent::Error(message) => assert!(message.contains("broken.cast"), "{message}"),
+            other => panic!("expected an error, got {other:?}"),
+        }
+        let (_backend, events, _control) = player_file(folder.join("missing.cast"));
+        assert!(matches!(
+            events.recv_timeout(Duration::from_secs(2)).unwrap(),
+            BackendEvent::Error(_)
+        ));
+        std::fs::remove_dir_all(&folder).unwrap();
     }
 }
