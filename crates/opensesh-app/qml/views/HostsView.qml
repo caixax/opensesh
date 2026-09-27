@@ -821,6 +821,14 @@ Item {
         }
 
         OsMenuItem {
+            text: qsTr("Install my key…")
+            iconName: "key-round"
+            enabled: hostMenu.single && hostMenu.first !== null && hostMenu.first.protocol === "ssh"
+                     && !Hosts.usesOpenSsh(hostMenu.ids[0])
+            onTriggered: view.shell.installKey(hostMenu.ids[0])
+        }
+
+        OsMenuItem {
             text: qsTr("Duplicate")
             iconName: "copy"
             enabled: hostMenu.single

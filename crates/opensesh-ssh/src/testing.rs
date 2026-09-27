@@ -2,9 +2,10 @@
 //! a user [`USER`] with the password [`PASSWORD`] and/or keys, an optional one-time code after a
 //! key ([`CODE`]), `direct-tcpip` for jump hosts, and a shell that prints `test$ ` and echoes what
 //! it gets ("exit" ends it with status 3, "drop" drops the connection). It also answers the OS
-//! detection command. Nothing here runs unless a test or the smoke test starts it.
+//! detection command and "install my key" (into [`Rules::authorized_keys`]). Nothing here runs
+//! unless a test or the smoke test starts it.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use russh::keys::{PrivateKey, PublicKey};
@@ -12,7 +13,7 @@ use russh::server::{Auth, Handler, Msg, Session};
 use russh::{Channel, ChannelId, MethodKind, MethodSet};
 use tokio::net::TcpListener;
 
-use crate::osdetect;
+use crate::{copy_id, osdetect};
 
 /// The user name the server knows.
 pub const USER: &str = "tester";
@@ -36,6 +37,8 @@ pub struct Rules {
     pub droppable: bool,
     /// The host key (a new random Ed25519 key when not given).
     pub host_key: Option<PrivateKey>,
+    /// The `authorized_keys` lines "install my key" added (shared with the test).
+    pub authorized_keys: Arc<Mutex<Vec<String>>>,
 }
 
 #[derive(Clone)]
@@ -46,6 +49,8 @@ struct Server {
     typed: Vec<u8>,
     /// Session channels (the tiny shell only answers on these, not on jump tunnels).
     sessions: Vec<ChannelId>,
+    /// Channels running the "install my key" script.
+    installs: Vec<ChannelId>,
 }
 
 fn methods(rules: &Rules, key_accepted: bool) -> MethodSet {
@@ -227,6 +232,8 @@ impl Handler for Server {
             session.exit_status_request(channel, 0)?;
             session.eof(channel)?;
             session.close(channel)?;
+        } else if command == copy_id::SCRIPT.as_bytes() {
+            self.installs.push(channel);
         }
         Ok(())
     }
@@ -237,6 +244,33 @@ impl Handler for Server {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
+        // The key line of "install my key": added unless the same key is there.
+        if self.installs.contains(&channel) {
+            let text = String::from_utf8_lossy(data);
+            let line = text.lines().next().unwrap_or_default().trim().to_owned();
+            let key: Vec<&str> = line.split_whitespace().take(2).collect();
+            let answer = {
+                let mut keys = self
+                    .rules
+                    .authorized_keys
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner);
+                if keys
+                    .iter()
+                    .any(|known| known.split_whitespace().take(2).collect::<Vec<_>>() == key)
+                {
+                    "__present__\n"
+                } else {
+                    keys.push(line);
+                    "__added__\n"
+                }
+            };
+            session.data(channel, answer.as_bytes().to_vec())?;
+            session.exit_status_request(channel, 0)?;
+            session.eof(channel)?;
+            session.close(channel)?;
+            return Ok(());
+        }
         // A tiny shell: echo, "exit" ends it, "drop" drops the connection.
         if !self.sessions.contains(&channel) {
             return Ok(());
@@ -286,6 +320,7 @@ pub async fn serve(rules: Rules) -> std::io::Result<u16> {
                 code_asked: false,
                 typed: Vec::new(),
                 sessions: Vec::new(),
+                installs: Vec::new(),
             };
             let config = Arc::clone(&config);
             tokio::spawn(async move {

@@ -19,6 +19,7 @@ pragma ComponentBehavior: Bound
 //   host: string           the saved host it connects to, if any (model role)
 //   target: string         the quick-connect target it connects to, if any (model role)
 //   commandJson: string    the program and arguments to run instead of a shell, as a JSON list
+//   installKey: string     a public key line to install on the SSH host once connected
 //   label: string          what it connects to, for titles (the host's name or the target)
 //   profile: string        the pane's profile id (model role; empty lets a host decide)
 //   directory: string      where a new shell starts (model role; empty for home)
@@ -29,6 +30,7 @@ pragma ComponentBehavior: Bound
 //   receiving: bool        read-only; input typed here also reaches other panes
 //   fontZoom: real         points added to the profile's font size (Ctrl+= / Ctrl+- / Ctrl+0)
 //   highlightOn: bool      keyword highlighting in this pane
+//   keyInstallResult: string  read-only; `added`, `present` or `failed` once installKey was tried
 // Functions: focusTerminal(), openSearch(), closeSearch(), findNext(forward), copy(), paste(),
 // selectAll(), clearScrollback(), restart(), closePane(), zoom(step) (0 resets),
 // toggleHighlight(), useProfile(id), currentDirectory().
@@ -46,6 +48,7 @@ Item {
     required property string host
     required property string target
     required property string commandJson
+    required property string installKey
     required property string label
     required property string profile
     required property string directory
@@ -65,6 +68,7 @@ Item {
     property string searchState: "none"
     // The shell ended with an error (a code other than 0, or killed, or it didn't start).
     property bool failed: false
+    property string keyInstallResult: ""
 
     function focusTerminal() {
         terminal.forceActiveFocus(Qt.OtherFocusReason);
@@ -230,6 +234,7 @@ Item {
         sessionId: pane.startSession ? pane.paneId : 0
         hostId: pane.host
         sshTarget: pane.kind === "ssh" && pane.host.length === 0 ? pane.target : ""
+        installKey: pane.installKey
         command: JSON.parse(pane.commandJson || "[]")
         demo: !pane.startSession
         demoDark: Theme.dark
@@ -278,6 +283,15 @@ Item {
         onOsDetected: icon => {
             if (pane.host.length > 0)
                 Hosts.setDetectedOs(pane.host, icon);
+        }
+        onKeyInstalled: (result, detail) => {
+            pane.keyInstallResult = result;
+            if (result === "added")
+                Toasts.show(qsTr("Your key was added on %1: it logs you in from now on.").arg(pane.label), "success");
+            else if (result === "present")
+                Toasts.show(qsTr("Your key was already on %1.").arg(pane.label), "info");
+            else
+                Toasts.show(qsTr("Your key couldn't be installed on %1: %2").arg(pane.label).arg(detail), "danger");
         }
         onContextMenuRequested: (x, y) => contextMenu.popup(terminal, x, y)
     }
