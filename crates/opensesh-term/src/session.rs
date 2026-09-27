@@ -1151,10 +1151,8 @@ impl Painter<'_> {
             std::mem::swap(&mut fg, &mut bg);
         }
         let mut out_flags = map_flags(engine_flags);
-        if HIGHLIGHT {
-            if let Some(style) = highlight {
-                self.apply_highlight(style, &mut fg, &mut bg, &mut underline, &mut out_flags);
-            }
+        if HIGHLIGHT && let Some(style) = highlight {
+            self.apply_highlight(style, &mut fg, &mut bg, &mut underline, &mut out_flags);
         }
         let mut underline = underline.unwrap_or(fg);
 

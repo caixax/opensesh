@@ -296,10 +296,10 @@ impl Keychain {
                     .ok_or_else(|| KeychainOpError::NotFound(edit.id.clone()))?,
             )
         };
-        if let Some(key) = &edit.key {
-            if file.key(key).is_none() {
-                return Err(KeychainOpError::NotFound(key.clone()));
-            }
+        if let Some(key) = &edit.key
+            && file.key(key).is_none()
+        {
+            return Err(KeychainOpError::NotFound(key.clone()));
         }
         let mut identity = existing
             .and_then(|index| file.identities.get(index).cloned())
@@ -368,10 +368,10 @@ impl Keychain {
     /// Removes a secret nothing refers to any more; while locked it waits for the next
     /// [`Keychain::collect_garbage`].
     fn forget_secret(&mut self, id: ulid::Ulid) {
-        if self.vault.status() == Status::Unlocked {
-            if let Err(error) = self.vault.remove(&[id]) {
-                tracing::warn!("could not remove a secret from the vault: {error}");
-            }
+        if self.vault.status() == Status::Unlocked
+            && let Err(error) = self.vault.remove(&[id])
+        {
+            tracing::warn!("could not remove a secret from the vault: {error}");
         }
     }
 

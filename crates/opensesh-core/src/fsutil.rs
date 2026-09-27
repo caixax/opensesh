@@ -69,11 +69,11 @@ pub fn atomic_write(path: &Path, contents: &[u8], backups: usize) -> io::Result<
         }
         return Err(error);
     }
-    if let Some(previous) = previous {
-        if let Err(error) = rotate_backups(path, &previous, backups) {
-            tracing::warn!(path = %path.display(), "saved, but could not rotate the backups: {error}");
-            discard(&previous);
-        }
+    if let Some(previous) = previous
+        && let Err(error) = rotate_backups(path, &previous, backups)
+    {
+        tracing::warn!(path = %path.display(), "saved, but could not rotate the backups: {error}");
+        discard(&previous);
     }
     sync_dir(&dir).map(|()| WriteOutcome::Written)
 }

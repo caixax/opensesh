@@ -206,10 +206,10 @@ pub fn serve(
     endpoint: Endpoint,
     handler: impl Fn(Request) -> Reply + Send + Sync + 'static,
 ) -> Result<Server, IpcError> {
-    if let Some(path) = endpoint.path() {
-        if let Some(dir) = path.parent() {
-            std::fs::create_dir_all(dir).map_err(IpcError::Io)?;
-        }
+    if let Some(path) = endpoint.path()
+        && let Some(dir) = path.parent()
+    {
+        std::fs::create_dir_all(dir).map_err(IpcError::Io)?;
     }
     let create = |overwrite: bool| {
         ListenerOptions::new()

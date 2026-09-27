@@ -237,12 +237,13 @@ fn percent_decode(text: &str) -> String {
             .and_then(|digit| u8::try_from(digit).ok())
     };
     while index < bytes.len() {
-        if bytes[index] == b'%' && index + 2 < bytes.len() {
-            if let (Some(high), Some(low)) = (hex(bytes[index + 1]), hex(bytes[index + 2])) {
-                out.push(high * 16 + low);
-                index += 3;
-                continue;
-            }
+        if bytes[index] == b'%'
+            && index + 2 < bytes.len()
+            && let (Some(high), Some(low)) = (hex(bytes[index + 1]), hex(bytes[index + 2]))
+        {
+            out.push(high * 16 + low);
+            index += 3;
+            continue;
         }
         out.push(bytes[index]);
         index += 1;
@@ -456,10 +457,11 @@ pub fn parse(text: &str) -> Result<Target, TargetError> {
         }
     };
     // `telnet host 23`: the port as a second word.
-    if target.protocol == Protocol::Telnet && target.port.is_none() {
-        if let Some(word) = positional.next() {
-            target.port = Some(parse_port(&word)?);
-        }
+    if target.protocol == Protocol::Telnet
+        && target.port.is_none()
+        && let Some(word) = positional.next()
+    {
+        target.port = Some(parse_port(&word)?);
     }
     if let Some(extra) = positional.next() {
         return Err(TargetError::Extra(extra));
@@ -564,10 +566,10 @@ impl SshArgs {
         for hop in &self.jump {
             parse_endpoint(hop)?;
         }
-        if let Some(file) = &self.identity_file {
-            if file.trim_start().starts_with('-') {
-                return Err(TargetError::BadName(file.clone()));
-            }
+        if let Some(file) = &self.identity_file
+            && file.trim_start().starts_with('-')
+        {
+            return Err(TargetError::BadName(file.clone()));
         }
         Ok(())
     }

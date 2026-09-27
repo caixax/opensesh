@@ -153,11 +153,11 @@ pub(crate) fn command_builder(
         builder.cwd(cwd);
     }
     apply_environment(&mut builder);
-    if cfg!(unix) {
-        if let Some(cwd) = &cwd {
-            // Lets the shell keep a symlinked path in `pwd` (as VTE does).
-            builder.env("PWD", cwd);
-        }
+    if cfg!(unix)
+        && let Some(cwd) = &cwd
+    {
+        // Lets the shell keep a symlinked path in `pwd` (as VTE does).
+        builder.env("PWD", cwd);
     }
     for (name, value) in &command.env {
         builder.env(name, value);

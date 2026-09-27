@@ -244,15 +244,15 @@ impl TerminalTheme {
                 .map(|value| value.trim().to_owned())
                 .unwrap_or_default()
         };
-        if let Some(Value::Integer(version)) = root.get("schema_version") {
-            if *version > SCHEMA_VERSION {
-                warnings.push(Warning {
-                    key: "schema_version".to_owned(),
-                    message: format!(
-                        "version {version} is newer than this OpenSesh supports ({SCHEMA_VERSION})"
-                    ),
-                });
-            }
+        if let Some(Value::Integer(version)) = root.get("schema_version")
+            && *version > SCHEMA_VERSION
+        {
+            warnings.push(Warning {
+                key: "schema_version".to_owned(),
+                message: format!(
+                    "version {version} is newer than this OpenSesh supports ({SCHEMA_VERSION})"
+                ),
+            });
         }
         let name = string("name");
         let colors_table = match root.get("colors") {

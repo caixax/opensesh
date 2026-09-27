@@ -410,17 +410,18 @@ fn translate_qt(qt_key: i32, qt_modifiers: u32, text: &str, windows: bool) -> Ke
             mods.ctrl = false;
             mods.alt = false;
         }
-        if mods.alt && !mods.ctrl {
-            if let (Key::Character(Some(letter)), Some(typed)) = (key, single_char(&text)) {
-                if letter.is_ascii_alphabetic() && typed.eq_ignore_ascii_case(&letter) {
-                    text = if mods.shift {
-                        typed.to_ascii_uppercase()
-                    } else {
-                        typed.to_ascii_lowercase()
-                    }
-                    .to_string();
-                }
+        if mods.alt
+            && !mods.ctrl
+            && let (Key::Character(Some(letter)), Some(typed)) = (key, single_char(&text))
+            && letter.is_ascii_alphabetic()
+            && typed.eq_ignore_ascii_case(&letter)
+        {
+            text = if mods.shift {
+                typed.to_ascii_uppercase()
+            } else {
+                typed.to_ascii_lowercase()
             }
+            .to_string();
         }
     }
     KeyInput { key, mods, text }
@@ -559,10 +560,10 @@ fn character(
     options: &KeyOptions,
 ) -> Option<Vec<u8>> {
     let esc = mods.alt && options.alt_sends_escape;
-    if mods.ctrl {
-        if let Some(byte) = key.and_then(ctrl_byte).or_else(|| lone_control(text)) {
-            return Some(with_esc(esc, &[byte]));
-        }
+    if mods.ctrl
+        && let Some(byte) = key.and_then(ctrl_byte).or_else(|| lone_control(text))
+    {
+        return Some(with_esc(esc, &[byte]));
     }
     let mut buffer = [0; 4];
     let text = match key {

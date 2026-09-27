@@ -646,10 +646,10 @@ impl Vault {
     ///
     /// When the file can't be removed (the keyring entry is removed on a best-effort basis).
     pub fn reset(&mut self) -> Result<(), VaultError> {
-        if let Some(name) = self.keyring_name() {
-            if let Err(error) = self.store.delete(&name) {
-                tracing::warn!("could not remove the vault key from the keyring: {error}");
-            }
+        if let Some(name) = self.keyring_name()
+            && let Err(error) = self.store.delete(&name)
+        {
+            tracing::warn!("could not remove the vault key from the keyring: {error}");
         }
         if let Some(path) = &self.path {
             match std::fs::remove_file(path) {

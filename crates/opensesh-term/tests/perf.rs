@@ -154,10 +154,10 @@ fn backend_floor(command: ShellCommand, limit: Option<Duration>) -> (u64, Durati
     let mut first: Option<Instant> = None;
     let deadline = Instant::now() + PTY_LIMIT;
     loop {
-        if let (Some(first), Some(limit)) = (first, limit) {
-            if first.elapsed() >= limit {
-                break;
-            }
+        if let (Some(first), Some(limit)) = (first, limit)
+            && first.elapsed() >= limit
+        {
+            break;
         }
         let left = deadline.saturating_duration_since(Instant::now());
         match events.recv_timeout(left.min(Duration::from_millis(100))) {

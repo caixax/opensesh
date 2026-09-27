@@ -22,7 +22,7 @@ default-members = [
 version = "0.1.2"
 edition = "2024"
 # MSRV: see docs/adr/0002-toolchain-and-msrv.md. Keep in sync with rust-toolchain.toml.
-rust-version = "1.88"
+rust-version = "1.89"
 license = "GPL-3.0-or-later"
 authors = ["OpenSesh contributors"]
 homepage = "https://github.com/caixax/opensesh"

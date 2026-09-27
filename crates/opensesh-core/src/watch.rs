@@ -75,14 +75,14 @@ impl FileWatcher {
                 }
             })?;
         watcher.watch(&dir, RecursiveMode::NonRecursive)?;
-        if let Some(target_dir) = target_dir {
-            if let Err(error) = watcher.watch(&target_dir, RecursiveMode::NonRecursive) {
-                tracing::warn!(
-                    dir = %target_dir.display(),
-                    "edits to the link target of {} won't be noticed: {error}",
-                    path.display()
-                );
-            }
+        if let Some(target_dir) = target_dir
+            && let Err(error) = watcher.watch(&target_dir, RecursiveMode::NonRecursive)
+        {
+            tracing::warn!(
+                dir = %target_dir.display(),
+                "edits to the link target of {} won't be noticed: {error}",
+                path.display()
+            );
         }
 
         std::thread::Builder::new()

@@ -89,10 +89,10 @@ pub fn set_listening() {
 pub fn push(request: Request) {
     let mut shared = SHARED.lock().unwrap_or_else(PoisonError::into_inner);
     shared.pending.push(request);
-    if shared.ready {
-        if let Some(thread) = &shared.thread {
-            let _ = thread.queue(|object| object.drain());
-        }
+    if shared.ready
+        && let Some(thread) = &shared.thread
+    {
+        let _ = thread.queue(|object| object.drain());
     }
 }
 
