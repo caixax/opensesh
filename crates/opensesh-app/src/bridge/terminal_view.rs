@@ -265,6 +265,7 @@ pub mod qobject {
         #[qproperty(QString, host_id, cxx_name = "hostId", READ, WRITE = set_host_id, NOTIFY = inputs_changed)]
         #[qproperty(QString, ssh_target, cxx_name = "sshTarget", READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, install_key, cxx_name = "installKey", READ, WRITE, NOTIFY = inputs_changed)]
+        #[qproperty(QString, playback, READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, connection, READ, NOTIFY = ssh_changed)]
         #[qproperty(i32, connection_serial, cxx_name = "connectionSerial", READ, NOTIFY = ssh_changed)]
         #[qproperty(QString, prompt, READ, NOTIFY = ssh_changed)]
@@ -518,6 +519,18 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "sendText"]
         fn send_text(self: Pin<&mut TerminalItem>, text: &QString);
+
+        /// Controls the recording this pane plays: `play`, `pause`, `restart`, `speed` (`value`
+        /// times faster) or `seek` (to `value` seconds). False when it plays none.
+        #[qinvokable]
+        #[cxx_name = "playerCommand"]
+        fn player_command(self: &TerminalItem, action: &QString, value: f64) -> bool;
+
+        /// The player's state as JSON, `{playing, position, duration, speed}` (seconds, pauses
+        /// shortened); empty when this pane plays no recording.
+        #[qinvokable]
+        #[cxx_name = "playerStatus"]
+        fn player_status(self: &TerminalItem) -> QString;
 
         /// Answers the SSH question `id`: `action` is `trust-once`, `trust-save`, `submit` (with
         /// `secrets`, one per field) or `cancel`. Returns whether it was still waiting.
@@ -898,6 +911,8 @@ pub struct TerminalItemRust {
     host_id: QString,
     ssh_target: QString,
     install_key: QString,
+    /// The recording this pane plays (a `.cast` path); empty for a shell or a connection.
+    playback: QString,
     connection: QString,
     /// Grows with each SSH connection that comes up; 0 while there is none.
     connection_serial: i32,
@@ -1011,6 +1026,7 @@ impl Default for TerminalItemRust {
             host_id: QString::default(),
             ssh_target: QString::default(),
             install_key: QString::default(),
+            playback: QString::default(),
             connection: QString::default(),
             connection_serial: 0,
             live: None,
@@ -1510,6 +1526,62 @@ impl qobject::TerminalItem {
         }))
     }
 
+    /// Starts the session of pane `id`: a recording's player, the built-in SSH client, or a
+    /// local program; `restart` ends the pane's session first.
+    fn open_session(
+        &self,
+        id: i32,
+        options: LocalOptions,
+        restart: bool,
+    ) -> Result<Arc<SessionEntry>, String> {
+        if restart {
+            registry::close(id);
+        }
+        if !self.playback.is_empty() {
+            let path = std::path::PathBuf::from(self.playback.to_string());
+            return registry::open_player(id, path, options).map_err(|error| error.to_string());
+        }
+        match self.ssh_start(&options) {
+            Some(Ok(ssh)) => {
+                registry::open_ssh(id, options, ssh).map_err(|error| error.to_string())
+            }
+            Some(Err(message)) => Err(message),
+            None => registry::open_local(id, options).map_err(|error| error.to_string()),
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn player_command(&self, action: &QString, value: f64) -> bool {
+        let Some(player) = self.entry().and_then(|entry| entry.player()) else {
+            return false;
+        };
+        match action.to_string().as_str() {
+            "play" => player.play(),
+            "pause" => player.pause(),
+            "restart" => player.restart(),
+            "speed" => player.set_speed(value),
+            "seek" => player.seek(value),
+            _ => return false,
+        }
+        true
+    }
+
+    /// See the bridge declaration.
+    pub fn player_status(&self) -> QString {
+        let Some(player) = self.entry().and_then(|entry| entry.player()) else {
+            return QString::default();
+        };
+        QString::from(
+            &serde_json::json!({
+                "playing": player.playing(),
+                "position": player.position(),
+                "duration": player.duration(),
+                "speed": player.speed(),
+            })
+            .to_string(),
+        )
+    }
+
     /// Mirrors the SSH connection's state and question into `connection` and `prompt`.
     fn publish_ssh(mut self: Pin<&mut Self>, entry: &SessionEntry) {
         let Some(view) = entry.ssh() else {
@@ -1791,13 +1863,7 @@ impl qobject::TerminalItem {
                     return;
                 };
                 let options = self.as_mut().rust_mut().local_options(size);
-                let opened = match self.ssh_start(&options) {
-                    Some(Ok(ssh)) => {
-                        registry::open_ssh(id, options, ssh).map_err(|error| error.to_string())
-                    }
-                    Some(Err(message)) => Err(message),
-                    None => registry::open_local(id, options).map_err(|error| error.to_string()),
-                };
+                let opened = self.open_session(id, options, false);
                 match opened {
                     Ok(entry) => entry,
                     Err(error) => {
@@ -2371,13 +2437,7 @@ impl qobject::TerminalItem {
         self.as_mut().detach();
         tracing::info!(id, "restarting a terminal");
         let options = self.as_mut().rust_mut().local_options(size);
-        let restarted = match self.ssh_start(&options) {
-            Some(Ok(ssh)) => {
-                registry::restart_ssh(id, options, ssh).map_err(|error| error.to_string())
-            }
-            Some(Err(message)) => Err(message),
-            None => registry::restart_local(id, options).map_err(|error| error.to_string()),
-        };
+        let restarted = self.open_session(id, options, true);
         match restarted {
             Ok(entry) => {
                 self.as_mut().rust_mut().start_error = QString::default();

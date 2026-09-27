@@ -22,6 +22,7 @@ use opensesh_ssh::prompt::{Answer, Asker, Prompt, Request};
 use opensesh_term::backend::{self, BackendError, TermSize};
 use opensesh_term::palette::Palette;
 use opensesh_term::pty;
+use opensesh_term::recording::{self, PlayerControl};
 use opensesh_term::session::{
     Notice, Notify, Session, SessionConfig, SessionError, SessionOptions,
 };
@@ -146,6 +147,8 @@ struct SessionState {
     attachment: Option<(u64, Waker)>,
     /// A wake-up is queued and not yet taken by the attached item.
     queued: bool,
+    /// The controls of the recording this session plays, if it plays one.
+    player: Option<PlayerControl>,
 }
 
 impl SessionState {
@@ -270,6 +273,12 @@ impl SessionEntry {
             .live
             .as_ref()
             .map(|live| Arc::clone(&live.0))
+    }
+
+    /// The controls of the recording this session plays; `None` for other sessions.
+    #[must_use]
+    pub fn player(&self) -> Option<PlayerControl> {
+        lock(&self.state).player.clone()
     }
 
     /// How installing the public key went, once (the next call gets `None`).
@@ -458,6 +467,29 @@ pub fn open_replay(
     Ok((id, entry))
 }
 
+/// The session of pane `id`, starting a player of the recording in `path` for it if there is
+/// none yet (paused; the file is read on the player's thread).
+///
+/// # Errors
+/// [`StartError`] if the engine thread could not be created.
+pub fn open_player(
+    id: i32,
+    path: std::path::PathBuf,
+    options: LocalOptions,
+) -> Result<Arc<SessionEntry>, StartError> {
+    open_with(id, move |notify, state| {
+        let (backend, events, control) = recording::player_file(path);
+        lock(state).player = Some(control);
+        let config = SessionConfig {
+            size: options.size,
+            palette: options.palette,
+            options: options.options,
+            ..SessionConfig::default()
+        };
+        Ok(Session::start(backend, events, config, notify)?)
+    })
+}
+
 /// The session of tab `id`, if it is open.
 #[must_use]
 pub fn get(id: i32) -> Option<Arc<SessionEntry>> {
@@ -484,19 +516,6 @@ pub fn open_ssh(
     open_with(id, |notify, state| {
         start_ssh(id, options, ssh, notify, state)
     })
-}
-
-/// Ends the session of tab `id` (if any) and starts a new SSH session for it.
-///
-/// # Errors
-/// [`StartError`] if the new session could not be started.
-pub fn restart_ssh(
-    id: i32,
-    options: LocalOptions,
-    ssh: SshStart,
-) -> Result<Arc<SessionEntry>, StartError> {
-    close(id);
-    open_ssh(id, options, ssh)
 }
 
 /// Starts an SSH session: questions and state go to the entry's shared state and wake the item.
@@ -579,6 +598,7 @@ fn open_with(
 /// Ends the session of tab `id` and forgets it. Returns whether there was one.
 pub fn close(id: i32) -> bool {
     crate::tunnels::session_closed(id);
+    crate::recordings::session_closed(id);
     let entry = sessions().remove(&id);
     match entry {
         Some(entry) => {
@@ -588,15 +608,6 @@ pub fn close(id: i32) -> bool {
         }
         None => false,
     }
-}
-
-/// Ends the session of tab `id` (if any) and starts a new local shell for it.
-///
-/// # Errors
-/// [`StartError`] if a thread for the new session could not be created.
-pub fn restart_local(id: i32, options: LocalOptions) -> Result<Arc<SessionEntry>, StartError> {
-    close(id);
-    open_local(id, options)
 }
 
 /// How many tab sessions are open (previews don't count).

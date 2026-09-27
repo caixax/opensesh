@@ -7,6 +7,8 @@ pragma ComponentBehavior: Bound
 // closes its pane. Panes stay alive while hidden (another tab, or another pane maximized), so
 // their shells keep running. An `ssh` pane without a command connects with the built-in client,
 // whose state and questions show in an SshOverlay; the OS it finds becomes the host's icon.
+// A `player` pane plays a session recording, with a bar to play, pause, jump, restart and pick
+// the speed. Any other pane can record its session (the menu; a chip while it records).
 //
 // Broadcast (MultiExec): while the tab broadcasts, what is typed or pasted in a pane that
 // receives broadcast input also goes to the other receiving panes. Those panes, and only those,
@@ -15,9 +17,10 @@ pragma ComponentBehavior: Bound
 //   workspace: Item        the TabWorkspace (shell, participants, pasteConfirmed, closePane(),
 //                          setFocusedPane(), paneActivity(), paneBell(), reviewPaste())
 //   paneId: int            the pane's id, which is also its session id
-//   kind: string           `local` or `ssh` (model role)
+//   kind: string           `local`, `ssh` or `player` (model role)
 //   host: string           the saved host it connects to, if any (model role)
-//   target: string         the quick-connect target it connects to, if any (model role)
+//   target: string         the quick-connect target it connects to, or the recording a
+//                          player plays (model role)
 //   commandJson: string    the program and arguments to run instead of a shell, as a JSON list
 //   installKey: string     a public key line to install on the SSH host once connected
 //   label: string          what it connects to, for titles (the host's name or the target)
@@ -33,7 +36,8 @@ pragma ComponentBehavior: Bound
 //   keyInstallResult: string  read-only; `added`, `present` or `failed` once installKey was tried
 // Functions: focusTerminal(), openSearch(), closeSearch(), findNext(forward), copy(), paste(),
 // selectAll(), clearScrollback(), restart(), closePane(), zoom(step) (0 resets),
-// toggleHighlight(), useProfile(id), currentDirectory().
+// toggleHighlight(), useProfile(id), currentDirectory(), toggleMacroRecording(),
+// toggleSessionRecording(), playerCommand(action, value).
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -58,6 +62,12 @@ Item {
     property bool highlightOn: true
     // What is typed here is recorded as a macro (Snippets.recordStart).
     property bool recordingMacro: false
+    readonly property bool player: kind === "player"
+    // The session is recorded into a file (Recordings.start).
+    readonly property bool recordingSession: JSON.parse(Recordings.panes || "[]").indexOf(paneId) >= 0
+    // A player's state: {playing, position, duration, speed} (seconds).
+    property var playerState: ({ playing: false, position: 0, duration: 0, speed: 1 })
+    property bool playerStarted: false
     readonly property var profileList: JSON.parse(TerminalProfiles.profiles || "[]")
 
     readonly property alias terminal: terminal
@@ -166,6 +176,43 @@ Item {
             shell.editRecordedMacro(steps);
     }
 
+    // Starts recording this pane's session into a file, or stops and says where it went.
+    function toggleSessionRecording() {
+        if (recordingSession) {
+            if (Recordings.stop(paneId).length > 0)
+                Toasts.show(qsTr("The recording was saved."), "success", qsTr("Show recordings"), "view.history");
+            return;
+        }
+        const title = terminal.title.length > 0 ? terminal.title : label.length > 0 ? label : qsTr("Local terminal");
+        if (Recordings.start(paneId, title).length === 0)
+            Toasts.show(qsTr("The recording couldn't start."), "danger", qsTr("Open logs"), "app.openLogsFolder");
+    }
+
+    // `play`, `pause`, `restart`, `speed` (value: times faster) or `seek` (value: seconds).
+    function playerCommand(action, value) {
+        terminal.playerCommand(action, value ?? 0);
+        updatePlayerState();
+    }
+
+    function updatePlayerState() {
+        const text = terminal.playerStatus();
+        if (text.length === 0)
+            return;
+        playerState = JSON.parse(text);
+        // It starts playing once the file is read.
+        if (!playerStarted && playerState.duration > 0) {
+            playerStarted = true;
+            terminal.playerCommand("play", 0);
+        }
+    }
+
+    // 75 -> "1:15".
+    function clockText(seconds) {
+        const total = Math.floor(Math.max(0, seconds));
+        const rest = total % 60;
+        return Math.floor(total / 60) + ":" + (rest < 10 ? "0" : "") + rest;
+    }
+
     function useProfile(id) {
         workspace.setPaneProfile(paneId, id);
     }
@@ -249,9 +296,11 @@ Item {
         id: terminal
 
         anchors.fill: parent
+        anchors.bottomMargin: pane.player ? playerBar.height : 0
         sessionId: pane.startSession ? pane.paneId : 0
         hostId: pane.host
         sshTarget: pane.kind === "ssh" && pane.host.length === 0 ? pane.target : ""
+        playback: pane.player ? pane.target : ""
         installKey: pane.installKey
         command: JSON.parse(pane.commandJson || "[]")
         demo: !pane.startSession
@@ -418,19 +467,34 @@ Item {
         z: 2
     }
 
-    // While a macro records: a chip that stops it.
-    OsButton {
+    // While the pane records (a macro, or the session into a file): chips that stop it.
+    Column {
         anchors.top: broadcastChip.visible ? broadcastChip.bottom : pane.searchOpen ? searchBar.bottom : parent.top
         anchors.right: parent.right
         anchors.topMargin: Theme.spacingSm
         anchors.rightMargin: Theme.spacingLg + pane.edgeInset
-        visible: pane.recordingMacro
+        spacing: Theme.spacingXs
         z: 3
-        variant: "danger"
-        iconName: "square"
-        text: qsTr("Recording a macro")
-        focusPolicy: Qt.NoFocus
-        onClicked: pane.toggleMacroRecording()
+
+        OsButton {
+            anchors.right: parent.right
+            visible: pane.recordingMacro
+            variant: "danger"
+            iconName: "square"
+            text: qsTr("Recording a macro")
+            focusPolicy: Qt.NoFocus
+            onClicked: pane.toggleMacroRecording()
+        }
+
+        OsButton {
+            anchors.right: parent.right
+            visible: pane.recordingSession
+            variant: "danger"
+            iconName: "circle-dot"
+            text: qsTr("Recording the session")
+            focusPolicy: Qt.NoFocus
+            onClicked: pane.toggleSessionRecording()
+        }
     }
 
     // While the tab broadcasts: whether this pane receives, and the switch to change it.
@@ -607,6 +671,105 @@ Item {
 
             interval: 200
             onTriggered: pane.findNext(false)
+        }
+    }
+
+    // A recording's controls, under the terminal: play or pause, from the start, the position
+    // (drag to jump), the speed.
+    Rectangle {
+        id: playerBar
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: pane.player ? playerRow.implicitHeight + 2 * Theme.spacingXs : 0
+        visible: pane.player
+        z: 3
+        color: Theme.surface
+
+        Accessible.role: Accessible.ToolBar
+        Accessible.name: qsTr("Recording controls")
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: Theme.borderWidth
+            color: Theme.border
+        }
+
+        RowLayout {
+            id: playerRow
+
+            anchors.fill: parent
+            anchors.leftMargin: Theme.spacingSm
+            anchors.rightMargin: Theme.spacingMd + pane.edgeInset
+            spacing: Theme.spacingSm
+
+            OsIconButton {
+                iconName: pane.playerState.playing ? "pause" : "play"
+                toolTip: pane.playerState.playing ? qsTr("Pause") : qsTr("Play")
+                onClicked: pane.playerCommand(pane.playerState.playing ? "pause" : "play")
+            }
+
+            OsIconButton {
+                iconName: "rotate-ccw"
+                toolTip: qsTr("Play from the start")
+                onClicked: pane.playerCommand("restart")
+            }
+
+            OsText {
+                text: pane.clockText(pane.playerState.position)
+                font.features: { "tnum": 1 }
+                size: "small"
+                muted: true
+            }
+
+            OsSlider {
+                id: positionSlider
+
+                Layout.fillWidth: true
+                from: 0
+                to: Math.max(pane.playerState.duration, 0.001)
+                stepSize: 1
+                Accessible.name: qsTr("Position")
+                onMoved: pane.playerCommand("seek", value)
+
+                Binding on value {
+                    when: !positionSlider.pressed
+                    value: pane.playerState.position
+                    restoreMode: Binding.RestoreNone
+                }
+            }
+
+            OsText {
+                text: pane.clockText(pane.playerState.duration)
+                font.features: { "tnum": 1 }
+                size: "small"
+                muted: true
+            }
+
+            OsComboBox {
+                id: speedBox
+
+                readonly property var speeds: [0.5, 1, 2, 4, 8]
+
+                Layout.preferredWidth: Theme.spacingXxl * 2.5
+                model: speeds.map(speed => ({ text: qsTr("%1×").arg(speed), value: speed }))
+                textRole: "text"
+                valueRole: "value"
+                currentIndex: Math.max(0, speeds.indexOf(pane.playerState.speed))
+                Accessible.name: qsTr("Speed")
+                onActivated: pane.playerCommand("speed", currentValue)
+            }
+        }
+
+        Timer {
+            interval: 200
+            repeat: true
+            running: pane.player && pane.startSession && pane.visible
+            triggeredOnStart: true
+            onTriggered: pane.updatePlayerState()
         }
     }
 
@@ -801,8 +964,18 @@ Item {
         OsMenuSeparator {}
 
         OsMenuItem {
+            text: pane.recordingSession ? qsTr("Stop recording the session") : qsTr("Record the session")
+            iconName: pane.recordingSession ? "square" : "circle-dot"
+            visible: !pane.player
+            height: visible ? implicitHeight : 0
+            onTriggered: pane.toggleSessionRecording()
+        }
+
+        OsMenuItem {
             text: pane.recordingMacro ? qsTr("Stop recording the macro…") : qsTr("Record a macro")
             iconName: pane.recordingMacro ? "square" : "play"
+            visible: !pane.player
+            height: visible ? implicitHeight : 0
             onTriggered: pane.toggleMacroRecording()
         }
 
@@ -810,6 +983,8 @@ Item {
             text: qsTr("Run a snippet…")
             iconName: "scroll-text"
             shortcutText: pane.shell.shortcutText("snippets.quick")
+            visible: !pane.player
+            height: visible ? implicitHeight : 0
             onTriggered: pane.shell.showSnippetPicker()
         }
 

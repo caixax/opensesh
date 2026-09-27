@@ -252,6 +252,14 @@
         <translation>[Ťéŕmíñáĺ šéťťíñĝš ~~~~~~]</translation>
     </message>
     <message>
+        <source>Run a snippet…</source>
+        <translation>[Ŕüñ á šñíþþéť… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>New snippet…</source>
+        <translation>[Ñéŵ šñíþþéť… ~~~~]</translation>
+    </message>
+    <message>
         <source>Toggle side panel</source>
         <translation>[Ťöĝĝĺé šíďé þáñéĺ ~~~~~~]</translation>
     </message>
@@ -491,6 +499,10 @@
         <translation>[Çöññéçť ťö %1 ~~~~]</translation>
     </message>
     <message>
+        <source>Open a terminal to run %1 in.</source>
+        <translation>[Öþéñ á ťéŕmíñáĺ ťö ŕüñ %1 íñ. ~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>tunnel</source>
         <translation>[ťüññéĺ ~~]</translation>
     </message>
@@ -529,6 +541,30 @@
     <message>
         <source>Metrics</source>
         <translation>[Méťŕíçš ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 stopped: its pane closed.</source>
+        <translation>[%1 šťöþþéď: íťš þáñé çĺöšéď. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 stopped: “%2” didn&apos;t appear in time.</source>
+        <translation>[%1 šťöþþéď: “%2” ďíďñ&apos;ť áþþéáŕ íñ ťímé. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 needs the password of %2: unlock the vault first.</source>
+        <translation>[%1 ñééďš ťĥé þáššŵöŕď öƒ %2: üñĺöçķ ťĥé váüĺť ƒíŕšť. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1: the keychain has no identity called %2.</source>
+        <translation>[%1: ťĥé ķéýçĥáíñ ĥáš ñö íďéñťíťý çáĺĺéď %2. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1: the identity %2 has no password.</source>
+        <translation>[%1: ťĥé íďéñťíťý %2 ĥáš ñö þáššŵöŕď. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 stopped: %2 has no value.</source>
+        <translation>[%1 šťöþþéď: %2 ĥáš ñö váĺüé. ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>The tunnel %1 needs an answer to connect: see Tunnels.</source>
@@ -1726,16 +1762,84 @@
 <context>
     <name>HistoryView</name>
     <message>
-        <source>No history yet</source>
-        <translation>[Ñö ĥíšťöŕý ýéť ~~~~~]</translation>
+        <source>The recording wasn&apos;t deleted: %1</source>
+        <translation>[Ťĥé ŕéçöŕďíñĝ ŵášñ&apos;ť ďéĺéťéď: %1 ~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Your recent connections appear here with hosts and sessions in Sprint 5. Session logs arrive in Sprint 7 and recordings in Sprint 10.</source>
-        <translation>[Ýöüŕ ŕéçéñť çöññéçťíöñš áþþéáŕ ĥéŕé ŵíťĥ ĥöšťš áñď šéššíöñš íñ Šþŕíñť 5. Šéššíöñ ĺöĝš áŕŕívé íñ Šþŕíñť 7 áñď ŕéçöŕďíñĝš íñ Šþŕíñť 10. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>History</source>
+        <translation>[Ĥíšťöŕý ~~~]</translation>
     </message>
     <message>
-        <source>Open logs folder</source>
-        <translation>[Öþéñ ĺöĝš ƒöĺďéŕ ~~~~~]</translation>
+        <source>Recent connections, session recordings and logs</source>
+        <translation>[Ŕéçéñť çöññéçťíöñš, šéššíöñ ŕéçöŕďíñĝš áñď ĺöĝš ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Session logs</source>
+        <translation>[Šéššíöñ ĺöĝš ~~~~]</translation>
+    </message>
+    <message>
+        <source>App logs</source>
+        <translation>[Åþþ ĺöĝš ~~~]</translation>
+    </message>
+    <message>
+        <source>Recent connections</source>
+        <translation>[Ŕéçéñť çöññéçťíöñš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>[Çĺéáŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Quick connect</source>
+        <translation>[Qüíçķ çöññéçť ~~~~]</translation>
+    </message>
+    <message>
+        <source>The hosts you connect to show up here.</source>
+        <translation>[Ťĥé ĥöšťš ýöü çöññéçť ťö šĥöŵ üþ ĥéŕé. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Recordings</source>
+        <translation>[Ŕéçöŕďíñĝš ~~~]</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>[Öþéñ ƒöĺďéŕ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Recording now</source>
+        <translation>[Ŕéçöŕďíñĝ ñöŵ ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 · %2</source>
+        <translation>[%1 · %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Play</source>
+        <translation>[Þĺáý ~~]</translation>
+    </message>
+    <message>
+        <source>Delete…</source>
+        <translation>[Ďéĺéťé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Record a terminal from its menu (Record the session) to play it here later.</source>
+        <translation>[Ŕéçöŕď á ťéŕmíñáĺ ƒŕöm íťš méñü (Ŕéçöŕď ťĥé šéššíöñ) ťö þĺáý íť ĥéŕé ĺáťéŕ. ~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete this recording?</source>
+        <translation>[Ďéĺéťé ťĥíš ŕéçöŕďíñĝ? ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
+    </message>
+    <message>
+        <source>Clear the recent connections?</source>
+        <translation>[Çĺéáŕ ťĥé ŕéçéñť çöññéçťíöñš? ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Your saved hosts stay; only the list of what you connected to goes.</source>
+        <translation>[Ýöüŕ šávéď ĥöšťš šťáý; öñĺý ťĥé ĺíšť öƒ ŵĥáť ýöü çöññéçťéď ťö ĝöéš. ~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -2383,6 +2487,14 @@
     <message>
         <source>Theme (light mode)</source>
         <translation>[Ťĥémé (ĺíĝĥť möďé) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Check pastes</source>
+        <translation>[Çĥéçķ þášťéš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Show what looks risky in a paste before sending it (Settings &gt; Terminal).</source>
+        <translation>[Šĥöŵ ŵĥáť ĺööķš ŕíšķý íñ á þášťé béƒöŕé šéñďíñĝ íť (Šéťťíñĝš &gt; Ťéŕmíñáĺ). ~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Every other terminal option comes from the profile. Hosts can override any of them in [host.terminal] in hosts.toml.</source>
@@ -3988,6 +4100,109 @@
     <message>
         <source>Collapsed</source>
         <translation>[Çöĺĺáþšéď ~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>PasteReviewDialog</name>
+    <message numerus="yes">
+        <source>%n line(s) run as soon as they are pasted</source>
+        <translation>
+            <numerusform>[%n ĺíñé(š) ŕüñ áš šööñ áš ťĥéý áŕé þášťéď ~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[%n ĺíñé(š) ŕüñ áš šööñ áš ťĥéý áŕé þášťéď ~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n lines; they wait for Enter</source>
+        <translation>
+            <numerusform>[%n ĺíñéš; ťĥéý ŵáíť ƒöŕ Éñťéŕ ~~~~~~~~~]</numerusform>
+            <numerusform>[%n ĺíñéš; ťĥéý ŵáíť ƒöŕ Éñťéŕ ~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>An escape character (%1): it can end the paste early and run what follows</source>
+        <translation>[Åñ éšçáþé çĥáŕáçťéŕ (%1): íť çáñ éñď ťĥé þášťé éáŕĺý áñď ŕüñ ŵĥáť ƒöĺĺöŵš ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A control character (%1)</source>
+        <translation>[Å çöñťŕöĺ çĥáŕáçťéŕ (%1) ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>An invisible character (%1)</source>
+        <translation>[Åñ íñvíšíbĺé çĥáŕáçťéŕ (%1) ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A character that reorders text (%1): what you see isn&apos;t what runs</source>
+        <translation>[Å çĥáŕáçťéŕ ťĥáť ŕéöŕďéŕš ťéxť (%1): ŵĥáť ýöü šéé íšñ&apos;ť ŵĥáť ŕüñš ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A carriage return inside a line: what follows is printed over what came before</source>
+        <translation>[Å çáŕŕíáĝé ŕéťüŕñ íñšíďé á ĺíñé: ŵĥáť ƒöĺĺöŵš íš þŕíñťéď övéŕ ŵĥáť çámé béƒöŕé ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Letters of another alphabet in a Latin word: %1</source>
+        <translation>[Ĺéťťéŕš öƒ áñöťĥéŕ áĺþĥábéť íñ á Ĺáťíñ ŵöŕď: %1 ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Runs a download: %1</source>
+        <translation>[Ŕüñš á ďöŵñĺöáď: %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Runs decoded or computed text: %1</source>
+        <translation>[Ŕüñš ďéçöďéď öŕ çömþüťéď ťéxť: %1 ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Writes to a shell profile, SSH keys or a system file: %1</source>
+        <translation>[Ŵŕíťéš ťö á šĥéĺĺ þŕöƒíĺé, ŠŠĤ ķéýš öŕ á šýšťém ƒíĺé: %1 ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>sudo in a pipe or running a shell: %1</source>
+        <translation>[šüďö íñ á þíþé öŕ ŕüññíñĝ á šĥéĺĺ: %1 ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Destroys data: %1</source>
+        <translation>[Ďéšťŕöýš ďáťá: %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Check this paste</source>
+        <translation>[Çĥéçķ ťĥíš þášťé ~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Paste into %n panes?</source>
+        <translation>
+            <numerusform>[Þášťé íñťö %n þáñéš? ~~~~~~]</numerusform>
+            <numerusform>[Þášťé íñťö %n þáñéš? ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Paste anyway</source>
+        <translation>[Þášťé áñýŵáý ~~~~]</translation>
+    </message>
+    <message>
+        <source>Paste</source>
+        <translation>[Þášťé ~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Broadcast is on, so the text goes to every receiving pane of this tab (%n). You won&apos;t be asked again until broadcast is turned off, unless a paste looks risky.</source>
+        <translation>
+            <numerusform>[Bŕöáďçášť íš öñ, šö ťĥé ťéxť ĝöéš ťö évéŕý ŕéçéívíñĝ þáñé öƒ ťĥíš ťáb (%n). Ýöü ŵöñ&apos;ť bé ášķéď áĝáíñ üñťíĺ bŕöáďçášť íš ťüŕñéď öƒƒ, üñĺéšš á þášťé ĺööķš ŕíšķý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Bŕöáďçášť íš öñ, šö ťĥé ťéxť ĝöéš ťö évéŕý ŕéçéívíñĝ þáñé öƒ ťĥíš ťáb (%n). Ýöü ŵöñ&apos;ť bé ášķéď áĝáíñ üñťíĺ bŕöáďçášť íš ťüŕñéď öƒƒ, üñĺéšš á þášťé ĺööķš ŕíšķý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>What was found</source>
+        <translation>[Ŵĥáť ŵáš ƒöüñď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>line %1</source>
+        <translation>[ĺíñé %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>What will be pasted (you can edit it):</source>
+        <translation>[Ŵĥáť ŵíĺĺ bé þášťéď (ýöü çáñ éďíť íť): ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Text to paste</source>
+        <translation>[Ťéxť ťö þášťé ~~~~]</translation>
     </message>
 </context>
 <context>
@@ -5769,6 +5984,40 @@
     <message>
         <source>Open a terminal or an SSH connection: its files show here and follow its folder.</source>
         <translation>[Öþéñ á ťéŕmíñáĺ öŕ áñ ŠŠĤ çöññéçťíöñ: íťš ƒíĺéš šĥöŵ ĥéŕé áñď ƒöĺĺöŵ íťš ƒöĺďéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>SessionSnippets</name>
+    <message>
+        <source>Search snippets</source>
+        <translation>[Šéáŕçĥ šñíþþéťš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Snippets</source>
+        <translation>[Šñíþþéťš ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n step(s)</source>
+        <translation>
+            <numerusform>[%n šťéþ(š) ~~~]</numerusform>
+            <numerusform>[%n šťéþ(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Manage snippets</source>
+        <translation>[Máñáĝé šñíþþéťš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>No snippets</source>
+        <translation>[Ñö šñíþþéťš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Save the commands you run often, with variables, and run them here with a click.</source>
+        <translation>[Šávé ťĥé çömmáñďš ýöü ŕüñ öƒťéñ, ŵíťĥ váŕíábĺéš, áñď ŕüñ ťĥém ĥéŕé ŵíťĥ á çĺíçķ. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New snippet</source>
+        <translation>[Ñéŵ šñíþþéť ~~~~]</translation>
     </message>
 </context>
 <context>
@@ -7694,6 +7943,14 @@
         <translation>[Åñšŵéŕbáçķ méššáĝé ~~~~~~]</translation>
     </message>
     <message>
+        <source>Check pastes</source>
+        <translation>[Çĥéçķ þášťéš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Before pasting, show what looks risky: lines that run at once, hidden or look-alike characters, downloads run by a shell, writes to shell profiles, destructive commands. The text can be edited there.</source>
+        <translation>[Béƒöŕé þášťíñĝ, šĥöŵ ŵĥáť ĺööķš ŕíšķý: ĺíñéš ťĥáť ŕüñ áť öñçé, ĥíďďéñ öŕ ĺööķ-áĺíķé çĥáŕáçťéŕš, ďöŵñĺöáďš ŕüñ bý á šĥéĺĺ, ŵŕíťéš ťö šĥéĺĺ þŕöƒíĺéš, ďéšťŕüçťívé çömmáñďš. Ťĥé ťéxť çáñ bé éďíťéď ťĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Paste delay</source>
         <translation>[Þášťé ďéĺáý ~~~~]</translation>
     </message>
@@ -8104,20 +8361,295 @@
         <source>Host details and the live system monitor arrive in Sprint 11.</source>
         <translation>[Ĥöšť ďéťáíĺš áñď ťĥé ĺívé šýšťém möñíťöŕ áŕŕívé íñ Šþŕíñť 11. ~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
+</context>
+<context>
+    <name>SnippetEditorDialog</name>
     <message>
-        <source>Quick snippets for the current session arrive in Sprint 10.</source>
-        <translation>[Qüíçķ šñíþþéťš ƒöŕ ťĥé çüŕŕéñť šéššíöñ áŕŕívé íñ Šþŕíñť 10. ~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Recorded macro</source>
+        <translation>[Ŕéçöŕďéď máçŕö ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Edit snippet</source>
+        <translation>[Éďíť šñíþþéť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Save the recorded macro</source>
+        <translation>[Šávé ťĥé ŕéçöŕďéď máçŕö ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New snippet</source>
+        <translation>[Ñéŵ šñíþþéť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>[Šávé ~~]</translation>
+    </message>
+    <message>
+        <source>Everything typed was recorded as text, passwords too: remove them, or type them with {{secret:identity}} from the keychain.</source>
+        <translation>[Évéŕýťĥíñĝ ťýþéď ŵáš ŕéçöŕďéď áš ťéxť, þáššŵöŕďš ťöö: ŕémövé ťĥém, öŕ ťýþé ťĥém ŵíťĥ {{šéçŕéť:íďéñťíťý}} ƒŕöm ťĥé ķéýçĥáíñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>[Föĺďéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Ops/Web</source>
+        <translation>[Öþš/Ŵéb ~~~]</translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation>[Ťáĝš ~~]</translation>
+    </message>
+    <message>
+        <source>Separated by commas.</source>
+        <translation>[Šéþáŕáťéď bý çömmáš. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Description</source>
+        <translation>[Ďéšçŕíþťíöñ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Optional</source>
+        <translation>[Öþťíöñáĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Shortcut</source>
+        <translation>[Šĥöŕťçüť ~~~]</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>[Ťýþé ~~]</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>[Ťéxť ~~]</translation>
+    </message>
+    <message>
+        <source>Macro (steps)</source>
+        <translation>[Máçŕö (šťéþš) ~~~~]</translation>
+    </message>
+    <message>
+        <source>sudo systemctl restart {{service}}</source>
+        <translation>[šüďö šýšťémçťĺ ŕéšťáŕť {{šéŕvíçé}} ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>{{name}} asks for a value when it runs; {{secret:identity}} types the password of a keychain identity. A new line is Enter.</source>
+        <translation>[{{ñámé}} ášķš ƒöŕ á váĺüé ŵĥéñ íť ŕüñš; {{šéçŕéť:íďéñťíťý}} ťýþéš ťĥé þáššŵöŕď öƒ á ķéýçĥáíñ íďéñťíťý. Å ñéŵ ĺíñé íš Éñťéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Wait for</source>
+        <translation>[Ŵáíť ƒöŕ ~~~]</translation>
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation>[Þáüšé ~~]</translation>
+    </message>
+    <message>
+        <source>text; 
+ is Enter</source>
+        <translation>[ťéxť; 
+ íš Éñťéŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>a pattern (regular expression)</source>
+        <translation>[á þáťťéŕñ (ŕéĝüĺáŕ éxþŕéššíöñ) ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Text of step %1</source>
+        <translation>[Ťéxť öƒ šťéþ %1 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pattern of step %1</source>
+        <translation>[Þáťťéŕñ öƒ šťéþ %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Timeout of step %1 in milliseconds</source>
+        <translation>[Ťíméöüť öƒ šťéþ %1 íñ míĺĺíšéçöñďš ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pause of step %1 in milliseconds</source>
+        <translation>[Þáüšé öƒ šťéþ %1 íñ míĺĺíšéçöñďš ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>ms</source>
+        <translation>[mš ~]</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation>[Mövé üþ ~~~]</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation>[Mövé ďöŵñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Remove the step</source>
+        <translation>[Ŕémövé ťĥé šťéþ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Type text</source>
+        <translation>[Ťýþé ťéxť ~~~]</translation>
+    </message>
+    <message>
+        <source>Wait for text</source>
+        <translation>[Ŵáíť ƒöŕ ťéxť ~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>SnippetPicker</name>
+    <message>
+        <source>Run a snippet…</source>
+        <translation>[Ŕüñ á šñíþþéť… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Search snippets</source>
+        <translation>[Šéáŕçĥ šñíþþéťš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Snippets</source>
+        <translation>[Šñíþþéťš ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n step(s)</source>
+        <translation>
+            <numerusform>[%n šťéþ(š) ~~~]</numerusform>
+            <numerusform>[%n šťéþ(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No snippets yet: make one in the Snippets view.</source>
+        <translation>[Ñö šñíþþéťš ýéť: máķé öñé íñ ťĥé Šñíþþéťš víéŵ. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>No snippet matches.</source>
+        <translation>[Ñö šñíþþéť máťçĥéš. ~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>SnippetRunDialog</name>
+    <message>
+        <source>Run %1</source>
+        <translation>[Ŕüñ %1 ~~]</translation>
+    </message>
+    <message>
+        <source>Run</source>
+        <translation>[Ŕüñ ~]</translation>
+    </message>
+    <message>
+        <source>Types the password of %1 from the keychain.</source>
+        <translation>[Ťýþéš ťĥé þáššŵöŕď öƒ %1 ƒŕöm ťĥé ķéýçĥáíñ. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Run in</source>
+        <translation>[Ŕüñ íñ ~~]</translation>
+    </message>
+    <message>
+        <source>The focused pane</source>
+        <translation>[Ťĥé ƒöçüšéď þáñé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Every pane of this tab (%1)</source>
+        <translation>[Évéŕý þáñé öƒ ťĥíš ťáb (%1) ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The broadcast panes (%1)</source>
+        <translation>[Ťĥé bŕöáďçášť þáñéš (%1) ~~~~~~~~]</translation>
     </message>
 </context>
 <context>
     <name>SnippetsView</name>
+    <message numerus="yes">
+        <source>%n step(s)</source>
+        <translation>
+            <numerusform>[%n šťéþ(š) ~~~]</numerusform>
+            <numerusform>[%n šťéþ(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 (+%n more line(s))</source>
+        <translation>
+            <numerusform>[%1 (+%n möŕé ĺíñé(š)) ~~~~~~~]</numerusform>
+            <numerusform>[%1 (+%n möŕé ĺíñé(š)) ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n snippet(s)</source>
+        <translation>
+            <numerusform>[%n šñíþþéť(š) ~~~~]</numerusform>
+            <numerusform>[%n šñíþþéť(š) ~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Search snippets</source>
+        <translation>[Šéáŕçĥ šñíþþéťš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>snippets.toml comes from a newer OpenSesh or can&apos;t be read: changes here are not saved.</source>
+        <translation>[šñíþþéťš.ťömĺ çöméš ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ öŕ çáñ&apos;ť bé ŕéáď: çĥáñĝéš ĥéŕé áŕé ñöť šávéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>All snippets</source>
+        <translation>[Åĺĺ šñíþþéťš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Folders</source>
+        <translation>[Föĺďéŕš ~~~]</translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation>[Ťáĝš ~~]</translation>
+    </message>
+    <message>
+        <source>Run…</source>
+        <translation>[Ŕüñ… ~~]</translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation>[Möŕé ~~]</translation>
+    </message>
+    <message>
+        <source>Enter</source>
+        <translation>[Éñťéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Edit…</source>
+        <translation>[Éďíť… ~~]</translation>
+    </message>
+    <message>
+        <source>F2</source>
+        <translation>[F2 ~]</translation>
+    </message>
+    <message>
+        <source>Duplicate</source>
+        <translation>[Ďüþĺíçáťé ~~~]</translation>
+    </message>
+    <message>
+        <source>Delete…</source>
+        <translation>[Ďéĺéťé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Del</source>
+        <translation>[Ďéĺ ~]</translation>
+    </message>
     <message>
         <source>No snippets</source>
         <translation>[Ñö šñíþþéťš ~~~~]</translation>
     </message>
     <message>
-        <source>Save the commands you run often, with variables, and send them to one terminal or many at once. Snippets arrive in Sprint 10.</source>
-        <translation>[Šávé ťĥé çömmáñďš ýöü ŕüñ öƒťéñ, ŵíťĥ váŕíábĺéš, áñď šéñď ťĥém ťö öñé ťéŕmíñáĺ öŕ máñý áť öñçé. Šñíþþéťš áŕŕívé íñ Šþŕíñť 10. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Save the commands you run often, with variables like {{host}}, and run them in one terminal or in many at once. Record a macro from a terminal&apos;s menu.</source>
+        <translation>[Šávé ťĥé çömmáñďš ýöü ŕüñ öƒťéñ, ŵíťĥ váŕíábĺéš ĺíķé {{ĥöšť}}, áñď ŕüñ ťĥém íñ öñé ťéŕmíñáĺ öŕ íñ máñý áť öñçé. Ŕéçöŕď á máçŕö ƒŕöm á ťéŕmíñáĺ&apos;š méñü. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete this snippet?</source>
+        <translation>[Ďéĺéťé ťĥíš šñíþþéť? ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
     </message>
     <message>
         <source>New snippet</source>
@@ -8546,21 +9078,6 @@
         <source>Pane divider</source>
         <translation>[Þáñé ďívíďéŕ ~~~~]</translation>
     </message>
-    <message numerus="yes">
-        <source>Paste into %n panes?</source>
-        <translation>
-            <numerusform>[Þášťé íñťö %n þáñéš? ~~~~~~]</numerusform>
-            <numerusform>[Þášťé íñťö %n þáñéš? ~~~~~~]</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Paste</source>
-        <translation>[Þášťé ~~]</translation>
-    </message>
-    <message>
-        <source>Broadcast is on, so the text goes to every receiving pane of this tab. You won&apos;t be asked again until broadcast is turned off.</source>
-        <translation>[Bŕöáďçášť íš öñ, šö ťĥé ťéxť ĝöéš ťö évéŕý ŕéçéívíñĝ þáñé öƒ ťĥíš ťáb. Ýöü ŵöñ&apos;ť bé ášķéď áĝáíñ üñťíĺ bŕöáďçášť íš ťüŕñéď öƒƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
 </context>
 <context>
     <name>TerminalOptionRow</name>
@@ -8595,6 +9112,26 @@
         <source>Local terminal</source>
         <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
     </message>
+    <message>
+        <source>Nothing was typed while recording.</source>
+        <translation>[Ñöťĥíñĝ ŵáš ťýþéď ŵĥíĺé ŕéçöŕďíñĝ. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The recording was saved.</source>
+        <translation>[Ťĥé ŕéçöŕďíñĝ ŵáš šávéď. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Show recordings</source>
+        <translation>[Šĥöŵ ŕéçöŕďíñĝš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>The recording couldn&apos;t start.</source>
+        <translation>[Ťĥé ŕéçöŕďíñĝ çöüĺďñ&apos;ť šťáŕť. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Open logs</source>
+        <translation>[Öþéñ ĺöĝš ~~~]</translation>
+    </message>
     <message numerus="yes">
         <source>Broadcasting input to %n panes</source>
         <translation>
@@ -8621,6 +9158,14 @@
     <message>
         <source>Scrollback</source>
         <translation>[Šçŕöĺĺbáçķ ~~~]</translation>
+    </message>
+    <message>
+        <source>Recording a macro</source>
+        <translation>[Ŕéçöŕďíñĝ á máçŕö ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Recording the session</source>
+        <translation>[Ŕéçöŕďíñĝ ťĥé šéššíöñ ~~~~~~~]</translation>
     </message>
     <message>
         <source>Receive broadcast input</source>
@@ -8677,6 +9222,34 @@
     <message>
         <source>Close search (Escape)</source>
         <translation>[Çĺöšé šéáŕçĥ (Éšçáþé) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Recording controls</source>
+        <translation>[Ŕéçöŕďíñĝ çöñťŕöĺš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation>[Þáüšé ~~]</translation>
+    </message>
+    <message>
+        <source>Play</source>
+        <translation>[Þĺáý ~~]</translation>
+    </message>
+    <message>
+        <source>Play from the start</source>
+        <translation>[Þĺáý ƒŕöm ťĥé šťáŕť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Position</source>
+        <translation>[Þöšíťíöñ ~~~]</translation>
+    </message>
+    <message>
+        <source>%1×</source>
+        <translation>[%1× ~]</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>[Šþééď ~~]</translation>
     </message>
     <message>
         <source>The shell could not start: %1</source>
@@ -8765,6 +9338,26 @@
     <message>
         <source>Clear scrollback</source>
         <translation>[Çĺéáŕ šçŕöĺĺbáçķ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Stop recording the session</source>
+        <translation>[Šťöþ ŕéçöŕďíñĝ ťĥé šéššíöñ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Record the session</source>
+        <translation>[Ŕéçöŕď ťĥé šéššíöñ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Stop recording the macro…</source>
+        <translation>[Šťöþ ŕéçöŕďíñĝ ťĥé máçŕö… ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Record a macro</source>
+        <translation>[Ŕéçöŕď á máçŕö ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Run a snippet…</source>
+        <translation>[Ŕüñ á šñíþþéť… ~~~~~]</translation>
     </message>
     <message>
         <source>Highlight keywords</source>

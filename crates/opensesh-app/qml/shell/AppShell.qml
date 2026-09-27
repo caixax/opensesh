@@ -827,6 +827,11 @@ Item {
         snippetEditor.show(snippet);
     }
 
+    // Plays the session recording in `path` in a new tab.
+    function playRecording(path) {
+        return openConnection({ kind: "player", target: path }, "tab");
+    }
+
     // A macro just recorded (steps as Snippets.recordStop gives them), to review and save.
     function editRecordedMacro(steps) {
         snippetEditor.showRecorded(steps);
@@ -1174,6 +1179,10 @@ Item {
         };
         let savedShape = "";
         let movedTab = 0;
+        let snippetId = "";
+        // Short, so it doesn't wrap in a narrow pane.
+        const token = "s" + marker.slice(-6);
+        const screenOf = id => workspace.paneItem(id).terminal.screenText();
         return [
             () => {
                 shell.newTab();
@@ -1257,6 +1266,37 @@ Item {
             },
             () => {
                 console.info("smoke test: a risky paste waited for the review, a plain one went through");
+                // A snippet with a variable (Sprint 10): its editor and the quick picker open, and
+                // it runs through the run dialog in the broadcast panes, a and b (c left).
+                const body = "echo {{word}}-snippet\n";
+                snippetId = Snippets.save(JSON.stringify({
+                    id: "", name: "Smoke echo", folder: "Smoke/Shell", tags: ["smoke"], description: "",
+                    shortcut: "", text: body, steps: [], macro: false
+                }));
+                if (!expect(snippetId.length > 0, "the smoke snippet wasn't saved"))
+                    return [];
+                shell.editSnippet(snippetId);
+                expect(snippetEditor.visible && snippetEditor.problem.length === 0, "the snippet editor didn't open on the snippet");
+                snippetEditor.close();
+                shell.showSnippetPicker();
+                expect(snippetPicker.visible, "the quick picker didn't open");
+                snippetPicker.close();
+                workspace.toggleBroadcast();
+                workspace.setPaneReceiving(c, false);
+                shell.runSnippet(snippetId, "broadcast");
+                if (!expect(snippetRunDialog.visible && snippetRunDialog.targets.length === 2,
+                            "the run dialog didn't open for the two broadcast panes"))
+                    return [];
+                snippetRunDialog.set("word", token);
+                snippetRunDialog.accept();
+                deadline = Date.now() + timeout;
+                return [waitFor("the snippet in both broadcast panes", () => [a, b].every(id => screenOf(id).indexOf(token + "-snippet") >= 0))];
+            },
+            () => {
+                expect(screenOf(c).indexOf(token) < 0, "the snippet reached a pane outside the broadcast");
+                workspace.toggleBroadcast();
+                Snippets.remove(snippetId);
+                console.info("smoke test: a snippet with a variable ran in the broadcast panes");
                 // A workspace survives saving and opening identically (no file in test runs).
                 const index = shell.tabIndexOf(shell.currentTabId);
                 shell.renameTab(index, "Smoke layout");
@@ -1370,6 +1410,12 @@ Item {
         const question = () => pane && pane.terminal.prompt.length > 0 ? JSON.parse(pane.terminal.prompt) : {};
         const state = () => pane && pane.terminal.connection.length > 0 ? JSON.parse(pane.terminal.connection).state : "";
         const screen = () => pane ? pane.terminal.screenText() : "";
+        let macroId = "";
+        let stuckId = "";
+        let recording = "";
+        let player = null;
+        const runs = [];
+        const onRunEnded = (id, paneId, code, detail) => runs.push({ id: id, pane: paneId, code: code, detail: detail });
         return [
             () => {
                 if (AppInfo.startSshTestServer() <= 0)
@@ -1455,6 +1501,60 @@ Item {
                             () => console.info("smoke test: the side panel opened again on the reconnected connection"));
             },
             () => shell.setSidePanelOpen(false),
+            // Macros and recordings on the SSH pane (Sprint 10): the session is recorded while a
+            // macro types, waits for the server's prompt and types again, and one whose text never
+            // shows stops on its timeout; then the recording plays in a tab.
+            () => {
+                const save = (name, steps) => Snippets.save(JSON.stringify({
+                    id: "", name: name, folder: "", tags: [], description: "", shortcut: "", text: "", steps: steps, macro: true
+                }));
+                const send = line => ({ kind: "send", text: line + "\n" }); // lint-qml: allow (typed into the test shell)
+                macroId = save("Smoke macro", [send("cd /logs"), { kind: "wait", pattern: "test\\$", timeout: 10000 }, send("macro-done")]);
+                stuckId = save("Smoke stuck", [{ kind: "wait", pattern: "never shows", timeout: 300 }, send("not typed")]);
+                if (macroId.length === 0 || stuckId.length === 0)
+                    smoke.fail("the smoke macros weren't saved");
+                recording = Recordings.start(pane.paneId, "smoke recording");
+                if (recording.length === 0 || !pane.recordingSession)
+                    smoke.fail("the session recording didn't start");
+                Snippets.runEnded.connect(onRunEnded);
+                Snippets.run(macroId, "{}", JSON.stringify([pane.paneId]));
+                Snippets.run(stuckId, "{}", JSON.stringify([pane.paneId]));
+                return wait("the macros to end", () => runs.length === 2);
+            },
+            () => {
+                Snippets.runEnded.disconnect(onRunEnded);
+                if (!runs.some(run => run.id === macroId && run.code === "") || screen().indexOf("macro-done") < 0)
+                    smoke.fail("the macro with a wait didn't finish: " + JSON.stringify(runs));
+                if (!runs.some(run => run.id === stuckId && run.code === "timeout") || screen().indexOf("not typed") >= 0)
+                    smoke.fail("the macro waiting for text that never shows didn't stop: " + JSON.stringify(runs));
+                Snippets.remove(macroId);
+                Snippets.remove(stuckId);
+                console.info("smoke test: a macro waited for the prompt and went on; one whose text never showed stopped on its timeout");
+                if (Recordings.stop(pane.paneId) !== recording || pane.recordingSession)
+                    smoke.fail("the session recording didn't stop");
+                return wait("the recording in the History list",
+                            () => JSON.parse(Recordings.list || "[]").some(entry => entry.path === recording && !entry.recording));
+            },
+            () => {
+                if (!shell.playRecording(recording))
+                    smoke.fail("the recording didn't open in a tab");
+                player = shell.currentTerminal;
+                if (!player || player.kind !== "player")
+                    smoke.fail("the recording's tab has no player");
+                return wait("the recording to play to its end", () => player.terminal.screenText().indexOf("macro-done") >= 0
+                            && player.playerState.duration > 0 && !player.playerState.playing);
+            },
+            () => {
+                // Back to the start, paused: the screen clears.
+                player.playerCommand("seek", 0);
+                return wait("the jump back to the start", () => player.terminal.screenText().indexOf("macro-done") < 0);
+            },
+            () => {
+                console.info("smoke test: the session was recorded, listed and played in a tab");
+                shell.closeTab(shell.currentTab);
+                shell.selectTabById(tabId);
+                pane = shell.currentTerminal;
+            },
             // "Install my key": pick a key, connect in a new tab, the key goes in.
             () => {
                 shell.installKey("H00000");
