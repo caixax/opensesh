@@ -779,14 +779,14 @@ impl HostsFile {
         }
         let group_ids: HashSet<String> = groups.iter().map(|group| group.id.clone()).collect();
         for group in &mut groups {
-            if let Some(parent) = &group.parent {
-                if !group_ids.contains(parent) || *parent == group.id {
-                    warnings.push(warning(
-                        format!("group {}", group.name),
-                        format!("unknown parent group {parent}; moved to the top"),
-                    ));
-                    group.parent = None;
-                }
+            if let Some(parent) = &group.parent
+                && (!group_ids.contains(parent) || *parent == group.id)
+            {
+                warnings.push(warning(
+                    format!("group {}", group.name),
+                    format!("unknown parent group {parent}; moved to the top"),
+                ));
+                group.parent = None;
             }
         }
         // Cut cycles: walk each group's parents; a group met twice closes a loop.
@@ -842,14 +842,14 @@ impl HostsFile {
                     host.address.clone()
                 };
             }
-            if let Some(group) = &host.group {
-                if !group_ids.contains(group) {
-                    warnings.push(warning(
-                        &label,
-                        format!("unknown group {group}; moved to the top"),
-                    ));
-                    host.group = None;
-                }
+            if let Some(group) = &host.group
+                && !group_ids.contains(group)
+            {
+                warnings.push(warning(
+                    &label,
+                    format!("unknown group {group}; moved to the top"),
+                ));
+                host.group = None;
             }
             if host.port == Some(0) {
                 warnings.push(warning(

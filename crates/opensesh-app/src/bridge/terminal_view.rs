@@ -1160,12 +1160,10 @@ fn paste_chunks(bytes: &[u8]) -> Vec<Vec<u8>> {
         && chunks
             .last()
             .is_some_and(|last| last.as_slice() == b"\x1b[201~")
+        && let Some(marker) = chunks.pop()
+        && let Some(last) = chunks.last_mut()
     {
-        if let Some(marker) = chunks.pop() {
-            if let Some(last) = chunks.last_mut() {
-                last.extend_from_slice(&marker);
-            }
-        }
+        last.extend_from_slice(&marker);
     }
     chunks
 }
@@ -2207,13 +2205,13 @@ impl qobject::TerminalItem {
         let session = entry.session();
         // Ctrl+click opens a link, even while a program reports the mouse (the link is visibly
         // underlined while Ctrl is held).
-        if button == MouseButton::Left && mods.ctrl {
-            if let Some(link) = self.link_at(entry, point) {
-                if self.open_link(&link.url) {
-                    self.as_mut().rust_mut().mouse.link_click = true;
-                    return;
-                }
-            }
+        if button == MouseButton::Left
+            && mods.ctrl
+            && let Some(link) = self.link_at(entry, point)
+            && self.open_link(&link.url)
+        {
+            self.as_mut().rust_mut().mouse.link_click = true;
+            return;
         }
         let modes = session.modes();
         if mouse_reporting_active(&modes, mods) {
@@ -2422,11 +2420,11 @@ impl qobject::TerminalItem {
             )
         });
         let lines = scaled_lines(steps_y, speed);
-        if !mods.shift {
-            if let Some(bytes) = alternate_scroll(lines, &modes) {
-                session.write(&bytes);
-                return;
-            }
+        if !mods.shift
+            && let Some(bytes) = alternate_scroll(lines, &modes)
+        {
+            session.write(&bytes);
+            return;
         }
         if smooth && !self.reduce_motion() {
             {

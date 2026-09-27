@@ -395,10 +395,10 @@ impl Worker {
             }
         };
         // Whatever unlocked the vault, secrets nothing refers to any more can go now.
-        if self.keychain.vault.status() == Status::Unlocked {
-            if let Err(error) = self.keychain.collect_garbage() {
-                tracing::warn!("could not tidy the vault: {error}");
-            }
+        if self.keychain.vault.status() == Status::Unlocked
+            && let Err(error) = self.keychain.collect_garbage()
+        {
+            tracing::warn!("could not tidy the vault: {error}");
         }
         match result {
             Ok(value) => outcome.value = value,

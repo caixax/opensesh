@@ -320,11 +320,11 @@ fn target_text(file: &HostsFile, host: &Host) -> String {
     }
     let resolved = file.resolve(host);
     let mut text = String::new();
-    if host.protocol.is_network() {
-        if let Some(user) = resolved.user() {
-            text.push_str(user);
-            text.push('@');
-        }
+    if host.protocol.is_network()
+        && let Some(user) = resolved.user()
+    {
+        text.push_str(user);
+        text.push('@');
     }
     text.push_str(&target::bracket_ipv6(&host.address));
     if let Some(port) = resolved
@@ -467,15 +467,14 @@ fn host_from_json(text: &str) -> Result<Host, Vec<(&'static str, &'static str)>>
                 inner.retain(|_, field| !field.is_null() && field.as_str() != Some(""));
             }
         }
-        if let Some(port) = object.get("port") {
-            if port
+        if let Some(port) = object.get("port")
+            && port
                 .as_u64()
                 .and_then(|port| u16::try_from(port).ok())
                 .is_none_or(|port| port == 0)
-            {
-                problems.push(("port", "invalid"));
-                object.remove("port");
-            }
+        {
+            problems.push(("port", "invalid"));
+            object.remove("port");
         }
         // "id" and "name" must stay strings even when empty.
         object.entry("id").or_insert(Json::String(String::new()));
@@ -540,15 +539,14 @@ fn group_from_json(text: &str) -> Result<Group, Vec<(&'static str, &'static str)
                     inner.retain(|_, field| !field.is_null() && field.as_str() != Some(""));
                 }
             }
-            if let Some(port) = defaults.get("port") {
-                if port
+            if let Some(port) = defaults.get("port")
+                && port
                     .as_u64()
                     .and_then(|port| u16::try_from(port).ok())
                     .is_none_or(|port| port == 0)
-                {
-                    problems.push(("port", "invalid"));
-                    defaults.remove("port");
-                }
+            {
+                problems.push(("port", "invalid"));
+                defaults.remove("port");
             }
         }
     }

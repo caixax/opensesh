@@ -433,10 +433,10 @@ fn iterm2(text: &str, fallback: &str) -> Result<RawTheme, ThemeError> {
             }
             Event::End(element) => {
                 if element.name().as_ref() == "dict" {
-                    if depth == 2 {
-                        if let [Some(r), Some(g), Some(b)] = rgb {
-                            found.push((entry.clone(), [r, g, b]));
-                        }
+                    if depth == 2
+                        && let [Some(r), Some(g), Some(b)] = rgb
+                    {
+                        found.push((entry.clone(), [r, g, b]));
                     }
                     depth = depth.saturating_sub(1);
                 }

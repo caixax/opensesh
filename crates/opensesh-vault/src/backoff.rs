@@ -103,12 +103,11 @@ impl Backoff {
         }
         self.failures = 0;
         self.last_failure = 0;
-        if let Some(path) = &self.path {
-            if let Err(error) = std::fs::remove_file(path) {
-                if error.kind() != std::io::ErrorKind::NotFound {
-                    tracing::warn!(path = %path.display(), "could not clear the password attempts: {error}");
-                }
-            }
+        if let Some(path) = &self.path
+            && let Err(error) = std::fs::remove_file(path)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!(path = %path.display(), "could not clear the password attempts: {error}");
         }
     }
 

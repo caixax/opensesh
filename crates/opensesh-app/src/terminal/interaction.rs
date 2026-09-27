@@ -123,14 +123,14 @@ pub fn url_at(row: &[TextCell], column: u16) -> Option<FoundUrl> {
 #[must_use]
 pub fn display_title(raw: &str, windows: bool) -> String {
     let trimmed = raw.trim();
-    if windows && is_windows_path(trimmed) {
-        if let Some(name) = trimmed
+    if windows
+        && is_windows_path(trimmed)
+        && let Some(name) = trimmed
             .rsplit(['\\', '/'])
             .next()
             .filter(|name| !name.is_empty())
-        {
-            return name.to_owned();
-        }
+    {
+        return name.to_owned();
     }
     trimmed.to_owned()
 }

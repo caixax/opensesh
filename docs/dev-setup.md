@@ -2,7 +2,7 @@
 
 OpenSesh is a Cargo workspace. The GUI (`opensesh-app`) links against Qt 6 through [cxx-qt](https://github.com/KDAB/cxx-qt), so building it needs:
 
-1. **Rust through rustup.** The toolchain (1.88.0, the MSRV) is pinned in `rust-toolchain.toml` and installed automatically the first time you run `cargo` in the repository. Distro compilers are too old (Debian 13 ships 1.85, Ubuntu 24.04 ships 1.75).
+1. **Rust through rustup.** The toolchain (1.89.0, the MSRV) is pinned in `rust-toolchain.toml` and installed automatically the first time you run `cargo` in the repository. Distro compilers are too old (Debian 13 ships 1.85, Ubuntu 24.04 ships 1.75).
 2. **A C++17 compiler.** GCC or Clang on Linux, MSVC on Windows.
 3. **Qt 6.8 or newer**, with the Base, Declarative (QML/Quick), SVG, Wayland and Tools modules. See [ADR 0003](adr/0003-qt-version-and-installation.md).
 

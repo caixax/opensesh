@@ -174,12 +174,12 @@ impl PtyShared {
     #[cfg(windows)]
     fn terminate(&self) {
         let mut process = self.process();
-        if !process.exited {
-            if let Some(killer) = process.killer.as_mut() {
-                // portable-pty 0.9.0 returns Err when TerminateProcess *succeeds* (fixed on its
-                // master branch, unreleased): the waiter confirms the exit instead.
-                let _ = killer.kill();
-            }
+        if !process.exited
+            && let Some(killer) = process.killer.as_mut()
+        {
+            // portable-pty 0.9.0 returns Err when TerminateProcess *succeeds* (fixed on its
+            // master branch, unreleased): the waiter confirms the exit instead.
+            let _ = killer.kill();
         }
     }
 }
@@ -407,10 +407,10 @@ impl Io {
     }
 
     fn resize(&self, size: TermSize) {
-        if let Some(master) = &self.master {
-            if let Err(error) = master.resize(pty_size(size)) {
-                tracing::warn!(error = %format!("{error:#}"), "resizing the terminal failed");
-            }
+        if let Some(master) = &self.master
+            && let Err(error) = master.resize(pty_size(size))
+        {
+            tracing::warn!(error = %format!("{error:#}"), "resizing the terminal failed");
         }
     }
 

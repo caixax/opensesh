@@ -1,6 +1,6 @@
 # ADR 0002: Rust toolchain pinned to the MSRV (1.88), edition 2024
 
-- **Status:** accepted
+- **Status:** accepted; the MSRV is 1.89 since [ADR 0026](0026-msrv-1.89-for-russh.md)
 - **Date:** 2026-09-25
 - **Sprint:** 0
 
