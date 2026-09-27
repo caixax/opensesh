@@ -14,6 +14,7 @@ pub mod links;
 pub mod osc;
 pub mod palette;
 pub mod pty;
+pub mod recording;
 pub mod search;
 pub mod session;
 pub mod shell;
