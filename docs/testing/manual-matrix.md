@@ -4,6 +4,40 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 8 (2026-09-27)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 343 to 359 steps):** as before, plus SFTP against the in-process test server (which now serves a temporary folder over SFTP; a smoke run removes it at exit):
+  - the side panel of an SSH pane lists the server's files on the pane's connection, follows the shell's folder (OSC 7 on `cd`), and works again after the connection drops and Enter reconnects;
+  - the SFTP view with the local sample folder and a saved host (host key card and password in the pane): 10,000 files listed and sorted (timed), a folder made, a file uploaded, uploaded again (the question, "keep both"), renamed, made read-only and writable, downloaded, deleted; the queue cleared; the sides swapped;
+  - a server's file edited: the private copy in the test folder (no editor is started in a test run), a save uploaded, the server's copy changed meanwhile (the conflict), "replace it with mine".
+  Settings changes stay in memory; nothing is written to the user's folders.
+- **Screenshots (native, Windows):** the SFTP view with the queue (a finished and a failed transfer), a file's permissions, the side panel following an SSH tab, and Settings > SFTP, in dark and light, comfortable and compact. The terminal renders in captures only on the native platform (offscreen, grabbing gives an empty terminal, as before).
+- **Real SSH servers** (`scripts/ssh-test-servers.sh`, [notes](ssh-servers.md)): the Sprint 7 tests, plus SFTP on OpenSSH 10.5p1: 1 GiB up and down through the queue with the same SHA-256 here, on the server and back; an upload whose connection is closed partway, resumed on a new connection; a copy within the server (`cp -R -p`); and port 2225 (no SFTP subsystem) refused.
+- **Shell integration:** the install command run twice by `sh` in a temporary home adds the lines once, and interactive bash 5.3 and zsh 5.9 then report their folder (OSC 7). The test runs wherever bash or zsh is installed (CI's Linux jobs have bash).
+- **SCP spike** ([README](../../spikes/scp-fallback/README.md)): a folder tree and 1 GiB both ways against OpenSSH without SFTP, checksums equal.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real SSH servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 539 | ✅ / ✅ | ✅ `windows` | — |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ 542 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ 542 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ 542 | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ OpenSSH 10.5p1, Dropbear 2026.94 |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ⏳ | ⏳ | — | ⏳ Ubuntu 24.04 packages |
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| The side panel on one of your servers: it follows `cd` once the shell integration is added (or with a shell that already sends OSC 7) | ⏳ | ⏳ |
+| A large transfer over a real network (a few GB): speed, pause and resume, and pulling the cable in the middle then Retry | ⏳ | ⏳ |
+| Drag files from Explorer / Nautilus / Dolphin into a pane (Wayland and X11), and this computer's files out to them | ⏳ | ⏳ |
+| Edit a server's file with VS Code (`code --wait {file}`) and with the system's editor; save twice; change it on the server meanwhile | ⏳ | ⏳ |
+| "Save with sudo" on a root-owned file (with and without a sudo password) | ⏳ | ⏳ |
+| A server with a non-UTF-8 file name, and one with thousands of files over a slow link | ⏳ | ⏳ |
+| Two SFTP panes on two different servers, copying between them | ⏳ | ⏳ |
+
 ## Sprint 7 (2026-09-27)
 
 ### Automated checks
