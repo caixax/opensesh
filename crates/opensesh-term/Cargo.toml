@@ -17,6 +17,7 @@ encoding_rs.workspace = true
 opensesh-core.workspace = true
 portable-pty.workspace = true
 regex.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 

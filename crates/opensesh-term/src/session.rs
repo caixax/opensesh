@@ -14,7 +14,7 @@
 
 use std::collections::VecDeque;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use alacritty_terminal::event::{Event, EventListener, WindowSize};
@@ -365,7 +365,28 @@ struct Shown {
     selection: Option<SelectionRange>,
 }
 
+/// Something that watches a session from the engine thread (Sprint 10): a recording, a macro
+/// waiting for a pattern, the macro recorder. Every method runs on the engine thread, some under
+/// the terminal's lock: they must return at once (hand the bytes to a channel).
+pub trait Tap: Send {
+    /// The tap was added, with the terminal's size then.
+    fn attached(&mut self, _size: TermSize) {}
+    /// Output of the program (in UTF-8, after a legacy encoding was decoded).
+    fn output(&mut self, _bytes: &[u8]) {}
+    /// What the user typed or pasted (before it was encoded for the program).
+    fn input(&mut self, _bytes: &[u8]) {}
+    /// The terminal changed size.
+    fn resize(&mut self, _size: TermSize) {}
+}
+
+/// Identifies a tap for [`Session::remove_tap`].
+pub type TapId = u64;
+
+static NEXT_TAP: AtomicU64 = AtomicU64::new(1);
+
 enum Command {
+    AddTap(TapId, Box<dyn Tap>),
+    RemoveTap(TapId),
     Write(Vec<u8>),
     Paced(Vec<Vec<u8>>, Duration),
     CancelPaste,
@@ -496,6 +517,7 @@ impl Session {
             bell: Throttled::default(),
             blinking: Throttled::default(),
             cursor_blinking: options.cursor_blinking,
+            taps: Vec::new(),
         };
         std::thread::Builder::new()
             .name("opensesh-term-engine".to_owned())
@@ -830,6 +852,18 @@ impl Session {
         state.full_redraw = true;
         drop(state);
         self.redraw();
+    }
+
+    /// Adds `tap`, which sees the session's output, input and size from now on; its id.
+    pub fn add_tap(&self, tap: Box<dyn Tap>) -> TapId {
+        let id = NEXT_TAP.fetch_add(1, Ordering::Relaxed);
+        self.send(Command::AddTap(id, tap));
+        id
+    }
+
+    /// Removes tap `id` (dropping it on the engine thread).
+    pub fn remove_tap(&self, id: TapId) {
+        self.send(Command::RemoveTap(id));
     }
 
     /// Ends the session: the backend shuts down (the program is hung up or terminated) and the
@@ -1409,6 +1443,8 @@ struct Engine {
     bell: Throttled<()>,
     blinking: Throttled<bool>,
     cursor_blinking: bool,
+    /// Watchers of the output, input and size ([`Session::add_tap`]).
+    taps: Vec<(TapId, Box<dyn Tap>)>,
 }
 
 /// What woke the engine up.
@@ -1483,6 +1519,11 @@ impl Engine {
     /// Handles one command; `false` means stop.
     fn command(&mut self, command: Command) -> bool {
         match command {
+            Command::AddTap(id, mut tap) => {
+                tap.attached(self.size);
+                self.taps.push((id, tap));
+            }
+            Command::RemoveTap(id) => self.taps.retain(|(tap, _)| *tap != id),
             Command::Write(bytes) => self.write_input(&bytes),
             Command::Paced(chunks, delay) => {
                 self.paste.extend(chunks);
@@ -1549,11 +1590,17 @@ impl Engine {
             if let Some(backend) = &self.backend {
                 let _ = backend.resize(size);
             }
+            for (_, tap) in &mut self.taps {
+                tap.resize(size);
+            }
         }
     }
 
     /// Typed or pasted input: converted to the session's encoding first.
     fn write_input(&mut self, bytes: &[u8]) {
+        for (_, tap) in &mut self.taps {
+            tap.input(bytes);
+        }
         match &mut self.codec {
             Some(codec) => {
                 let encoded = codec.encode(bytes);
@@ -1637,6 +1684,9 @@ impl Engine {
                 }
                 None => bytes,
             };
+            for (_, tap) in &mut self.taps {
+                tap.output(bytes);
+            }
             let limited = self.limiter.filter(bytes);
             let bytes = limited.as_deref().unwrap_or(bytes);
             self.side.advance(bytes);
@@ -1878,6 +1928,57 @@ mod tests {
             notices,
             seen,
         }
+    }
+
+    /// What a tap saw.
+    #[derive(Default)]
+    struct Watched {
+        attached: Option<TermSize>,
+        output: Vec<u8>,
+        input: Vec<u8>,
+        sizes: Vec<TermSize>,
+    }
+
+    struct Watcher(Arc<Mutex<Watched>>);
+
+    impl Tap for Watcher {
+        fn attached(&mut self, size: TermSize) {
+            self.0.lock().unwrap().attached = Some(size);
+        }
+        fn output(&mut self, bytes: &[u8]) {
+            self.0.lock().unwrap().output.extend_from_slice(bytes);
+        }
+        fn input(&mut self, bytes: &[u8]) {
+            self.0.lock().unwrap().input.extend_from_slice(bytes);
+        }
+        fn resize(&mut self, size: TermSize) {
+            self.0.lock().unwrap().sizes.push(size);
+        }
+    }
+
+    #[test]
+    fn taps_see_output_input_and_sizes() {
+        let harness = start(40, 10);
+        let watched = Arc::new(Mutex::new(Watched::default()));
+        let id = harness
+            .session
+            .add_tap(Box::new(Watcher(Arc::clone(&watched))));
+        harness.feed_until(b"before \x1b[1mbold\x1b[0m", "bold");
+        harness.session.write(b"typed\r");
+        harness.wait_written(b"typed\r");
+        harness.session.resize(TermSize::new(50, 12));
+        harness.wait_for(|_| !watched.lock().unwrap().sizes.is_empty());
+        {
+            let seen = watched.lock().unwrap();
+            assert_eq!(seen.attached, Some(TermSize::new(40, 10)));
+            assert_eq!(seen.output, b"before \x1b[1mbold\x1b[0m");
+            assert_eq!(seen.input, b"typed\r");
+            assert_eq!(seen.sizes, [TermSize::new(50, 12)]);
+        }
+        // Removed: it sees nothing more.
+        harness.session.remove_tap(id);
+        harness.feed_until(b" after", "after");
+        assert!(!watched.lock().unwrap().output.ends_with(b"after"));
     }
 
     impl Harness {
