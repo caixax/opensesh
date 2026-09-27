@@ -1,5 +1,6 @@
-# Build output
+# Build output (the spikes have workspaces of their own)
 /target/
+/spikes/*/target/
 **/*.rs.bk
 
 # Portable-mode data folder created next to the executable during local runs
