@@ -6,6 +6,23 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 10: snippets, macros, paste protection and recordings ([ADR 0030](docs/adr/0030-snippets-macros-paste-protection-and-recordings.md)).**
+  - **Paste protection:** before a paste, OpenSesh looks at the text:
+    - lines that would run at once, and hidden, control or bidirectional characters;
+    - letters from another alphabet in Latin words;
+    - `curl … | sh` and decoded text run by a shell;
+    - writes to shell profiles or `authorized_keys`, `sudo` in a pipe, destructive commands.
+
+    When it finds something, a dialog shows the text (editable) with what was found, and a click on a finding selects its text. On by default; off in Settings > Terminal, per profile, group or host. A paste into several broadcast panes goes through the same dialog.
+  - **Snippets** (`snippets.toml`), in folders and tags, with a description and an optional shortcut:
+    - `{{name}}` asks for a value when the snippet runs (the last one is offered), once for every pane.
+    - `{{secret:identity}}` types a keychain identity's password, which never leaves the vault's side.
+    - A snippet runs in the focused terminal, every pane of the tab or the broadcast panes.
+  - **Where snippets run from:** the Snippets view (search, folders, tags, run, edit, duplicate, delete), the side panel's Snippets tab, the quick picker (Ctrl+Shift+Space) and each snippet's own shortcut.
+  - **Macros:** a snippet can be steps: type text, pause, or wait for a pattern in the output (a regular expression, with a timeout). A wait that runs out stops that pane's run and says why.
+  - **The macro recorder** (a terminal's menu) turns what is typed, with its pauses, into a macro to review and save. It warns that typed passwords were recorded too.
+  - **Session recordings:** "Record the session" in a terminal's menu writes what it shows to `recordings/` in the data folder, in asciinema's format (never the keys typed), with a chip while it records. A recording plays in its own tab: play, pause, jump, restart and speed.
+  - **The History view:** the recent connections (a click connects again), the recordings (play, open the folder, delete) and the session and app logs folders.
 - **Sprint 9: tunnels ([ADR 0029](docs/adr/0029-tunnels.md)).**
   - **Local (`-L`), remote (`-R`) and dynamic (`-D`, a SOCKS5 proxy) forwarding** through the built-in SSH client, saved in `tunnels.toml`.
   - **The Tunnels view:** each tunnel with a switch, its route in words, what it is doing (running, connecting, waiting for a session, retrying, failed) and its traffic (bytes each way, connections), and a menu to edit, duplicate, copy its address or delete it. A tunnel that listens beyond localhost is marked, and saving one asks first.
@@ -14,6 +31,10 @@ All notable changes to this project are documented in this file. The format is b
   - **Import from `~/.ssh/config`:** its `LocalForward`, `RemoteForward` and `DynamicForward` lines become tunnels tied to their hosts.
   - **Command palette:** start and stop each tunnel. The status bar shows how many run.
   - **Tests:** `curl` through each kind of tunnel, in-process and against OpenSSH, and a tunnel that comes back by itself after its session is killed ([how](docs/testing/ssh-servers.md)).
+
+### Fixed
+
+- Multi-line text in the host notes and in the private key import showed only its first line.
 
 ## [0.1.3] - 2026-09-27
 
