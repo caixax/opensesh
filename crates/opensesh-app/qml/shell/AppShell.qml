@@ -1186,7 +1186,8 @@ Item {
         let snippetId = "";
         // Short, so it doesn't wrap in a narrow pane.
         const token = "s" + marker.slice(-6);
-        const screenOf = id => workspace.paneItem(id).terminal.screenText();
+        // The screen's rows joined: a command that wraps in a narrow pane reads whole again.
+        const screenOf = id => workspace.paneItem(id).terminal.screenText().replace(/\n/g, "");
         return [
             () => {
                 shell.newTab();
@@ -1265,8 +1266,7 @@ Item {
                 workspace.paneItem(a).terminal.pasteText("echo " + marker + "-pasted");
                 expect(!workspace.askingToPaste, "a plain paste asked for a review");
                 deadline = Date.now() + timeout;
-                // The pane is narrow: the command wraps, so only its end is looked for.
-                return [waitFor("the plain paste", () => workspace.paneItem(a).terminal.screenText().indexOf("-pasted") >= 0)];
+                return [waitFor("the plain paste", () => screenOf(a).indexOf(marker + "-pasted") >= 0)];
             },
             () => {
                 console.info("smoke test: a risky paste waited for the review, a plain one went through");
