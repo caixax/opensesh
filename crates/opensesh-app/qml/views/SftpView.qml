@@ -132,6 +132,22 @@ Item {
                 right.browser.mkdir("incoming");
                 return wait("the new folder", () => right.browser.rowOf("incoming") >= 0);
             },
+            // 10,000 files: how long they take to list and to sort.
+            () => {
+                const started = Date.now();
+                right.navigate("/many");
+                return wait("10,000 files", () => right.browser.count === 10000, () => {
+                    const listed = Date.now() - started;
+                    const sorting = Date.now();
+                    right.browser.sortKey = "modified";
+                    right.browser.sortAscending = false;
+                    const sorted = Date.now() - sorting;
+                    right.browser.sortKey = "name";
+                    right.browser.sortAscending = true;
+                    console.info("smoke test: 10,000 files listed in", listed, "ms and sorted in", sorted, "ms");
+                    return [];
+                });
+            },
             () => {
                 right.navigate("/incoming");
                 return wait("the new folder to open", () => right.browser.path === "/incoming" && right.browser.count === 0);

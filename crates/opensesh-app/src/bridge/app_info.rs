@@ -166,7 +166,8 @@ pub fn remove_test_folder() {
     }
 }
 
-/// Fresh sample files for the smoke test: a few on each side, and a folder of 300 files.
+/// Fresh sample files for the smoke test: a few on each side, a folder of 300 files, and one of
+/// 10,000 empty files (the SFTP view's timing).
 fn sample_files(folder: &Path) -> std::io::Result<()> {
     if folder.exists() {
         std::fs::remove_dir_all(folder)?;
@@ -175,6 +176,10 @@ fn sample_files(folder: &Path) -> std::io::Result<()> {
     let local = folder.join("local");
     std::fs::create_dir_all(remote.join("docs"))?;
     std::fs::create_dir_all(remote.join("logs"))?;
+    std::fs::create_dir_all(remote.join("many"))?;
+    for n in 0..10_000 {
+        std::fs::File::create(remote.join("many").join(format!("file-{n:05}")))?;
+    }
     std::fs::create_dir_all(local.join("project"))?;
     std::fs::write(
         remote.join("docs").join("readme.txt"),
