@@ -25,6 +25,7 @@ pub mod proxy;
 pub mod sftp;
 pub mod spec;
 pub mod testing;
+pub mod tunnel;
 
 use std::sync::OnceLock;
 

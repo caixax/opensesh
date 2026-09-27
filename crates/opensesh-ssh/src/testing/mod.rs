@@ -1,11 +1,11 @@
 //! A tiny SSH server for tests, and for the app's smoke test (which must not reach the network):
 //! a user [`USER`] with the password [`PASSWORD`] and/or keys, an optional one-time code after a
-//! key ([`CODE`]), `direct-tcpip` for jump hosts, and a shell that prints `test$ ` and echoes what
-//! it gets ("exit" ends it with status 3, "drop" drops the connection, "cd /path" reports the
-//! folder with OSC 7). It also answers the OS
-//! detection command and "install my key" (into [`Rules::authorized_keys`]), and serves SFTP
-//! over a folder when [`Rules::sftp_root`] names one. Nothing here runs unless a test or the
-//! smoke test starts it.
+//! key ([`CODE`]), `direct-tcpip` (jump hosts, local and dynamic forwards) and `tcpip-forward`
+//! (remote forwards) when [`Rules::jump`] allows them, and a shell that prints `test$ ` and
+//! echoes what it gets ("exit" ends it with status 3, "drop" drops the connection, "cd /path"
+//! reports the folder with OSC 7). It also answers the OS detection command and "install my
+//! key" (into [`Rules::authorized_keys`]), and serves SFTP over a folder when
+//! [`Rules::sftp_root`] names one. Nothing here runs unless a test or the smoke test starts it.
 
 mod sftp;
 
@@ -60,6 +60,17 @@ struct Server {
     installs: Vec<ChannelId>,
     /// Session channels that may still ask for the SFTP subsystem.
     channels: HashMap<ChannelId, Channel<Msg>>,
+    /// Remote forwards (`tcpip-forward`): the listener tasks, by port.
+    forwards: HashMap<u32, tokio::task::JoinHandle<()>>,
+}
+
+impl Drop for Server {
+    fn drop(&mut self) {
+        // The connection is gone: so are its remote forwards.
+        for task in self.forwards.values() {
+            task.abort();
+        }
+    }
 }
 
 fn methods(rules: &Rules, key_accepted: bool) -> MethodSet {
@@ -200,6 +211,68 @@ impl Handler for Server {
             _ => session.channel_failure(channel)?,
         }
         Ok(())
+    }
+
+    /// Remote forwarding, where jumps are allowed: listens where asked (port 0: any) and opens a
+    /// `forwarded-tcpip` channel back for each connection.
+    async fn tcpip_forward(
+        &mut self,
+        address: &str,
+        port: &mut u32,
+        session: &mut Session,
+    ) -> Result<bool, Self::Error> {
+        let Ok(wanted) = u16::try_from(*port) else {
+            return Ok(false);
+        };
+        if !self.rules.jump {
+            return Ok(false);
+        }
+        let host = if address.is_empty() {
+            "0.0.0.0"
+        } else {
+            address
+        };
+        let Ok(listener) = TcpListener::bind((host, wanted)).await else {
+            return Ok(false);
+        };
+        let bound = listener
+            .local_addr()
+            .map_or(u32::from(wanted), |local| u32::from(local.port()));
+        *port = bound;
+        let handle = session.handle();
+        let address = address.to_owned();
+        let task = tokio::spawn(async move {
+            while let Ok((mut socket, peer)) = listener.accept().await {
+                let channel = handle
+                    .channel_open_forwarded_tcpip(
+                        address.clone(),
+                        bound,
+                        peer.ip().to_string(),
+                        u32::from(peer.port()),
+                    )
+                    .await;
+                if let Ok(channel) = channel {
+                    tokio::spawn(async move {
+                        let mut stream = channel.into_stream();
+                        let _ = tokio::io::copy_bidirectional(&mut stream, &mut socket).await;
+                    });
+                }
+            }
+        });
+        self.forwards.insert(bound, task);
+        Ok(true)
+    }
+
+    async fn cancel_tcpip_forward(
+        &mut self,
+        _address: &str,
+        port: u32,
+        _session: &mut Session,
+    ) -> Result<bool, Self::Error> {
+        Ok(self.forwards.remove(&port).is_some_and(|task| {
+            task.abort();
+            true
+        }))
     }
 
     async fn channel_open_direct_tcpip(
@@ -379,6 +452,7 @@ pub async fn serve(rules: Rules) -> std::io::Result<u16> {
                 sessions: Vec::new(),
                 installs: Vec::new(),
                 channels: HashMap::new(),
+                forwards: HashMap::new(),
             };
             let config = Arc::clone(&config);
             tokio::spawn(async move {

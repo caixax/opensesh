@@ -28,6 +28,7 @@ use crate::algorithms;
 use crate::prompt::{self, Answer, Asker, Field, HostKeyKind, HostKeyQuestion, Prompt};
 use crate::proxy::{self, Transport};
 use crate::spec::{AuthMethod, ConnectSpec, Hop, KnownHostsFiles, Proxy};
+use crate::tunnel;
 
 /// Progress of a connection, for the pane.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,6 +71,8 @@ pub struct ClientHandler {
     rejection: Arc<Mutex<Option<String>>>,
     agent_forwarding: bool,
     agent_socket: Option<String>,
+    /// Where the server's `forwarded-tcpip` channels go (remote forwards; the target hop only).
+    routes: tunnel::Routes,
 }
 
 impl std::fmt::Debug for ClientHandler {
@@ -212,6 +215,31 @@ impl Handler for ClientHandler {
         }
         reply.accept().await;
         tokio::spawn(forward_to_agent(channel, self.agent_socket.clone()));
+        Ok(())
+    }
+
+    async fn server_channel_open_forwarded_tcpip(
+        &mut self,
+        channel: Channel<Msg>,
+        _connected_address: &str,
+        connected_port: u32,
+        _originator_address: &str,
+        _originator_port: u32,
+        reply: client::ChannelOpenHandle,
+        _session: &mut client::Session,
+    ) -> Result<(), Self::Error> {
+        // Only for a remote forward this client asked for.
+        match self.routes.get(connected_port) {
+            Some(route) => {
+                reply.accept().await;
+                tokio::spawn(tunnel::serve_forwarded(channel, route));
+            }
+            None => {
+                reply
+                    .reject(ChannelOpenFailure::AdministrativelyProhibited)
+                    .await;
+            }
+        }
         Ok(())
     }
 
@@ -724,6 +752,7 @@ async fn agent_keys(
 /// An established chain: every hop's handle, the target last. Dropping it disconnects.
 pub struct Connection {
     handles: Vec<Handle<ClientHandler>>,
+    routes: tunnel::Routes,
 }
 
 impl std::fmt::Debug for Connection {
@@ -744,6 +773,11 @@ impl Connection {
         self.handles
             .last()
             .ok_or_else(|| SshError::Protocol("no connection".to_owned()))
+    }
+
+    /// The target's remote forwards.
+    pub(crate) fn routes(&self) -> &tunnel::Routes {
+        &self.routes
     }
 
     /// Whether the target's connection has ended.
@@ -775,6 +809,7 @@ pub async fn connect(
 ) -> Result<Connection, SshError> {
     let count = spec.hops.len();
     let mut handles: Vec<Handle<ClientHandler>> = Vec::with_capacity(count);
+    let routes = tunnel::Routes::default();
     for (index, hop) in spec.hops.iter().enumerate() {
         let label = hop.label();
         notes(Note::Connecting {
@@ -799,6 +834,11 @@ pub async fn connect(
             rejection: Arc::clone(&rejection),
             agent_forwarding: spec.agent_forwarding && index + 1 == count,
             agent_socket: spec.agent_socket.clone(),
+            routes: if index + 1 == count {
+                routes.clone()
+            } else {
+                tunnel::Routes::default()
+            },
         };
         let transport: Box<dyn Transport> = match handles.last() {
             None => first_transport(spec, hop).await?,
@@ -843,7 +883,7 @@ pub async fn connect(
         authenticate(&mut handle, hop, asker).await?;
         handles.push(handle);
     }
-    Ok(Connection { handles })
+    Ok(Connection { handles, routes })
 }
 
 /// The stream to the first hop: TCP, or through the proxy.
