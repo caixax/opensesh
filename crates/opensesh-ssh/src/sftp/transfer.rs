@@ -27,6 +27,7 @@ use super::FsError;
 use super::entry::{Entry, Kind};
 use super::fs::Fs;
 use super::path;
+use super::remote::Remote;
 
 /// Identifies a job.
 pub type JobId = u64;
@@ -635,7 +636,13 @@ impl Queue {
         counters: Arc<Counters>,
     ) -> Result<(), FsError> {
         self.set_state(id, State::Scanning);
-        let (dirs, items) = scan(&request, &counters, &mut control).await?;
+        let (mut dirs, mut items) = scan(&request, &counters, &mut control).await?;
+        if request.from.same(&request.to)
+            && let Some(remote) = request.from.remote()
+        {
+            self.set_state(id, State::Running);
+            copy_on_server(remote, &request, &counters, &mut dirs, &mut items).await?;
+        }
         for dir in &dirs {
             ensure_dir(&request.to, dir).await?;
         }
@@ -789,6 +796,55 @@ async fn scan(
         }
     }
     Ok((dirs, items))
+}
+
+/// A copy within one server: each source whose destination is free is copied there with
+/// `cp -R -p` (no bytes through this client), and its folders and files leave `dirs` and `items`.
+/// The rest (a destination in the way, which the policy decides, or a server without a shell)
+/// goes through the client like any copy.
+async fn copy_on_server(
+    remote: &Remote,
+    request: &Request,
+    counters: &Counters,
+    dirs: &mut Vec<String>,
+    items: &mut Vec<Item>,
+) -> Result<(), FsError> {
+    let style = request.to.style();
+    for source in &request.sources {
+        let to = path::join(style, &request.destination, &path::file_name(style, source));
+        // A folder copied into itself would never end; a destination in the way is the
+        // policy's.
+        if within(&request.destination, source) || request.to.try_lstat(&to).await?.is_some() {
+            continue;
+        }
+        match remote.copy_within(source, &to).await {
+            Ok(()) => {
+                let (done, rest): (Vec<Item>, Vec<Item>) = std::mem::take(items)
+                    .into_iter()
+                    .partition(|item| within(&item.to, &to));
+                *items = rest;
+                dirs.retain(|dir| !within(dir, &to));
+                let bytes: u64 = done.iter().map(|item| item.entry.size).sum();
+                counters
+                    .files_done
+                    .fetch_add(done.len() as u64, Ordering::Relaxed);
+                counters.bytes_done.fetch_add(bytes, Ordering::Relaxed);
+            }
+            Err(FsError::Unsupported { .. }) => return Ok(()),
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(())
+}
+
+/// Whether POSIX path `candidate` is `root` or inside it.
+fn within(candidate: &str, root: &str) -> bool {
+    let root = root.trim_end_matches('/');
+    candidate == root
+        || root.is_empty()
+        || candidate
+            .strip_prefix(root)
+            .is_some_and(|rest| rest.starts_with('/'))
 }
 
 /// Creates folder `dir` unless it is there.
@@ -1027,6 +1083,13 @@ impl FileJob {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn paths_within() {
+        assert!(within("/a", "/a") && within("/a/b/c", "/a") && within("/a/b", "/a/"));
+        assert!(!within("/ab", "/a") && !within("/", "/a") && !within("/b/a", "/a"));
+        assert!(within("/anything", "/"));
+    }
 
     #[test]
     fn names() {
