@@ -787,6 +787,8 @@ FocusScope {
                     text = qsTr("%1, %2 hidden").arg(text).arg(browser.hiddenCount);
                 if (pane.selectionCount > 0)
                     text = qsTr("%1 · %2 selected").arg(text).arg(pane.selectionCount);
+                if (browser.spaceTotal > 0)
+                    text = qsTr("%1 · %2 free of %3").arg(text).arg(FileFormat.size(browser.spaceFree)).arg(FileFormat.size(browser.spaceTotal));
                 return text;
             }
         }
