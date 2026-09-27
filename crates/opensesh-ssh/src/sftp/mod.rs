@@ -122,7 +122,8 @@ impl FsError {
     }
 
     /// A local I/O error about `path`.
-    pub(crate) fn io(path: &str, error: &std::io::Error) -> Self {
+    #[must_use]
+    pub fn io(path: &str, error: &std::io::Error) -> Self {
         let path = path.to_owned();
         match error.kind() {
             std::io::ErrorKind::NotFound => Self::NotFound { path },

@@ -2303,6 +2303,7 @@ name = "opensesh-app"
 version = "0.1.2"
 dependencies = [
  "anyhow",
+ "base64ct",
  "cxx",
  "cxx-qt",
  "cxx-qt-build",

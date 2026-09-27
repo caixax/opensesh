@@ -266,6 +266,7 @@ pub mod qobject {
         #[qproperty(QString, ssh_target, cxx_name = "sshTarget", READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, install_key, cxx_name = "installKey", READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, connection, READ, NOTIFY = ssh_changed)]
+        #[qproperty(i32, connection_serial, cxx_name = "connectionSerial", READ, NOTIFY = ssh_changed)]
         #[qproperty(QString, prompt, READ, NOTIFY = ssh_changed)]
         #[qproperty(QStringList, command, READ, WRITE, NOTIFY)]
         #[qproperty(QString, start_error, cxx_name = "startError", READ, NOTIFY = session_info_changed)]
@@ -717,6 +718,9 @@ use crate::terminal::profiles::{self, DEFAULT_FONT, Resolved};
 use crate::terminal::registry::{self, LocalOptions, SessionEntry, SessionInfo, Waker};
 use crate::terminal::{demo, preview};
 
+/// Numbers the SSH connections panes see come up (starting at 1).
+static SERIAL: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(1);
+
 /// The pane's view of an SSH connection's state, as JSON for QML.
 fn ssh_status_json(status: &opensesh_ssh::backend::Status) -> String {
     use opensesh_ssh::backend::Status;
@@ -742,13 +746,13 @@ fn ssh_status_json(status: &opensesh_ssh::backend::Status) -> String {
         }),
         Status::Ended => serde_json::json!({ "state": "ended" }),
         // Kept apart by the registry.
-        Status::OsDetected(_) | Status::KeyInstall(_) => return String::new(),
+        Status::OsDetected(_) | Status::KeyInstall(_) | Status::Live(_) => return String::new(),
     };
     value.to_string()
 }
 
 /// An SSH question as JSON for QML (no secret is in a question).
-fn ssh_prompt_json(id: u64, prompt: &opensesh_ssh::prompt::Prompt) -> String {
+pub(crate) fn ssh_prompt_json(id: u64, prompt: &opensesh_ssh::prompt::Prompt) -> String {
     use opensesh_ssh::prompt::{HostKeyKind, Prompt};
     let id = i64::try_from(id).unwrap_or(0);
     let value = match prompt {
@@ -876,6 +880,10 @@ pub struct TerminalItemRust {
     ssh_target: QString,
     install_key: QString,
     connection: QString,
+    /// Grows with each SSH connection that comes up; 0 while there is none.
+    connection_serial: i32,
+    /// The connection `connection_serial` counts.
+    live: Option<opensesh_ssh::backend::Live>,
     prompt: QString,
     /// The OS was already reported for this session.
     os_reported: bool,
@@ -984,6 +992,8 @@ impl Default for TerminalItemRust {
             ssh_target: QString::default(),
             install_key: QString::default(),
             connection: QString::default(),
+            connection_serial: 0,
+            live: None,
             prompt: QString::default(),
             os_reported: false,
             command: QStringList::default(),
@@ -1510,12 +1520,21 @@ impl qobject::TerminalItem {
             .as_ref()
             .map(|(id, prompt)| ssh_prompt_json(*id, prompt))
             .unwrap_or_default();
-        let changed =
-            self.connection.to_string() != connection || self.prompt.to_string() != prompt;
+        let live_changed = self.live != view.live;
+        let changed = live_changed
+            || self.connection.to_string() != connection
+            || self.prompt.to_string() != prompt;
         {
             let mut state = self.as_mut().rust_mut();
             state.connection = QString::from(&connection);
             state.prompt = QString::from(&prompt);
+            if live_changed {
+                state.connection_serial = match view.live {
+                    Some(_) => SERIAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+                    None => 0,
+                };
+                state.live = view.live;
+            }
         }
         if changed {
             self.as_mut().ssh_changed();
@@ -1838,11 +1857,13 @@ impl qobject::TerminalItem {
         }
         self.as_mut().publish_info(&SessionInfo::default(), false);
         self.as_mut().set_has_selection_value(false);
-        if !self.connection.is_empty() || !self.prompt.is_empty() {
+        if !self.connection.is_empty() || !self.prompt.is_empty() || self.live.is_some() {
             {
                 let mut state = self.as_mut().rust_mut();
                 state.connection = QString::default();
                 state.prompt = QString::default();
+                state.live = None;
+                state.connection_serial = 0;
             }
             self.as_mut().ssh_changed();
         }
