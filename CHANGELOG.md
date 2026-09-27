@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-09-27
+
 ### Added
 
 - **Sprint 8: SFTP ([ADR 0028](docs/adr/0028-sftp.md)).**
