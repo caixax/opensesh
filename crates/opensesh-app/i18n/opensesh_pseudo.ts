@@ -608,6 +608,526 @@
     </message>
 </context>
 <context>
+    <name>FileFormat</name>
+    <message>
+        <source>%1 B</source>
+        <translation>[%1 B ~~]</translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation>[%1 ĶB ~~]</translation>
+    </message>
+    <message>
+        <source>%1 MB</source>
+        <translation>[%1 MB ~~]</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>[%1 ĜB ~~]</translation>
+    </message>
+    <message>
+        <source>%1 TB</source>
+        <translation>[%1 ŤB ~~]</translation>
+    </message>
+    <message>
+        <source>%1/s</source>
+        <translation>[%1/š ~~]</translation>
+    </message>
+    <message>
+        <source>%1 s</source>
+        <translation>[%1 š ~~]</translation>
+    </message>
+    <message>
+        <source>%1 min %2 s</source>
+        <translation>[%1 míñ %2 š ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 h %2 min</source>
+        <translation>[%1 ĥ %2 míñ ~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>FileNameDialog</name>
+    <message>
+        <source>New file</source>
+        <translation>[Ñéŵ ƒíĺé ~~~]</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>[Ŕéñámé ~~]</translation>
+    </message>
+    <message>
+        <source>New symbolic link</source>
+        <translation>[Ñéŵ šýmböĺíç ĺíñķ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New folder</source>
+        <translation>[Ñéŵ ƒöĺďéŕ ~~~]</translation>
+    </message>
+    <message>
+        <source>Create</source>
+        <translation>[Çŕéáťé ~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Points to</source>
+        <translation>[Þöíñťš ťö ~~~]</translation>
+    </message>
+    <message>
+        <source>A path on the same side, absolute or relative to the link&apos;s folder.</source>
+        <translation>[Å þáťĥ öñ ťĥé šámé šíďé, ábšöĺüťé öŕ ŕéĺáťívé ťö ťĥé ĺíñķ&apos;š ƒöĺďéŕ. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>FilePane</name>
+    <message>
+        <source>It isn&apos;t there any more.</source>
+        <translation>[Íť íšñ&apos;ť ťĥéŕé áñý möŕé. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Permission denied.</source>
+        <translation>[Þéŕmíššíöñ ďéñíéď. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Something with that name is already there.</source>
+        <translation>[Šöméťĥíñĝ ŵíťĥ ťĥáť ñámé íš áĺŕéáďý ťĥéŕé. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The connection was lost.</source>
+        <translation>[Ťĥé çöññéçťíöñ ŵáš ĺöšť. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server didn&apos;t answer in time.</source>
+        <translation>[Ťĥé šéŕvéŕ ďíďñ&apos;ť áñšŵéŕ íñ ťímé. ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server can&apos;t do that.</source>
+        <translation>[Ťĥé šéŕvéŕ çáñ&apos;ť ďö ťĥáť. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The terminal isn&apos;t connected.</source>
+        <translation>[Ťĥé ťéŕmíñáĺ íšñ&apos;ť çöññéçťéď. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This server has no SFTP. Files can&apos;t be browsed on it yet.</source>
+        <translation>[Ťĥíš šéŕvéŕ ĥáš ñö ŠFŤÞ. Fíĺéš çáñ&apos;ť bé bŕöŵšéď öñ íť ýéť. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>[Çáñçéĺĺéď. ~~~]</translation>
+    </message>
+    <message>
+        <source>Authentication failed.</source>
+        <translation>[Åüťĥéñťíçáťíöñ ƒáíĺéď. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server&apos;s key wasn&apos;t accepted.</source>
+        <translation>[Ťĥé šéŕvéŕ&apos;š ķéý ŵášñ&apos;ť áççéþťéď. ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server can&apos;t be reached.</source>
+        <translation>[Ťĥé šéŕvéŕ çáñ&apos;ť bé ŕéáçĥéď. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Something went wrong.</source>
+        <translation>[Šöméťĥíñĝ ŵéñť ŵŕöñĝ. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The file can&apos;t be opened: the connection is gone.</source>
+        <translation>[Ťĥé ƒíĺé çáñ&apos;ť bé öþéñéď: ťĥé çöññéçťíöñ íš ĝöñé. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The other side isn&apos;t connected.</source>
+        <translation>[Ťĥé öťĥéŕ šíďé íšñ&apos;ť çöññéçťéď. ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The files can&apos;t be pasted: their side isn&apos;t connected any more.</source>
+        <translation>[Ťĥé ƒíĺéš çáñ&apos;ť bé þášťéď: ťĥéíŕ šíďé íšñ&apos;ť çöññéçťéď áñý möŕé. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Copied %n path(s).</source>
+        <translation>
+            <numerusform>[Çöþíéď %n þáťĥ(š). ~~~~~~]</numerusform>
+            <numerusform>[Çöþíéď %n þáťĥ(š). ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Up (Backspace)</source>
+        <translation>[Üþ (Báçķšþáçé) ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Home</source>
+        <translation>[Ĥömé ~~]</translation>
+    </message>
+    <message>
+        <source>Refresh (Ctrl+R)</source>
+        <translation>[Ŕéƒŕéšĥ (Çťŕĺ+Ŕ) ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>[Föĺďéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Folder: %1</source>
+        <translation>[Föĺďéŕ: %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>This computer</source>
+        <translation>[Ťĥíš çömþüťéŕ ~~~~]</translation>
+    </message>
+    <message>
+        <source>New folder (F7)</source>
+        <translation>[Ñéŵ ƒöĺďéŕ (F7) ~~~~~]</translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation>[Möŕé ~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>[Šížé ~~]</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>[Möďíƒíéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Permissions</source>
+        <translation>[Þéŕmíššíöñš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Owner</source>
+        <translation>[Öŵñéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Files of %1</source>
+        <translation>[Fíĺéš öƒ %1 ~~~~]</translation>
+    </message>
+    <message>
+        <source>Files</source>
+        <translation>[Fíĺéš ~~]</translation>
+    </message>
+    <message>
+        <source>Only hidden files here (Ctrl+H shows them).</source>
+        <translation>[Öñĺý ĥíďďéñ ƒíĺéš ĥéŕé (Çťŕĺ+Ĥ šĥöŵš ťĥém). ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This folder is empty.</source>
+        <translation>[Ťĥíš ƒöĺďéŕ íš émþťý. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connecting to %1…</source>
+        <translation>[Çöññéçťíñĝ ťö %1… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connecting…</source>
+        <translation>[Çöññéçťíñĝ… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose where to connect</source>
+        <translation>[Çĥööšé ŵĥéŕé ťö çöññéçť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Disconnected</source>
+        <translation>[Ďíšçöññéçťéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>Can&apos;t show these files</source>
+        <translation>[Çáñ&apos;ť šĥöŵ ťĥéšé ƒíĺéš ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pick a saved host, or type user@host.</source>
+        <translation>[Þíçķ á šávéď ĥöšť, öŕ ťýþé üšéŕ@ĥöšť. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a host…</source>
+        <translation>[Çĥööšé á ĥöšť… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reconnect</source>
+        <translation>[Ŕéçöññéçť ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n item(s)</source>
+        <translation>
+            <numerusform>[%n íťém(š) ~~~]</numerusform>
+            <numerusform>[%n íťém(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1, %2 hidden</source>
+        <translation>[%1, %2 ĥíďďéñ ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 · %2 selected</source>
+        <translation>[%1 · %2 šéĺéçťéď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 · %2 free of %3</source>
+        <translation>[%1 · %2 ƒŕéé öƒ %3 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1, sorted ascending</source>
+        <translation>[%1, šöŕťéď ášçéñďíñĝ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1, sorted descending</source>
+        <translation>[%1, šöŕťéď ďéšçéñďíñĝ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 → %2</source>
+        <translation>[%1 → %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>[Öþéñ ~~]</translation>
+    </message>
+    <message>
+        <source>Quick look</source>
+        <translation>[Qüíçķ ĺööķ ~~~]</translation>
+    </message>
+    <message>
+        <source>Space</source>
+        <translation>[Šþáçé ~~]</translation>
+    </message>
+    <message>
+        <source>Copy to the other side</source>
+        <translation>[Çöþý ťö ťĥé öťĥéŕ šíďé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>F5</source>
+        <translation>[F5 ~]</translation>
+    </message>
+    <message>
+        <source>Move to the other side</source>
+        <translation>[Mövé ťö ťĥé öťĥéŕ šíďé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>F6</source>
+        <translation>[F6 ~]</translation>
+    </message>
+    <message>
+        <source>Download to…</source>
+        <translation>[Ďöŵñĺöáď ťö… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>[Çöþý ~~]</translation>
+    </message>
+    <message>
+        <source>Ctrl+C</source>
+        <translation>[Çťŕĺ+Ç ~~]</translation>
+    </message>
+    <message>
+        <source>Cut</source>
+        <translation>[Çüť ~]</translation>
+    </message>
+    <message>
+        <source>Ctrl+X</source>
+        <translation>[Çťŕĺ+X ~~]</translation>
+    </message>
+    <message>
+        <source>Copy the path</source>
+        <translation>[Çöþý ťĥé þáťĥ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation>[Ŕéñámé… ~~~]</translation>
+    </message>
+    <message>
+        <source>F2</source>
+        <translation>[F2 ~]</translation>
+    </message>
+    <message>
+        <source>Permissions…</source>
+        <translation>[Þéŕmíššíöñš… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Properties…</source>
+        <translation>[Þŕöþéŕťíéš… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete…</source>
+        <translation>[Ďéĺéťé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Del</source>
+        <translation>[Ďéĺ ~]</translation>
+    </message>
+    <message>
+        <source>Paste</source>
+        <translation>[Þášťé ~~]</translation>
+    </message>
+    <message>
+        <source>Ctrl+V</source>
+        <translation>[Çťŕĺ+V ~~]</translation>
+    </message>
+    <message>
+        <source>Upload files…</source>
+        <translation>[Üþĺöáď ƒíĺéš… ~~~~]</translation>
+    </message>
+    <message>
+        <source>New folder…</source>
+        <translation>[Ñéŵ ƒöĺďéŕ… ~~~~]</translation>
+    </message>
+    <message>
+        <source>F7</source>
+        <translation>[F7 ~]</translation>
+    </message>
+    <message>
+        <source>New file…</source>
+        <translation>[Ñéŵ ƒíĺé… ~~~]</translation>
+    </message>
+    <message>
+        <source>New symbolic link…</source>
+        <translation>[Ñéŵ šýmböĺíç ĺíñķ… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Show hidden files</source>
+        <translation>[Šĥöŵ ĥíďďéñ ƒíĺéš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Ctrl+H</source>
+        <translation>[Çťŕĺ+Ĥ ~~]</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>[Ŕéƒŕéšĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>Ctrl+R</source>
+        <translation>[Çťŕĺ+Ŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Open in the file manager</source>
+        <translation>[Öþéñ íñ ťĥé ƒíĺé máñáĝéŕ ~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Delete %n items?</source>
+        <translation>
+            <numerusform>[Ďéĺéťé %n íťémš? ~~~~~]</numerusform>
+            <numerusform>[Ďéĺéťé %n íťémš? ~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Delete this item?</source>
+        <translation>[Ďéĺéťé ťĥíš íťém? ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
+    </message>
+    <message>
+        <source>Folders are deleted with everything in them. This can&apos;t be undone.</source>
+        <translation>[Föĺďéŕš áŕé ďéĺéťéď ŵíťĥ évéŕýťĥíñĝ íñ ťĥém. Ťĥíš çáñ&apos;ť bé üñďöñé. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Folders are deleted with everything in them. They don&apos;t go to the trash, and this can&apos;t be undone.</source>
+        <translation>[Föĺďéŕš áŕé ďéĺéťéď ŵíťĥ évéŕýťĥíñĝ íñ ťĥém. Ťĥéý ďöñ&apos;ť ĝö ťö ťĥé ťŕášĥ, áñď ťĥíš çáñ&apos;ť bé üñďöñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Download to</source>
+        <translation>[Ďöŵñĺöáď ťö ~~~~]</translation>
+    </message>
+    <message>
+        <source>Upload files</source>
+        <translation>[Üþĺöáď ƒíĺéš ~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>FilePreviewDialog</name>
+    <message>
+        <source>Close</source>
+        <translation>[Çĺöšé ~~]</translation>
+    </message>
+    <message>
+        <source>This file isn&apos;t text.</source>
+        <translation>[Ťĥíš ƒíĺé íšñ&apos;ť ťéxť. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This image is too big for a quick look (over 8 MB).</source>
+        <translation>[Ťĥíš ímáĝé íš ťöö bíĝ ƒöŕ á qüíçķ ĺööķ (övéŕ 8 MB). ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The file can&apos;t be read: %1</source>
+        <translation>[Ťĥé ƒíĺé çáñ&apos;ť bé ŕéáď: %1 ~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>FilePropertiesDialog</name>
+    <message>
+        <source>Path</source>
+        <translation>[Þáťĥ ~~]</translation>
+    </message>
+    <message>
+        <source>Kind</source>
+        <translation>[Ķíñď ~~]</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>[Šížé ~~]</translation>
+    </message>
+    <message>
+        <source>%1 (%2 bytes)</source>
+        <translation>[%1 (%2 býťéš) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>[Möďíƒíéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Permissions</source>
+        <translation>[Þéŕmíššíöñš ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>[%1 (%2) ~~~]</translation>
+    </message>
+    <message>
+        <source>Owner and group</source>
+        <translation>[Öŵñéŕ áñď ĝŕöüþ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Points to</source>
+        <translation>[Þöíñťš ťö ~~~]</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>[Föĺďéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Link to a folder</source>
+        <translation>[Ĺíñķ ťö á ƒöĺďéŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Link to a file</source>
+        <translation>[Ĺíñķ ťö á ƒíĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Broken link</source>
+        <translation>[Bŕöķéñ ĺíñķ ~~~~]</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>[Fíĺé ~~]</translation>
+    </message>
+    <message>
+        <source>Special file</source>
+        <translation>[Šþéçíáĺ ƒíĺé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>[Çĺöšé ~~]</translation>
+    </message>
+</context>
+<context>
     <name>Gallery</name>
     <message>
         <source>Tokens</source>
@@ -3431,6 +3951,84 @@
     </message>
 </context>
 <context>
+    <name>PermissionsDialog</name>
+    <message numerus="yes">
+        <source>Permissions of %n files</source>
+        <translation>
+            <numerusform>[Þéŕmíššíöñš öƒ %n ƒíĺéš ~~~~~~~]</numerusform>
+            <numerusform>[Þéŕmíššíöñš öƒ %n ƒíĺéš ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Permissions</source>
+        <translation>[Þéŕmíššíöñš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>[Åþþĺý ~~]</translation>
+    </message>
+    <message>
+        <source>Read</source>
+        <translation>[Ŕéáď ~~]</translation>
+    </message>
+    <message>
+        <source>Write</source>
+        <translation>[Ŵŕíťé ~~]</translation>
+    </message>
+    <message>
+        <source>Execute</source>
+        <translation>[Éxéçüťé ~~~]</translation>
+    </message>
+    <message>
+        <source>Owner</source>
+        <translation>[Öŵñéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Group</source>
+        <translation>[Ĝŕöüþ ~~]</translation>
+    </message>
+    <message>
+        <source>Others</source>
+        <translation>[Öťĥéŕš ~~]</translation>
+    </message>
+    <message>
+        <source>%1: %2</source>
+        <translation>[%1: %2 ~~]</translation>
+    </message>
+    <message>
+        <source>read</source>
+        <translation>[ŕéáď ~~]</translation>
+    </message>
+    <message>
+        <source>write</source>
+        <translation>[ŵŕíťé ~~]</translation>
+    </message>
+    <message>
+        <source>execute</source>
+        <translation>[éxéçüťé ~~~]</translation>
+    </message>
+    <message>
+        <source>Set user ID</source>
+        <translation>[Šéť üšéŕ ÍĎ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Set group ID</source>
+        <translation>[Šéť ĝŕöüþ ÍĎ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Sticky</source>
+        <translation>[Šťíçķý ~~]</translation>
+    </message>
+    <message>
+        <source>Octal</source>
+        <translation>[Öçťáĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Permissions as an octal number</source>
+        <translation>[Þéŕmíššíöñš áš áñ öçťáĺ ñümbéŕ ~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>QuickConnectPopup</name>
     <message>
         <source>Quick connect</source>
@@ -3467,6 +4065,57 @@
     <message>
         <source>Enter: new tab · Shift+Enter: split right · Ctrl+Enter: split down</source>
         <translation>[Éñťéŕ: ñéŵ ťáb · Šĥíƒť+Éñťéŕ: šþĺíť ŕíĝĥť · Çťŕĺ+Éñťéŕ: šþĺíť ďöŵñ ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>RemoteEditDialogs</name>
+    <message>
+        <source>%1 saved to the server.</source>
+        <translation>[%1 šávéď ťö ťĥé šéŕvéŕ. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 couldn&apos;t be saved to the server: %2</source>
+        <translation>[%1 çöüĺďñ&apos;ť bé šávéď ťö ťĥé šéŕvéŕ: %2 ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 changed on the server</source>
+        <translation>[%1 çĥáñĝéď öñ ťĥé šéŕvéŕ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Replace it with mine</source>
+        <translation>[Ŕéþĺáçé íť ŵíťĥ míñé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not now</source>
+        <translation>[Ñöť ñöŵ ~~~]</translation>
+    </message>
+    <message>
+        <source>Someone or something changed the file on the server after you opened it. Your save would replace their changes.</source>
+        <translation>[Šöméöñé öŕ šöméťĥíñĝ çĥáñĝéď ťĥé ƒíĺé öñ ťĥé šéŕvéŕ áƒťéŕ ýöü öþéñéď íť. Ýöüŕ šávé ŵöüĺď ŕéþĺáçé ťĥéíŕ çĥáñĝéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Take the server&apos;s copy (my changes are lost)</source>
+        <translation>[Ťáķé ťĥé šéŕvéŕ&apos;š çöþý (mý çĥáñĝéš áŕé ĺöšť) ~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Save %1 with sudo?</source>
+        <translation>[Šávé %1 ŵíťĥ šüďö? ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Save with sudo</source>
+        <translation>[Šávé ŵíťĥ šüďö ~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server didn&apos;t let your user write this file. With sudo, the file is written as root (`sudo tee`): make sure you mean to change it.</source>
+        <translation>[Ťĥé šéŕvéŕ ďíďñ&apos;ť ĺéť ýöüŕ üšéŕ ŵŕíťé ťĥíš ƒíĺé. Ŵíťĥ šüďö, ťĥé ƒíĺé íš ŵŕíťťéñ áš ŕööť (`šüďö ťéé`): máķé šüŕé ýöü méáñ ťö çĥáñĝé íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>sudo password (empty if it asks for none)</source>
+        <translation>[šüďö þáššŵöŕď (émþťý íƒ íť ášķš ƒöŕ ñöñé) ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>sudo password</source>
+        <translation>[šüďö þáššŵöŕď ~~~~]</translation>
     </message>
 </context>
 <context>
@@ -5052,6 +5701,37 @@
     </message>
 </context>
 <context>
+    <name>SessionFiles</name>
+    <message>
+        <source>Follow the terminal</source>
+        <translation>[Föĺĺöŵ ťĥé ťéŕmíñáĺ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Go to the terminal&apos;s folder</source>
+        <translation>[Ĝö ťö ťĥé ťéŕmíñáĺ&apos;š ƒöĺďéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This shell doesn&apos;t tell its folder.</source>
+        <translation>[Ťĥíš šĥéĺĺ ďöéšñ&apos;ť ťéĺĺ íťš ƒöĺďéŕ. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Set up…</source>
+        <translation>[Šéť üþ… ~~~]</translation>
+    </message>
+    <message>
+        <source>This computer</source>
+        <translation>[Ťĥíš çömþüťéŕ ~~~~]</translation>
+    </message>
+    <message>
+        <source>No terminal</source>
+        <translation>[Ñö ťéŕmíñáĺ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Open a terminal or an SSH connection: its files show here and follow its folder.</source>
+        <translation>[Öþéñ á ťéŕmíñáĺ öŕ áñ ŠŠĤ çöññéçťíöñ: íťš ƒíĺéš šĥöŵ ĥéŕé áñď ƒöĺĺöŵ íťš ƒöĺďéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>SessionTabStrip</name>
     <message>
         <source>Tabs</source>
@@ -6083,6 +6763,113 @@
     </message>
 </context>
 <context>
+    <name>SettingsSftpPage</name>
+    <message>
+        <source>SFTP</source>
+        <translation>[ŠFŤÞ ~~]</translation>
+    </message>
+    <message>
+        <source>How files are transferred, shown and edited, in the SFTP view and in the side panel.</source>
+        <translation>[Ĥöŵ ƒíĺéš áŕé ťŕáñšƒéŕŕéď, šĥöŵñ áñď éďíťéď, íñ ťĥé ŠFŤÞ víéŵ áñď íñ ťĥé šíďé þáñéĺ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Transfers</source>
+        <translation>[Ťŕáñšƒéŕš ~~~]</translation>
+    </message>
+    <message>
+        <source>Files at once</source>
+        <translation>[Fíĺéš áť öñçé ~~~~]</translation>
+    </message>
+    <message>
+        <source>How many files are copied at the same time, across every transfer.</source>
+        <translation>[Ĥöŵ máñý ƒíĺéš áŕé çöþíéď áť ťĥé šámé ťímé, áçŕöšš évéŕý ťŕáñšƒéŕ. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>When a file is already there</source>
+        <translation>[Ŵĥéñ á ƒíĺé íš áĺŕéáďý ťĥéŕé ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Ask</source>
+        <translation>[Åšķ ~]</translation>
+    </message>
+    <message>
+        <source>Replace it</source>
+        <translation>[Ŕéþĺáçé íť ~~~]</translation>
+    </message>
+    <message>
+        <source>Replace it if older</source>
+        <translation>[Ŕéþĺáçé íť íƒ öĺďéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Continue it if it is shorter</source>
+        <translation>[Çöñťíñüé íť íƒ íť íš šĥöŕťéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Skip it</source>
+        <translation>[Šķíþ íť ~~~]</translation>
+    </message>
+    <message>
+        <source>Keep both</source>
+        <translation>[Ķééþ böťĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>Keep modification times</source>
+        <translation>[Ķééþ möďíƒíçáťíöñ ťíméš ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keep permissions</source>
+        <translation>[Ķééþ þéŕmíššíöñš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>The permission bits of each file go with it (on Windows, only read-only means something).</source>
+        <translation>[Ťĥé þéŕmíššíöñ bíťš öƒ éáçĥ ƒíĺé ĝö ŵíťĥ íť (öñ Ŵíñďöŵš, öñĺý ŕéáď-öñĺý méáñš šöméťĥíñĝ). ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>File panes</source>
+        <translation>[Fíĺé þáñéš ~~~]</translation>
+    </message>
+    <message>
+        <source>Show hidden files</source>
+        <translation>[Šĥöŵ ĥíďďéñ ƒíĺéš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Files whose name starts with a dot. Ctrl+H switches it in a pane.</source>
+        <translation>[Fíĺéš ŵĥöšé ñámé šťáŕťš ŵíťĥ á ďöť. Çťŕĺ+Ĥ šŵíťçĥéš íť íñ á þáñé. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Follow the terminal</source>
+        <translation>[Föĺĺöŵ ťĥé ťéŕmíñáĺ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The side panel&apos;s files go where the terminal&apos;s shell goes.</source>
+        <translation>[Ťĥé šíďé þáñéĺ&apos;š ƒíĺéš ĝö ŵĥéŕé ťĥé ťéŕmíñáĺ&apos;š šĥéĺĺ ĝöéš. ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Confirm deleting</source>
+        <translation>[Çöñƒíŕm ďéĺéťíñĝ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Editing server files</source>
+        <translation>[Éďíťíñĝ šéŕvéŕ ƒíĺéš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Opening a server&apos;s file downloads a private copy and opens it; each save is uploaded, after checking nobody changed the server&apos;s copy since.</source>
+        <translation>[Öþéñíñĝ á šéŕvéŕ&apos;š ƒíĺé ďöŵñĺöáďš á þŕíváťé çöþý áñď öþéñš íť; éáçĥ šávé íš üþĺöáďéď, áƒťéŕ çĥéçķíñĝ ñöböďý çĥáñĝéď ťĥé šéŕvéŕ&apos;š çöþý šíñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Editor command</source>
+        <translation>[Éďíťöŕ çömmáñď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>For example: code --wait {file}. {file} is the copy&apos;s path; empty uses the system&apos;s editor for the file&apos;s type.</source>
+        <translation>[Föŕ éxámþĺé: çöďé --ŵáíť {ƒíĺé}. {ƒíĺé} íš ťĥé çöþý&apos;š þáťĥ; émþťý üšéš ťĥé šýšťém&apos;š éďíťöŕ ƒöŕ ťĥé ƒíĺé&apos;š ťýþé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>the system&apos;s editor</source>
+        <translation>[ťĥé šýšťém&apos;š éďíťöŕ ~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>SettingsShortcutsPage</name>
     <message>
         <source>Shortcuts</source>
@@ -7105,8 +7892,8 @@
         <translation>[ŠFŤÞ ~~]</translation>
     </message>
     <message>
-        <source>File transfer defaults: the dual-pane browser, conflicts and permissions.</source>
-        <translation>[Fíĺé ťŕáñšƒéŕ ďéƒáüĺťš: ťĥé ďüáĺ-þáñé bŕöŵšéŕ, çöñƒĺíçťš áñď þéŕmíššíöñš. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Transfers, the file panes and editing server files.</source>
+        <translation>[Ťŕáñšƒéŕš, ťĥé ƒíĺé þáñéš áñď éďíťíñĝ šéŕvéŕ ƒíĺéš. ~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Security</source>
@@ -7140,16 +7927,107 @@
 <context>
     <name>SftpView</name>
     <message>
-        <source>SFTP</source>
-        <translation>[ŠFŤÞ ~~]</translation>
+        <source>This computer</source>
+        <translation>[Ťĥíš çömþüťéŕ ~~~~]</translation>
     </message>
     <message>
-        <source>Browse, edit and transfer files on your servers in a dual-pane explorer, local on one side and remote on the other. Coming in Sprint 8.</source>
-        <translation>[Bŕöŵšé, éďíť áñď ťŕáñšƒéŕ ƒíĺéš öñ ýöüŕ šéŕvéŕš íñ á ďüáĺ-þáñé éxþĺöŕéŕ, ĺöçáĺ öñ öñé šíďé áñď ŕémöťé öñ ťĥé öťĥéŕ. Çömíñĝ íñ Šþŕíñť 8. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Hide the transfers</source>
+        <translation>[Ĥíďé ťĥé ťŕáñšƒéŕš ~~~~~~]</translation>
     </message>
     <message>
-        <source>New SFTP connection</source>
-        <translation>[Ñéŵ ŠFŤÞ çöññéçťíöñ ~~~~~~]</translation>
+        <source>Show the transfers</source>
+        <translation>[Šĥöŵ ťĥé ťŕáñšƒéŕš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connect to user@host…</source>
+        <translation>[Çöññéçť ťö üšéŕ@ĥöšť… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a host</source>
+        <translation>[Çĥööšé á ĥöšť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Files of</source>
+        <translation>[Fíĺéš öƒ ~~~]</translation>
+    </message>
+    <message>
+        <source>Swap the sides</source>
+        <translation>[Šŵáþ ťĥé šíďéš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy the selection to the right (F5)</source>
+        <translation>[Çöþý ťĥé šéĺéçťíöñ ťö ťĥé ŕíĝĥť (F5) ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy the selection to the left (F5)</source>
+        <translation>[Çöþý ťĥé šéĺéçťíöñ ťö ťĥé ĺéƒť (F5) ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connect to</source>
+        <translation>[Çöññéçť ťö ~~~]</translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation>[Çöññéçť ~~~]</translation>
+    </message>
+    <message>
+        <source>user@host:port</source>
+        <translation>[üšéŕ@ĥöšť:þöŕť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Where to connect</source>
+        <translation>[Ŵĥéŕé ťö çöññéçť ~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ShellIntegrationDialog</name>
+    <message>
+        <source>Follow the terminal&apos;s folder</source>
+        <translation>[Föĺĺöŵ ťĥé ťéŕmíñáĺ&apos;š ƒöĺďéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Add to ~/.%1rc</source>
+        <translation>[Åďď ťö ~/.%1ŕç ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Added to ~/.%1rc. It works in new shells, or after `source ~/.%1rc`.</source>
+        <translation>[Åďďéď ťö ~/.%1ŕç. Íť ŵöŕķš íñ ñéŵ šĥéĺĺš, öŕ áƒťéŕ `šöüŕçé ~/.%1ŕç`. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The lines couldn&apos;t be added: %1</source>
+        <translation>[Ťĥé ĺíñéš çöüĺďñ&apos;ť bé áďďéď: %1 ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The shell on this server doesn&apos;t say which folder it is in, so the files can&apos;t follow `cd`. These lines make it say so before each prompt.</source>
+        <translation>[Ťĥé šĥéĺĺ öñ ťĥíš šéŕvéŕ ďöéšñ&apos;ť šáý ŵĥíçĥ ƒöĺďéŕ íť íš íñ, šö ťĥé ƒíĺéš çáñ&apos;ť ƒöĺĺöŵ `çď`. Ťĥéšé ĺíñéš máķé íť šáý šö béƒöŕé éáçĥ þŕömþť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>bash</source>
+        <translation>[bášĥ ~~]</translation>
+    </message>
+    <message>
+        <source>zsh</source>
+        <translation>[žšĥ ~]</translation>
+    </message>
+    <message>
+        <source>Shell</source>
+        <translation>[Šĥéĺĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Shell integration lines</source>
+        <translation>[Šĥéĺĺ íñťéĝŕáťíöñ ĺíñéš ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy the lines</source>
+        <translation>[Çöþý ťĥé ĺíñéš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copied.</source>
+        <translation>[Çöþíéď. ~~~]</translation>
+    </message>
+    <message>
+        <source>&quot;Add&quot; appends them to the file on the server unless they are there already.</source>
+        <translation>[&quot;Åďď&quot; áþþéñďš ťĥém ťö ťĥé ƒíĺé öñ ťĥé šéŕvéŕ üñĺéšš ťĥéý áŕé ťĥéŕé áĺŕéáďý. ~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -7177,10 +8055,6 @@
     <message>
         <source>Close side panel</source>
         <translation>[Çĺöšé šíďé þáñéĺ ~~~~~]</translation>
-    </message>
-    <message>
-        <source>The file browser for the current session arrives in Sprint 8.</source>
-        <translation>[Ťĥé ƒíĺé bŕöŵšéŕ ƒöŕ ťĥé çüŕŕéñť šéššíöñ áŕŕívéš íñ Šþŕíñť 8. ~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Host info</source>
@@ -7523,6 +8397,24 @@
     <message>
         <source>Stop broadcasting (%1)</source>
         <translation>[Šťöþ bŕöáďçášťíñĝ (%1) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 · %2</source>
+        <translation>[%1 · %2 ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n transfer(s) running</source>
+        <translation>
+            <numerusform>[%n ťŕáñšƒéŕ(š) ŕüññíñĝ ~~~~~~~]</numerusform>
+            <numerusform>[%n ťŕáñšƒéŕ(š) ŕüññíñĝ ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n transfer(s) running. Click to see them.</source>
+        <translation>
+            <numerusform>[%n ťŕáñšƒéŕ(š) ŕüññíñĝ. Çĺíçķ ťö šéé ťĥém. ~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[%n ťŕáñšƒéŕ(š) ŕüññíñĝ. Çĺíçķ ťö šéé ťĥém. ~~~~~~~~~~~~~]</numerusform>
+        </translation>
     </message>
     <message>
         <source>The vault is locked: click to unlock</source>
@@ -8025,6 +8917,175 @@
     <message>
         <source>Command palette (%1)</source>
         <translation>[Çömmáñď þáĺéťťé (%1) ~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>TransferQuestionDialog</name>
+    <message>
+        <source>%1 is already there</source>
+        <translation>[%1 íš áĺŕéáďý ťĥéŕé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Replace</source>
+        <translation>[Ŕéþĺáçé ~~~]</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>[Šížé ~~]</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>[Möďíƒíéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Being copied</source>
+        <translation>[Béíñĝ çöþíéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>Already there</source>
+        <translation>[Åĺŕéáďý ťĥéŕé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Continue it</source>
+        <translation>[Çöñťíñüé íť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Replace if newer</source>
+        <translation>[Ŕéþĺáçé íƒ ñéŵéŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keep both</source>
+        <translation>[Ķééþ böťĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>Skip</source>
+        <translation>[Šķíþ ~~]</translation>
+    </message>
+    <message>
+        <source>Cancel the transfer</source>
+        <translation>[Çáñçéĺ ťĥé ťŕáñšƒéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Do this for every file of this transfer</source>
+        <translation>[Ďö ťĥíš ƒöŕ évéŕý ƒíĺé öƒ ťĥíš ťŕáñšƒéŕ ~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>TransfersPanel</name>
+    <message>
+        <source>Waiting</source>
+        <translation>[Ŵáíťíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Looking at the folders…</source>
+        <translation>[Ĺööķíñĝ áť ťĥé ƒöĺďéŕš… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Paused</source>
+        <translation>[Þáüšéď ~~]</translation>
+    </message>
+    <message>
+        <source>Waiting for your answer</source>
+        <translation>[Ŵáíťíñĝ ƒöŕ ýöüŕ áñšŵéŕ ~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Done (%n skipped)</source>
+        <translation>
+            <numerusform>[Ďöñé (%n šķíþþéď) ~~~~~~]</numerusform>
+            <numerusform>[Ďöñé (%n šķíþþéď) ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>[Ďöñé ~~]</translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation>[Fáíĺéď: %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>[Çáñçéĺĺéď ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 of %2</source>
+        <translation>[%1 öƒ %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 left</source>
+        <translation>[%1 ĺéƒť ~~~]</translation>
+    </message>
+    <message>
+        <source>Downloading…</source>
+        <translation>[Ďöŵñĺöáďíñĝ… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Saving to the server…</source>
+        <translation>[Šávíñĝ ťö ťĥé šéŕvéŕ… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved to the server</source>
+        <translation>[Šávéď ťö ťĥé šéŕvéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Changed on the server since you opened it</source>
+        <translation>[Çĥáñĝéď öñ ťĥé šéŕvéŕ šíñçé ýöü öþéñéď íť ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server refused the save</source>
+        <translation>[Ťĥé šéŕvéŕ ŕéƒüšéď ťĥé šávé ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saves go to the server</source>
+        <translation>[Šávéš ĝö ťö ťĥé šéŕvéŕ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Transfers (%1 active)</source>
+        <translation>[Ťŕáñšƒéŕš (%1 áçťívé) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Transfers</source>
+        <translation>[Ťŕáñšƒéŕš ~~~]</translation>
+    </message>
+    <message>
+        <source>Clear finished</source>
+        <translation>[Çĺéáŕ ƒíñíšĥéď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Nothing is being transferred. Drag files between the panes, or drop them here from your file manager.</source>
+        <translation>[Ñöťĥíñĝ íš béíñĝ ťŕáñšƒéŕŕéď. Ďŕáĝ ƒíĺéš béťŵééñ ťĥé þáñéš, öŕ ďŕöþ ťĥém ĥéŕé ƒŕöm ýöüŕ ƒíĺé máñáĝéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 → %2</source>
+        <translation>[%1 → %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Progress of %1</source>
+        <translation>[Þŕöĝŕéšš öƒ %1 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (%2 of %3 files)</source>
+        <translation>[%1 (%2 öƒ %3 ƒíĺéš) ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation>[Þáüšé ~~]</translation>
+    </message>
+    <message>
+        <source>Resume</source>
+        <translation>[Ŕéšümé ~~]</translation>
+    </message>
+    <message>
+        <source>Try again (copied files are skipped, partial ones continued)</source>
+        <translation>[Ťŕý áĝáíñ (çöþíéď ƒíĺéš áŕé šķíþþéď, þáŕťíáĺ öñéš çöñťíñüéď) ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Stop editing (the local copy is deleted)</source>
+        <translation>[Šťöþ éďíťíñĝ (ťĥé ĺöçáĺ çöþý íš ďéĺéťéď) ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çáñçéĺ ~~]</translation>
     </message>
 </context>
 <context>

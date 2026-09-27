@@ -1,6 +1,6 @@
 # Threat model
 
-This document says what OpenSesh protects, from whom, how, and where it stops. It is kept up to date as features arrive (PLAN §8). It was last reviewed in Sprint 7 (the SSH client).
+This document says what OpenSesh protects, from whom, how, and where it stops. It is kept up to date as features arrive (PLAN §8). It was last reviewed in Sprint 8 (SFTP).
 
 ## What is worth protecting
 
@@ -13,6 +13,7 @@ This document says what OpenSesh protects, from whom, how, and where it stops. I
 | Passphrases of imported or exported keys | typed once; never stored |
 | Hosts, users, identities' names, public keys, known hosts | readable TOML files (`hosts.toml`, `keychain.toml`, `known_hosts`) |
 | What remote sessions show | the terminal's memory; session logs when a host turns them on |
+| Files on servers | the servers; copies the user transfers; private copies of files being edited, in the cache folder |
 | The user's SSH sessions themselves | the network, between OpenSesh and each server |
 
 Hosts and public keys are not secret, but they are private: they show where the user connects and as whom. They are kept readable on purpose (PLAN §0, local-first), like OpenSSH's own `~/.ssh/config` and `known_hosts`.
@@ -76,6 +77,9 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - **X11 forwarding** isn't implemented in the built-in client yet; `x11` channels are refused.
 - **Output is untrusted:** escape sequences are parsed by the terminal engine (bounded, no command execution); clipboard writes (OSC 52) are shown with a toast; OS detection only matches `/etc/os-release` IDs to a fixed icon list.
 - **"Install my key"** sends only the public key, on the command's standard input.
+- **File names are untrusted:** listings, symlink targets and the names in a recursive download come from the server. A download writes only under the folder the user chose: a name that isn't one plain name (empty, `.`, `..`, with a `/`, and on Windows with a `\` or `:`) is left out of listings and downloads, and a file with such a name isn't opened for editing, so a server can't place a file elsewhere (the CVE-2019-6111 kind of attack; the SCP spike refuses such names too). Symlinks to folders are not followed in recursive copies (no loops, nothing outside the tree).
+- **Shell commands on the server** run only for what the user asked: a copy within the server (`cp -R -p`), the shell integration (added to `~/.bashrc` or `~/.zshrc` only after the user confirms), and "Save with sudo". Paths go in single quotes; nothing from a listing is run.
+- **Following the terminal's folder** (OSC 7) only moves the side panel's listing: a server can make it show another folder, not run anything or write anywhere.
 - **RSA signing** (RUSTSEC-2023-0071, see Dependencies): a server could time the client's RSA signatures, one per connection.
 
 ### Tampering with files
@@ -94,6 +98,8 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - **Exported private keys** are written by the keychain worker straight to the chosen file (`0600` on Linux), optionally with a passphrase. They never pass through the UI or the clipboard. Only public keys are copied to the clipboard.
 - **Test runs** (smoke tests, screenshots) keep the vault in memory and never touch the user's keyring, agents or files. Their SSH connections all go to an in-process test server.
 - **Secrets reach a connection only when it authenticates:** the connection asks the keychain worker for the identity's password and key then, so a locked vault stays locked until a connection needs it. Typed answers become wiped strings at once; a dropped question counts as cancelled.
+- **Files being edited** are downloaded into a private folder (the cache folder's `edit/<id>`, `0700` on Linux) while the edit lasts, in clear, like any file the user downloads; the folder is removed when the edit stops or OpenSesh quits (after a crash it stays until removed by hand). An editor may keep its own backups elsewhere.
+- **"Save with sudo"** is offered only after the server refused a save, with a warning. The sudo password is typed in its dialog, kept as a wiped string, sent once on the command's standard input (never on the command line) and only when `sudo -n true` says a password is needed; otherwise a password line would end up in the file. If sudo asks for a password for `tee` but not for `true` (per-command rules), the first line of the file is taken as a wrong password attempt, and nothing is written.
 - **Session logs** (off by default) keep what the screen showed, secrets printed there included. They go to `logs/sessions` in the data folder or a folder chosen in Settings > SSH, created `0600` on Linux; text logs leave out escape sequences. Passwords typed at a remote prompt are not echoed, so they are not in the log.
 
 ## Memory
