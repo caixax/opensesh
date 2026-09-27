@@ -308,6 +308,7 @@ pub mod qobject {
         #[qproperty(bool, copy_on_select, cxx_name = "copyOnSelect", READ, WRITE, NOTIFY)]
         #[qproperty(QString, title, READ, NOTIFY = session_info_changed)]
         #[qproperty(QString, working_directory, cxx_name = "workingDirectory", READ, NOTIFY = session_info_changed)]
+        #[qproperty(QString, shell_directory, cxx_name = "shellDirectory", READ, NOTIFY = session_info_changed)]
         #[qproperty(bool, running, READ, NOTIFY = session_info_changed)]
         #[qproperty(i32, exit_code, cxx_name = "exitCode", READ, NOTIFY = session_info_changed)]
         #[qproperty(bool, exit_code_known, cxx_name = "exitCodeKnown", READ, NOTIFY = session_info_changed)]
@@ -906,6 +907,7 @@ pub struct TerminalItemRust {
     copy_on_select: bool,
     title: QString,
     working_directory: QString,
+    shell_directory: QString,
     running: bool,
     exit_code: i32,
     exit_code_known: bool,
@@ -1015,6 +1017,7 @@ impl Default for TerminalItemRust {
             copy_on_select: false,
             title: QString::default(),
             working_directory: QString::default(),
+            shell_directory: QString::default(),
             running: false,
             exit_code: 0,
             exit_code_known: false,
@@ -1939,10 +1942,12 @@ impl qobject::TerminalItem {
             .unwrap_or_default();
         let title = QString::from(&title);
         let directory = QString::from(info.working_directory.as_deref().unwrap_or_default());
+        let shell_directory = QString::from(info.shell_directory.as_deref().unwrap_or_default());
         let running = attached && info.exit.is_none();
         let (code, known) = exit_status(info.exit);
         let changed = self.title != title
             || self.working_directory != directory
+            || self.shell_directory != shell_directory
             || self.running != running
             || self.exit_code != code
             || self.exit_code_known != known;
@@ -1953,6 +1958,7 @@ impl qobject::TerminalItem {
             let mut state = self.as_mut().rust_mut();
             state.title = title;
             state.working_directory = directory;
+            state.shell_directory = shell_directory;
             state.running = running;
             state.exit_code = code;
             state.exit_code_known = known;

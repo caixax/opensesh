@@ -105,6 +105,9 @@ pub enum Notice {
     ResetTitle,
     /// The shell reported its working directory (OSC 7 for this machine), as a local path.
     WorkingDirectory(String),
+    /// The shell reported where it is, on any host (OSC 7; a server's shell over SSH), as the
+    /// path it wrote.
+    ShellDirectory(String),
     /// The program rang the bell (at most one per 50 ms).
     Bell,
     /// The program ended: its exit code, or `None` when it was killed or failed to start. Sent
@@ -489,6 +492,7 @@ impl Session {
             exit_reported: false,
             title: Throttled::default(),
             directory: Throttled::default(),
+            shell_directory: Throttled::default(),
             bell: Throttled::default(),
             blinking: Throttled::default(),
             cursor_blinking: options.cursor_blinking,
@@ -1401,6 +1405,7 @@ struct Engine {
     exit_reported: bool,
     title: Throttled<Option<String>>,
     directory: Throttled<String>,
+    shell_directory: Throttled<String>,
     bell: Throttled<()>,
     blinking: Throttled<bool>,
     cursor_blinking: bool,
@@ -1715,6 +1720,9 @@ impl Engine {
         if let Some(directory) = self.side.take_working_directory() {
             self.directory.set(directory);
         }
+        if let Some(directory) = self.side.take_shell_directory() {
+            self.shell_directory.set(directory);
+        }
         let enquiries = self.side.take_enquiries();
         if !self.answerback.is_empty() {
             for _ in 0..enquiries.min(MAX_ANSWERBACKS_PER_CHUNK) {
@@ -1728,6 +1736,7 @@ impl Engine {
             self.sync_hold.map(|start| start + SYNC_HOLD),
             self.title.due(),
             self.directory.due(),
+            self.shell_directory.due(),
             self.bell.due(),
             self.blinking.due(),
             self.clipboard.due(),
@@ -1771,6 +1780,9 @@ impl Engine {
         }
         if let Some(directory) = self.directory.take(now, force, true) {
             self.shared.emit(Notice::WorkingDirectory(directory));
+        }
+        if let Some(directory) = self.shell_directory.take(now, force, true) {
+            self.shared.emit(Notice::ShellDirectory(directory));
         }
         if self.bell.take(now, force, false).is_some() {
             self.shared.emit(Notice::Bell);

@@ -126,6 +126,8 @@ struct SideState {
     synchronized: bool,
     /// Latest OSC 7 directory that was not taken yet.
     working_directory: Option<String>,
+    /// Latest OSC 7 directory from any host (a remote shell's too) that was not taken yet.
+    shell_directory: Option<String>,
     /// ENQ (Ctrl+E) bytes received since the last [`SideParser::take_enquiries`].
     enquiries: usize,
 }
@@ -174,6 +176,12 @@ impl SideParser {
         self.state.working_directory.take()
     }
 
+    /// The path of the latest OSC 7 from any host (a server's shell over SSH) since the previous
+    /// call, as the shell wrote it.
+    pub fn take_shell_directory(&mut self) -> Option<String> {
+        self.state.shell_directory.take()
+    }
+
     /// How many ENQ (0x05) control bytes arrived since the previous call: each one asks for the
     /// answerback message.
     pub fn take_enquiries(&mut self) -> usize {
@@ -203,6 +211,9 @@ impl Perform for SideState {
         let payload = rest.join(&b';');
         if let Some(path) = parse_osc7(&payload, local_hostname()) {
             self.working_directory = Some(path);
+        }
+        if let Some(path) = parse_osc7_path(&payload) {
+            self.shell_directory = Some(path);
         }
     }
 
@@ -260,6 +271,16 @@ pub fn parse_osc7(payload: &[u8], hostname: Option<&str>) -> Option<String> {
         return None;
     }
     Some(windows_drive_path(path))
+}
+
+/// The path of an OSC 7 payload whatever its host (percent-decoded, without control
+/// characters): where a server's shell is, for the SFTP side panel.
+#[must_use]
+pub fn parse_osc7_path(payload: &[u8]) -> Option<String> {
+    let rest = payload.strip_prefix(b"file://")?;
+    let slash = rest.iter().position(|&byte| byte == b'/')?;
+    let path = String::from_utf8(percent_decode(rest.get(slash..)?)?).ok()?;
+    (!path.chars().any(char::is_control)).then_some(path)
 }
 
 /// `/C:/dir` is how Windows shells write a drive path in a `file://` URL.
@@ -477,6 +498,12 @@ mod tests {
         let mut side = SideParser::new();
         side.advance(b"\x1b]7;file:///one\x07\x1b]7;file:///two\x07");
         assert_eq!(side.take_working_directory().as_deref(), Some("/two"));
+        // A server's shell: not a local directory, but where the shell is.
+        let mut side = SideParser::new();
+        side.advance(b"\x1b]7;file://far-away.example/srv/my%20site\x07");
+        assert_eq!(side.take_working_directory(), None);
+        assert_eq!(side.take_shell_directory().as_deref(), Some("/srv/my site"));
+        assert_eq!(side.take_shell_directory(), None);
     }
 
     #[test]

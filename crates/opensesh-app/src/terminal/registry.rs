@@ -79,6 +79,8 @@ pub struct SessionInfo {
     pub title: Option<String>,
     /// Working directory reported by the shell (OSC 7), if any.
     pub working_directory: Option<String>,
+    /// Where the shell is on any host (OSC 7, a server's shell too), if it said.
+    pub shell_directory: Option<String>,
     /// Set once the program ended: its exit code, or `None` when it was killed or failed to
     /// start.
     pub exit: Option<Option<i32>>,
@@ -167,6 +169,10 @@ impl SessionState {
             }
             Notice::WorkingDirectory(directory) => {
                 self.info.working_directory = Some(directory);
+                self.events.info = true;
+            }
+            Notice::ShellDirectory(directory) => {
+                self.info.shell_directory = Some(directory);
                 self.events.info = true;
             }
             Notice::Bell => self.events.bell = true,
