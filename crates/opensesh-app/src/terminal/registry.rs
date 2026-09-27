@@ -185,7 +185,12 @@ impl SessionState {
             }
             // The snapshot's cursor carries the blinking wish; nothing to do here.
             Notice::CursorBlinking(_) => {}
-            Notice::Clipboard(text) => self.events.clipboard = Some(text),
+            // A recording played back doesn't write the clipboard: it is a file, not a program.
+            Notice::Clipboard(text) => {
+                if self.player.is_none() {
+                    self.events.clipboard = Some(text);
+                }
+            }
         }
     }
 
@@ -736,6 +741,79 @@ mod tests {
         entry.detach(first_token);
         assert!(entry.take_events(second_token).is_some());
         close(id);
+    }
+
+    #[test]
+    fn a_recording_played_back_never_writes_the_clipboard() {
+        // "hi" to the clipboard (OSC 52), then some text.
+        let osc52 = "\x1b]52;c;aGk=\x07after";
+        // With OSC 52 allowed (Settings > Terminal), a program's output does write it...
+        let allowed = SessionOptions {
+            osc52_copy: true,
+            ..SessionOptions::default()
+        };
+        let id = test_id();
+        let bytes = osc52.as_bytes().to_vec();
+        let options = allowed.clone();
+        let entry = open_with(id, move |notify, _state| {
+            let (backend, events) = backend::replay(bytes);
+            let config = SessionConfig {
+                size: TermSize::new(20, 4),
+                options,
+                ..SessionConfig::default()
+            };
+            Ok(Session::start(backend, events, config, notify)?)
+        })
+        .unwrap();
+        let (waker, _) = counting_waker();
+        let token = next_token();
+        entry.attach(token, waker);
+        let mut clipboard = None;
+        wait_for("the clipboard from a program", || {
+            if let Some((events, _)) = entry.take_events(token) {
+                clipboard = clipboard.take().or(events.clipboard);
+            }
+            clipboard.is_some()
+        });
+        assert_eq!(clipboard.as_deref(), Some("hi"));
+        close(id);
+        // ...a recording's doesn't.
+        let folder = std::env::temp_dir().join(format!("opensesh-player-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let path = folder.join("clipboard.cast");
+        let line = serde_json::json!([0.0, "o", osc52]).to_string();
+        std::fs::write(
+            &path,
+            format!("{{\"version\": 2, \"width\": 20, \"height\": 4}}\n{line}\n"),
+        )
+        .unwrap();
+        let id = test_id();
+        let options = LocalOptions {
+            size: TermSize::new(20, 4),
+            palette: Palette::default(),
+            options: allowed,
+            term: "xterm-256color".to_owned(),
+            directory: String::new(),
+            program: None,
+        };
+        let entry = open_player(id, path, options).unwrap();
+        let (waker, _) = counting_waker();
+        let token = next_token();
+        entry.attach(token, waker);
+        let player = entry.player().unwrap();
+        player.play();
+        wait_for("the recording to play", || {
+            entry.session().text_dump().contains("after")
+        });
+        // Whatever arrived by now: no clipboard.
+        std::thread::sleep(Duration::from_millis(50));
+        let events = entry
+            .take_events(token)
+            .map(|(events, _)| events)
+            .unwrap_or_default();
+        assert_eq!(events.clipboard, None);
+        close(id);
+        std::fs::remove_dir_all(&folder).unwrap();
     }
 
     #[test]
