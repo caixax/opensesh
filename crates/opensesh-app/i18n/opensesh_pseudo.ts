@@ -491,8 +491,48 @@
         <translation>[Çöññéçť ťö %1 ~~~~]</translation>
     </message>
     <message>
+        <source>tunnel</source>
+        <translation>[ťüññéĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Stop tunnel %1</source>
+        <translation>[Šťöþ ťüññéĺ %1 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Start tunnel %1</source>
+        <translation>[Šťáŕť ťüññéĺ %1 ~~~~~]</translation>
+    </message>
+    <message>
         <source>Verification code:</source>
         <translation>[Véŕíƒíçáťíöñ çöďé: ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Staging web</source>
+        <translation>[Šťáĝíñĝ ŵéb ~~~~]</translation>
+    </message>
+    <message>
+        <source>Preview for the team</source>
+        <translation>[Þŕévíéŵ ƒöŕ ťĥé ťéám ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>SOCKS through web-01</source>
+        <translation>[ŠÖÇĶŠ ťĥŕöüĝĥ ŵéb-01 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Grafana</source>
+        <translation>[Ĝŕáƒáñá ~~~]</translation>
+    </message>
+    <message>
+        <source>Shared dev server</source>
+        <translation>[Šĥáŕéď ďév šéŕvéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Metrics</source>
+        <translation>[Méťŕíçš ~~~]</translation>
+    </message>
+    <message>
+        <source>The tunnel %1 needs an answer to connect: see Tunnels.</source>
+        <translation>[Ťĥé ťüññéĺ %1 ñééďš áñ áñšŵéŕ ťö çöññéçť: šéé Ťüññéĺš. ~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Terminal</source>
@@ -8416,6 +8456,20 @@
             <numerusform>[%n ťŕáñšƒéŕ(š) ŕüññíñĝ. Çĺíçķ ťö šéé ťĥém. ~~~~~~~~~~~~~]</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>%n tunnel(s) running</source>
+        <translation>
+            <numerusform>[%n ťüññéĺ(š) ŕüññíñĝ ~~~~~~]</numerusform>
+            <numerusform>[%n ťüññéĺ(š) ŕüññíñĝ ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n tunnel(s) running. Click to see them.</source>
+        <translation>
+            <numerusform>[%n ťüññéĺ(š) ŕüññíñĝ. Çĺíçķ ťö šéé ťĥém. ~~~~~~~~~~~~]</numerusform>
+            <numerusform>[%n ťüññéĺ(š) ŕüññíñĝ. Çĺíçķ ťö šéé ťĥém. ~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The vault is locked: click to unlock</source>
         <translation>[Ťĥé váüĺť íš ĺöçķéď: çĺíçķ ťö üñĺöçķ ~~~~~~~~~~~]</translation>
@@ -9089,14 +9143,414 @@
     </message>
 </context>
 <context>
+    <name>TunnelEditorDialog</name>
+    <message>
+        <source>Other: user@host</source>
+        <translation>[Öťĥéŕ: üšéŕ@ĥöšť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Edit tunnel</source>
+        <translation>[Éďíť ťüññéĺ ~~~~]</translation>
+    </message>
+    <message>
+        <source>New tunnel</source>
+        <translation>[Ñéŵ ťüññéĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>[Šávé ~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Optional</source>
+        <translation>[Öþťíöñáĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Kind</source>
+        <translation>[Ķíñď ~~]</translation>
+    </message>
+    <message>
+        <source>A port on this computer reaches a host the server can reach (ssh -L).</source>
+        <translation>[Å þöŕť öñ ťĥíš çömþüťéŕ ŕéáçĥéš á ĥöšť ťĥé šéŕvéŕ çáñ ŕéáçĥ (ššĥ -Ĺ). ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A port on the server reaches a host this computer can reach (ssh -R).</source>
+        <translation>[Å þöŕť öñ ťĥé šéŕvéŕ ŕéáçĥéš á ĥöšť ťĥíš çömþüťéŕ çáñ ŕéáçĥ (ššĥ -Ŕ). ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A SOCKS5 proxy on this computer: programs that use it connect from the server (ssh -D).</source>
+        <translation>[Å ŠÖÇĶŠ5 þŕöxý öñ ťĥíš çömþüťéŕ: þŕöĝŕámš ťĥáť üšé íť çöññéçť ƒŕöm ťĥé šéŕvéŕ (ššĥ -Ď). ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Local</source>
+        <translation>[Ĺöçáĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Remote</source>
+        <translation>[Ŕémöťé ~~]</translation>
+    </message>
+    <message>
+        <source>Dynamic (SOCKS)</source>
+        <translation>[Ďýñámíç (ŠÖÇĶŠ) ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Through</source>
+        <translation>[Ťĥŕöüĝĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>SSH host</source>
+        <translation>[ŠŠĤ ĥöšť ~~~]</translation>
+    </message>
+    <message>
+        <source>user@host:port</source>
+        <translation>[üšéŕ@ĥöšť:þöŕť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>SSH server</source>
+        <translation>[ŠŠĤ šéŕvéŕ ~~~]</translation>
+    </message>
+    <message>
+        <source>Runs</source>
+        <translation>[Ŕüñš ~~]</translation>
+    </message>
+    <message>
+        <source>While a terminal session to the host is connected, on its connection.</source>
+        <translation>[Ŵĥíĺé á ťéŕmíñáĺ šéššíöñ ťö ťĥé ĥöšť íš çöññéçťéď, öñ íťš çöññéçťíöñ. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>On a connection of its own, while it is switched on.</source>
+        <translation>[Öñ á çöññéçťíöñ öƒ íťš öŵñ, ŵĥíĺé íť íš šŵíťçĥéď öñ. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>On its own</source>
+        <translation>[Öñ íťš öŵñ ~~~]</translation>
+    </message>
+    <message>
+        <source>With the host&apos;s terminal sessions</source>
+        <translation>[Ŵíťĥ ťĥé ĥöšť&apos;š ťéŕmíñáĺ šéššíöñš ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Listen on the server</source>
+        <translation>[Ĺíšťéñ öñ ťĥé šéŕvéŕ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Listen on this computer</source>
+        <translation>[Ĺíšťéñ öñ ťĥíš çömþüťéŕ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Port 0 takes any free port.</source>
+        <translation>[Þöŕť 0 ťáķéš áñý ƒŕéé þöŕť. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Every interface of the server: others on its network can use this tunnel (if the server allows it).</source>
+        <translation>[Évéŕý íñťéŕƒáçé öƒ ťĥé šéŕvéŕ: öťĥéŕš öñ íťš ñéťŵöŕķ çáñ üšé ťĥíš ťüññéĺ (íƒ ťĥé šéŕvéŕ áĺĺöŵš íť). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Beyond this computer: others on the network can use this tunnel.</source>
+        <translation>[Béýöñď ťĥíš çömþüťéŕ: öťĥéŕš öñ ťĥé ñéťŵöŕķ çáñ üšé ťĥíš ťüññéĺ. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Listening address</source>
+        <translation>[Ĺíšťéñíñĝ áďďŕéšš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Listening port</source>
+        <translation>[Ĺíšťéñíñĝ þöŕť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Destination, from here</source>
+        <translation>[Ďéšťíñáťíöñ, ƒŕöm ĥéŕé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Destination, from the server</source>
+        <translation>[Ďéšťíñáťíöñ, ƒŕöm ťĥé šéŕvéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Destination host</source>
+        <translation>[Ďéšťíñáťíöñ ĥöšť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Destination port</source>
+        <translation>[Ďéšťíñáťíöñ þöŕť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Start with OpenSesh</source>
+        <translation>[Šťáŕť ŵíťĥ ÖþéñŠéšĥ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reconnect</source>
+        <translation>[Ŕéçöññéçť ~~~]</translation>
+    </message>
+    <message>
+        <source>When the connection is lost, try again after 1, 2, 4… up to 30 s.</source>
+        <translation>[Ŵĥéñ ťĥé çöññéçťíöñ íš ĺöšť, ťŕý áĝáíñ áƒťéŕ 1, 2, 4… üþ ťö 30 š. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>:</source>
+        <translation>[: ~]</translation>
+    </message>
+    <message>
+        <source>Listen beyond this computer?</source>
+        <translation>[Ĺíšťéñ béýöñď ťĥíš çömþüťéŕ? ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Save anyway</source>
+        <translation>[Šávé áñýŵáý ~~~~]</translation>
+    </message>
+    <message>
+        <source>The server will listen on %1 on every interface it allows: anyone who can reach it there reaches %2 on this computer.</source>
+        <translation>[Ťĥé šéŕvéŕ ŵíĺĺ ĺíšťéñ öñ %1 öñ évéŕý íñťéŕƒáçé íť áĺĺöŵš: áñýöñé ŵĥö çáñ ŕéáçĥ íť ťĥéŕé ŕéáçĥéš %2 öñ ťĥíš çömþüťéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh will listen on %1 beyond this computer: anyone on the network who can reach it can use the tunnel into the server&apos;s network.</source>
+        <translation>[ÖþéñŠéšĥ ŵíĺĺ ĺíšťéñ öñ %1 béýöñď ťĥíš çömþüťéŕ: áñýöñé öñ ťĥé ñéťŵöŕķ ŵĥö çáñ ŕéáçĥ íť çáñ üšé ťĥé ťüññéĺ íñťö ťĥé šéŕvéŕ&apos;š ñéťŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>TunnelImportDialog</name>
+    <message>
+        <source>LocalForward %1 → %2</source>
+        <translation>[ĹöçáĺFöŕŵáŕď %1 → %2 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>RemoteForward %1 → %2</source>
+        <translation>[ŔémöťéFöŕŵáŕď %1 → %2 ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>DynamicForward %1</source>
+        <translation>[ĎýñámíçFöŕŵáŕď %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import tunnels from ~/.ssh/config</source>
+        <translation>[Ímþöŕť ťüññéĺš ƒŕöm ~/.ššĥ/çöñƒíĝ ~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Import %n</source>
+        <translation>
+            <numerusform>[Ímþöŕť %n ~~~]</numerusform>
+            <numerusform>[Ímþöŕť %n ~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Imported %n tunnel(s).</source>
+        <translation>
+            <numerusform>[Ímþöŕťéď %n ťüññéĺ(š). ~~~~~~~]</numerusform>
+            <numerusform>[Ímþöŕťéď %n ťüññéĺ(š). ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Each forward becomes a tunnel of its host that runs while a terminal session to it is connected, as with OpenSSH.</source>
+        <translation>[Éáçĥ ƒöŕŵáŕď béçöméš á ťüññéĺ öƒ íťš ĥöšť ťĥáť ŕüñš ŵĥíĺé á ťéŕmíñáĺ šéššíöñ ťö íť íš çöññéçťéď, áš ŵíťĥ ÖþéñŠŠĤ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>~/.ssh/config has no LocalForward, RemoteForward or DynamicForward lines in Host blocks OpenSesh reads.</source>
+        <translation>[~/.ššĥ/çöñƒíĝ ĥáš ñö ĹöçáĺFöŕŵáŕď, ŔémöťéFöŕŵáŕď öŕ ĎýñámíçFöŕŵáŕď ĺíñéš íñ Ĥöšť bĺöçķš ÖþéñŠéšĥ ŕéáďš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Host not in OpenSesh</source>
+        <translation>[Ĥöšť ñöť íñ ÖþéñŠéšĥ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Already a tunnel</source>
+        <translation>[Åĺŕéáďý á ťüññéĺ ~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>TunnelQuestionDialog</name>
+    <message>
+        <source>Close</source>
+        <translation>[Çĺöšé ~~]</translation>
+    </message>
+</context>
+<context>
     <name>TunnelsView</name>
+    <message>
+        <source>%1 → %2 from %3</source>
+        <translation>[%1 → %2 ƒŕöm %3 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 on %3 → %2 here</source>
+        <translation>[%1 öñ %3 → %2 ĥéŕé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>SOCKS proxy on %1 through %2</source>
+        <translation>[ŠÖÇĶŠ þŕöxý öñ %1 ťĥŕöüĝĥ %2 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Local</source>
+        <translation>[Ĺöçáĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Remote</source>
+        <translation>[Ŕémöťé ~~]</translation>
+    </message>
+    <message>
+        <source>SOCKS</source>
+        <translation>[ŠÖÇĶŠ ~~]</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>[Ŕüññíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Connecting…</source>
+        <translation>[Çöññéçťíñĝ… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Waiting for a session to %1</source>
+        <translation>[Ŵáíťíñĝ ƒöŕ á šéššíöñ ťö %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Waiting for the connection</source>
+        <translation>[Ŵáíťíñĝ ƒöŕ ťĥé çöññéçťíöñ ~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Connection lost; trying again in %n s</source>
+        <translation>
+            <numerusform>[Çöññéçťíöñ ĺöšť; ťŕýíñĝ áĝáíñ íñ %n š ~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Çöññéçťíöñ ĺöšť; ťŕýíñĝ áĝáíñ íñ %n š ~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Stopped</source>
+        <translation>[Šťöþþéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Authentication failed</source>
+        <translation>[Åüťĥéñťíçáťíöñ ƒáíĺéď ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server&apos;s key wasn&apos;t accepted</source>
+        <translation>[Ťĥé šéŕvéŕ&apos;š ķéý ŵášñ&apos;ť áççéþťéď ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>[Çáñçéĺĺéď ~~~]</translation>
+    </message>
+    <message>
+        <source>The vault is locked</source>
+        <translation>[Ťĥé váüĺť íš ĺöçķéď ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The connection was lost</source>
+        <translation>[Ťĥé çöññéçťíöñ ŵáš ĺöšť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>It can&apos;t run</source>
+        <translation>[Íť çáñ&apos;ť ŕüñ ~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>↑ %1 ↓ %2 · %n connection(s)</source>
+        <translation>
+            <numerusform>[↑ %1 ↓ %2 · %n çöññéçťíöñ(š) ~~~~~~~~~]</numerusform>
+            <numerusform>[↑ %1 ↓ %2 · %n çöññéçťíöñ(š) ~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Copied %1.</source>
+        <translation>[Çöþíéď %1. ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n tunnel(s), %1 running</source>
+        <translation>
+            <numerusform>[%n ťüññéĺ(š), %1 ŕüññíñĝ ~~~~~~~~]</numerusform>
+            <numerusform>[%n ťüññéĺ(š), %1 ŕüññíñĝ ~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Import…</source>
+        <translation>[Ímþöŕť… ~~~]</translation>
+    </message>
+    <message>
+        <source>tunnels.toml comes from a newer OpenSesh or can&apos;t be read: changes here are not saved.</source>
+        <translation>[ťüññéĺš.ťömĺ çöméš ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ öŕ çáñ&apos;ť bé ŕéáď: çĥáñĝéš ĥéŕé áŕé ñöť šávéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
     <message>
         <source>No tunnels</source>
         <translation>[Ñö ťüññéĺš ~~~]</translation>
     </message>
     <message>
-        <source>Forward local, remote and dynamic (SOCKS) ports through SSH, start them with the app and see their traffic. Tunnels arrive in Sprint 9.</source>
-        <translation>[Föŕŵáŕď ĺöçáĺ, ŕémöťé áñď ďýñámíç (ŠÖÇĶŠ) þöŕťš ťĥŕöüĝĥ ŠŠĤ, šťáŕť ťĥém ŵíťĥ ťĥé áþþ áñď šéé ťĥéíŕ ťŕáƒƒíç. Ťüññéĺš áŕŕívé íñ Šþŕíñť 9. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Forward a port here to a server&apos;s network (local), a server&apos;s port back to this computer (remote), or run a SOCKS proxy through a server (dynamic).</source>
+        <translation>[Föŕŵáŕď á þöŕť ĥéŕé ťö á šéŕvéŕ&apos;š ñéťŵöŕķ (ĺöçáĺ), á šéŕvéŕ&apos;š þöŕť báçķ ťö ťĥíš çömþüťéŕ (ŕémöťé), öŕ ŕüñ á ŠÖÇĶŠ þŕöxý ťĥŕöüĝĥ á šéŕvéŕ (ďýñámíç). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import from ~/.ssh/config…</source>
+        <translation>[Ímþöŕť ƒŕöm ~/.ššĥ/çöñƒíĝ… ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Run %1</source>
+        <translation>[Ŕüñ %1 ~~]</translation>
+    </message>
+    <message>
+        <source>%1 · %2</source>
+        <translation>[%1 · %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Runs while a terminal session to %1 is connected</source>
+        <translation>[Ŕüñš ŵĥíĺé á ťéŕmíñáĺ šéššíöñ ťö %1 íš çöññéçťéď ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Listens on every interface of the server: others on its network can use it.</source>
+        <translation>[Ĺíšťéñš öñ évéŕý íñťéŕƒáçé öƒ ťĥé šéŕvéŕ: öťĥéŕš öñ íťš ñéťŵöŕķ çáñ üšé íť. ~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Listens beyond this computer: others on the network can use it.</source>
+        <translation>[Ĺíšťéñš béýöñď ťĥíš çömþüťéŕ: öťĥéŕš öñ ťĥé ñéťŵöŕķ çáñ üšé íť. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Answer…</source>
+        <translation>[Åñšŵéŕ… ~~~]</translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation>[Möŕé ~~]</translation>
+    </message>
+    <message>
+        <source>Stop</source>
+        <translation>[Šťöþ ~~]</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation>[Šťáŕť ~~]</translation>
+    </message>
+    <message>
+        <source>Space</source>
+        <translation>[Šþáçé ~~]</translation>
+    </message>
+    <message>
+        <source>Edit…</source>
+        <translation>[Éďíť… ~~]</translation>
+    </message>
+    <message>
+        <source>Enter</source>
+        <translation>[Éñťéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Duplicate</source>
+        <translation>[Ďüþĺíçáťé ~~~]</translation>
+    </message>
+    <message>
+        <source>Copy the address</source>
+        <translation>[Çöþý ťĥé áďďŕéšš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete…</source>
+        <translation>[Ďéĺéťé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Del</source>
+        <translation>[Ďéĺ ~]</translation>
+    </message>
+    <message>
+        <source>Delete this tunnel?</source>
+        <translation>[Ďéĺéťé ťĥíš ťüññéĺ? ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>[Ďéĺéťé ~~]</translation>
     </message>
     <message>
         <source>New tunnel</source>
