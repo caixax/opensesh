@@ -434,7 +434,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "settings"
-        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts", "ssh", "security"]
+        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts", "ssh", "sftp", "security"]
         prepare: (mode, density, page) => shell.prepareSettingsScreenshot(page)
         onFinished: terminalScreenshots.start()
     }
@@ -480,8 +480,20 @@ Window {
         prefix: "ssh"
         pages: ["hostkey", "changed", "code", "disconnected"]
         prepare: (mode, density, page) => shell.prepareSshScreenshot(page)
+        onFinished: shell.prepareSftpScreenshots(() => sftpScreenshots.start())
+    }
+
+    ScreenshotRunner {
+        id: sftpScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "sftp"
+        pages: ["view", "permissions", "panel"]
+        prepare: (mode, density, page) => shell.prepareSftpScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
-                            + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures > 0 ? 7 : 0)
+                            + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures
+                            + sftpScreenshots.failures > 0 ? 7 : 0)
     }
 }

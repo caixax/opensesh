@@ -40,16 +40,18 @@ pub mod qobject {
         #[qproperty(QUrl, config_folder, cxx_name = "configFolder", READ, CONSTANT)]
         type AppInfo = super::AppInfoRust;
 
-        /// Smoke tests only: starts the in-process SSH test server (user `tester`, password
-        /// `right password`, jumps allowed, "drop" drops the connection, SFTP over
-        /// `testFolder()/remote`) on 127.0.0.1 and returns its port; 0 in normal runs or when it
-        /// can't start. From then on every SSH connection of the smoke test goes to it.
+        /// Test runs only (smoke tests and screenshots): starts the in-process SSH test server
+        /// (user `tester`, password `right password`, jumps allowed, "drop" drops the
+        /// connection, SFTP over `testFolder()/remote`) on 127.0.0.1 and returns its port; 0 in
+        /// normal runs or when it can't start. From then on every SSH connection of the run goes
+        /// to it.
         #[qinvokable]
         #[cxx_name = "startSshTestServer"]
         fn start_ssh_test_server(self: &Self) -> i32;
 
-        /// Smoke tests only: a temporary folder with `local` and `remote` sample files (the
-        /// server's side), made fresh by `startSshTestServer`; empty in normal runs.
+        /// Test runs only: a temporary folder with `local` and `remote` sample files (the
+        /// server's side), made fresh by `startSshTestServer` and removed at exit; empty in
+        /// normal runs.
         #[qinvokable]
         #[cxx_name = "testFolder"]
         fn test_folder(self: &Self) -> QString;
@@ -81,7 +83,7 @@ static STARTUP: OnceLock<Startup> = OnceLock::new();
 impl qobject::AppInfo {
     /// See the bridge declaration.
     pub fn start_ssh_test_server(&self) -> i32 {
-        if !is_smoke_test() {
+        if !is_test_run() {
             return 0;
         }
         let Some(runtime) = opensesh_ssh::runtime() else {
@@ -115,7 +117,7 @@ impl qobject::AppInfo {
 impl qobject::AppInfo {
     /// See the bridge declaration.
     pub fn test_folder(&self) -> QString {
-        if is_smoke_test() {
+        if is_test_run() {
             QString::from(&test_folder_path().display().to_string())
         } else {
             QString::default()
@@ -123,9 +125,20 @@ impl qobject::AppInfo {
     }
 }
 
-/// The smoke test's temporary folder (one per process).
+/// A test run's temporary folder (one per process).
 fn test_folder_path() -> PathBuf {
     std::env::temp_dir().join(format!("opensesh-smoke-{}", std::process::id()))
+}
+
+/// Removes a test run's temporary folder, if the run made one.
+pub fn remove_test_folder() {
+    let folder = test_folder_path();
+    if is_test_run()
+        && folder.exists()
+        && let Err(error) = std::fs::remove_dir_all(&folder)
+    {
+        tracing::warn!("could not remove the test run's folder: {error}");
+    }
 }
 
 /// Fresh sample files for the smoke test: a few on each side, and a folder of 300 files.
@@ -152,12 +165,6 @@ fn sample_files(folder: &Path) -> std::io::Result<()> {
     std::fs::write(local.join("project").join("main.rs"), "fn main() {}\n")?;
     std::fs::write(local.join("notes.txt"), "upload me\n".repeat(1000))?;
     Ok(())
-}
-
-/// Whether this run is a `--smoke-test`.
-#[must_use]
-pub fn is_smoke_test() -> bool {
-    STARTUP.get().is_some_and(|startup| startup.smoke_test)
 }
 
 /// Whether this run must leave the user's files alone: a smoke test or a screenshot run reads
