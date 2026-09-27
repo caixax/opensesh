@@ -5,7 +5,8 @@
 #   linux   - Ubuntu 24.04 with Qt from aqtinstall: clippy, tests, build, offscreen smoke test
 #   distro  - Arch, Fedora and Debian 13 containers with their own Qt packages
 #   ssh     - the SSH client against real OpenSSH and Dropbear servers (scripts/ssh-test-servers.sh):
-#             two jump hosts with an agent, a one-time code through PAM, reconnection
+#             two jump hosts with an agent, a one-time code through PAM, reconnection; SFTP: 1 GiB
+#             both ways with checksums, an interrupted upload resumed, a server without SFTP
 #   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, bundled ConPTY, offscreen
 #             smoke test
 name: CI
@@ -216,14 +217,14 @@ jobs:
         with:
           key: ssh-servers
       - name: Build the tests
-        run: cargo test --locked -p opensesh-ssh --test real_servers --no-run
+        run: cargo test --locked -p opensesh-ssh --test real_servers --test real_sftp --no-run
       - name: Start OpenSSH and Dropbear
         run: sudo scripts/ssh-test-servers.sh start
       - name: Tests against the servers
         run: |
           eval "$(ssh-agent -s)"
           ssh-add /tmp/opensesh-ssh-servers/client_ed25519
-          cargo test --locked -p opensesh-ssh --test real_servers -- --ignored --test-threads 1
+          cargo test --locked -p opensesh-ssh --test real_servers --test real_sftp -- --ignored --test-threads 1
       - name: Server logs
         if: failure()
         run: sudo tail -n 60 /tmp/opensesh-ssh-servers/*.log
