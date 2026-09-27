@@ -60,6 +60,9 @@ pub struct AuthPlan {
     pub key_files: Vec<PathBuf>,
     /// Try the SSH agent's keys.
     pub agent: bool,
+    /// The agent to use instead of the usual one (like OpenSSH's `IdentityAgent`): a Unix socket
+    /// path, or a named pipe (`\\.\pipe\...`) on Windows.
+    pub agent_socket: Option<String>,
 }
 
 impl std::fmt::Debug for AuthPlan {
@@ -70,6 +73,7 @@ impl std::fmt::Debug for AuthPlan {
             .field("keys", &self.keys.len())
             .field("key_files", &self.key_files)
             .field("agent", &self.agent)
+            .field("agent_socket", &self.agent_socket)
             .finish()
     }
 }
@@ -185,6 +189,8 @@ pub struct ConnectSpec {
     pub known_hosts: KnownHostsFiles,
     /// Forward the local agent to the target (never to jump hosts).
     pub agent_forwarding: bool,
+    /// The agent to forward instead of the usual one (see [`AuthPlan::agent_socket`]).
+    pub agent_socket: Option<String>,
 }
 
 impl ConnectSpec {

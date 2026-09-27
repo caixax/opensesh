@@ -2335,6 +2335,7 @@ version = "0.1.2"
 dependencies = [
  "base64ct",
  "crossbeam-channel",
+ "futures",
  "opensesh-core",
  "opensesh-term",
  "opensesh-vault",

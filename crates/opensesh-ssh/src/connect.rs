@@ -69,6 +69,7 @@ pub struct ClientHandler {
     /// Why the host key was refused, for the error message.
     rejection: Arc<Mutex<Option<String>>>,
     agent_forwarding: bool,
+    agent_socket: Option<String>,
 }
 
 impl std::fmt::Debug for ClientHandler {
@@ -198,7 +199,7 @@ impl Handler for ClientHandler {
             return Ok(());
         }
         reply.accept().await;
-        tokio::spawn(forward_to_agent(channel));
+        tokio::spawn(forward_to_agent(channel, self.agent_socket.clone()));
         Ok(())
     }
 
@@ -218,9 +219,9 @@ impl Handler for ClientHandler {
 }
 
 /// Carries a forwarded agent channel to the local agent.
-async fn forward_to_agent(channel: Channel<Msg>) {
+async fn forward_to_agent(channel: Channel<Msg>, socket: Option<String>) {
     let mut stream = channel.into_stream();
-    let result = match local_agent_stream().await {
+    let result = match local_agent_stream(socket.as_deref()).await {
         Ok(mut agent) => tokio::io::copy_bidirectional(&mut stream, &mut agent)
             .await
             .map(|_| ()),
@@ -231,18 +232,21 @@ async fn forward_to_agent(channel: Channel<Msg>) {
     }
 }
 
-/// A stream to the local agent (SSH_AUTH_SOCK on Unix; SSH_AUTH_SOCK's pipe or the OpenSSH
-/// agent's pipe on Windows).
-async fn local_agent_stream() -> Result<Box<dyn Transport>, SshError> {
+/// A stream to the local agent: `socket` when given, else SSH_AUTH_SOCK on Unix, and on Windows
+/// SSH_AUTH_SOCK's named pipe or the OpenSSH agent's pipe.
+async fn local_agent_stream(socket: Option<&str>) -> Result<Box<dyn Transport>, SshError> {
     let local = |message: String| SshError::Local {
         what: "the SSH agent".to_owned(),
         message,
     };
     #[cfg(unix)]
     {
-        let path = std::env::var_os("SSH_AUTH_SOCK")
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| local("SSH_AUTH_SOCK is not set".to_owned()))?;
+        let path = match socket {
+            Some(socket) => std::ffi::OsString::from(socket),
+            None => std::env::var_os("SSH_AUTH_SOCK")
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| local("SSH_AUTH_SOCK is not set".to_owned()))?,
+        };
         let stream = tokio::net::UnixStream::connect(path)
             .await
             .map_err(|error| local(error.to_string()))?;
@@ -250,8 +254,9 @@ async fn local_agent_stream() -> Result<Box<dyn Transport>, SshError> {
     }
     #[cfg(windows)]
     {
-        let pipe = std::env::var("SSH_AUTH_SOCK")
-            .ok()
+        let pipe = socket
+            .map(str::to_owned)
+            .or_else(|| std::env::var("SSH_AUTH_SOCK").ok())
             .filter(|value| value.starts_with(r"\\.\pipe\") || value.starts_with("//./pipe/"))
             .map(|value| value.replace('/', r"\"))
             .unwrap_or_else(|| opensesh_vault::agent::OPENSSH_PIPE.to_owned());
@@ -429,7 +434,7 @@ impl<'a> AuthSession<'a> {
             }
         }
         if self.hop.auth.agent {
-            match agent_keys(handle, &user).await {
+            match agent_keys(handle, &user, self.hop.auth.agent_socket.as_deref()).await {
                 Ok(Some(step)) => return Ok(step),
                 Ok(None) => {}
                 Err(error) => tracing::info!("the SSH agent could not be used: {error}"),
@@ -608,12 +613,13 @@ fn certificate_for(path: &Path) -> Option<russh::keys::Certificate> {
 async fn agent_keys(
     handle: &mut Handle<ClientHandler>,
     user: &str,
+    socket: Option<&str>,
 ) -> Result<Option<Step>, SshError> {
     let agent_error = |error: russh::keys::Error| SshError::Local {
         what: "the SSH agent".to_owned(),
         message: error.to_string(),
     };
-    let mut agent = AgentClient::connect(local_agent_stream().await?);
+    let mut agent = AgentClient::connect(local_agent_stream(socket).await?);
     let identities = agent.request_identities().await.map_err(agent_error)?;
     let mut last = None;
     for identity in identities {
@@ -723,6 +729,7 @@ pub async fn connect(
             notes: Arc::clone(notes),
             rejection: Arc::clone(&rejection),
             agent_forwarding: spec.agent_forwarding && index + 1 == count,
+            agent_socket: spec.agent_socket.clone(),
         };
         let transport: Box<dyn Transport> = match handles.last() {
             None => first_transport(spec, hop).await?,
