@@ -4,6 +4,34 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 9 (2026-09-27)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 397 to 407 steps):** as before, plus the Tunnels view against the in-process test server (which now also serves remote forwards) and a small HTTP server of the test run: a local, a remote and a dynamic tunnel through the saved host H00000 on their own connection (host key and password answered in their rows, and the question dialog opened), a page fetched through the local and the remote one, their counters, a row that stays while they change, a tunnel tied to H00000 that runs with a terminal session and waits again when it closes, the editor (a problem found, `0.0.0.0` seen as exposed), the import dialog (a sample `~/.ssh/config`, not the user's), duplicate and delete. The user's tunnels aren't loaded, and nothing is written.
+- **Screenshots (native, Windows):** the Tunnels view (running with traffic, waiting for a session, stopped with the warning, failed), the editor of a tunnel that listens on every interface, and the import dialog, in dark and light, comfortable and compact.
+- **Tunnels in-process** (`tests/tunnel.rs`): HTTP through each kind, with `curl` where it is installed; the counters; forwards carried over to a new connection (a request made meanwhile waits for it); a stopped forward giving its port back; a server that forbids forwarding; an independent tunnel reconnecting by itself, and a wrong password ending without retrying.
+- **Real SSH servers** (`scripts/ssh-test-servers.sh`, [notes](ssh-servers.md)): the Sprint 7 and 8 tests, plus `curl` through a local, a dynamic and a remote tunnel on OpenSSH 10.5p1, and a tunnel whose `sshd-session` is killed coming back by itself.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real SSH servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 556 | ✅ / ✅ | ✅ `windows` | — |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ 559 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ 559 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ 559 | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ OpenSSH 10.5p1, Dropbear 2026.94 |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ⏳ | ⏳ | — | ⏳ Ubuntu 24.04 packages |
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| A local tunnel to a database on one of your servers, used by a real client | ⏳ | ⏳ |
+| A browser through the SOCKS proxy (names resolved by the server) | ⏳ | ⏳ |
+| A remote tunnel with and without `GatewayPorts` on the server; the warning for `0.0.0.0` | ⏳ | ⏳ |
+| Wi-Fi off and on with an independent tunnel running: it comes back by itself | ⏳ | ⏳ |
+| A tunnel imported from `~/.ssh/config`, up with a terminal session and down when it closes | ⏳ | ⏳ |
+| A tunnel that starts with OpenSesh and needs a password: the notification and the Answer button | ⏳ | ⏳ |
+
 ## Sprint 8 (2026-09-27)
 
 ### Automated checks
