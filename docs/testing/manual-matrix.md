@@ -4,6 +4,38 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 7 (2026-09-27)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 260 to 272 steps):** as before, plus an SSH pane against the in-process test server (every SSH connection of a smoke test goes there, with no agent, key file or `known_hosts` of the user): the host key card, a wrong then a right password, the remote shell, a dropped connection and Enter to reconnect, and "Install my key" from its dialog. Keychain > Known hosts finds a hashed name. Settings > SSH opens. Nothing is written.
+- **Real SSH servers** (`scripts/ssh-test-servers.sh`, [notes](ssh-servers.md)): OpenSSH with a key file, Dropbear with a password, a user certificate, agent forwarding and the environment, OpenSSH → Dropbear → OpenSSH with `ssh-agent` and a TOTP code through PAM, and the terminal reconnecting after `sshd-session` is killed. `stop` left no user, PAM block or process behind.
+- **Pageant 0.83** (the official build, checked against PuTTY's SHA-256 list) holding a fixture key signed for the client, with the Windows OpenSSH agent service stopped.
+- **X11 forwarding spike** onto WSLg's Xwayland (see [its README](../../spikes/x11-forwarding/README.md)).
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real SSH servers | Real agent |
+|---|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 517 | ✅ / ✅ | ✅ `windows` | — | ✅ Pageant |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ 519 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — | ✅ ssh-agent |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ 519 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — | ✅ ssh-agent |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ 519 | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ OpenSSH 10.5p1, Dropbear 2026.94 | ✅ ssh-agent (the real-server tests) |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ Ubuntu 24.04 packages | — |
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| Connect to one of your own servers: the host key card, trust and remember, and no question the next time | ⏳ | ⏳ |
+| A server whose key changed (reinstalled): the warning, "Don't connect", then "Replace the saved key" | ⏳ | ⏳ |
+| A host with an identity whose vault is locked: "Unlock and connect" | ⏳ | ⏳ |
+| MFA on a real bastion (a key, then a code) and a jump host behind it | ⏳ | ⏳ |
+| Wi-Fi off and on during a session: the banner, then Enter (and automatic reconnection on a host with it) | ⏳ | ⏳ |
+| An old device with legacy algorithms (a switch or router) | ⏳ | ⏳ |
+| A SOCKS5 or HTTP proxy, and a proxy command | ⏳ | ⏳ |
+| The Windows OpenSSH agent service holding your key | ⏳ | — |
+| "Install my key" on a server where it wasn't, then connecting with the key | ⏳ | ⏳ |
+| Session logs (text and raw) in the chosen folder | ⏳ | ⏳ |
+
 ## Sprint 6 (2026-09-27)
 
 ### Automated checks
