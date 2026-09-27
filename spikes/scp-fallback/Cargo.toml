@@ -1,0 +1,14 @@
+[package]
+name = "scp-fallback-spike"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Sprint 8 spike: copying files with the SCP protocol over an exec channel, for servers without SFTP"
+license = "GPL-3.0-or-later"
+
+# A throwaway program: its own workspace, not part of the app's.
+[workspace]
+
+[dependencies]
+russh = { version = "=0.63.3", default-features = false, features = ["ring", "flate2", "rsa"] }
+tokio = { version = "=1.53.1", features = ["rt-multi-thread", "fs", "io-util", "macros", "time"] }
