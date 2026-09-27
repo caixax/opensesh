@@ -98,10 +98,6 @@ Rectangle {
             description: qsTr("Host details and the live system monitor arrive in Sprint 11.")
         }
 
-        OsEmptyState {
-            iconName: "scroll-text"
-            title: qsTr("Snippets")
-            description: qsTr("Quick snippets for the current session arrive in Sprint 10.")
-        }
+        SessionSnippets {}
     }
 }

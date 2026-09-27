@@ -56,6 +56,8 @@ Item {
     property real edgeInset: 0
     property real fontZoom: 0
     property bool highlightOn: true
+    // What is typed here is recorded as a macro (Snippets.recordStart).
+    property bool recordingMacro: false
     readonly property var profileList: JSON.parse(TerminalProfiles.profiles || "[]")
 
     readonly property alias terminal: terminal
@@ -148,6 +150,20 @@ Item {
 
     function toggleHighlight() {
         highlightOn = !highlightOn;
+    }
+
+    // Starts recording what is typed here as a macro, or stops and opens it to save.
+    function toggleMacroRecording() {
+        if (!recordingMacro) {
+            recordingMacro = Snippets.recordStart(paneId);
+            return;
+        }
+        recordingMacro = false;
+        const steps = JSON.parse(Snippets.recordStop(paneId) || "[]");
+        if (steps.length === 0)
+            Toasts.show(qsTr("Nothing was typed while recording."), "info");
+        else
+            shell.editRecordedMacro(steps);
     }
 
     function useProfile(id) {
@@ -400,6 +416,21 @@ Item {
         border.width: pane.receiving ? Theme.borderWidth * 2 : Theme.borderWidth
         border.color: pane.receiving ? Theme.danger : Theme.accent
         z: 2
+    }
+
+    // While a macro records: a chip that stops it.
+    OsButton {
+        anchors.top: broadcastChip.visible ? broadcastChip.bottom : pane.searchOpen ? searchBar.bottom : parent.top
+        anchors.right: parent.right
+        anchors.topMargin: Theme.spacingSm
+        anchors.rightMargin: Theme.spacingLg + pane.edgeInset
+        visible: pane.recordingMacro
+        z: 3
+        variant: "danger"
+        iconName: "square"
+        text: qsTr("Recording a macro")
+        focusPolicy: Qt.NoFocus
+        onClicked: pane.toggleMacroRecording()
     }
 
     // While the tab broadcasts: whether this pane receives, and the switch to change it.
@@ -765,6 +796,21 @@ Item {
             text: qsTr("Clear scrollback")
             iconName: "trash-2"
             onTriggered: terminal.clearScrollback()
+        }
+
+        OsMenuSeparator {}
+
+        OsMenuItem {
+            text: pane.recordingMacro ? qsTr("Stop recording the macro…") : qsTr("Record a macro")
+            iconName: pane.recordingMacro ? "square" : "play"
+            onTriggered: pane.toggleMacroRecording()
+        }
+
+        OsMenuItem {
+            text: qsTr("Run a snippet…")
+            iconName: "scroll-text"
+            shortcutText: pane.shell.shortcutText("snippets.quick")
+            onTriggered: pane.shell.showSnippetPicker()
         }
 
         OsMenuSeparator {}
