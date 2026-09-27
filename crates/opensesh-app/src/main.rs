@@ -16,6 +16,7 @@ mod services;
 mod sftp;
 mod ssh;
 mod terminal;
+mod tunnels;
 mod update;
 
 use std::io::Write as _;
@@ -174,7 +175,9 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
 
     let result = gui::run(qml, &initial_language);
     drop(instance_server);
-    // The window is gone: end the shells of the tabs still open (in the background).
+    // The window is gone: end the shells of the tabs still open (in the background), and the
+    // tunnels.
+    tunnels::stop_all();
     terminal::registry::shutdown_all();
     // Settings and UI state may still be waiting in the writer's debounce window.
     services::flush();

@@ -14,6 +14,7 @@ pub mod terminal_sessions;
 pub mod terminal_view;
 pub mod theme;
 pub mod transfers;
+pub mod tunnels;
 pub mod ui_state;
 pub mod updater;
 pub mod workspaces;

@@ -481,7 +481,9 @@ pub fn open_ssh(
     options: LocalOptions,
     ssh: SshStart,
 ) -> Result<Arc<SessionEntry>, StartError> {
-    open_with(id, |notify, state| start_ssh(options, ssh, notify, state))
+    open_with(id, |notify, state| {
+        start_ssh(id, options, ssh, notify, state)
+    })
 }
 
 /// Ends the session of tab `id` (if any) and starts a new SSH session for it.
@@ -498,7 +500,9 @@ pub fn restart_ssh(
 }
 
 /// Starts an SSH session: questions and state go to the entry's shared state and wake the item.
+/// A saved host's live connection is also told to the tunnels tied to it.
 fn start_ssh(
+    id: i32,
     options: LocalOptions,
     mut ssh: SshStart,
     notify: Notify,
@@ -514,6 +518,7 @@ fn start_ssh(
             state.wake();
         })
     };
+    let host = ssh.host.clone();
     let status: opensesh_ssh::backend::StatusSink = {
         let state = Arc::clone(state);
         Arc::new(move |status| {
@@ -521,9 +526,19 @@ fn start_ssh(
             match status {
                 SshStatus::OsDetected(icon) => state.ssh.os = Some(icon),
                 SshStatus::KeyInstall(result) => state.ssh.key_install = Some(result),
-                SshStatus::Live(live) => state.ssh.live = Some(live),
+                SshStatus::Live(live) => {
+                    if let Some(host) = &host {
+                        crate::tunnels::session_live(host, id, Some(Arc::clone(&live.0)));
+                    }
+                    state.ssh.live = Some(live);
+                }
                 status => {
                     if !matches!(status, SshStatus::Connected) {
+                        if state.ssh.live.is_some()
+                            && let Some(host) = &host
+                        {
+                            crate::tunnels::session_live(host, id, None);
+                        }
                         state.ssh.live = None;
                     }
                     state.ssh.status = Some(status);
@@ -563,6 +578,7 @@ fn open_with(
 
 /// Ends the session of tab `id` and forgets it. Returns whether there was one.
 pub fn close(id: i32) -> bool {
+    crate::tunnels::session_closed(id);
     let entry = sessions().remove(&id);
     match entry {
         Some(entry) => {
