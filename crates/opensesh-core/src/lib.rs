@@ -14,6 +14,7 @@ pub mod ipc;
 pub mod keybindings;
 pub mod paste;
 pub mod paths;
+pub mod snippets;
 pub mod state;
 pub mod terminal;
 pub mod theme;
