@@ -603,12 +603,17 @@ impl qobject::Transfers {
             return 0;
         };
         let remote = remote.to_string();
+        let name = path::file_name(fs.style(), &remote);
+        // The copy must stay in its folder (a server's `a\b` is a path on Windows).
+        if !path::is_plain_name(path::Style::Local, &name) {
+            tracing::warn!("a file whose name can't be a local file name wasn't opened");
+            return 0;
+        }
         let id = {
             let mut state = self.as_mut().rust_mut();
             state.next_edit += 1;
             state.next_edit
         };
-        let name = path::file_name(fs.style(), &remote);
         let dir = match app::edit_dir(u64::try_from(id).unwrap_or(0) + edit_serial_base()) {
             Ok(dir) => dir,
             Err(error) => {

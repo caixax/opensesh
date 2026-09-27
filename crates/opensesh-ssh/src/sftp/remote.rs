@@ -159,7 +159,8 @@ impl Remote {
         let mut entries: Vec<Entry> = listing
             .filter_map(|item| {
                 let name = item.file_name();
-                (name != "." && name != "..").then(|| entry(&name, &item.metadata()))
+                // `.`, `..`, and names with a `/` a server shouldn't send (path::is_plain_name).
+                path::is_plain_name(Style::Posix, &name).then(|| entry(&name, &item.metadata()))
             })
             .collect();
         let links: Vec<usize> = entries

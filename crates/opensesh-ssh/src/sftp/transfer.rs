@@ -772,6 +772,12 @@ async fn scan(
                 let mut children = request.from.list(&from).await?;
                 children.sort_by(|a, b| b.name.cmp(&a.name));
                 for child in children {
+                    // A name this side can't hold as one name (a server's `a\b` on Windows)
+                    // would land outside the folder: it is left out.
+                    if !path::is_plain_name(to_style, &child.name) {
+                        counters.files_skipped.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
                     stack.push((
                         path::join(from_style, &from, &child.name),
                         path::join(to_style, &to, &child.name),

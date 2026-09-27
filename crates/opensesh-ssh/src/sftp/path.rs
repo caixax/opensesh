@@ -39,6 +39,25 @@ pub fn normalize_posix(path: &str) -> String {
     }
 }
 
+/// Whether `name` (from a listing, so from the server) is one plain name in `style`: not empty,
+/// not `.` or `..`, no separator, nothing that makes a path absolute. Anything else could put a
+/// file outside the folder it is copied into (the CVE-2019-6111 kind of attack), so such names
+/// are not listed, and not copied to this computer.
+#[must_use]
+pub fn is_plain_name(style: Style, name: &str) -> bool {
+    let posix = !name.is_empty() && name != "." && name != ".." && !name.contains(['/', '\0']);
+    match style {
+        Style::Posix => posix,
+        Style::Local => {
+            let mut parts = Path::new(name).components();
+            posix
+                && !(cfg!(windows) && name.contains(['\\', ':']))
+                && matches!(parts.next(), Some(Component::Normal(part)) if part == name)
+                && parts.next().is_none()
+        }
+    }
+}
+
 /// `name` inside `dir`.
 #[must_use]
 pub fn join(style: Style, dir: &str, name: &str) -> String {
@@ -194,6 +213,23 @@ mod tests {
                 ("me".to_owned(), "/home/me".to_owned()),
             ]
         );
+    }
+
+    #[test]
+    fn plain_names() {
+        for name in ["a.txt", ".profile", "a b", "a..b", "…"] {
+            assert!(is_plain_name(Style::Posix, name), "{name}");
+            assert!(is_plain_name(Style::Local, name), "{name}");
+        }
+        for name in ["", ".", "..", "a/b", "/etc/passwd", "../x", "a\0b"] {
+            assert!(!is_plain_name(Style::Posix, name), "{name:?}");
+            assert!(!is_plain_name(Style::Local, name), "{name:?}");
+        }
+        // A backslash is part of a name on a server, a separator on Windows.
+        assert!(is_plain_name(Style::Posix, r"a\b"));
+        assert_eq!(is_plain_name(Style::Local, r"a\b"), cfg!(not(windows)));
+        assert_eq!(is_plain_name(Style::Local, r"..\x"), cfg!(not(windows)));
+        assert_eq!(is_plain_name(Style::Local, "C:x"), cfg!(not(windows)));
     }
 
     #[test]
