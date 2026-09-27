@@ -331,9 +331,16 @@ impl Worker {
     /// The password and key of identity `id`: `locked` when the vault holds them and is locked,
     /// `unknown` for an identity that doesn't exist.
     fn connection_secrets(&mut self, id: &str) -> ConnectionSecrets {
-        let Some(identity) = self.keychain.file.identity(id).cloned() else {
+        // By id (hosts), or by name (a snippet's `{{secret:name}}`).
+        let file = &self.keychain.file;
+        let Some(identity) = file
+            .identity(id)
+            .or_else(|| file.identities.iter().find(|identity| identity.name == id))
+            .cloned()
+        else {
             return Err("unknown");
         };
+        let id = identity.id.as_str();
         let needs_vault = identity.password.is_some() || identity.key.is_some();
         if needs_vault && self.keychain.vault.status() == Status::Locked {
             // Opens by itself when the keyring holds (or remembers) the key.

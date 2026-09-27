@@ -14,6 +14,7 @@ mod platform;
 mod saves;
 mod services;
 mod sftp;
+mod snippets;
 mod ssh;
 mod terminal;
 mod tunnels;
