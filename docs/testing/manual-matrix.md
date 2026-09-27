@@ -26,14 +26,12 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 | Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real agent | Real keyring |
 |---|---|---|---|---|---|---|
 | Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ | ✅ / ✅ | ✅ `windows` | ✅ Pageant | ✅ Credential Manager |
-| Debian 13 (WSLg) ¹ | 6.8.2 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ ssh-agent | ✅ GNOME Keyring |
-| Fedora 43 (WSLg) ² | 6.10.3 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ ssh-agent | — |
-| Arch Linux (WSLg) | 6.11.2 (distro) | ⏳ ³ | ⏳ ³ | ⏳ ³ | ⏳ ³ | — |
-| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | CI_RESULT | CI_RESULT (offscreen) | — | — | — |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ ssh-agent | ✅ GNOME Keyring |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ ssh-agent | — |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ | ✅ / ✅ | ✅ Wayland, ✅ X11 | — (no OpenSSH installed) | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | — | — |
 
-¹ The keychain as first committed; the later changes (typed passwords as `SecretString`, the vault held by a keyring without its key, the smoke test's final unlock) are covered by Windows, Fedora and CI.
-² Everything but the smoke test's final unlock (a QML-only change), which Windows and CI ran.
-³ Not run: the drive holding the WSL disks filled up during the sprint, and the Arch and Debian disks went read-only with I/O errors. The Arch container in CI ran instead.
+The drive that held the WSL disks filled up during the sprint, and the Debian and Arch disks went read-only with I/O errors in the middle of a run. With the owner's go-ahead, the four WSL distros moved to another drive (`wsl --manage <distro> --move`). Every distro came back read-write without file system errors, and the table above is the run on the final code after the move. Debian's clippy first failed to find the `opensesh_vault` crate, and passed after `cargo clean -p opensesh-vault`: build metadata truncated by the full disk.
 
 ### Manual checks
 
