@@ -11,6 +11,7 @@
 #   2222  Dropbear, public key or password (the second jump host)
 #   2223  OpenSSH, public key and then a one-time code (TOTP through PAM)
 #   2224  Dropbear, password
+#   2225  OpenSSH, public key, without the SFTP subsystem (spikes/scp-fallback, the "no SFTP" error)
 #
 # The servers run from $OPENSESH_SSH_SERVERS (default /tmp/opensesh-ssh-servers) with their own
 # host keys and configuration; the system's sshd configuration is not touched. Two system changes
@@ -124,11 +125,14 @@ start() {
     dropbearkey -t ed25519 -f "$STATE/dropbear_ed25519_key" >/dev/null 2>&1
     mkdir -p /run/sshd /var/empty
     local port methods ca
-    for port in 2221 2223; do
+    local subsystem
+    for port in 2221 2223 2225; do
         methods=publickey
         [ "$port" = 2223 ] && methods=publickey,keyboard-interactive
         ca=none
         [ "$port" = 2221 ] && ca="$STATE/user_ca.pub"
+        subsystem="Subsystem sftp internal-sftp"
+        [ "$port" = 2225 ] && subsystem="# No SFTP subsystem: scp and shell commands only."
         cat >"$STATE/sshd_$port.conf" <<EOF
 Port $port
 ListenAddress 127.0.0.1
@@ -149,7 +153,7 @@ X11Forwarding yes
 X11UseLocalhost yes
 PrintMotd no
 LogLevel VERBOSE
-Subsystem sftp internal-sftp
+$subsystem
 EOF
         "$sshd" -t -f "$STATE/sshd_$port.conf" || die "the configuration of port $port is wrong"
         "$sshd" -f "$STATE/sshd_$port.conf" -E "$STATE/sshd_$port.log"
@@ -159,10 +163,10 @@ EOF
             2>>"$STATE/dropbear_$port.log"
     done
     sleep 1
-    for port in 2221 2222 2223 2224; do
+    for port in 2221 2222 2223 2224 2225; do
         (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null || die "nothing listens on $port (see $STATE/*.log)"
     done
-    echo "ssh-test-servers: listening on 127.0.0.1:2221-2224 (state in $STATE)"
+    echo "ssh-test-servers: listening on 127.0.0.1:2221-2225 (state in $STATE)"
 }
 
 case "${1:-}" in
