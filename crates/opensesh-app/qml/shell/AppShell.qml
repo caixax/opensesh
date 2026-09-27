@@ -1265,6 +1265,7 @@ Item {
         let deadline = 0;
         let tabId = 0;
         let pane = null;
+        let serial = 0;
         const waitFor = (what, condition, next) => {
             const poll = () => {
                 if (condition())
@@ -1346,6 +1347,27 @@ Item {
                 return wait("the side panel to follow the shell", () => sidePanel.files.pane.browser.path === "/docs"
                             && sidePanel.files.pane.browser.rowOf("readme.txt") >= 0,
                             () => console.info("smoke test: the side panel showed an SSH pane's files over its connection and followed its folder"));
+            },
+            // The connection drops: after Enter reconnects, the side panel works on the new one.
+            () => {
+                serial = pane.terminal.connectionSerial;
+                pane.terminal.sendText("drop\r");
+                return wait("the second disconnection", () => state() === "disconnected");
+            },
+            () => {
+                pane.terminal.sendText("\r");
+                return wait("the password prompt of the second reconnection", () => question().kind === "password");
+            },
+            () => {
+                pane.terminal.answerPrompt(question().id, "submit", ["right password"]);
+                return wait("the second reconnection", () => state() === "connected" && pane.terminal.connectionSerial > serial
+                            && sidePanel.files.pane !== null && sidePanel.files.pane.ready);
+            },
+            () => {
+                sidePanel.files.pane.navigate("/logs");
+                return wait("the side panel on the new connection", () => sidePanel.files.pane.browser.path === "/logs"
+                            && sidePanel.files.pane.browser.rowOf("app-000.log") >= 0,
+                            () => console.info("smoke test: the side panel opened again on the reconnected connection"));
             },
             () => shell.setSidePanelOpen(false),
             // "Install my key": pick a key, connect in a new tab, the key goes in.
