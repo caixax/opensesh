@@ -377,8 +377,16 @@ async fn forwards_carry_on_over_a_new_connection() {
     remote_reports
         .until("waiting", |report| *report == Report::Waiting)
         .await;
-    tokio::time::sleep(Duration::from_millis(300)).await;
-    assert!(TcpStream::connect(("127.0.0.1", fixed)).await.is_err());
+    // The server lets go of the port once it notices (in the background, so on a busy machine
+    // it can take a moment).
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    while TcpStream::connect(("127.0.0.1", fixed)).await.is_ok() {
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "the server still listens on the remote forward's port"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
 
     // A request made meanwhile waits for the new connection.
     let pending = tokio::spawn(get_at(local_port));
