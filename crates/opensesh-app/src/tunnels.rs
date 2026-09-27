@@ -515,7 +515,15 @@ fn start(state: &mut State, id: &str) {
                     entry.failure = None;
                 }
                 Report::Waiting => entry.waiting = true,
-                Report::Failed(message) => entry.failure = Some(message),
+                // It can't run (its port is taken, the server refused it): its connection has
+                // nothing to carry. Switching it on again tries again.
+                Report::Failed(message) => {
+                    entry.failure = Some(message);
+                    entry.active = None;
+                    for request in entry.requests.drain(..) {
+                        request.answer(Answer::Cancel);
+                    }
+                }
             });
         })
     };

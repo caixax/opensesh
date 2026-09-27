@@ -119,6 +119,15 @@ use crate::tunnels::{self as service, View};
 
 const RELOAD_DEBOUNCE: Duration = Duration::from_millis(250);
 
+/// What test runs import from, for the smoke test and screenshots (the first host is in the
+/// hosts fixture, the second isn't).
+const TEST_SSH_CONFIG: &str = "Host web-01.eu-west
+  LocalForward 5432 db.internal:5432
+  DynamicForward 1080
+Host build-runner
+  RemoteForward 9000 localhost:3000
+";
+
 /// Rust state behind `Tunnels`.
 #[derive(Default)]
 pub struct TunnelsRust {
@@ -435,12 +444,18 @@ impl qobject::Tunnels {
         model::is_loopback(&address.to_string())
     }
 
-    /// The forwards of `~/.ssh/config`, with the saved host each would go through.
+    /// The forwards of `~/.ssh/config`, with the saved host each would go through. Test runs
+    /// read a sample instead of the user's file.
     fn candidates() -> Vec<(String, String, String, ssh_config::SshForward)> {
         let Some(home) = opensesh_core::paths::home_dir() else {
             return Vec::new();
         };
-        let config = ssh_config::load(&home.join(".ssh").join("config"), &home);
+        let path = home.join(".ssh").join("config");
+        let config = if is_test_run() {
+            ssh_config::parse_str(TEST_SSH_CONFIG, &path, &home)
+        } else {
+            ssh_config::load(&path, &home)
+        };
         let library = crate::hosts::current();
         let mut out = Vec::new();
         for host in &config.hosts {

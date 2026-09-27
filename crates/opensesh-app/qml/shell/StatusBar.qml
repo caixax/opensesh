@@ -138,6 +138,27 @@ Rectangle {
             }
         }
 
+        // Tunnels running; a click shows them.
+        OsButton {
+            id: tunnelsButton
+
+            anchors.verticalCenter: parent.verticalCenter
+            visible: Tunnels.running > 0
+            implicitHeight: bar.buttonSize
+            leftPadding: Theme.spacingSm
+            rightPadding: Theme.spacingSm
+            variant: "ghost"
+            iconName: "waypoints"
+            text: String(Tunnels.running)
+            Accessible.name: qsTr("%n tunnel(s) running", "", Tunnels.running)
+            onClicked: WindowRegistry.mainShell.showView("tunnels")
+
+            OsTooltip {
+                visible: tunnelsButton.hovered
+                text: qsTr("%n tunnel(s) running. Click to see them.", "", Tunnels.running)
+            }
+        }
+
         OsIconButton {
             id: vaultButton
 

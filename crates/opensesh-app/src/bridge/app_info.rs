@@ -56,6 +56,13 @@ pub mod qobject {
         #[cxx_name = "testFolder"]
         fn test_folder(self: &Self) -> QString;
 
+        /// Test runs only: starts a tiny HTTP server on 127.0.0.1 that answers every request
+        /// with `OpenSesh tunnel test` (for the tunnels' smoke steps) and returns its port; 0 in
+        /// normal runs.
+        #[qinvokable]
+        #[cxx_name = "startHttpTestServer"]
+        fn start_http_test_server(self: &Self) -> i32;
+
         /// Test runs only: writes `text` to `path` inside `testFolder()` (an editor saving a
         /// file, for the smoke test); false anywhere else.
         #[qinvokable]
@@ -141,6 +148,53 @@ impl qobject::AppInfo {
             .all(|part| part != std::path::Component::ParentDir)
             && path.starts_with(&folder);
         inside && std::fs::write(&path, text.to_string()).is_ok()
+    }
+}
+
+/// What the test HTTP server answers.
+pub const HTTP_TEST_BODY: &str = "OpenSesh tunnel test";
+
+impl qobject::AppInfo {
+    /// See the bridge declaration.
+    pub fn start_http_test_server(&self) -> i32 {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        if !is_test_run() {
+            return 0;
+        }
+        let Some(runtime) = opensesh_ssh::runtime() else {
+            return 0;
+        };
+        // Binding a local port takes no time.
+        let listener = match runtime.block_on(tokio::net::TcpListener::bind("127.0.0.1:0")) {
+            Ok(listener) => listener,
+            Err(error) => {
+                tracing::warn!("could not start the HTTP test server: {error}");
+                return 0;
+            }
+        };
+        let port = listener.local_addr().map_or(0, |address| address.port());
+        runtime.spawn(async move {
+            while let Ok((mut socket, _)) = listener.accept().await {
+                tokio::spawn(async move {
+                    let mut request = Vec::new();
+                    let mut buffer = [0_u8; 1024];
+                    while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+                        match socket.read(&mut buffer).await {
+                            Ok(0) | Err(_) => return,
+                            Ok(read) => request.extend_from_slice(&buffer[..read]),
+                        }
+                    }
+                    let response = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\
+                         Access-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{HTTP_TEST_BODY}",
+                        HTTP_TEST_BODY.len()
+                    );
+                    let _ = socket.write_all(response.as_bytes()).await;
+                    let _ = socket.shutdown().await;
+                });
+            }
+        });
+        i32::from(port)
     }
 }
 
