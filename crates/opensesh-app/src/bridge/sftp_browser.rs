@@ -205,6 +205,17 @@ pub mod qobject {
         /// Connects again after the connection was lost.
         #[qinvokable]
         fn reconnect(self: Pin<&mut SftpBrowser>);
+
+        /// The shell integration lines for `shell` (`bash` or `zsh`), to show and copy.
+        #[qinvokable]
+        #[cxx_name = "shellIntegration"]
+        fn shell_integration(self: &SftpBrowser, shell: &QString) -> QString;
+
+        /// Adds the shell integration to the rc file of `shell` on the server (only when the user
+        /// asked for it); reports with `done`.
+        #[qinvokable]
+        #[cxx_name = "installShellIntegration"]
+        fn install_shell_integration(self: Pin<&mut SftpBrowser>, shell: &QString) -> i32;
     }
 
     unsafe extern "RustQt" {
@@ -1020,6 +1031,42 @@ impl qobject::SftpBrowser {
                 Err(error) => object.as_mut().preview_ready(
                     token,
                     qstring(error.code()),
+                    QString::from(&error.to_string()),
+                ),
+            },
+        );
+        token
+    }
+
+    /// See the bridge declaration.
+    pub fn shell_integration(&self, shell: &QString) -> QString {
+        QString::from(app::shell_integration(&shell.to_string()))
+    }
+
+    /// See the bridge declaration.
+    pub fn install_shell_integration(mut self: Pin<&mut Self>, shell: &QString) -> i32 {
+        let token = self.as_mut().token();
+        let Some(remote) = self.fs.as_ref().and_then(Fs::remote).cloned() else {
+            self.done(token, qstring("unsupported"), QString::default());
+            return token;
+        };
+        let command = app::install_integration_command(&shell.to_string());
+        self.spawn(
+            async move { remote.run(&command, &[]).await },
+            move |mut object, result| match result {
+                Ok(output) if output.status == Some(0) => {
+                    object
+                        .as_mut()
+                        .done(token, QString::default(), QString::default());
+                }
+                Ok(output) => object.as_mut().done(
+                    token,
+                    qstring("failed"),
+                    QString::from(String::from_utf8_lossy(&output.stderr).trim()),
+                ),
+                Err(error) => object.as_mut().done(
+                    token,
+                    qstring("disconnected"),
                     QString::from(&error.to_string()),
                 ),
             },
