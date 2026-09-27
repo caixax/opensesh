@@ -351,6 +351,81 @@ mod tests {
         assert!(command.ends_with(">> \"$HOME/.bashrc\""));
     }
 
+    /// The install command, run twice by `sh` in a temporary home, adds the snippet once; an
+    /// interactive shell then reports each folder it goes to (OSC 7). For each shell that is
+    /// installed here.
+    #[cfg(unix)]
+    #[test]
+    fn shell_integration_in_real_shells() {
+        use std::io::Write as _;
+        use std::process::{Command, Stdio};
+        for shell in ["bash", "zsh"] {
+            let installed = Command::new(shell)
+                .args(["-c", "true"])
+                .status()
+                .is_ok_and(|status| status.success());
+            if !installed {
+                continue;
+            }
+            let home = tempfile::tempdir().unwrap();
+            for _ in 0..2 {
+                let status = Command::new("sh")
+                    .args(["-c", &install_integration_command(shell)])
+                    .env("HOME", home.path())
+                    .status()
+                    .unwrap();
+                assert!(status.success(), "{shell}");
+            }
+            let rc = home
+                .path()
+                .join(if shell == "zsh" { ".zshrc" } else { ".bashrc" });
+            let text = std::fs::read_to_string(&rc).unwrap();
+            assert_eq!(text.matches(INTEGRATION_MARK).count(), 1, "{text}");
+            assert!(text.ends_with(shell_integration(shell)), "{text}");
+
+            let folder = home.path().join("a folder");
+            std::fs::create_dir(&folder).unwrap();
+            // zsh without its line editor (+Z) reads the commands from the pipe even when there
+            // is a terminal.
+            let args: &[&str] = if shell == "zsh" {
+                &["-i", "+Z"]
+            } else {
+                &["-i"]
+            };
+            let mut child = Command::new(shell)
+                .args(args)
+                .env("HOME", home.path())
+                .current_dir(home.path())
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap();
+            child
+                .stdin
+                .take()
+                .unwrap()
+                .write_all(b"cd 'a folder'\nexit\n")
+                .unwrap();
+            // An interactive shell ignores SIGTERM: one that hangs is killed.
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+            while child.try_wait().unwrap().is_none() {
+                if std::time::Instant::now() > deadline {
+                    child.kill().unwrap();
+                    panic!("{shell} -i didn't exit");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            let mut text = String::new();
+            std::io::Read::read_to_string(&mut child.stdout.take().unwrap(), &mut text).unwrap();
+            let reported = format!("{}\x1b\\", folder.display());
+            assert!(
+                text.contains("\x1b]7;file://") && text.contains(&reported),
+                "{shell} printed {text:?}"
+            );
+        }
+    }
+
     #[test]
     fn panes_by_id() {
         let id = new_pane_id();
