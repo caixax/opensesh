@@ -123,9 +123,9 @@ Item {
             () => {
                 if (entry(right, "notes.txt").size !== 10000)
                     smoke.fail("the uploaded file's size is " + entry(right, "notes.txt").size);
-                if (AppSettings.sftpPolicy !== "ask")
-                    return [];
-                // The same file again: a question, answered "keep both".
+                // The same file again: a question, answered "keep both" (a test run never writes
+                // the settings).
+                AppSettings.sftpPolicy = "ask";
                 job = Transfers.copy(left.browser.paneId, left.browser.pathsOf(["notes.txt"]), right.browser.paneId, "/incoming", false);
                 return wait("the question about the file already there", () => Transfers.question.indexOf("notes.txt") >= 0, () => {
                     Transfers.answer(job, "rename", false);

@@ -1332,8 +1332,10 @@ Item {
                 return wait("the reconnected shell", () => state() === "connected",
                             () => console.info("smoke test: an SSH pane asked for the host key and the password, connected and reconnected"));
             },
-            // The side panel's files: the pane's own connection, following the shell's folder.
+            // The side panel's files: the pane's own connection, following the shell's folder (a
+            // test run never writes the settings).
             () => {
+                AppSettings.sftpFollowTerminal = true;
                 shell.setSidePanelOpen(true);
                 sidePanel.currentIndex = 0;
                 return wait("the side panel's files", () => sidePanel.files.pane !== null && sidePanel.files.pane.ready
