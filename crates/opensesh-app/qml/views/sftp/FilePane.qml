@@ -23,7 +23,7 @@ pragma ComponentBehavior: Bound
 //   compact: bool           name and size only (the side panel)
 //   peer: Item              the other pane of a dual view (F5/F6, "copy to the other side")
 //   browser: SftpBrowser    read-only
-//   selectedPaths(): the selection's full paths
+//   selectedPaths(): the selection's full paths; closeDialogs(): closes its menus and dialogs
 // Signals: activated() (the pane got the keyboard), chooseSource() (an idle remote pane's button).
 import QtQuick
 import QtQuick.Dialogs
@@ -265,6 +265,11 @@ FocusScope {
         }
     }
 
+    function closeDialogs() {
+        for (const popup of [fileMenu, backgroundMenu, nameDialog, permissionsDialog, propertiesDialog, previewDialog, deleteDialog])
+            popup.close();
+    }
+
     function editPath() {
         pathField.text = browser.path;
         editingPath = true;
@@ -417,6 +422,7 @@ FocusScope {
                                         id: crumbButton
 
                                         anchors.verticalCenter: parent.verticalCenter
+                                        implicitWidth: implicitContentWidth + leftPadding + rightPadding
                                         height: parent.height - Theme.spacingXs
                                         leftPadding: Theme.spacingXs
                                         rightPadding: Theme.spacingXs
