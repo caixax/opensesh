@@ -715,6 +715,15 @@ OsDialog {
                             })))
                         }
 
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "terminal.paste_protection"
+                            inherit: false
+                            label: qsTr("Check pastes")
+                            options: [{ text: qsTr("From the profile"), value: undefined }].concat(dialog.onOff)
+                            helpText: qsTr("Show what looks risky in a paste before sending it (Settings > Terminal).")
+                        }
+
                         Note {
                             text: qsTr("Every other terminal option comes from the profile. Hosts can override any of them in [host.terminal] in hosts.toml.")
                         }

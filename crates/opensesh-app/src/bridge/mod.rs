@@ -9,6 +9,7 @@ pub mod platform;
 pub mod settings;
 pub mod sftp_browser;
 pub mod shim;
+pub mod snippets;
 pub mod terminal_profiles;
 pub mod terminal_sessions;
 pub mod terminal_view;

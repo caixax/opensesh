@@ -26,6 +26,8 @@ opensesh-import.workspace = true
 opensesh-term.workspace = true
 opensesh-ssh.workspace = true
 opensesh-vault.workspace = true
+# Macro steps that wait for a pattern (snippets.rs).
+regex.workspace = true
 secrecy.workspace = true
 # Update checks (update.rs): GitHub Releases over HTTPS, checksums of downloaded installers.
 serde.workspace = true
