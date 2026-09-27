@@ -3,7 +3,7 @@
 //! certificate, agent forwarding, and the terminal backend reconnecting after the server side of
 //! the session is killed.
 //!
-//! The servers come from `scripts/ssh-test-servers.sh start` (127.0.0.1:2221-2224), so these
+//! The servers come from `scripts/ssh-test-servers.sh start` (127.0.0.1:2221-2225), so these
 //! tests are ignored by default. With the servers up, and an agent that holds
 //! `$OPENSESH_SSH_SERVERS/client_ed25519`:
 //!
