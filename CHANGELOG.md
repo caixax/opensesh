@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-09-28
+
 ### Added
 
 - **Sprint 11: the remote monitor and host info ([ADR 0031](docs/adr/0031-remote-monitor.md)).**
