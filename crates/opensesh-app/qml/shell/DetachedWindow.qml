@@ -17,6 +17,8 @@ Window {
     readonly property bool frameless: decorations === "custom" || decorations === "none"
     readonly property bool windowed: visibility === Window.Windowed
     property bool closingDown: false
+    // Closing was confirmed (or the main window's closing covers it): no question.
+    property bool closeConfirmed: false
 
     minimumWidth: 480
     minimumHeight: 320
@@ -31,9 +33,14 @@ Window {
         if (active)
             WindowRegistry.activated(shell);
     }
-    onClosing: {
+    onClosing: close => {
         if (closingDown)
             return;
+        // Its sessions still run: ask first (Settings > General).
+        if (!closeConfirmed && shell.askBeforeClosing(false)) {
+            close.accepted = false;
+            return;
+        }
         closingDown = true;
         shell.closeAllTabs();
         // Not from inside the signal: the window is still in use.

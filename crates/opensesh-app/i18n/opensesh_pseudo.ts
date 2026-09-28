@@ -648,6 +648,62 @@
     </message>
 </context>
 <context>
+    <name>CloseConfirmDialog</name>
+    <message numerus="yes">
+        <source>%n terminal session(s)</source>
+        <translation>
+            <numerusform>[%n ťéŕmíñáĺ šéššíöñ(š) ~~~~~~~]</numerusform>
+            <numerusform>[%n ťéŕmíñáĺ šéššíöñ(š) ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n tunnel(s)</source>
+        <translation>
+            <numerusform>[%n ťüññéĺ(š) ~~~~]</numerusform>
+            <numerusform>[%n ťüññéĺ(š) ~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file transfer(s)</source>
+        <translation>
+            <numerusform>[%n ƒíĺé ťŕáñšƒéŕ(š) ~~~~~~]</numerusform>
+            <numerusform>[%n ƒíĺé ťŕáñšƒéŕ(š) ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Close OpenSesh?</source>
+        <translation>[Çĺöšé ÖþéñŠéšĥ? ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close this window?</source>
+        <translation>[Çĺöšé ťĥíš ŵíñďöŵ? ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close OpenSesh</source>
+        <translation>[Çĺöšé ÖþéñŠéšĥ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Close window</source>
+        <translation>[Çĺöšé ŵíñďöŵ ~~~~]</translation>
+    </message>
+    <message>
+        <source>These end when OpenSesh closes:</source>
+        <translation>[Ťĥéšé éñď ŵĥéñ ÖþéñŠéšĥ çĺöšéš: ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>These end when the window closes:</source>
+        <translation>[Ťĥéšé éñď ŵĥéñ ťĥé ŵíñďöŵ çĺöšéš: ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>• %1</source>
+        <translation>[• %1 ~~]</translation>
+    </message>
+    <message>
+        <source>Don&apos;t ask again</source>
+        <translation>[Ďöñ&apos;ť ášķ áĝáíñ ~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>ComingSoon</name>
     <message>
         <source>%1 is coming in Sprint %2.</source>
@@ -6274,6 +6330,26 @@
         <translation>[ĜÑÜ Ĝéñéŕáĺ Þübĺíç Ĺíçéñšé v3.0 öŕ ĺáťéŕ (ĜÞĹ-3.0-öŕ-ĺáťéŕ) ~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>Source code</source>
+        <translation>[Šöüŕçé çöďé ~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh is open source: the code, the releases and the issue tracker are on GitHub.</source>
+        <translation>[ÖþéñŠéšĥ íš öþéñ šöüŕçé: ťĥé çöďé, ťĥé ŕéĺéášéš áñď ťĥé íššüé ťŕáçķéŕ áŕé öñ ĜíťĤüb. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>GitHub</source>
+        <translation>[ĜíťĤüb ~~]</translation>
+    </message>
+    <message>
+        <source>Report a problem</source>
+        <translation>[Ŕéþöŕť á þŕöbĺém ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Release notes</source>
+        <translation>[Ŕéĺéášé ñöťéš ~~~~]</translation>
+    </message>
+    <message>
         <source>App ID</source>
         <translation>[Åþþ ÍĎ ~~]</translation>
     </message>
@@ -6608,8 +6684,8 @@
         <translation>[Çöñƒíŕm béƒöŕé çĺöšíñĝ ŵíťĥ áçťívé šéššíöñš ~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Asks before closing a tab or the window while sessions are connected.</source>
-        <translation>[Åšķš béƒöŕé çĺöšíñĝ á ťáb öŕ ťĥé ŵíñďöŵ ŵĥíĺé šéššíöñš áŕé çöññéçťéď. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Asks before closing OpenSesh or one of its windows while terminals, tunnels or file transfers are still running.</source>
+        <translation>[Åšķš béƒöŕé çĺöšíñĝ ÖþéñŠéšĥ öŕ öñé öƒ íťš ŵíñďöŵš ŵĥíĺé ťéŕmíñáĺš, ťüññéĺš öŕ ƒíĺé ťŕáñšƒéŕš áŕé šťíĺĺ ŕüññíñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Updates</source>

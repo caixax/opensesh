@@ -130,9 +130,12 @@ QtObject {
     }
 
     // The main window is closing: the detached windows go too (their sessions end).
+    // The main window closes (confirmed already, when it asked): so do the others, without asking.
     function closeDetached() {
-        for (const window of windows.slice())
+        for (const window of windows.slice()) {
+            window.closeConfirmed = true;
             window.close();
+        }
     }
 
     function hostOpened(id) {

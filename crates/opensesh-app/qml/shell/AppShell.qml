@@ -286,6 +286,52 @@ Item {
         return -1;
     }
 
+    // This window's terminal panes whose program still runs (a shell that ended, or a recording
+    // played back, loses nothing when it closes).
+    function runningSessionCount() {
+        let count = 0;
+        for (let i = 0; i < tabRepeater.count; ++i) {
+            const workspace = tabRepeater.itemAt(i);
+            if (!workspace)
+                continue;
+            for (const id of workspace.paneIds) {
+                const pane = workspace.paneItem(id);
+                if (pane && pane.kind !== "player" && pane.terminal.running)
+                    count += 1;
+            }
+        }
+        return count;
+    }
+
+    // Before this window closes: with "Confirm before closing with active sessions" on and work
+    // that would end, shows the question and returns true (the caller keeps the window open;
+    // confirming closes it again, marked as confirmed). `wholeApp`: the main window, whose closing
+    // ends every window, tunnel and transfer.
+    readonly property bool askingToClose: closeDialog.visible
+
+    // Answers the close question (the smoke test): `close` closes the window.
+    function answerClose(close) {
+        if (close)
+            closeDialog.accept();
+        else
+            closeDialog.reject();
+    }
+
+    function askBeforeClosing(wholeApp) {
+        if (closeDialog.visible)
+            return true;
+        if (!AppSettings.confirmCloseWithSessions)
+            return false;
+        const sessions = wholeApp ? WindowRegistry.shells.reduce((sum, each) => sum + each.runningSessionCount(), 0)
+                                  : runningSessionCount();
+        const tunnels = wholeApp ? Tunnels.running : 0;
+        const transfers = wholeApp ? Transfers.active : 0;
+        if (sessions + tunnels + transfers === 0)
+            return false;
+        closeDialog.show(wholeApp, sessions, tunnels, transfers);
+        return true;
+    }
+
     function workspaceOf(tabId) {
         for (let i = 0; i < tabRepeater.count; ++i) {
             const item = tabRepeater.itemAt(i);
@@ -1156,9 +1202,10 @@ Item {
                 smoke.fail(what);
             return condition;
         };
+        // The rows joined: the command wraps in a narrow pane.
         const hasMarker = id => {
             const item = workspace.paneItem(id);
-            return item !== null && item.terminal.screenText().indexOf(marker) >= 0;
+            return item !== null && item.terminal.screenText().replace(/\n/g, "").indexOf(marker) >= 0;
         };
         const ready = id => {
             const item = workspace.paneItem(id);
@@ -1183,6 +1230,8 @@ Item {
         };
         let savedShape = "";
         let movedTab = 0;
+        let otherShell = null;
+        let otherIds = [];
         let snippetId = "";
         // Short, so it doesn't wrap in a narrow pane.
         const token = "s" + marker.slice(-6);
@@ -1245,10 +1294,10 @@ Item {
                 workspace.paneItem(c).terminal.sendText("echo " + marker + "-c\r");
                 deadline = Date.now() + timeout;
                 return [waitFor("the text typed in the excluded pane",
-                                () => workspace.paneItem(c).terminal.screenText().indexOf(marker + "-c") >= 0)];
+                                () => screenOf(c).indexOf(marker + "-c") >= 0)];
             },
             () => {
-                expect(workspace.paneItem(a).terminal.screenText().indexOf(marker + "-c") < 0,
+                expect(screenOf(a).indexOf(marker + "-c") < 0,
                        "text typed in an excluded pane reached a receiving pane");
                 workspace.toggleBroadcast();
                 expect(!workspace.paneItem(a).receiving && workspace.participants.length === 0,
@@ -1355,14 +1404,23 @@ Item {
                 const other = WindowRegistry.shells.find(candidate => candidate !== shell);
                 if (!expect(other !== undefined && other.sessionCount === 1, "the second window did not open with its tab"))
                     return [];
-                // Closing a window ends the sessions of its tabs.
-                const ids = other.currentWorkspace ? other.currentWorkspace.paneIds.slice() : [];
-                expect(ids.length === 3, "the second window's tab doesn't have its three panes");
-                other.window.close();
+                // Closing a window ends the sessions of its tabs: once its shells run, it asks first.
+                otherShell = other;
+                otherIds = other.currentWorkspace ? other.currentWorkspace.paneIds.slice() : [];
+                expect(otherIds.length === 3, "the second window's tab doesn't have its three panes");
+                deadline = Date.now() + timeout;
+                return [waitFor("the second window's shells", () => other.runningSessionCount() === 3)];
+            },
+            () => {
+                otherShell.window.close();
+                if (!expect(otherShell.askingToClose && otherIds.every(id => TerminalSessions.isOpen(id)),
+                            "closing a window with running shells didn't ask first"))
+                    return [];
+                otherShell.answerClose(true);
                 deadline = Date.now() + timeout;
                 return [waitFor("the second window to close and end its sessions",
-                                () => WindowRegistry.shells.length === 1 && ids.every(id => !TerminalSessions.isOpen(id)),
-                                () => console.info("smoke test: a two-window workspace opened, and closing a window ended its sessions"))];
+                                () => WindowRegistry.shells.length === 1 && otherIds.every(id => !TerminalSessions.isOpen(id)),
+                                () => console.info("smoke test: a two-window workspace opened; closing a window asked first, then ended its sessions"))];
             },
             () => {
                 // Tab strip operations.
@@ -1746,6 +1804,7 @@ Item {
     // --screenshots: a tab split in three (page "splits"), then broadcasting to two of them
     // ("broadcast"), with a pinned tab and tab colors. The panes show the demo frame.
     function prepareTerminalScreenshot(page) {
+        closeDialog.close();
         palette.close();
         notifications.close();
         sidePanelOpen = false;
@@ -1765,12 +1824,16 @@ Item {
             workspace.toggleBroadcast();
             workspace.setPaneReceiving(bottom, false);
             workspace.focusPane(right);
+        } else if (page === "close") {
+            // The question when OpenSesh closes with work running (sample counts: no shells run).
+            closeDialog.show(true, 3, 1, 2);
         }
     }
 
     // --screenshots: the Hosts view with generated hosts, as cards or a list, the host editor and
     // quick connect.
     function prepareHostsScreenshot(page) {
+        closeDialog.close();
         closeHostDialogs();
         while (sessionModel.count > 0)
             removeTab(sessionModel.count, false);
@@ -2233,6 +2296,15 @@ Item {
 
     SnippetEditorDialog {
         id: snippetEditor
+    }
+
+    CloseConfirmDialog {
+        id: closeDialog
+
+        onConfirmed: {
+            shell.window.closeConfirmed = true;
+            shell.window.close();
+        }
     }
 
     SnippetRunDialog {
