@@ -23,6 +23,9 @@ All notable changes to this project are documented in this file. The format is b
   - **The macro recorder** (a terminal's menu) turns what is typed, with its pauses, into a macro to review and save. It warns that typed passwords were recorded too.
   - **Session recordings:** "Record the session" in a terminal's menu writes what it shows to `recordings/` in the data folder, in asciinema's format (never the keys typed), with a chip while it records. A recording plays in its own tab: play, pause, jump, restart and speed.
   - **The History view:** the recent connections (a click connects again), the recordings (play, open the folder, delete) and the session and app logs folders.
+  - **Closing with work running asks first:** closing OpenSesh, or one of its windows, while terminals, tunnels or file transfers still run lists what would end, with "Don't ask again". On by default in Settings > General ("Confirm before closing with active sessions", which did nothing until now).
+  - **Settings > About:** links to the project on GitHub, to report a problem and to the release notes.
+  - **Windows:** `OpenSesh.exe` has the app's icon (Explorer, the taskbar, shortcuts, Installed apps) and its version information (Task Manager shows "OpenSesh"); so do the installer and the uninstaller.
 - **Sprint 9: tunnels ([ADR 0029](docs/adr/0029-tunnels.md)).**
   - **Local (`-L`), remote (`-R`) and dynamic (`-D`, a SOCKS5 proxy) forwarding** through the built-in SSH client, saved in `tunnels.toml`.
   - **The Tunnels view:** each tunnel with a switch, its route in words, what it is doing (running, connecting, waiting for a session, retrying, failed) and its traffic (bytes each way, connections), and a menu to edit, duplicate, copy its address or delete it. A tunnel that listens beyond localhost is marked, and saving one asks first.
