@@ -4,6 +4,40 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 11 (2026-09-28)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 449 to 461 steps):** as before, plus the remote monitor against the in-process test server:
+  - the SSH pane's readings reach the status bar (CPU needs two readings, so the rates are checked too);
+  - the side panel's Info tab reads the host over the same connection, and its "Copy as text" has the host name, the system, the address and the CPU.
+- **Screenshots (native, Windows),** in dark and light, comfortable and compact:
+  - the Info tab next to a real SSH tab on the test server, with the status bar's readings;
+  - Settings > SSH with the Remote monitor group.
+- **The monitor's command:**
+  - run with the system's `sh` in every Linux job and distro;
+  - with busybox's `sh` and applets in CI's Ubuntu job (busybox 1.36.1) and by hand in WSL (busybox 1.30.1);
+  - its cost measured with dash and busybox ([perf.md](../perf.md)).
+- **Real SSH servers:** two readings and the host info on OpenSSH 10.5p1 and Dropbear, with the Sprint 7 to 9 tests.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real SSH servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 607 | ✅ / ✅ | ✅ `windows` | — |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ 611 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| Fedora 43 (WSLg) | 6.10.3 (distro) | ✅ 611 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| Arch Linux (WSLg) | 6.11.2 (distro) | ✅ 611 | ✅ / ✅ | ✅ Wayland, ✅ X11 | ✅ OpenSSH 10.5p1, Dropbear 2026.94 |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ Ubuntu 24.04 packages |
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| The monitor on your own servers: a VPS, and a Raspberry Pi or an Alpine box (busybox) | ⏳ | ⏳ |
+| A FreeBSD or macOS server, if one is at hand | ⏳ | ⏳ |
+| A Windows server with OpenSSH: no readings, and the Info tab says why | ⏳ | ⏳ |
+| The status bar and the Info tab during a reconnection, and switching between two SSH tabs | ⏳ | ⏳ |
+| Turning the monitor off for one host in its editor, and globally in Settings > SSH | ⏳ | ⏳ |
+
 ## Sprint 10 (2026-09-28)
 
 ### Automated checks
