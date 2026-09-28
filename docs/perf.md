@@ -146,6 +146,30 @@ The engine's own cost is small; the scrollback dominates. With the 150 MB budget
 
 In the app (`--smoke-test`, release build, Windows, offscreen), the Hosts view loads the same 1000 hosts and times each refresh: the Rust search and its JSON, parsing it, and updating the list model with the visible cards. Listing all 1000 hosts took **6 to 8 ms** and the query `web eu` (226 hosts) **7 to 8 ms** in three runs. The first version rebuilt every visible card on each change (a new JavaScript array as the model, and a tag repeater per card) and took 25 to 44 ms; the view now keeps one list model updated in place, cards have fixed tag slots, and the views reuse their delegates while scrolling.
 
+### Remote monitor (Sprint 11, 2026-09-28)
+
+PLAN Sprint 11 asks for a negligible CPU overhead on both ends ([ADR 0031](adr/0031-remote-monitor.md)). The probe is an `#[ignore]`d test:
+
+```sh
+cargo test --release -p opensesh-ssh --test monitor -- --ignored --nocapture measure_the_monitor
+```
+
+- **What it does:**
+  1. Runs the monitor's real loop 100 times without the pause, under the shell named by `$MONITOR_SHELL` (`sh` by default).
+  2. Prints the shell's `times` (the CPU of the shell and of the programs it ran).
+  3. Parses one of those readings 10,000 times.
+- **Busybox:** with `PATH` pointing to a folder of busybox's applets, the same probe measures busybox, whose `sh` then runs its own `df` and `who`.
+- **Where:** Debian 13 in WSL2, on the machine above.
+
+| Server shell | CPU per reading (shell and programs) | At the default 3 s | Wall time per reading |
+|---|---|---|---|
+| dash 0.5.12 (Debian's `sh`) | 2.1 ms (0.21 s for 100) | 0.07 % of one core | 22 ms |
+| busybox 1.30.1 `sh` and applets | 1.7 ms (0.17 s for 100) | 0.06 % of one core | 2.6 ms |
+
+- **Where the time goes:** on Linux, the `/proc` files are read by the shell's own `read`, so the programs a reading starts are `df` and `who` (and `sleep`).
+- **Wall time** is mostly `df` waiting: in WSL it also lists the Windows drives, over the network file system. A real server has no such mounts.
+- **Here:** a reading is 3.9 to 4.2 kB, and parsing it takes **14 µs** (release). That is under 0.001 % of a core at the default interval, and rates, JSON and the status bar's update come on top.
+
 ## How to measure (GUI)
 
 Everything is measured from outside the app, on release builds in portable mode (an empty `portable` file next to the executable, deleted afterwards), so nothing in the app is instrumented beyond its existing logs. The probe scripts are not in the repository; this section says exactly what they do.
