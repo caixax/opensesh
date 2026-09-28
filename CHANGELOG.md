@@ -6,6 +6,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 11: the remote monitor and host info ([ADR 0031](docs/adr/0031-remote-monitor.md)).**
+  - **The status bar shows how the server of the current terminal is doing:** CPU, memory, network, the disk of `/`, uptime, load and users, every 3 seconds, with the details in a tooltip. Nothing is installed on the server: a small shell loop reads what the system already has, on a separate channel of the SSH connection, and ends when the connection does.
+  - **Where it works:** Linux (busybox too), FreeBSD and macOS. A server without `sh` (a Windows server, a router) simply has no monitor, and says why.
+  - **The side panel's Info tab:** the host's system, kernel, architecture, CPUs, uptime and load, live CPU, memory, swap and network, disks, IP addresses and logged-in users, with Refresh and "Copy as text".
+  - **Settings > SSH:** watch servers or not, the interval, and what the status bar shows; the host and group editors can turn it off for a host.
 - **Sprint 10: snippets, macros, paste protection and recordings ([ADR 0030](docs/adr/0030-snippets-macros-paste-protection-and-recordings.md)).**
   - **Paste protection:** before a paste, OpenSesh looks at the text:
     - lines that would run at once, and hidden, control or bidirectional characters;
