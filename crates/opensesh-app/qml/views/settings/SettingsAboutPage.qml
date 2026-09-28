@@ -133,6 +133,35 @@ SettingsPage {
         }
 
         SettingsRow {
+            label: qsTr("Source code")
+            helpText: qsTr("OpenSesh is open source: the code, the releases and the issue tracker are on GitHub.")
+
+            Flow {
+                width: parent.width
+                spacing: Theme.spacingSm
+
+                OsButton {
+                    text: qsTr("GitHub")
+                    iconName: "external-link"
+                    Accessible.description: AppInfo.repositoryUrl
+                    onClicked: Qt.openUrlExternally(AppInfo.repositoryUrl)
+                }
+
+                OsButton {
+                    text: qsTr("Report a problem")
+                    iconName: "bug"
+                    onClicked: Qt.openUrlExternally(AppInfo.repositoryUrl + "/issues")
+                }
+
+                OsButton {
+                    text: qsTr("Release notes")
+                    iconName: "file-text"
+                    onClicked: Qt.openUrlExternally(AppInfo.repositoryUrl + "/releases")
+                }
+            }
+        }
+
+        SettingsRow {
             label: qsTr("App ID")
 
             OsText {

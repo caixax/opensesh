@@ -94,7 +94,7 @@ SettingsPage {
 
         SettingsRow {
             label: qsTr("Confirm before closing with active sessions")
-            helpText: qsTr("Asks before closing a tab or the window while sessions are connected.")
+            helpText: qsTr("Asks before closing OpenSesh or one of its windows while terminals, tunnels or file transfers are still running.")
 
             OsSwitch {
                 checked: AppSettings.confirmCloseWithSessions

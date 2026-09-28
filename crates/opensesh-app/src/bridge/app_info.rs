@@ -24,6 +24,7 @@ pub mod qobject {
         #[qml_singleton]
         #[qproperty(QString, version, READ, CONSTANT)]
         #[qproperty(QString, app_id, cxx_name = "appId", READ, CONSTANT)]
+        #[qproperty(QString, repository_url, cxx_name = "repositoryUrl", READ, CONSTANT)]
         #[qproperty(bool, smoke_test, cxx_name = "smokeTest", READ, CONSTANT)]
         #[qproperty(bool, gallery, READ, CONSTANT)]
         #[qproperty(bool, window_alpha, cxx_name = "windowAlpha", READ, CONSTANT)]
@@ -282,6 +283,7 @@ pub fn set_startup(startup: Startup) {
 pub struct AppInfoRust {
     version: QString,
     app_id: QString,
+    repository_url: QString,
     smoke_test: bool,
     gallery: bool,
     window_alpha: bool,
@@ -306,6 +308,7 @@ impl Default for AppInfoRust {
         Self {
             version: QString::from(identity::VERSION),
             app_id: QString::from(identity::APP_ID),
+            repository_url: QString::from(identity::REPOSITORY),
             smoke_test: startup.smoke_test,
             gallery: startup.gallery,
             window_alpha: WINDOW_ALPHA.load(std::sync::atomic::Ordering::Relaxed),

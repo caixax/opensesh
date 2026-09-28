@@ -13,6 +13,9 @@ pub const ORGANIZATION_DOMAIN: &str = "caixa.cc";
 /// Version of the OpenSesh crates, taken from the workspace `Cargo.toml`.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Where the source code, the releases and the issues are, taken from the workspace `Cargo.toml`.
+pub const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -22,6 +25,13 @@ mod tests {
         let reversed: Vec<&str> = ORGANIZATION_DOMAIN.split('.').rev().collect();
         let expected = format!("{}.{APP_NAME}", reversed.join("."));
         assert_eq!(APP_ID, expected);
+    }
+
+    #[test]
+    fn the_repository_is_a_github_project() {
+        let project = REPOSITORY.strip_prefix("https://github.com/").unwrap();
+        assert_eq!(project.split('/').count(), 2, "{REPOSITORY}");
+        assert!(!project.ends_with('/'));
     }
 
     #[test]

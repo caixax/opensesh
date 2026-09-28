@@ -22,6 +22,8 @@ Window {
 
     property bool geometryReady: false
     property string appliedLanguage: ""
+    // Closing was confirmed (or needs no question, as for an update): see onClosing.
+    property bool closeConfirmed: false
     // Room left for a native title bar and frame, which QML can't measure.
     readonly property int nativeFrameAllowance: 48
     // The size restoreGeometry() shrank the window to so it fits its screen. It isn't saved over
@@ -138,7 +140,12 @@ Window {
         if (active)
             WindowRegistry.activated(shell);
     }
-    onClosing: {
+    onClosing: close => {
+        // Sessions, tunnels or transfers still running: ask first (Settings > General).
+        if (!closeConfirmed && shell.askBeforeClosing(true)) {
+            close.accepted = false;
+            return;
+        }
         geometryTimer.stop();
         recordGeometry();
         // Every window's tabs, before the detached windows close and end their sessions.
@@ -195,6 +202,8 @@ Window {
         }
 
         function onQuitForUpdate() {
+            // The user chose to update and restart: no question.
+            window.closeConfirmed = true;
             window.close();
         }
     }
@@ -435,7 +444,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "settings"
-        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts", "ssh", "sftp", "security"]
+        pages: ["appearance", "terminal", "profiles", "themes", "shortcuts", "ssh", "sftp", "security", "about"]
         prepare: (mode, density, page) => shell.prepareSettingsScreenshot(page)
         onFinished: terminalScreenshots.start()
     }
@@ -446,7 +455,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "terminal"
-        pages: ["splits", "broadcast"]
+        pages: ["splits", "broadcast", "close"]
         prepare: (mode, density, page) => shell.prepareTerminalScreenshot(page)
         onFinished: hostsScreenshots.start()
     }
