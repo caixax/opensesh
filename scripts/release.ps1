@@ -8,7 +8,7 @@ as the fallback.
 Picks the next version (or the one given), writes it into Cargo.toml, moves the CHANGELOG's
 [Unreleased] section under it, runs the tests, builds the portable zip and the NSIS installer
 (cargo xtask dist windows), builds the Linux packages inside the WSL distros of this machine
-(scripts/linux/build.sh, one distro per family, at the same time), writes SHA256SUMS.txt, commits
+(scripts/linux/build.sh, one distro per family, one after another), writes SHA256SUMS.txt, commits
 and tags vX.Y.Z, pushes, and publishes the GitHub release with gh. Installed copies of the app see
 the release on their next update check.
 
@@ -111,23 +111,26 @@ if (-not $SkipLinux) {
     # The checkout as WSL sees it: I:\Projects\opensesh -> /mnt/i/Projects/opensesh.
     $drive = $repo.Substring(0, 1).ToLower()
     $script = "/mnt/$drive" + ($repo.Substring(2) -replace '\\', '/') + "/scripts/linux/build.sh"
-    $jobs = foreach ($distro in $LinuxDistros) {
-        Write-Host "> wsl -d $distro -- bash $script" -ForegroundColor DarkGray
-        Start-Job -Name $distro -ArgumentList $distro, $script -ScriptBlock {
-            param($distro, $script)
-            $output = wsl.exe -d $distro -- bash $script 2>&1
-            [pscustomobject]@{ Code = $LASTEXITCODE; Tail = ($output | Select-Object -Last 25) -join "`n" }
-        }
-    }
+    # One distro at a time, with fewer compile jobs: three release builds at once can take more
+    # memory than WSL's virtual machine and the rest of the machine have.
+    $env:CARGO_BUILD_JOBS = "4"
+    $env:WSLENV = "CARGO_BUILD_JOBS"
     $failed = @()
-    foreach ($job in $jobs) {
-        $result = Receive-Job -Job $job -Wait -AutoRemoveJob
-        if ($result.Code -ne 0) {
-            $failed += $job.Name
-            Write-Host "`n--- $($job.Name) failed:`n$($result.Tail)" -ForegroundColor Red
+    foreach ($distro in $LinuxDistros) {
+        Write-Host "> wsl -d $distro -- bash $script" -ForegroundColor DarkGray
+        # Cargo writes its progress to stderr: in Windows PowerShell, `2>&1` turns each line into
+        # an error record, which "Stop" would throw on.
+        $ErrorActionPreference = "Continue"
+        $output = wsl.exe -d $distro -- bash $script 2>&1
+        $code = $LASTEXITCODE
+        $ErrorActionPreference = "Stop"
+        if ($code -ne 0) {
+            $failed += $distro
+            Write-Host "`n--- $distro failed:`n$(($output | Select-Object -Last 25) -join "`n")" -ForegroundColor Red
         } else {
-            Write-Host "$($job.Name): ok" -ForegroundColor Green
+            Write-Host "${distro}: ok" -ForegroundColor Green
         }
+        wsl.exe --terminate $distro | Out-Null
     }
     if ($failed.Count -gt 0) {
         # Nothing is committed yet; put the version back so a retry starts clean.
