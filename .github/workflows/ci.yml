@@ -103,6 +103,9 @@ jobs:
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Tests
         run: cargo test --locked --workspace
+        env:
+          # The remote monitor's test must find the busybox installed above.
+          OPENSESH_EXPECT_BUSYBOX: "1"
       - name: Translations are up to date (lupdate)
         run: cargo xtask i18n --check
       - name: Build the app
