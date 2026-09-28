@@ -3,9 +3,10 @@
 //! key ([`CODE`]), `direct-tcpip` (jump hosts, local and dynamic forwards) and `tcpip-forward`
 //! (remote forwards) when [`Rules::jump`] allows them, and a shell that prints `test$ ` and
 //! echoes what it gets ("exit" ends it with status 3, "drop" drops the connection, "cd /path"
-//! reports the folder with OSC 7). It also answers the OS detection command and "install my
-//! key" (into [`Rules::authorized_keys`]), and serves SFTP over a folder when
-//! [`Rules::sftp_root`] names one. Nothing here runs unless a test or the smoke test starts it.
+//! reports the folder with OSC 7). It also answers the OS detection command, "install my key"
+//! (into [`Rules::authorized_keys`]), and the remote monitor and host info commands (the readings
+//! of a made-up Debian server, one a second, its counters growing), and serves SFTP over a folder
+//! when [`Rules::sftp_root`] names one. Nothing here runs unless a test or the smoke test starts it.
 
 mod sftp;
 
@@ -19,7 +20,7 @@ use russh::server::{Auth, Handler, Msg, Session};
 use russh::{Channel, ChannelId, MethodKind, MethodSet};
 use tokio::net::TcpListener;
 
-use crate::{copy_id, osdetect};
+use crate::{copy_id, monitor, osdetect};
 
 /// The user name the server knows.
 pub const USER: &str = "tester";
@@ -47,6 +48,9 @@ pub struct Rules {
     pub authorized_keys: Arc<Mutex<Vec<String>>>,
     /// Serve SFTP with this folder as `/` (none: no SFTP subsystem).
     pub sftp_root: Option<PathBuf>,
+    /// Answer the remote monitor and host info commands (else they fail, as on a server without
+    /// `sh`).
+    pub monitor: bool,
 }
 
 struct Server {
@@ -62,12 +66,14 @@ struct Server {
     channels: HashMap<ChannelId, Channel<Msg>>,
     /// Remote forwards (`tcpip-forward`): the listener tasks, by port.
     forwards: HashMap<u32, tokio::task::JoinHandle<()>>,
+    /// Channels running the remote monitor: the tasks printing their readings.
+    monitors: HashMap<ChannelId, tokio::task::JoinHandle<()>>,
 }
 
 impl Drop for Server {
     fn drop(&mut self) {
-        // The connection is gone: so are its remote forwards.
-        for task in self.forwards.values() {
+        // The connection is gone: so are its remote forwards and monitors.
+        for task in self.forwards.values().chain(self.monitors.values()) {
             task.abort();
         }
     }
@@ -344,12 +350,41 @@ impl Handler for Server {
             session.close(channel)?;
         } else if command == copy_id::SCRIPT.as_bytes() {
             self.installs.push(channel);
+        } else if self.rules.monitor && is_monitor_command(command) {
+            // A reading a second, whatever the interval asked for: tests don't wait.
+            let handle = session.handle();
+            let task = tokio::spawn(async move {
+                for tick in 0_u64.. {
+                    if handle.data(channel, sample_reading(tick)).await.is_err() {
+                        return;
+                    }
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            });
+            self.monitors.insert(channel, task);
+        } else if self.rules.monitor && command == monitor::info_command().as_bytes() {
+            session.data(channel, format!("{SAMPLE_INFO}{}", sample_reading(0)))?;
+            session.exit_status_request(channel, 0)?;
+            session.eof(channel)?;
+            session.close(channel)?;
         } else {
             // No other command exists here, as in a shell without it.
             session.extended_data(channel, 1, b"sh: command not found\n".to_vec())?;
             session.exit_status_request(channel, 127)?;
             session.eof(channel)?;
             session.close(channel)?;
+        }
+        Ok(())
+    }
+
+    async fn channel_close(
+        &mut self,
+        channel: ChannelId,
+        _session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        // The client stopped watching: so does the monitor's loop, as `sh` would.
+        if let Some(task) = self.monitors.remove(&channel) {
+            task.abort();
         }
         Ok(())
     }
@@ -420,6 +455,47 @@ impl Handler for Server {
     }
 }
 
+/// Whether `command` is the remote monitor's loop, at any interval.
+fn is_monitor_command(command: &[u8]) -> bool {
+    let Ok(text) = std::str::from_utf8(command) else {
+        return false;
+    };
+    text.strip_prefix("sh -c 'n=")
+        .and_then(|rest| rest.split_once(';'))
+        .and_then(|(seconds, _)| seconds.parse::<u64>().ok())
+        .is_some_and(|seconds| text == monitor::command(Duration::from_secs(seconds)))
+}
+
+/// What the host info command prints about the made-up server, before its reading.
+const SAMPLE_INFO: &str = "@release\nPRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nID=debian\n\
+                           @uname\nLinux 6.12.48+deb13-amd64 x86_64\n@hostname\ntest-server\n\
+                           @ncpu\n4\n@addr\n1: lo    inet 127.0.0.1/8 scope host lo\n\
+                           2: eth0    inet 10.0.0.5/24 brd 10.0.0.255 scope global eth0\n\
+                           2: eth0    inet6 fe80::5054:ff:fe12:3456/64 scope link\n";
+
+/// Reading `tick` of the made-up server: 12 % CPU, 1.25 MB/s in and 80 kB/s out a second, 5 of
+/// 8 GB free, `/` at 40 %, up 12 days.
+fn sample_reading(tick: u64) -> String {
+    let (busy, idle) = (1000 + tick * 12, 9000 + tick * 88);
+    let (received, sent) = (5_000_000 + tick * 1_250_000, 700_000 + tick * 80_000);
+    let uptime = 1_036_800 + tick;
+    format!(
+        "@os Linux\n@cpu\ncpu  {busy} 0 0 {idle} 0 0 0 0 0 0\n\
+         @meminfo\nMemTotal:        7812500 kB\nMemAvailable:    4882812 kB\n\
+         SwapTotal:       1953125 kB\nSwapFree:        1953125 kB\n\
+         @netdev\nInter-|   Receive |  Transmit\n face |bytes packets|bytes packets\n\
+         lo: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n\
+         eth0: {received} 0 0 0 0 0 0 0 {sent} 0 0 0 0 0 0 0\n\
+         @route\nIface\tDestination\tGateway\tFlags\tRefCnt\tUse\tMetric\tMask\tMTU\tWindow\tIRTT\n\
+         eth0\t00000000\t0100000A\t0003\t0\t0\t0\t00000000\t0\t0\t0\n\
+         @uptime\n{uptime}.00 0.00\n@loadavg\n0.12 0.25 0.50 1/100 1000\n\
+         @df\nFilesystem     1024-blocks      Used Available Capacity Mounted on\n\
+         /dev/vda1         41152736  16461094  24691642      41% /\n\
+         tmpfs                 1000         0      1000       0% /run\n\
+         @who\n{USER}   pts/0        2026-09-28 09:00 (127.0.0.1)\n@end\n"
+    )
+}
+
 /// Starts a server with `rules` on a free port of 127.0.0.1 and returns the port. It runs until
 /// the runtime ends.
 ///
@@ -451,6 +527,7 @@ pub async fn serve(rules: Rules) -> std::io::Result<u16> {
                 typed: Vec::new(),
                 sessions: Vec::new(),
                 installs: Vec::new(),
+                monitors: HashMap::new(),
                 channels: HashMap::new(),
                 forwards: HashMap::new(),
             };

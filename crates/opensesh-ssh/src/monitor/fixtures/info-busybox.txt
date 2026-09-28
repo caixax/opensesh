@@ -1,0 +1,119 @@
+@release
+PRETTY_NAME="Ubuntu 22.04.5 LTS"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.5 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+@uname
+Linux 6.18.33.2-microsoft-standard-WSL2 x86_64
+@hostname
+web-01
+@ncpu
+20
+@addr
+1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+1: lo    inet6 ::1/128 scope host \       valid_lft forever preferred_lft forever
+2: eth0    inet 10.0.0.5/24 brd 10.0.0.255 scope global eth0\       valid_lft forever preferred_lft forever
+2: eth0    inet6 fe80::5054:ff:fe12:3456/64 scope link \       valid_lft forever preferred_lft forever
+@os Linux
+@cpu
+cpu  764 0 1026 63865 1530 0 232 0 0 0
+@meminfo
+MemTotal:       16278176 kB
+MemFree:        14369436 kB
+MemAvailable:   15356100 kB
+Buffers:          105376 kB
+Cached:          1052604 kB
+SwapCached:            0 kB
+Active:           212808 kB
+Inactive:        1128964 kB
+Active(anon):       3068 kB
+Inactive(anon):   184500 kB
+Active(file):     209740 kB
+Inactive(file):   944464 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:       4194304 kB
+SwapFree:        4194304 kB
+Dirty:              8644 kB
+Writeback:             0 kB
+AnonPages:        183732 kB
+Mapped:           197348 kB
+Shmem:              4324 kB
+KReclaimable:      38920 kB
+Slab:             140576 kB
+SReclaimable:      38920 kB
+SUnreclaim:       101656 kB
+KernelStack:        9328 kB
+PageTables:        19644 kB
+SecPageTables:         0 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    12333392 kB
+Committed_AS:    1564980 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:       40004 kB
+VmallocChunk:          0 kB
+Percpu:            13440 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:         0 kB
+FilePmdMapped:         0 kB
+Unaccepted:            0 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+DirectMap4k:       48128 kB
+DirectMap2M:     5097472 kB
+DirectMap1G:    20971520 kB
+@netdev
+Inter-|   Receive                                                |  Transmit
+face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+eth0:   22304     127    0    0    0     0          0       115     8149      87    0    0    0     0       0          0
+@route
+Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT
+eth0	00000000	01F015AC	0003	0	0	0	00000000	0	0	0
+eth0	00F015AC	00000000	0001	0	0	0	00F0FFFF	0	0	0
+@uptime
+34.71 638.97
+@loadavg
+0.51 0.11 0.04 1/540 668
+@df
+Filesystem           1024-blocks    Used Available Capacity Mounted on
+none                   8139088         0   8139088   0% /usr/lib/modules/6.18.33.2-microsoft-standard-WSL2
+none                   8139088         4   8139084   0% /mnt/wsl
+drivers              500089852 344570312 155519540  69% /usr/lib/wsl/drivers
+/dev/sdf             1055762868  10199000 991860396   1% /
+none                   8139088        36   8139052   0% /mnt/wslg
+/dev/sdf             1055762868  10199000 991860396   1% /mnt/wslg/distro
+none                   8139088         0   8139088   0% /usr/lib/wsl/lib
+none                   8133328         0   8133328   0% /dev
+none                   8139088       536   8138552   0% /run
+none                   8139088         0   8139088   0% /run/lock
+none                   8139088         0   8139088   0% /run/shm
+none                   8139088         0   8139088   0% /dev/shm
+none                   8139088        36   8139052   0% /run/user
+none                   8139088        68   8139020   0% /mnt/wslg/versions.txt
+none                   8139088        68   8139020   0% /mnt/wslg/doc
+none                   8139088        36   8139052   0% /tmp/.X11-unix
+none                   8139088        36   8139052   0% /run/user
+tmpfs                  1627816         0   1627816   0% /run/user/1000
+tmpfs                  1627816         0   1627816   0% /mnt/wslg/run/user/1000
+@who
+deploy           pts/1           00:00   Sep 28 03:43:43  
+@end

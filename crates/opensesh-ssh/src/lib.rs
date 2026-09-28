@@ -8,6 +8,7 @@
 //! - [`connect`]: host key checks, authentication, and jump host chains.
 //! - [`backend`]: a terminal backend over an SSH session channel, with reconnection.
 //! - [`log`], [`osdetect`], [`copy_id`]: session logs, the remote OS, installing a public key.
+//! - [`monitor`]: the remote monitor (CPU, memory, network, disks...) and the host info.
 //! - [`sftp`]: files over SSH, and the transfer queue.
 //! - [`testing`]: a tiny SSH server for tests and the app's smoke test.
 //!
@@ -19,6 +20,7 @@ pub mod backend;
 pub mod connect;
 pub mod copy_id;
 pub mod log;
+pub mod monitor;
 pub mod osdetect;
 pub mod prompt;
 pub mod proxy;

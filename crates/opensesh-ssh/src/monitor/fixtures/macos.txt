@@ -1,0 +1,51 @@
+@os Darwin
+@sysctl
+hw.ncpu 8
+hw.memsize 17179869184
+hw.pagesize 16384
+vm.loadavg { 1.62 1.80 1.95 }
+kern.boottime { sec = 1790400000, usec = 5000 } Sat Sep 26 05:20:00 2026
+vm.swapusage total = 2048.00M  used = 512.25M  free = 1535.75M  (encrypted)
+now 1790503872
+@route
+   route to: default
+destination: default
+       mask: default
+    gateway: 192.168.1.1
+  interface: en0
+      flags: <UP,GATEWAY,DONE,STATIC,PRCLONING,GLOBAL>
+ recvpipe  sendpipe  ssthresh  rtt,msec    rttvar  hopcount      mtu     expire
+       0         0         0         0         0         0      1500         0
+@netstat
+Name       Mtu   Network       Address            Ipkts Ierrs     Ibytes    Opkts Oerrs     Obytes  Coll
+lo0        16384 <Link#1>                        412345     0   98765432   412345     0   98765432     0
+lo0        16384 127           127.0.0.1         412345     -   98765432   412345     -   98765432     -
+en0        1500  <Link#6>    a4:83:e7:12:34:56  9876543     0 12345678901  5432109     0  987654321     0
+en0        1500  192.168.1     192.168.1.23     9876543     - 12345678901  5432109     -  987654321     -
+@vmstat
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                               12345.
+Pages active:                            345678.
+Pages inactive:                          234567.
+Pages speculative:                         4567.
+Pages throttled:                              0.
+Pages wired down:                        123456.
+Pages purgeable:                           7890.
+@pscpu
+ 12.5
+  3.5
+  0.0
+ 40.0
+@df
+Filesystem     1024-blocks      Used Available Capacity  Mounted on
+/dev/disk3s1s1   482797652   9734212 290345520     4%    /
+devfs                  204       204         0   100%    /dev
+/dev/disk3s6     482797652   2097172 290345520     1%    /System/Volumes/VM
+/dev/disk3s2     482797652   6212340 290345520     3%    /System/Volumes/Preboot
+/dev/disk3s4     482797652      3252 290345520     1%    /System/Volumes/Update
+/dev/disk3s5     482797652 172345123 290345520    38%    /System/Volumes/Data
+map auto_home            0         0         0   100%    /System/Volumes/Data/home
+@who
+deploy   console  Sep 26 05:21
+deploy   ttys000  Sep 28 09:12 (10.0.0.2)
+@end
