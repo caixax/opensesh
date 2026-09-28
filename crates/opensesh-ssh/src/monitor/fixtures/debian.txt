@@ -1,0 +1,93 @@
+@os Linux
+@cpu
+cpu  108 0 176 5364 154 0 42 0 0 0
+@meminfo
+MemTotal:       16278176 kB
+MemFree:        15301700 kB
+MemAvailable:   15552068 kB
+Buffers:           52940 kB
+Cached:           376768 kB
+SwapCached:            0 kB
+Active:            78400 kB
+Inactive:         415968 kB
+Active(anon):       2588 kB
+Inactive(anon):    64836 kB
+Active(file):      75812 kB
+Inactive(file):   351132 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:       4194304 kB
+SwapFree:        4194304 kB
+Dirty:              5328 kB
+Writeback:             0 kB
+AnonPages:         65504 kB
+Mapped:           117144 kB
+Shmem:              3516 kB
+KReclaimable:      20848 kB
+Slab:              91872 kB
+SReclaimable:      20848 kB
+SUnreclaim:        71024 kB
+KernelStack:        6140 kB
+PageTables:        10128 kB
+SecPageTables:         0 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    12333392 kB
+Committed_AS:     645152 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:       35136 kB
+VmallocChunk:          0 kB
+Percpu:             9312 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:         0 kB
+FilePmdMapped:         0 kB
+Unaccepted:            0 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+DirectMap4k:       44032 kB
+DirectMap2M:     4052992 kB
+DirectMap1G:    22020096 kB
+@netdev
+Inter-|   Receive                                                |  Transmit
+face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
+eth0:    1820      10    0    0    0     0          0        10      606       7    0    0    0     0       0          0
+@route
+Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT
+eth0	00000000	01F015AC	0003	0	0	0	00000000	0	0	0
+eth0	00F015AC	00000000	0001	0	0	0	00F0FFFF	0	0	0
+@uptime
+3.93 53.97
+@loadavg
+0.00 0.00 0.00 1/367 262
+@df
+Filesystem     1024-blocks       Used Available Capacity Mounted on
+none               8139088          0   8139088       0% /usr/lib/modules/6.18.33.2-microsoft-standard-WSL2
+none               8139088          4   8139084       1% /mnt/wsl
+drivers          500089852  344530260 155559592      69% /usr/lib/wsl/drivers
+/dev/sdd        1055762868   64485108 937574288       7% /
+none               8139088         36   8139052       1% /mnt/wslg
+none               8139088          0   8139088       0% /usr/lib/wsl/lib
+rootfs             8133328       2772   8130556       1% /init
+none               8133328          0   8133328       0% /dev
+none               8139088        492   8138596       1% /run
+none               8139088          0   8139088       0% /run/lock
+none               8139088          0   8139088       0% /run/shm
+none               8139088         68   8139020       1% /mnt/wslg/versions.txt
+none               8139088         68   8139020       1% /mnt/wslg/doc
+tmpfs              8139088          0   8139088       0% /tmp
+tmpfs                 1024          0      1024       0% /run/credentials/systemd-journald.service
+tmpfs                 1024          0      1024       0% /run/credentials/getty@tty1.service
+tmpfs              1627816         20   1627796       1% /run/user/1000
+@who
+deploy    pts/1        2026-09-28 03:43
+@end

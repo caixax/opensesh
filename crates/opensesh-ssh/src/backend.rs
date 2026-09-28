@@ -12,7 +12,7 @@
 //! Progress and state also go to a [`StatusSink`] for the pane's overlays.
 //!
 //! Once connected, the OS detection and "install my key" ([`Options`]) run on channels of their
-//! own while the shell starts.
+//! own while the shell starts, and the remote monitor (Sprint 11) for as long as the session lasts.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -26,6 +26,7 @@ use crate::SshError;
 use crate::connect::{self, Connection, Note, Notes};
 use crate::copy_id::{self, Installed};
 use crate::log::SessionLog;
+use crate::monitor::{self, Monitoring};
 use crate::osdetect;
 use crate::prompt::Asker;
 use crate::spec::{ConnectSpec, SessionSpec};
@@ -66,6 +67,8 @@ pub enum Status {
     KeyInstall(KeyInstall),
     /// The connection is up: other channels can use it (SFTP) until the next status.
     Live(Live),
+    /// A reading of the remote monitor ([`Options::monitor`]), or why there won't be any.
+    Monitor(Monitoring),
 }
 
 /// A session's connection, shared with what opens other channels on it (the SFTP side panel).
@@ -109,6 +112,17 @@ pub struct Options {
     /// A public key line to add to the server's `authorized_keys` once connected (the first
     /// connection only).
     pub install_key: Option<String>,
+    /// Watch the server with the remote monitor, a reading every this often.
+    pub monitor: Option<Duration>,
+}
+
+/// Aborts a task when dropped: the monitor ends with its connection's session.
+struct AbortOnDrop(tokio::task::JoinHandle<()>);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
 }
 
 enum Command {
@@ -267,6 +281,7 @@ async fn run(
             &spec,
             &session,
             options.detect_os,
+            options.monitor,
             &mut install_key,
             &asker,
             &status,
@@ -366,6 +381,7 @@ async fn once(
     spec: &ConnectSpec,
     session: &SessionSpec,
     detect_os: bool,
+    monitor_every: Option<Duration>,
     install_key: &mut Option<String>,
     asker: &Asker,
     status: &StatusSink,
@@ -426,6 +442,17 @@ async fn once(
     let connection = Arc::new(connection);
     status(Status::Connected);
     status(Status::Live(Live(Arc::clone(&connection))));
+    // The remote monitor reads the server on a channel of its own while the session lasts.
+    let watching = monitor_every.map(|interval| {
+        let connection = Arc::clone(&connection);
+        let status = Arc::clone(status);
+        AbortOnDrop(tokio::spawn(async move {
+            monitor::watch(&connection, interval, |event| {
+                status(Status::Monitor(event));
+            })
+            .await;
+        }))
+    });
     // The OS is detected, and the key installed, on channels of their own while the shell runs.
     let key = install_key.take();
     let detection = async {
@@ -453,6 +480,7 @@ async fn once(
         detection
     );
     let ended = result.unwrap_or_else(|error| lost(&error));
+    drop(watching);
     connection.close().await;
     ended
 }

@@ -595,6 +595,7 @@ fn the_terminal_backend_reconnects() {
         Options {
             detect_os: true,
             install_key: Some(INSTALLED.to_owned()),
+            ..Options::default()
         },
         answers.asker,
         sink,
