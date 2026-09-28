@@ -10,6 +10,7 @@ mod gui;
 mod hosts;
 mod keychain;
 mod logging;
+mod monitor;
 mod platform;
 mod recordings;
 mod saves;

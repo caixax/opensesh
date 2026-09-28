@@ -50,6 +50,9 @@ pub mod qobject {
         #[qproperty(i32, ssh_keepalive_secs, cxx_name = "sshKeepaliveSecs", READ = ssh_keepalive_secs, WRITE = set_ssh_keepalive_secs, NOTIFY = settings_changed)]
         #[qproperty(bool, ssh_auto_reconnect, cxx_name = "sshAutoReconnect", READ = ssh_auto_reconnect, WRITE = set_ssh_auto_reconnect, NOTIFY = settings_changed)]
         #[qproperty(bool, ssh_detect_os, cxx_name = "sshDetectOs", READ = ssh_detect_os, WRITE = set_ssh_detect_os, NOTIFY = settings_changed)]
+        #[qproperty(bool, ssh_monitor, cxx_name = "sshMonitor", READ = ssh_monitor, WRITE = set_ssh_monitor, NOTIFY = settings_changed)]
+        #[qproperty(i32, ssh_monitor_interval, cxx_name = "sshMonitorInterval", READ = ssh_monitor_interval, WRITE = set_ssh_monitor_interval, NOTIFY = settings_changed)]
+        #[qproperty(QStringList, ssh_monitor_metrics, cxx_name = "sshMonitorMetrics", READ = ssh_monitor_metrics, WRITE = set_ssh_monitor_metrics, NOTIFY = settings_changed)]
         #[qproperty(bool, ssh_send_locale, cxx_name = "sshSendLocale", READ = ssh_send_locale, WRITE = set_ssh_send_locale, NOTIFY = settings_changed)]
         #[qproperty(QString, ssh_log, cxx_name = "sshLog", READ = ssh_log, WRITE = set_ssh_log, NOTIFY = settings_changed)]
         #[qproperty(QString, ssh_logs_dir, cxx_name = "sshLogsDir", READ = ssh_logs_dir, WRITE = set_ssh_logs_dir, NOTIFY = settings_changed)]
@@ -139,6 +142,12 @@ pub mod qobject {
         fn set_ssh_auto_reconnect(self: Pin<&mut Self>, value: bool);
         fn ssh_detect_os(self: &Self) -> bool;
         fn set_ssh_detect_os(self: Pin<&mut Self>, value: bool);
+        fn ssh_monitor(self: &Self) -> bool;
+        fn set_ssh_monitor(self: Pin<&mut Self>, value: bool);
+        fn ssh_monitor_interval(self: &Self) -> i32;
+        fn set_ssh_monitor_interval(self: Pin<&mut Self>, value: i32);
+        fn ssh_monitor_metrics(self: &Self) -> QStringList;
+        fn set_ssh_monitor_metrics(self: Pin<&mut Self>, value: QStringList);
         fn ssh_send_locale(self: &Self) -> bool;
         fn set_ssh_send_locale(self: Pin<&mut Self>, value: bool);
         fn ssh_log(self: &Self) -> QString;
@@ -641,6 +650,42 @@ impl qobject::AppSettings {
     }
     pub fn set_ssh_detect_os(self: Pin<&mut Self>, value: bool) {
         self.set_flag(value, |c| &mut c.ssh.detect_os);
+    }
+    pub fn ssh_monitor(&self) -> bool {
+        self.config.ssh.monitor
+    }
+    pub fn set_ssh_monitor(self: Pin<&mut Self>, value: bool) {
+        self.set_flag(value, |c| &mut c.ssh.monitor);
+    }
+    pub fn ssh_monitor_interval(&self) -> i32 {
+        i32::try_from(self.config.ssh.monitor_interval_secs).unwrap_or(3)
+    }
+    pub fn set_ssh_monitor_interval(self: Pin<&mut Self>, value: i32) {
+        match u32::try_from(value)
+            .ok()
+            .filter(|secs| config::MONITOR_INTERVAL_RANGE.contains(secs))
+        {
+            Some(secs) => self.change(|c| replace(&mut c.ssh.monitor_interval_secs, secs)),
+            None => {
+                tracing::warn!(value, "ignoring an invalid monitor interval");
+                self.change(|_| false);
+            }
+        }
+    }
+    pub fn ssh_monitor_metrics(&self) -> QStringList {
+        qstring_list(self.config.ssh.monitor_metrics.iter().cloned())
+    }
+    pub fn set_ssh_monitor_metrics(self: Pin<&mut Self>, value: QStringList) {
+        let metrics: Vec<String> = value
+            .iter()
+            .map(|metric| metric.to_string().trim().to_owned())
+            .collect();
+        if SshSettings::valid_monitor_metrics(&metrics) {
+            self.change(|c| replace(&mut c.ssh.monitor_metrics, metrics));
+        } else {
+            tracing::warn!(?metrics, "ignoring invalid monitor metrics from QML");
+            self.change(|_| false);
+        }
     }
     pub fn ssh_send_locale(&self) -> bool {
         self.config.ssh.send_locale

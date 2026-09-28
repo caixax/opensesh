@@ -809,6 +809,27 @@
         <source>%1 h %2 min</source>
         <translation>[%1 ĥ %2 míñ ~~~~]</translation>
     </message>
+    <message numerus="yes">
+        <source>%n day(s)</source>
+        <translation>
+            <numerusform>[%n ďáý(š) ~~~]</numerusform>
+            <numerusform>[%n ďáý(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n hour(s)</source>
+        <translation>
+            <numerusform>[%n ĥöüŕ(š) ~~~]</numerusform>
+            <numerusform>[%n ĥöüŕ(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n minute(s)</source>
+        <translation>
+            <numerusform>[%n míñüťé(š) ~~~~]</numerusform>
+            <numerusform>[%n míñüťé(š) ~~~~]</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>FileNameDialog</name>
@@ -1656,6 +1677,10 @@
         <translation>[Ďéťéçť ťĥé ÖŠ ~~~~]</translation>
     </message>
     <message>
+        <source>Remote monitor</source>
+        <translation>[Ŕémöťé möñíťöŕ ~~~~~]</translation>
+    </message>
+    <message>
         <source>Agent</source>
         <translation>[Åĝéñť ~~]</translation>
     </message>
@@ -2499,6 +2524,14 @@
     <message>
         <source>Startup snippet</source>
         <translation>[Šťáŕťüþ šñíþþéť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remote monitor</source>
+        <translation>[Ŕémöťé möñíťöŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>CPU, memory, network and disks in the status bar, read every few seconds over a separate channel. Nothing is installed on the server.</source>
+        <translation>[ÇÞÜ, mémöŕý, ñéťŵöŕķ áñď ďíšķš íñ ťĥé šťáťüš báŕ, ŕéáď évéŕý ƒéŵ šéçöñďš övéŕ á šéþáŕáťé çĥáññéĺ. Ñöťĥíñĝ íš íñšťáĺĺéď öñ ťĥé šéŕvéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Speed (baud)</source>
@@ -6075,6 +6108,224 @@
     </message>
 </context>
 <context>
+    <name>SessionInfo</name>
+    <message>
+        <source>%1 used of %2</source>
+        <translation>[%1 üšéď öƒ %2 ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>[%1 (%2) ~~~]</translation>
+    </message>
+    <message>
+        <source>Kernel: %1, %2</source>
+        <translation>[Ķéŕñéĺ: %1, %2 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>CPUs: %1</source>
+        <translation>[ÇÞÜš: %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>Up %1</source>
+        <translation>[Üþ %1 ~~]</translation>
+    </message>
+    <message>
+        <source>Load average: %1</source>
+        <translation>[Ĺöáď ávéŕáĝé: %1 ~~~~~]</translation>
+    </message>
+    <message>
+        <source>CPU: %1%</source>
+        <translation>[ÇÞÜ: %1% ~~~]</translation>
+    </message>
+    <message>
+        <source>Memory: %1</source>
+        <translation>[Mémöŕý: %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>Swap: %1 used of %2</source>
+        <translation>[Šŵáþ: %1 üšéď öƒ %2 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Network: %1/s in, %2/s out</source>
+        <translation>[Ñéťŵöŕķ: %1/š íñ, %2/š öüť ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Disks:</source>
+        <translation>[Ďíšķš: ~~]</translation>
+    </message>
+    <message>
+        <source>  %1 (%2): %3 used of %4 (%5%)</source>
+        <translation>[  %1 (%2): %3 üšéď öƒ %4 (%5%) ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Addresses:</source>
+        <translation>[Åďďŕéššéš: ~~~]</translation>
+    </message>
+    <message>
+        <source>  %1 %2</source>
+        <translation>[  %1 %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Users:</source>
+        <translation>[Üšéŕš: ~~]</translation>
+    </message>
+    <message>
+        <source>  %1 on %2 from %3</source>
+        <translation>[  %1 öñ %2 ƒŕöm %3 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>  %1 on %2</source>
+        <translation>[  %1 öñ %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>A terminal on this computer</source>
+        <translation>[Å ťéŕmíñáĺ öñ ťĥíš çömþüťéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connected with OpenSSH</source>
+        <translation>[Çöññéçťéď ŵíťĥ ÖþéñŠŠĤ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not connected</source>
+        <translation>[Ñöť çöññéçťéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>No host info</source>
+        <translation>[Ñö ĥöšť íñƒö ~~~~]</translation>
+    </message>
+    <message>
+        <source>Host info</source>
+        <translation>[Ĥöšť íñƒö ~~~]</translation>
+    </message>
+    <message>
+        <source>Host info is for connections to servers with the built-in SSH client.</source>
+        <translation>[Ĥöšť íñƒö íš ƒöŕ çöññéçťíöñš ťö šéŕvéŕš ŵíťĥ ťĥé büíĺť-íñ ŠŠĤ çĺíéñť. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This host uses the system&apos;s OpenSSH, so OpenSesh has no connection to read it over. Choose the built-in client in the host&apos;s editor.</source>
+        <translation>[Ťĥíš ĥöšť üšéš ťĥé šýšťém&apos;š ÖþéñŠŠĤ, šö ÖþéñŠéšĥ ĥáš ñö çöññéçťíöñ ťö ŕéáď íť övéŕ. Çĥööšé ťĥé büíĺť-íñ çĺíéñť íñ ťĥé ĥöšť&apos;š éďíťöŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>It shows once the connection is up.</source>
+        <translation>[Íť šĥöŵš öñçé ťĥé çöññéçťíöñ íš üþ. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This server couldn&apos;t be read: %1</source>
+        <translation>[Ťĥíš šéŕvéŕ çöüĺďñ&apos;ť bé ŕéáď: %1 ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Open a terminal connected to a server to see how it is doing.</source>
+        <translation>[Öþéñ á ťéŕmíñáĺ çöññéçťéď ťö á šéŕvéŕ ťö šéé ĥöŵ íť íš ďöíñĝ. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Try again</source>
+        <translation>[Ťŕý áĝáíñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Reading the host</source>
+        <translation>[Ŕéáďíñĝ ťĥé ĥöšť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Reading the host…</source>
+        <translation>[Ŕéáďíñĝ ťĥé ĥöšť… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>[Ŕéƒŕéšĥ ~~~]</translation>
+    </message>
+    <message>
+        <source>Copy as text</source>
+        <translation>[Çöþý áš ťéxť ~~~~]</translation>
+    </message>
+    <message>
+        <source>The host info was copied.</source>
+        <translation>[Ťĥé ĥöšť íñƒö ŵáš çöþíéď. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>System</source>
+        <translation>[Šýšťém ~~]</translation>
+    </message>
+    <message>
+        <source>Kernel</source>
+        <translation>[Ķéŕñéĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Architecture</source>
+        <translation>[Åŕçĥíťéçťüŕé ~~~~]</translation>
+    </message>
+    <message>
+        <source>CPUs</source>
+        <translation>[ÇÞÜš ~~]</translation>
+    </message>
+    <message>
+        <source>Up</source>
+        <translation>[Üþ ~]</translation>
+    </message>
+    <message>
+        <source>Load</source>
+        <translation>[Ĺöáď ~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Now (every %n second(s))</source>
+        <translation>
+            <numerusform>[Ñöŵ (évéŕý %n šéçöñď(š)) ~~~~~~~~]</numerusform>
+            <numerusform>[Ñöŵ (évéŕý %n šéçöñď(š)) ~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>When read</source>
+        <translation>[Ŵĥéñ ŕéáď ~~~]</translation>
+    </message>
+    <message>
+        <source>The live monitor can&apos;t read this server: %1</source>
+        <translation>[Ťĥé ĺívé möñíťöŕ çáñ&apos;ť ŕéáď ťĥíš šéŕvéŕ: %1 ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>CPU</source>
+        <translation>[ÇÞÜ ~]</translation>
+    </message>
+    <message>
+        <source>%1%</source>
+        <translation>[%1% ~]</translation>
+    </message>
+    <message>
+        <source>Memory</source>
+        <translation>[Mémöŕý ~~]</translation>
+    </message>
+    <message>
+        <source>Swap</source>
+        <translation>[Šŵáþ ~~]</translation>
+    </message>
+    <message>
+        <source>Network</source>
+        <translation>[Ñéťŵöŕķ ~~~]</translation>
+    </message>
+    <message>
+        <source>↓%1/s ↑%2/s</source>
+        <translation>[↓%1/š ↑%2/š ~~~~]</translation>
+    </message>
+    <message>
+        <source>Disks</source>
+        <translation>[Ďíšķš ~~]</translation>
+    </message>
+    <message>
+        <source>%1 of %2</source>
+        <translation>[%1 öƒ %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Addresses</source>
+        <translation>[Åďďŕéššéš ~~~]</translation>
+    </message>
+    <message>
+        <source>Logged in</source>
+        <translation>[Ĺöĝĝéď íñ ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 from %2</source>
+        <translation>[%1 ƒŕöm %2 ~~~]</translation>
+    </message>
+</context>
+<context>
     <name>SessionSnippets</name>
     <message>
         <source>Search snippets</source>
@@ -7396,6 +7647,70 @@
         <translation>[Ŕéáďš /éťç/öš-ŕéĺéášé öñçé çöññéçťéď, övéŕ á šéþáŕáťé çĥáññéĺ, ƒöŕ ťĥé íçöñ öƒ ĥöšťš šéť ťö Åüťömáťíç. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>Remote monitor</source>
+        <translation>[Ŕémöťé möñíťöŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>The status bar shows how the server of the current terminal is doing, read over a separate channel of its connection with the tools every system has. Nothing is installed or left running on the server.</source>
+        <translation>[Ťĥé šťáťüš báŕ šĥöŵš ĥöŵ ťĥé šéŕvéŕ öƒ ťĥé çüŕŕéñť ťéŕmíñáĺ íš ďöíñĝ, ŕéáď övéŕ á šéþáŕáťé çĥáññéĺ öƒ íťš çöññéçťíöñ ŵíťĥ ťĥé ťööĺš évéŕý šýšťém ĥáš. Ñöťĥíñĝ íš íñšťáĺĺéď öŕ ĺéƒť ŕüññíñĝ öñ ťĥé šéŕvéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Watch servers</source>
+        <translation>[Ŵáťçĥ šéŕvéŕš ~~~~]</translation>
+    </message>
+    <message>
+        <source>For every host that doesn&apos;t choose otherwise in its editor. Takes effect on the next connection.</source>
+        <translation>[Föŕ évéŕý ĥöšť ťĥáť ďöéšñ&apos;ť çĥööšé öťĥéŕŵíšé íñ íťš éďíťöŕ. Ťáķéš éƒƒéçť öñ ťĥé ñéxť çöññéçťíöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Every</source>
+        <translation>[Évéŕý ~~]</translation>
+    </message>
+    <message>
+        <source>Seconds between two readings.</source>
+        <translation>[Šéçöñďš béťŵééñ ťŵö ŕéáďíñĝš. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Seconds between two readings</source>
+        <translation>[Šéçöñďš béťŵééñ ťŵö ŕéáďíñĝš ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation>[Šĥöŵ ~~]</translation>
+    </message>
+    <message>
+        <source>What the status bar shows; the side panel&apos;s Info tab has everything.</source>
+        <translation>[Ŵĥáť ťĥé šťáťüš báŕ šĥöŵš; ťĥé šíďé þáñéĺ&apos;š Íñƒö ťáb ĥáš évéŕýťĥíñĝ. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>CPU</source>
+        <translation>[ÇÞÜ ~]</translation>
+    </message>
+    <message>
+        <source>Memory</source>
+        <translation>[Mémöŕý ~~]</translation>
+    </message>
+    <message>
+        <source>Network</source>
+        <translation>[Ñéťŵöŕķ ~~~]</translation>
+    </message>
+    <message>
+        <source>Disk</source>
+        <translation>[Ďíšķ ~~]</translation>
+    </message>
+    <message>
+        <source>Uptime</source>
+        <translation>[Üþťímé ~~]</translation>
+    </message>
+    <message>
+        <source>Load</source>
+        <translation>[Ĺöáď ~~]</translation>
+    </message>
+    <message>
+        <source>Users</source>
+        <translation>[Üšéŕš ~~]</translation>
+    </message>
+    <message>
         <source>Session logs</source>
         <translation>[Šéššíöñ ĺöĝš ~~~~]</translation>
     </message>
@@ -8461,14 +8776,6 @@
         <source>Close side panel</source>
         <translation>[Çĺöšé šíďé þáñéĺ ~~~~~]</translation>
     </message>
-    <message>
-        <source>Host info</source>
-        <translation>[Ĥöšť íñƒö ~~~]</translation>
-    </message>
-    <message>
-        <source>Host details and the live system monitor arrive in Sprint 11.</source>
-        <translation>[Ĥöšť ďéťáíĺš áñď ťĥé ĺívé šýšťém möñíťöŕ áŕŕívé íñ Šþŕíñť 11. ~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
 </context>
 <context>
     <name>SnippetEditorDialog</name>
@@ -9040,6 +9347,37 @@
         <translation>[Ñö áçťívé šéššíöñ ~~~~~~]</translation>
     </message>
     <message>
+        <source>CPU %1%</source>
+        <translation>[ÇÞÜ %1% ~~~]</translation>
+    </message>
+    <message>
+        <source>RAM %1/%2</source>
+        <translation>[ŔÅM %1/%2 ~~~]</translation>
+    </message>
+    <message>
+        <source>↓%1/s ↑%2/s</source>
+        <translation>[↓%1/š ↑%2/š ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 %2%</source>
+        <translation>[%1 %2% ~~]</translation>
+    </message>
+    <message>
+        <source>up %1</source>
+        <translation>[üþ %1 ~~]</translation>
+    </message>
+    <message>
+        <source>load %1</source>
+        <translation>[ĺöáď %1 ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n user(s)</source>
+        <translation>
+            <numerusform>[%n üšéŕ(š) ~~~]</numerusform>
+            <numerusform>[%n üšéŕ(š) ~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
         <source>Connecting to %1…</source>
         <translation>[Çöññéçťíñĝ ťö %1… ~~~~~~]</translation>
     </message>
@@ -9062,6 +9400,18 @@
     <message>
         <source>Working directory: %1</source>
         <translation>[Ŵöŕķíñĝ ďíŕéçťöŕý: %1 ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Server monitor: %1</source>
+        <translation>[Šéŕvéŕ möñíťöŕ: %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Shows the host&apos;s details in the side panel</source>
+        <translation>[Šĥöŵš ťĥé ĥöšť&apos;š ďéťáíĺš íñ ťĥé šíďé þáñéĺ ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Click for the host&apos;s details.</source>
+        <translation>[Çĺíçķ ƒöŕ ťĥé ĥöšť&apos;š ďéťáíĺš. ~~~~~~~~~]</translation>
     </message>
     <message numerus="yes">
         <source>Broadcasting to %n panes</source>

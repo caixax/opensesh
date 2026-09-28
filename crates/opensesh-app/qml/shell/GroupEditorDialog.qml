@@ -390,6 +390,14 @@ OsDialog {
                     options: dialog.onOff
                 }
 
+                EditorChoiceRow {
+                    editor: dialog
+                    path: "defaults.ssh.monitor"
+                    inheritKey: "ssh.monitor"
+                    label: qsTr("Remote monitor")
+                    options: dialog.onOff
+                }
+
                 EditorTextRow {
                     editor: dialog
                     path: "defaults.ssh.agent_socket"

@@ -1,6 +1,6 @@
 // Collapsible side panel (PLAN §5.3): contextual tools for the current session in three tabs:
-// SFTP (the files of the focused terminal, SessionFiles), Info and Snippets (placeholders until
-// Sprints 11 and 10).
+// SFTP (the files of the focused terminal, SessionFiles), Info (its host, SessionInfo) and
+// Snippets (SessionSnippets).
 //   currentIndex: int       selected tab
 //   terminalPane: Item      the current tab's focused TerminalPane, or null
 //   signal closeRequested   the header close button was clicked
@@ -14,6 +14,7 @@ Rectangle {
     property int currentIndex: 0
     property Item terminalPane: null
     readonly property alias files: sessionFiles
+    readonly property alias info: sessionInfo
 
     signal closeRequested
 
@@ -92,10 +93,10 @@ Rectangle {
             terminalPane: panel.visible && panel.currentIndex === 0 ? panel.terminalPane : null
         }
 
-        OsEmptyState {
-            iconName: "info"
-            title: qsTr("Host info")
-            description: qsTr("Host details and the live system monitor arrive in Sprint 11.")
+        SessionInfo {
+            id: sessionInfo
+
+            terminalPane: panel.visible && panel.currentIndex === 1 ? panel.terminalPane : null
         }
 
         SessionSnippets {}
