@@ -2394,7 +2394,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "opensesh-app"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -2426,7 +2426,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-cli"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "opensesh-core",
@@ -2436,7 +2436,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-core"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "directories",
  "interprocess",
@@ -2455,7 +2455,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-import"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "opensesh-core",
  "tempfile",
@@ -2465,7 +2465,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-ssh"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "base64ct",
  "crossbeam-channel",
@@ -2486,7 +2486,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-term"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "alacritty_terminal",
  "crossbeam-channel",
@@ -2504,7 +2504,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-vault"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "aes 0.8.4",
  "argon2 0.5.3",
@@ -5018,7 +5018,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "flate2",
