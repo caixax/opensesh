@@ -279,6 +279,9 @@ pub struct SshOptions {
     /// Ask the server which OS it runs, for the host's icon.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub detect_os: Option<bool>,
+    /// Watch the server with the remote monitor (the status bar's readings).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub monitor: Option<bool>,
     /// The SSH agent to use instead of the usual one (like OpenSSH's `IdentityAgent`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent_socket: Option<String>,
@@ -614,6 +617,7 @@ pub const INHERITED_KEYS: &[&str] = &[
     "ssh.auto_reconnect",
     "ssh.log",
     "ssh.detect_os",
+    "ssh.monitor",
     "ssh.agent_socket",
     "sftp.follow_cwd",
     "sftp.start_dir",
@@ -634,7 +638,7 @@ fn builtin(key: &str, protocol: Protocol) -> Option<Value> {
         | "ssh.compression"
         | "ssh.legacy_algorithms"
         | "ssh.auto_reconnect" => Some(Value::Boolean(false)),
-        "ssh.send_locale" | "ssh.detect_os" => Some(Value::Boolean(true)),
+        "ssh.send_locale" | "ssh.detect_os" | "ssh.monitor" => Some(Value::Boolean(true)),
         "ssh.x11" => Some(Value::String("off".to_owned())),
         "ssh.keepalive_secs" => Some(Value::Integer(30)),
         "ssh.startup_snippet"
@@ -1702,13 +1706,19 @@ mod tests {
         let config = crate::config::SshSettings {
             keepalive_secs: 99,
             detect_os: false,
+            monitor: false,
             ..crate::config::SshSettings::default()
         };
         file.base = config.host_defaults();
         let resolved = file.resolve(&file.hosts[0]);
         assert_eq!(resolved.keepalive_secs(), 10);
         assert!(!resolved.flag("ssh.detect_os"));
+        assert!(!resolved.flag("ssh.monitor"));
         assert_eq!(resolved.fields["ssh.detect_os"].origin, Origin::Default);
+        // A host turns the monitor back on for itself.
+        file.hosts[0].ssh.monitor = Some(true);
+        assert!(file.resolve(&file.hosts[0]).flag("ssh.monitor"));
+        file.hosts[0].ssh.monitor = None;
         // The app's defaults are never written to hosts.toml.
         assert!(!file.to_toml_string().unwrap().contains("detect_os"));
     }

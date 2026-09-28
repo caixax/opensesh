@@ -284,6 +284,17 @@ pub const MAX_LOCK_AFTER_MINUTES: u32 = 24 * 60;
 /// Longest SSH keepalive interval, in seconds (an hour).
 pub const MAX_KEEPALIVE_SECS: u32 = 3600;
 
+/// What the remote monitor can show in the status bar (Sprint 11), in that order.
+pub const MONITOR_METRICS: [&str; 7] = [
+    "cpu", "memory", "network", "disk", "uptime", "load", "users",
+];
+
+/// What it shows unless the user chooses.
+pub const DEFAULT_MONITOR_METRICS: [&str; 5] = ["cpu", "memory", "network", "disk", "uptime"];
+
+/// Seconds between two readings of the remote monitor.
+pub const MONITOR_INTERVAL_RANGE: std::ops::RangeInclusive<u32> = 1..=60;
+
 /// Most files a transfer queue copies at once.
 pub const MAX_PARALLEL_TRANSFERS: u32 = 16;
 
@@ -338,6 +349,12 @@ pub struct SshSettings {
     pub auto_reconnect: bool,
     /// Detect the remote OS for the automatic icon.
     pub detect_os: bool,
+    /// Watch servers with the remote monitor.
+    pub monitor: bool,
+    /// Seconds between two readings of the monitor ([`MONITOR_INTERVAL_RANGE`]).
+    pub monitor_interval_secs: u32,
+    /// What the status bar shows of the monitor's readings, from [`MONITOR_METRICS`].
+    pub monitor_metrics: Vec<String>,
     /// Send `LANG` and `LC_*`.
     pub send_locale: bool,
     /// Session logs.
@@ -357,6 +374,12 @@ impl Default for SshSettings {
             keepalive_secs: 30,
             auto_reconnect: false,
             detect_os: true,
+            monitor: true,
+            monitor_interval_secs: 3,
+            monitor_metrics: DEFAULT_MONITOR_METRICS
+                .iter()
+                .map(|metric| (*metric).to_owned())
+                .collect(),
             send_locale: true,
             log: SessionLogMode::default(),
             logs_dir: String::new(),
@@ -374,6 +397,15 @@ impl SshSettings {
                 crate::hosts::DEFAULT_AUTH_ORDER.contains(&method.as_str())
                     && !order[..index].contains(method)
             })
+    }
+
+    /// Whether `metrics` is a usable choice of the monitor's metrics: known ones, none twice
+    /// (none at all is fine: the status bar then shows no readings).
+    #[must_use]
+    pub fn valid_monitor_metrics(metrics: &[String]) -> bool {
+        metrics.iter().enumerate().all(|(index, metric)| {
+            MONITOR_METRICS.contains(&metric.as_str()) && !metrics[..index].contains(metric)
+        })
     }
 
     /// What these settings give every SSH host, as a host table of `hosts.toml` (`ssh.backend`,
@@ -400,6 +432,7 @@ impl SshSettings {
         );
         ssh.insert("auto_reconnect".into(), Value::Boolean(self.auto_reconnect));
         ssh.insert("detect_os".into(), Value::Boolean(self.detect_os));
+        ssh.insert("monitor".into(), Value::Boolean(self.monitor));
         ssh.insert("send_locale".into(), Value::Boolean(self.send_locale));
         ssh.insert("log".into(), Value::String(self.log.as_str().into()));
         let mut host = Table::new();
@@ -698,6 +731,23 @@ impl Config {
             );
             reader.boolean(&mut ssh, "ssh.auto_reconnect", &mut s.auto_reconnect);
             reader.boolean(&mut ssh, "ssh.detect_os", &mut s.detect_os);
+            reader.boolean(&mut ssh, "ssh.monitor", &mut s.monitor);
+            let mut interval = s.monitor_interval_secs;
+            reader.bounded(
+                &mut ssh,
+                "ssh.monitor_interval_secs",
+                &mut interval,
+                *MONITOR_INTERVAL_RANGE.end(),
+            );
+            if MONITOR_INTERVAL_RANGE.contains(&interval) {
+                s.monitor_interval_secs = interval;
+            } else {
+                reader.warn(
+                    "ssh.monitor_interval_secs",
+                    "0 is not allowed, keeping the default".to_owned(),
+                );
+            }
+            reader.monitor_metrics(&mut ssh, "ssh.monitor_metrics", &mut s.monitor_metrics);
             reader.boolean(&mut ssh, "ssh.send_locale", &mut s.send_locale);
             reader.choice(&mut ssh, "ssh.log", &mut s.log);
             reader.string(&mut ssh, "ssh.logs_dir", &mut s.logs_dir);
@@ -826,6 +876,20 @@ impl Config {
             })
             .unwrap_or_default();
         ssh.insert("logs_dir".into(), Value::String(self.ssh.logs_dir.clone()));
+        ssh.insert(
+            "monitor_interval_secs".into(),
+            Value::Integer(i64::from(self.ssh.monitor_interval_secs)),
+        );
+        ssh.insert(
+            "monitor_metrics".into(),
+            Value::Array(
+                self.ssh
+                    .monitor_metrics
+                    .iter()
+                    .map(|metric| Value::String(metric.clone()))
+                    .collect(),
+            ),
+        );
 
         let s = &self.sftp;
         let mut sftp = Table::new();
@@ -1065,6 +1129,29 @@ impl Reader {
         }
     }
 
+    fn monitor_metrics(&mut self, table: &mut Table, key: &str, target: &mut Vec<String>) {
+        match Self::take(table, key) {
+            None => {}
+            Some(Value::Array(items)) => {
+                let metrics: Option<Vec<String>> = items
+                    .iter()
+                    .map(|item| item.as_str().map(|text| text.trim().to_owned()))
+                    .collect();
+                match metrics.filter(|metrics| SshSettings::valid_monitor_metrics(metrics)) {
+                    Some(metrics) => *target = metrics,
+                    None => self.warn(
+                        key,
+                        format!(
+                            "expected some of {}, keeping the default",
+                            MONITOR_METRICS.join(", ")
+                        ),
+                    ),
+                }
+            }
+            Some(other) => self.warn(key, format!("expected a list, found {}", other.type_str())),
+        }
+    }
+
     fn unknown(&mut self, table: &Table, section: &str) {
         for name in table.keys() {
             let key = if section.is_empty() {
@@ -1286,6 +1373,40 @@ mod tests {
         let kept = parsed.extra["appearance"]["sparkle"].as_bool();
         assert_eq!(kept, Some(true));
         assert_eq!(parsed.extra.len(), 1, "{:?}", parsed.extra);
+    }
+
+    #[test]
+    fn monitor_settings() {
+        let defaults = Config::default().ssh;
+        assert!(defaults.monitor);
+        assert_eq!(defaults.monitor_interval_secs, 3);
+        assert_eq!(defaults.monitor_metrics, DEFAULT_MONITOR_METRICS);
+        let text = "[ssh]\nmonitor = false\nmonitor_interval_secs = 10\nmonitor_metrics = [\"load\", \"cpu\"]\n";
+        let (config, warnings, _) = Config::from_toml_str(text).unwrap();
+        assert!(warnings.is_empty(), "{warnings:?}");
+        assert!(!config.ssh.monitor);
+        assert_eq!(config.ssh.monitor_interval_secs, 10);
+        assert_eq!(config.ssh.monitor_metrics, ["load", "cpu"]);
+        let (again, _, _) = Config::from_toml_str(&config.to_toml_string()).unwrap();
+        assert_eq!(again, config);
+        // The host default follows the switch; the interval and the metrics are the app's only.
+        let host = config.ssh.host_defaults();
+        assert_eq!(host["ssh"]["monitor"].as_bool(), Some(false));
+        assert!(host["ssh"].get("monitor_interval_secs").is_none());
+        // No metrics at all is a choice too.
+        let (none, warnings, _) = Config::from_toml_str("[ssh]\nmonitor_metrics = []\n").unwrap();
+        assert!(warnings.is_empty() && none.ssh.monitor_metrics.is_empty());
+        for bad in [
+            "[ssh]\nmonitor_interval_secs = 0\n",
+            "[ssh]\nmonitor_interval_secs = 61\n",
+            "[ssh]\nmonitor_metrics = [\"gpu\"]\n",
+            "[ssh]\nmonitor_metrics = [\"cpu\", \"cpu\"]\n",
+            "[ssh]\nmonitor_metrics = \"cpu\"\n",
+        ] {
+            let (config, warnings, _) = Config::from_toml_str(bad).unwrap();
+            assert_eq!(warnings.len(), 1, "{bad}: {warnings:?}");
+            assert_eq!(config.ssh, defaults, "{bad}");
+        }
     }
 
     #[test]
