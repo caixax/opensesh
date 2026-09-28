@@ -193,7 +193,10 @@ fn rc_string(text: &str) -> String {
 }
 
 /// Stops the build with `message`.
-#[allow(clippy::print_stderr, reason = "a build script reports its errors on stderr")]
+#[allow(
+    clippy::print_stderr,
+    reason = "a build script reports its errors on stderr"
+)]
 fn fail(message: &str) -> ! {
     eprintln!("error: {message}");
     std::process::exit(1);
