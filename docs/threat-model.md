@@ -1,6 +1,6 @@
 # Threat model
 
-This document says what OpenSesh protects, from whom, how, and where it stops. It is kept up to date as features arrive (PLAN §8). It was last reviewed in Sprint 10 (snippets, macros, paste protection and recordings).
+This document says what OpenSesh protects, from whom, how, and where it stops. It is kept up to date as features arrive (PLAN §8). It was last reviewed in Sprint 11 (the remote monitor and host info).
 
 ## What is worth protecting
 
@@ -77,6 +77,10 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - **Agent forwarding** is off by default. When a host turns it on, anyone with root on that host can ask the user's agent to sign while the session lasts (the host editor says so). Agent channels are refused unless the host asked for forwarding.
 - **X11 forwarding** isn't implemented in the built-in client yet; `x11` channels are refused.
 - **Output is untrusted:** escape sequences are parsed by the terminal engine (bounded, no command execution); clipboard writes (OSC 52) are shown with a toast; OS detection only matches `/etc/os-release` IDs to a fixed icon list.
+- **The remote monitor and the host info** (on by default, off globally or per host) run a fixed read-only command on an exec channel of the user's own connection: a POSIX `sh` loop reading `/proc` (or `sysctl`, `netstat`, `vm_stat`), `df` and `who`, and once `uname`, `hostname`, `ip`/`ifconfig`.
+  - What comes back is only parsed into numbers and names for the status bar and the Info tab; a server can lie in it, not make OpenSesh run or write anything.
+  - The loop ends by itself when its channel closes, so nothing stays on the server.
+  - A server that doesn't have `sh` just gets no monitor.
 - **Macros that wait for text** decide only when to go on, never what to type: a server that prints the awaited text early makes the next step come sooner, and one that never prints it stops the run at the step's timeout. What a macro types is what the user wrote in it.
 - **"Install my key"** sends only the public key, on the command's standard input.
 - **File names are untrusted:** listings, symlink targets and the names in a recursive download come from the server. A download writes only under the folder the user chose: a name that isn't one plain name (empty, `.`, `..`, with a `/`, and on Windows with a `\` or `:`) is left out of listings and downloads, and a file with such a name isn't opened for editing, so a server can't place a file elsewhere (the CVE-2019-6111 kind of attack; the SCP spike refuses such names too). Symlinks to folders are not followed in recursive copies (no loops, nothing outside the tree).
@@ -135,6 +139,7 @@ A web page, a chat or a document that gives the user a command to paste.
 - **Recordings** (off by default, per pane, started from the pane's menu, with a chip while they run) keep what the screen showed, secrets printed there included, but never the keys typed.
   - They go to `recordings/` in the data folder (`0700`, files `0600` on Linux) and end when the pane's session ends.
   - A recording played back is a file, not a program: its output is parsed like a server's, and it never writes the clipboard.
+- **The monitor's readings and the host info** stay in memory, and leave only when the user copies them ("Copy as text").
 - **Session logs** (off by default) keep what the screen showed, secrets printed there included. They go to `logs/sessions` in the data folder or a folder chosen in Settings > SSH, created `0600` on Linux; text logs leave out escape sequences. Passwords typed at a remote prompt are not echoed, so they are not in the log.
 
 ## Memory
