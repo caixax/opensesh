@@ -4,6 +4,45 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 10 (2026-09-28)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 433 to 439 steps):** as before, plus:
+  - **Paste protection:** a `curl … | sh` paste waits for the review (cancelled); a plain one goes through at once.
+  - **Snippets:** a snippet with a variable, its editor and the quick picker opened. It then runs through the run dialog in the two broadcast panes of a three-pane tab, and not in the pane that left.
+  - **Macros,** against the in-process SSH server: one types, waits for the prompt and types again; one waiting for text that never shows stops on its timeout.
+  - **Recordings:** the SSH session recorded, found in the History list, played in a tab to its end, then jumped back to the start.
+  - **Closing:** closing a window whose shells run asks first; confirming closes it and ends its sessions.
+
+  The user's snippets aren't loaded, and nothing is written outside the run's temporary folder.
+- **Screenshots (native, Windows),** in dark and light, comfortable and compact:
+  - the Snippets view, the editor on a macro and the quick picker;
+  - the paste review of a two-line `curl | sudo bash`;
+  - the player's bar, and History;
+  - the close question, and Settings > About.
+- **Windows executable:** `OpenSesh.exe` read back with PowerShell has its icon and "OpenSesh 0.1.3" in its version information. `cargo xtask icons` checks the `.ico`'s sizes and colors in a test.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real SSH servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 589 | ✅ / ✅ | ✅ `windows` | — |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ 592 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| Fedora 43 (WSLg), before the owner's requests | 6.10.3 (distro) | ✅ 590 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| Arch Linux (WSLg), before the owner's requests | 6.11.2 (distro) | ✅ 590 | ✅ / ✅ | ✅ Wayland, ✅ X11 | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ Ubuntu 24.04 packages |
+
+### Manual checks
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| A paste from a web page with hidden characters, and a real `curl … \| sh` line: the review shows them | ⏳ | ⏳ |
+| A snippet with `{{secret:identity}}` on a real server (the password typed, never shown or saved) | ⏳ | ⏳ |
+| A macro against a slow server or a network device (waits, a timeout) | ⏳ | ⏳ |
+| A long recording played at several speeds and jumped around; the file opened with `asciinema play` | ⏳ | ⏳ |
+| The macro recorder on a real session, reviewed and saved | ⏳ | ⏳ |
+| Closing with sessions, tunnels and a transfer running: the question, Cancel, Close, Don't ask again | ⏳ | ⏳ |
+| The installed app's icon in Explorer, the taskbar, the Start menu and Installed apps; the installer's icon | ⏳ | — |
+
 ## Sprint 9 (2026-09-27)
 
 ### Automated checks
