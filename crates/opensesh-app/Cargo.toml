@@ -51,6 +51,7 @@ windows-sys = { workspace = true, features = [
 
 [build-dependencies]
 cxx-qt-build.workspace = true
+embed-resource.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -11,8 +11,10 @@ publish.workspace = true
 [dependencies]
 anyhow.workspace = true
 flate2.workspace = true
+ico.workspace = true
 opensesh-core.workspace = true
 regex.workspace = true
+resvg.workspace = true
 serde.workspace = true
 sha2.workspace = true
 tar.workspace = true
