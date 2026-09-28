@@ -81,7 +81,8 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libvulkan-dev libxkbcommon-dev pkg-config lld
+          # busybox: the remote monitor's command is also checked with busybox's sh and applets.
+          sudo apt-get install -y libgl1-mesa-dev libvulkan-dev libxkbcommon-dev pkg-config lld busybox
       - name: Install Qt
         uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
         with:

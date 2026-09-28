@@ -1,7 +1,7 @@
 //! The SSH client against real servers (PLAN Sprint 7): OpenSSH and Dropbear, a chain of two jump
 //! hosts authenticated by an agent, a one-time code (TOTP through PAM) after a key, a user
-//! certificate, agent forwarding, and the terminal backend reconnecting after the server side of
-//! the session is killed.
+//! certificate, agent forwarding, the terminal backend reconnecting after the server side of the
+//! session is killed, and the remote monitor and host info (Sprint 11).
 //!
 //! The servers come from `scripts/ssh-test-servers.sh start` (127.0.0.1:2221-2225), so these
 //! tests are ignored by default. With the servers up, and an agent that holds
@@ -23,7 +23,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use opensesh_ssh::backend::{self, Options, Status};
-use opensesh_ssh::connect;
+use opensesh_ssh::connect::{self, Connection};
+use opensesh_ssh::monitor::{self, Monitoring};
 use opensesh_ssh::osdetect;
 use opensesh_ssh::prompt::{Answer, Asker, Prompt, Request};
 use opensesh_ssh::spec::{AuthPlan, ConnectSpec, Hop, KnownHostsFiles, SessionSpec};
@@ -165,6 +166,79 @@ async fn openssh_with_a_key_file_and_dropbear_with_a_password() {
         .await
         .is_err()
     );
+}
+
+/// Two readings of the remote monitor of `connection`'s server (the second has rates), then its
+/// host info.
+async fn watch_twice(connection: &Connection) -> (monitor::Snapshot, monitor::HostInfo) {
+    let readings: Arc<Mutex<Vec<Monitoring>>> = Arc::default();
+    let seen = Arc::clone(&readings);
+    let watching = monitor::watch(connection, Duration::from_secs(1), move |event| {
+        seen.lock().unwrap().push(event);
+    });
+    let _ = tokio::time::timeout(Duration::from_secs(15), async {
+        tokio::pin!(watching);
+        loop {
+            tokio::select! {
+                () = &mut watching => return,
+                () = tokio::time::sleep(Duration::from_millis(100)) => {
+                    if readings.lock().unwrap().len() >= 2 {
+                        return;
+                    }
+                }
+            }
+        }
+    })
+    .await;
+    let second = match readings.lock().unwrap().get(1) {
+        Some(Monitoring::Reading(snapshot)) => snapshot.clone(),
+        other => panic!("no second reading: {other:?}"),
+    };
+    (second, monitor::host_info(connection).await.unwrap())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs scripts/ssh-test-servers.sh start"]
+async fn the_remote_monitor_on_openssh_and_dropbear() {
+    let dir = tempfile::tempdir().unwrap();
+    let (asker, _) = user();
+    let keyed = AuthPlan {
+        key_files: vec![state().join("client_ed25519")],
+        ..AuthPlan::default()
+    };
+    let password = AuthPlan {
+        password: Some(SecretString::from(PASSWORD)),
+        ..AuthPlan::default()
+    };
+    for (port, auth) in [(OPENSSH_KEY_ONLY, keyed), (DROPBEAR_PASSWORD, password)] {
+        let connection = connect::connect(
+            &spec(dir.path(), vec![hop(port, auth)]),
+            &asker,
+            &connect::quiet(),
+        )
+        .await
+        .unwrap();
+        let (reading, info) = watch_twice(&connection).await;
+        assert!(reading.cpu_permille.is_some(), "{port}: {reading:?}");
+        assert!(
+            reading.memory.is_some_and(|memory| memory.total > 0),
+            "{port}"
+        );
+        assert!(reading.received_per_sec.is_some(), "{port}: {reading:?}");
+        assert!(
+            reading.root_disk().is_some() && reading.uptime_secs.is_some(),
+            "{port}"
+        );
+        assert!(
+            !info.os_name.is_empty() && info.kernel.starts_with("Linux"),
+            "{port}: {info:?}"
+        );
+        assert!(
+            !info.hostname.is_empty() && info.cpus.is_some(),
+            "{port}: {info:?}"
+        );
+        connection.close().await;
+    }
 }
 
 #[test]

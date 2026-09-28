@@ -137,6 +137,79 @@ async fn a_server_without_sh_is_unsupported_once() {
     );
 }
 
+/// The monitor's real script, run `count` times with no pause (what goes inside `sh -c '...'`).
+#[cfg(unix)]
+fn readings_script(count: u32) -> String {
+    let command = monitor::command(Duration::from_secs(1));
+    command
+        .strip_prefix("sh -c '")
+        .and_then(|rest| rest.strip_suffix('\''))
+        .unwrap()
+        .replace(
+            "while :; do",
+            &format!("i=0; while [ $i -lt {count} ]; do i=$((i+1));"),
+        )
+        .replace("sleep $n;", "")
+}
+
+/// One reading of the real command by `shell`, with `path` as `PATH` when given.
+#[cfg(unix)]
+fn read_once(shell: &std::path::Path, path: Option<&std::path::Path>) -> monitor::Reading {
+    let mut command = std::process::Command::new(shell);
+    command.arg("-c").arg(readings_script(1));
+    if let Some(path) = path {
+        command.env("PATH", path);
+    }
+    let output = command.output().unwrap();
+    monitor::parse(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// The real command reads this Linux system (CI's containers and runners too) with its `sh`
+/// (dash or bash), and with busybox's `sh` and applets where busybox is installed.
+#[cfg(target_os = "linux")]
+#[test]
+fn the_command_reads_this_linux_system() {
+    let check = |reading: &monitor::Reading, shell: &str| {
+        assert_eq!(reading.os, "Linux", "{shell}");
+        assert!(reading.cpu.is_some(), "{shell}: {reading:?}");
+        assert!(
+            reading.memory.is_some_and(|memory| memory.total > 0),
+            "{shell}: {reading:?}"
+        );
+        assert!(
+            reading.uptime.is_some() && reading.load.is_some(),
+            "{shell}: {reading:?}"
+        );
+        assert!(
+            reading.disks.iter().any(|disk| disk.mount == "/"),
+            "{shell}: {reading:?}"
+        );
+    };
+    check(&read_once(std::path::Path::new("sh"), None), "sh");
+    let busybox = std::env::var_os("PATH").and_then(|path| {
+        std::env::split_paths(&path)
+            .map(|dir| dir.join("busybox"))
+            .find(|candidate| candidate.is_file())
+    });
+    let Some(busybox) = busybox else {
+        println!("no busybox here: only sh was checked");
+        return;
+    };
+    // A folder of busybox's applets as the whole PATH: busybox runs everything.
+    let applets = tempfile::tempdir().unwrap();
+    let list = std::process::Command::new(&busybox)
+        .arg("--list")
+        .output()
+        .unwrap();
+    for applet in String::from_utf8_lossy(&list.stdout).lines() {
+        std::os::unix::fs::symlink(&busybox, applets.path().join(applet)).unwrap();
+    }
+    check(
+        &read_once(&applets.path().join("sh"), Some(applets.path())),
+        "busybox",
+    );
+}
+
 /// What one reading costs (docs/perf.md): the real command's loop run 100 times with no pause
 /// by `$MONITOR_SHELL` (`sh` by default; the programs it runs are found on `PATH`, so a folder of
 /// busybox's applets measures busybox), with the shell's `times` for the CPU used; then 10,000
@@ -146,14 +219,7 @@ async fn a_server_without_sh_is_unsupported_once() {
 #[ignore = "a measurement, run by hand"]
 fn measure_the_monitor() {
     use std::time::Instant;
-    let command = monitor::command(Duration::from_secs(1));
-    let script = command
-        .strip_prefix("sh -c '")
-        .and_then(|rest| rest.strip_suffix('\''))
-        .unwrap()
-        .replace("while :; do", "i=0; while [ $i -lt 100 ]; do i=$((i+1));")
-        .replace("sleep $n;", "")
-        + "; times";
+    let script = readings_script(100) + "; times";
     let shell = std::env::var("MONITOR_SHELL").unwrap_or_else(|_| "sh".to_owned());
     let started = Instant::now();
     let output = std::process::Command::new(&shell)

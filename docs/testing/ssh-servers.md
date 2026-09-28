@@ -3,12 +3,16 @@
 The SSH client (`crates/opensesh-ssh`) has three layers of tests:
 
 - **Unit tests** in the crate: algorithm lists, proxy handshakes against fake proxies, the
-  ProxyCommand parser, the session log's text cleaner, OS release parsing.
+  ProxyCommand parser, the session log's text cleaner, OS release parsing, and the remote
+  monitor's parser against captured and documented outputs (`src/monitor/fixtures`).
 - **An in-process server** (`opensesh_ssh::testing`, `tests/server.rs`, `tests/sftp.rs`,
-  `tests/tunnel.rs`): every authentication method, new, changed and revoked host keys,
-  keyboard-interactive, three hops, the agent, "install my key", the terminal backend's
-  reconnection, SFTP over a temporary folder, and the three kinds of tunnels. They run
-  everywhere with `cargo test`, and the app's smoke test uses the same server.
+  `tests/tunnel.rs`, `tests/monitor.rs`): every authentication method, new, changed and revoked
+  host keys, keyboard-interactive, three hops, the agent, "install my key", the terminal
+  backend's reconnection, SFTP over a temporary folder, the three kinds of tunnels, and the
+  remote monitor (made-up readings, and a server without `sh`). They run everywhere with
+  `cargo test`, and the app's smoke test uses the same server. On Linux, `tests/monitor.rs` also
+  runs the monitor's real command with the system's `sh`, and with busybox's `sh` and applets
+  where busybox is installed (CI's Ubuntu job installs it).
 - **Real servers** (`tests/real_servers.rs`, `tests/real_sftp.rs`, `tests/real_tunnels.rs`):
   OpenSSH and Dropbear started by `scripts/ssh-test-servers.sh`. They are ignored by default.
 
@@ -59,7 +63,10 @@ The tests cover:
   proxy (the name resolved by the server) and a remote forward (sshd listening on its loopback)
   to an HTTP server of the test; then an independent tunnel whose `sshd-session` is killed
   (`kill -9 $PPID` on an exec channel) comes back by itself, its local port still there and its
-  remote forward asked for again.
+  remote forward asked for again;
+- the remote monitor and the host info on OpenSSH and Dropbear: two readings (the second with
+  CPU and network rates), memory, the disk of `/` and the uptime, then the system's name, kernel,
+  host name and CPUs.
 
 On 2026-09-27 in the archlinux distro (release build), 1 GiB went up at 627 MiB/s and came down
 at 692 MiB/s over the loopback; a debug build (as in CI) managed 223 and 124 MiB/s.
