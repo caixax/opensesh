@@ -136,3 +136,47 @@ async fn a_server_without_sh_is_unsupported_once() {
         "sh: command not found"
     );
 }
+
+/// What one reading costs (docs/perf.md): the real command's loop run 100 times with no pause
+/// by `$MONITOR_SHELL` (`sh` by default; the programs it runs are found on `PATH`, so a folder of
+/// busybox's applets measures busybox), with the shell's `times` for the CPU used; then 10,000
+/// parses of one of its readings.
+#[cfg(unix)]
+#[test]
+#[ignore = "a measurement, run by hand"]
+fn measure_the_monitor() {
+    use std::time::Instant;
+    let command = monitor::command(Duration::from_secs(1));
+    let script = command
+        .strip_prefix("sh -c '")
+        .and_then(|rest| rest.strip_suffix('\''))
+        .unwrap()
+        .replace("while :; do", "i=0; while [ $i -lt 100 ]; do i=$((i+1));")
+        .replace("sleep $n;", "")
+        + "; times";
+    let shell = std::env::var("MONITOR_SHELL").unwrap_or_else(|_| "sh".to_owned());
+    let started = Instant::now();
+    let output = std::process::Command::new(&shell)
+        .arg("-c")
+        .arg(&script)
+        .output()
+        .unwrap();
+    let elapsed = started.elapsed();
+    let text = String::from_utf8_lossy(&output.stdout);
+    let times: Vec<&str> = text.lines().rev().take(2).collect();
+    println!(
+        "{shell}: 100 readings in {elapsed:?} wall; `times` (children, then the shell): {times:?}"
+    );
+    let end = text.find("@end\n").unwrap() + 5;
+    let reading = &text[..end];
+    assert!(!monitor::parse(reading).is_empty());
+    let started = Instant::now();
+    for _ in 0..10_000 {
+        std::hint::black_box(monitor::parse(std::hint::black_box(reading)));
+    }
+    println!(
+        "a parse of a {}-byte reading: {:?}",
+        reading.len(),
+        started.elapsed() / 10_000
+    );
+}

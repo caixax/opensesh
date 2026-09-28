@@ -119,6 +119,74 @@ SettingsPage {
 
     SettingsGroup {
         width: parent.width
+        title: qsTr("Remote monitor")
+        description: qsTr("The status bar shows how the server of the current terminal is doing, read over a separate channel of its connection with the tools every system has. Nothing is installed or left running on the server.")
+
+        SettingsRow {
+            label: qsTr("Watch servers")
+            helpText: qsTr("For every host that doesn't choose otherwise in its editor. Takes effect on the next connection.")
+
+            OsSwitch {
+                checked: AppSettings.sshMonitor
+                Accessible.name: qsTr("Watch servers")
+                onToggled: AppSettings.sshMonitor = checked
+            }
+        }
+
+        SettingsRow {
+            label: qsTr("Every")
+            helpText: qsTr("Seconds between two readings.")
+            enabled: AppSettings.sshMonitor
+
+            OsSpinBox {
+                from: 1
+                to: 60
+                value: AppSettings.sshMonitorInterval
+                Accessible.name: qsTr("Seconds between two readings")
+                onValueModified: AppSettings.sshMonitorInterval = value
+            }
+        }
+
+        SettingsRow {
+            label: qsTr("Show")
+            helpText: qsTr("What the status bar shows; the side panel's Info tab has everything.")
+            enabled: AppSettings.sshMonitor
+
+            Flow {
+                width: parent.width
+                spacing: Theme.spacingMd
+
+                Repeater {
+                    model: [
+                        { id: "cpu", text: qsTr("CPU") },
+                        { id: "memory", text: qsTr("Memory") },
+                        { id: "network", text: qsTr("Network") },
+                        { id: "disk", text: qsTr("Disk") },
+                        { id: "uptime", text: qsTr("Uptime") },
+                        { id: "load", text: qsTr("Load") },
+                        { id: "users", text: qsTr("Users") }
+                    ]
+
+                    delegate: OsCheckBox {
+                        required property var modelData
+
+                        text: modelData.text
+                        checked: AppSettings.sshMonitorMetrics.indexOf(modelData.id) >= 0
+                        onToggled: {
+                            const order = ["cpu", "memory", "network", "disk", "uptime", "load", "users"];
+                            const chosen = AppSettings.sshMonitorMetrics.filter(id => id !== modelData.id);
+                            if (checked)
+                                chosen.push(modelData.id);
+                            AppSettings.sshMonitorMetrics = order.filter(id => chosen.indexOf(id) >= 0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    SettingsGroup {
+        width: parent.width
         title: qsTr("Session logs")
         description: qsTr("A file per connection with what the server sent. Logs keep whatever the screen showed, secrets printed there included.")
 

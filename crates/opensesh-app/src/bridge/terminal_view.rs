@@ -269,6 +269,8 @@ pub mod qobject {
         #[qproperty(QString, connection, READ, NOTIFY = ssh_changed)]
         #[qproperty(i32, connection_serial, cxx_name = "connectionSerial", READ, NOTIFY = ssh_changed)]
         #[qproperty(QString, prompt, READ, NOTIFY = ssh_changed)]
+        #[qproperty(QString, monitor, READ, NOTIFY = monitor_changed)]
+        #[qproperty(QString, host_info, cxx_name = "hostInfo", READ, NOTIFY = monitor_changed)]
         #[qproperty(QStringList, command, READ, WRITE, NOTIFY)]
         #[qproperty(QString, start_error, cxx_name = "startError", READ, NOTIFY = session_info_changed)]
         #[qproperty(i32, settings_revision, cxx_name = "settingsRevision", READ, WRITE = set_settings_revision, NOTIFY = inputs_changed)]
@@ -392,6 +394,11 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "sshChanged"]
         fn ssh_changed(self: Pin<&mut TerminalItem>);
+
+        /// The remote monitor's reading (`monitor`) or the host info (`hostInfo`) changed.
+        #[qsignal]
+        #[cxx_name = "monitorChanged"]
+        fn monitor_changed(self: Pin<&mut TerminalItem>);
 
         /// The SSH session found the remote OS (a host icon name, e.g. `os-debian`).
         #[qsignal]
@@ -531,6 +538,12 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "playerStatus"]
         fn player_status(self: &TerminalItem) -> QString;
+
+        /// Reads the host info of this pane's server (the side panel's Info tab); it arrives in
+        /// `hostInfo`. False without a live SSH connection.
+        #[qinvokable]
+        #[cxx_name = "readHostInfo"]
+        fn read_host_info(self: &TerminalItem) -> bool;
 
         /// Answers the SSH question `id`: `action` is `trust-once`, `trust-save`, `submit` (with
         /// `secrets`, one per field) or `cancel`. Returns whether it was still waiting.
@@ -778,7 +791,9 @@ fn ssh_status_json(status: &opensesh_ssh::backend::Status) -> String {
         }),
         Status::Ended => serde_json::json!({ "state": "ended" }),
         // Kept apart by the registry.
-        Status::OsDetected(_) | Status::KeyInstall(_) | Status::Live(_) => return String::new(),
+        Status::OsDetected(_) | Status::KeyInstall(_) | Status::Live(_) | Status::Monitor(_) => {
+            return String::new();
+        }
     };
     value.to_string()
 }
@@ -914,6 +929,10 @@ pub struct TerminalItemRust {
     /// The recording this pane plays (a `.cast` path); empty for a shell or a connection.
     playback: QString,
     connection: QString,
+    /// The remote monitor's latest reading as JSON (see `crate::monitor`); empty without one.
+    monitor: QString,
+    /// The host info as JSON, once asked for; empty before.
+    host_info: QString,
     /// Grows with each SSH connection that comes up; 0 while there is none.
     connection_serial: i32,
     /// The connection `connection_serial` counts.
@@ -1028,6 +1047,8 @@ impl Default for TerminalItemRust {
             install_key: QString::default(),
             playback: QString::default(),
             connection: QString::default(),
+            monitor: QString::default(),
+            host_info: QString::default(),
             connection_serial: 0,
             live: None,
             prompt: QString::default(),
@@ -1632,6 +1653,29 @@ impl qobject::TerminalItem {
         if changed {
             self.as_mut().ssh_changed();
         }
+        let monitor = view
+            .monitor
+            .as_ref()
+            .map(crate::monitor::monitoring_json)
+            .unwrap_or_default();
+        let host_info = view
+            .info
+            .as_ref()
+            .map(crate::monitor::host_info_json)
+            .unwrap_or_default();
+        if self.monitor.to_string() != monitor || self.host_info.to_string() != host_info {
+            {
+                let mut state = self.as_mut().rust_mut();
+                state.monitor = QString::from(&monitor);
+                state.host_info = QString::from(&host_info);
+            }
+            self.as_mut().monitor_changed();
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn read_host_info(&self) -> bool {
+        self.entry().is_some_and(|entry| entry.read_host_info())
     }
 
     /// See the bridge declaration.
@@ -1944,6 +1988,14 @@ impl qobject::TerminalItem {
         }
         self.as_mut().publish_info(&SessionInfo::default(), false);
         self.as_mut().set_has_selection_value(false);
+        if !self.monitor.is_empty() || !self.host_info.is_empty() {
+            {
+                let mut state = self.as_mut().rust_mut();
+                state.monitor = QString::default();
+                state.host_info = QString::default();
+            }
+            self.as_mut().monitor_changed();
+        }
         if !self.connection.is_empty() || !self.prompt.is_empty() || self.live.is_some() {
             {
                 let mut state = self.as_mut().rust_mut();

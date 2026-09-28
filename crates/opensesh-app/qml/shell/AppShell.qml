@@ -1526,6 +1526,22 @@ Item {
                 return wait("the reconnected shell", () => state() === "connected",
                             () => console.info("smoke test: an SSH pane asked for the host key and the password, connected and reconnected"));
             },
+            // The remote monitor (Sprint 11): the test server's readings reach the status bar (CPU
+            // needs two), and the Info tab reads the host over the same connection.
+            () => wait("the remote monitor's readings in the status bar",
+                       () => statusBar.monitorText.indexOf("CPU 12%") >= 0 && statusBar.monitorText.indexOf("/ 40%") >= 0),
+            () => {
+                shell.setSidePanelOpen(true);
+                sidePanel.currentIndex = 1;
+                return wait("the host info in the Info tab", () => sidePanel.info.mode === "ready");
+            },
+            () => {
+                const text = sidePanel.info.asText();
+                if (text.indexOf("test-server (Debian GNU/Linux 13 (trixie))") < 0 || text.indexOf("eth0 10.0.0.5/24") < 0
+                        || text.indexOf("CPU: 12.0%") < 0)
+                    smoke.fail("the Info tab's text is wrong: " + text);
+                console.info("smoke test: the remote monitor's readings reached the status bar, and the Info tab read the host");
+            },
             // The side panel's files: the pane's own connection, following the shell's folder (a
             // test run never writes the settings).
             () => {
@@ -1961,6 +1977,18 @@ Item {
             } else if (stage === "folder") {
                 if (terminal.terminal.shellDirectory !== "/logs")
                     return false;
+                stage = "monitor";
+            } else if (stage === "monitor") {
+                // The remote monitor's readings (CPU needs two) and the host info, for the status
+                // bar and the Info tab.
+                const reading = terminal.terminal.monitor.length > 0 ? JSON.parse(terminal.terminal.monitor) : {};
+                if (reading.cpu === undefined || reading.cpu === null)
+                    return false;
+                terminal.terminal.readHostInfo();
+                stage = "info";
+            } else if (stage === "info") {
+                if (terminal.terminal.hostInfo.indexOf("\"state\":\"ready\"") < 0)
+                    return false;
                 showView("sftp");
                 return true;
             }
@@ -1977,10 +2005,10 @@ Item {
         const right = sftp ? sftp.pane(1) : null;
         if (right)
             right.closeDialogs();
-        if (page === "panel") {
+        if (page === "panel" || page === "info") {
             selectTab(sessionModel.count);
             setSidePanelOpen(true);
-            sidePanel.currentIndex = 0;
+            sidePanel.currentIndex = page === "info" ? 1 : 0;
             return;
         }
         setSidePanelOpen(false);
@@ -2562,6 +2590,10 @@ Item {
             label: shell.currentTerminal ? shell.currentTerminal.label : ""
             workspace: shell.currentTab > 0 ? shell.currentWorkspace : null
 
+            onMonitorClicked: {
+                shell.setSidePanelOpen(true);
+                sidePanel.currentIndex = 1;
+            }
             onVisibleChanged: {
                 if (!visible)
                     shell.moveFocusOffHiddenItem();

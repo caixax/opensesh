@@ -1,13 +1,16 @@
 // Status bar (PLAN §5.3). Left: the session status: the current terminal's working directory
-// when the shell reports it (OSC 7), else the state of an SSH connection, else its title (a live
-// monitor arrives in Sprint 11), and while the tab broadcasts, how many panes receive the input
-// (click to stop).
+// when the shell reports it (OSC 7), else the state of an SSH connection, else its title; the
+// remote monitor's readings of that terminal's server (Sprint 11: the metrics chosen in Settings >
+// SSH, the details in a tooltip, a click shows the side panel's Info tab); and while the tab
+// broadcasts, how many panes receive the input (click to stop).
 // Right: with a master password, the vault's lock (click to lock or unlock), the notifications
 // button with the unread count, a theme quick switch (System -> Dark -> Light) and the version.
 //   terminal: TerminalItem   the focused terminal of the current tab, or null
 //   label: string            what that terminal connects to (a host's name), if anything
 //   workspace: TabWorkspace  the current tab, or null
+//   signal monitorClicked    the readings were clicked
 import QtQuick
+import QtQuick.Templates as T
 import cc.caixa.opensesh
 
 Rectangle {
@@ -19,6 +22,46 @@ Rectangle {
     // The built-in SSH client's state of the terminal ("" for other sessions).
     readonly property string sshState: terminal && terminal.connection.length > 0 ? JSON.parse(terminal.connection).state ?? "" : ""
     readonly property int receiving: workspace && workspace.broadcast ? workspace.participants.length : 0
+    // The remote monitor's latest reading of the terminal's server, while connected; else null.
+    readonly property var reading: {
+        if (!terminal || sshState !== "connected" || terminal.monitor.length === 0)
+            return null;
+        const value = JSON.parse(terminal.monitor);
+        return value.state === "reading" ? value : null;
+    }
+    // Each metric's short text, when the reading has it.
+    readonly property var metricTexts: {
+        const value = reading;
+        if (!value)
+            return ({});
+        const out = {};
+        if (value.cpu !== null)
+            out.cpu = qsTr("CPU %1%").arg(Math.round(value.cpu));
+        if (value.memory)
+            out.memory = qsTr("RAM %1/%2").arg(FileFormat.size(value.memory.total - value.memory.available))
+                                          .arg(FileFormat.size(value.memory.total));
+        if (value.received !== null && value.sent !== null)
+            out.network = qsTr("↓%1/s ↑%2/s").arg(FileFormat.size(value.received)).arg(FileFormat.size(value.sent));
+        if (value.root)
+            out.disk = qsTr("%1 %2%").arg(value.root.mount).arg(bar.usedPercent(value.root));
+        if (value.uptime !== null)
+            out.uptime = qsTr("up %1").arg(FileFormat.uptime(value.uptime));
+        if (value.load)
+            out.load = qsTr("load %1").arg(value.load[0].toFixed(2));
+        if (value.users.length > 0)
+            out.users = qsTr("%n user(s)", "", value.users.length);
+        return out;
+    }
+    readonly property string monitorText: AppSettings.sshMonitorMetrics.map(id => metricTexts[id] ?? "")
+                                                   .filter(text => text.length > 0).join(" · ")
+
+    signal monitorClicked
+
+    // How full a disk is, as `df` counts it: used over used and available.
+    function usedPercent(disk) {
+        const counted = disk.used + disk.available;
+        return counted > 0 ? Math.round(disk.used * 100 / counted) : 0;
+    }
     readonly property string sessionText: {
         if (!terminal)
             return qsTr("No active session");
@@ -88,6 +131,47 @@ Rectangle {
             Accessible.role: Accessible.StaticText
             Accessible.name: bar.terminal && bar.terminal.workingDirectory.length > 0
                              ? qsTr("Working directory: %1").arg(bar.terminal.workingDirectory) : text
+        }
+
+        // The remote monitor: the chosen metrics; a click shows the Info tab.
+        T.AbstractButton {
+            id: monitorButton
+
+            anchors.verticalCenter: parent.verticalCenter
+            visible: bar.monitorText.length > 0
+            width: Math.min(implicitWidth, bar.width * 0.55)
+            implicitWidth: monitorLabel.implicitWidth + 2 * Theme.spacingXs
+            implicitHeight: bar.buttonSize
+            focusPolicy: Qt.NoFocus
+            hoverEnabled: true
+            Accessible.role: Accessible.Button
+            Accessible.name: qsTr("Server monitor: %1").arg(bar.monitorText)
+            Accessible.description: qsTr("Shows the host's details in the side panel")
+            onClicked: bar.monitorClicked()
+
+            background: Rectangle {
+                radius: Theme.radiusControl
+                color: monitorButton.down ? Theme.pressed : monitorButton.hovered ? Theme.hover : "transparent"
+            }
+
+            contentItem: OsText {
+                id: monitorLabel
+
+                leftPadding: Theme.spacingXs
+                rightPadding: Theme.spacingXs
+                verticalAlignment: Text.AlignVCenter
+                text: bar.monitorText
+                size: "small"
+                muted: true
+                elide: Text.ElideRight
+                font.features: { "tnum": 1 }
+            }
+
+            OsTooltip {
+                visible: monitorButton.hovered
+                text: Object.keys(bar.metricTexts).map(id => bar.metricTexts[id]).join("\n")
+                      + "\n" + qsTr("Click for the host's details.")
+            }
         }
 
         OsButton {

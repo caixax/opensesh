@@ -608,6 +608,15 @@ OsDialog {
                             helpText: qsTr("Reads /etc/os-release once connected, for the automatic icon.")
                         }
 
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "ssh.monitor"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Remote monitor")
+                            options: dialog.onOff
+                            helpText: qsTr("CPU, memory, network and disks in the status bar, read every few seconds over a separate channel. Nothing is installed on the server.")
+                        }
+
                         EditorTextRow {
                             editor: dialog
                             path: "serial.baud"

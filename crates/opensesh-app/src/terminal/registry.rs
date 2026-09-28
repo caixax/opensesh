@@ -18,6 +18,7 @@ use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
 use opensesh_ssh::backend::{KeyInstall, Live, Status as SshStatus};
 use opensesh_ssh::connect::Connection;
+use opensesh_ssh::monitor::{HostInfo, Monitoring};
 use opensesh_ssh::prompt::{Answer, Asker, Prompt, Request};
 use opensesh_term::backend::{self, BackendError, TermSize};
 use opensesh_term::palette::Palette;
@@ -122,6 +123,21 @@ struct SshState {
     key_install: Option<KeyInstall>,
     live: Option<Live>,
     requests: VecDeque<Request>,
+    /// The remote monitor's latest reading, while connected.
+    monitor: Option<Monitoring>,
+    /// The host info the Info tab asked for.
+    info: Option<HostInfoState>,
+}
+
+/// Where reading the host info is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HostInfoState {
+    /// Asked, no answer yet.
+    Reading,
+    /// What the server said.
+    Ready(Box<HostInfo>),
+    /// Why it couldn't be read (for people).
+    Failed(String),
 }
 
 /// What a pane shows about its SSH connection.
@@ -135,6 +151,10 @@ pub struct SshView {
     pub os: Option<&'static str>,
     /// The connection while it is up (other channels can use it).
     pub live: Option<Live>,
+    /// The remote monitor's latest reading (or why there is none), while connected.
+    pub monitor: Option<Monitoring>,
+    /// The host info, once asked for.
+    pub info: Option<HostInfoState>,
 }
 
 /// Shared between the engine's callback and the GUI thread.
@@ -262,12 +282,41 @@ impl SessionEntry {
             status: state.ssh.status.clone(),
             os: state.ssh.os,
             live: state.ssh.live.clone(),
+            monitor: state.ssh.monitor.clone(),
+            info: state.ssh.info.clone(),
             prompt: state
                 .ssh
                 .requests
                 .front()
                 .map(|request| (request.id, request.prompt.clone())),
         })
+    }
+
+    /// Reads the host info of this session's server in the background (the Info tab): the
+    /// answer arrives with the next SSH event. False without a live connection.
+    pub fn read_host_info(&self) -> bool {
+        let (Some(connection), Some(runtime)) = (self.ssh_connection(), opensesh_ssh::runtime())
+        else {
+            return false;
+        };
+        {
+            let mut state = lock(&self.state);
+            state.ssh.info = Some(HostInfoState::Reading);
+            state.events.ssh = true;
+            state.wake();
+        }
+        let state = Arc::clone(&self.state);
+        runtime.spawn(async move {
+            let result = opensesh_ssh::monitor::host_info(&connection).await;
+            let mut state = lock(&state);
+            state.ssh.info = Some(match result {
+                Ok(info) => HostInfoState::Ready(Box::new(info)),
+                Err(reason) => HostInfoState::Failed(reason),
+            });
+            state.events.ssh = true;
+            state.wake();
+        });
+        true
     }
 
     /// The SSH connection of this session while it is up.
@@ -549,6 +598,7 @@ fn start_ssh(
             let mut state = lock(&state);
             match status {
                 SshStatus::OsDetected(icon) => state.ssh.os = Some(icon),
+                SshStatus::Monitor(reading) => state.ssh.monitor = Some(reading),
                 SshStatus::KeyInstall(result) => state.ssh.key_install = Some(result),
                 SshStatus::Live(live) => {
                     if let Some(host) = &host {
@@ -564,6 +614,8 @@ fn start_ssh(
                             crate::tunnels::session_live(host, id, None);
                         }
                         state.ssh.live = None;
+                        // The readings were of the connection that went away.
+                        state.ssh.monitor = None;
                     }
                     state.ssh.status = Some(status);
                 }

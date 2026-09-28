@@ -499,7 +499,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "sftp"
-        pages: ["view", "permissions", "panel"]
+        pages: ["view", "permissions", "panel", "info"]
         prepare: (mode, density, page) => shell.prepareSftpScreenshot(page)
         onFinished: shell.prepareTunnelsScreenshots(() => tunnelsScreenshots.start())
     }

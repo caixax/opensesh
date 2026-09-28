@@ -112,6 +112,7 @@ impl qobject::AppInfo {
             jump: true,
             droppable: true,
             sftp_root: Some(folder.join("remote")),
+            monitor: true,
             ..opensesh_ssh::testing::Rules::default()
         };
         // Binding a local port takes no time: the smoke test waits for it.

@@ -1,8 +1,9 @@
 pragma Singleton
 
-// How file sizes, speeds, durations and times read in the file panes and the transfer queue.
-// Functions: size(bytes), speed(bytesPerSecond), duration(seconds), time(secondsSinceEpoch),
-// fileUrl(localPath).
+// How file sizes, speeds, durations and times read in the file panes, the transfer queue and the
+// remote monitor.
+// Functions: size(bytes), speed(bytesPerSecond), duration(seconds), uptime(seconds),
+// time(secondsSinceEpoch), fileUrl(localPath).
 import QtQuick
 
 QtObject {
@@ -36,6 +37,17 @@ QtObject {
         if (seconds < 3600)
             return qsTr("%1 min %2 s").arg(Math.floor(seconds / 60)).arg(seconds % 60);
         return qsTr("%1 h %2 min").arg(Math.floor(seconds / 3600)).arg(Math.floor(seconds % 3600 / 60));
+    }
+
+    // How long a machine has been up, in its largest unit: "12 days", "5 hours", "3 minutes".
+    function uptime(seconds) {
+        if (seconds === undefined || seconds === null || seconds < 0)
+            return "";
+        if (seconds >= 86400)
+            return qsTr("%n day(s)", "", Math.floor(seconds / 86400));
+        if (seconds >= 3600)
+            return qsTr("%n hour(s)", "", Math.floor(seconds / 3600));
+        return qsTr("%n minute(s)", "", Math.floor(seconds / 60));
     }
 
     // The locale's short date and time; empty when unknown.

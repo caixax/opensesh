@@ -7,7 +7,7 @@
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::atomic::{AtomicU16, AtomicU32, Ordering};
 use std::sync::{Arc, LazyLock, PoisonError, RwLock};
 use std::time::Duration;
 
@@ -49,8 +49,13 @@ static TEST_SERVER: AtomicU16 = AtomicU16::new(0);
 /// folder).
 static LOGS_DIR: LazyLock<RwLock<Option<PathBuf>>> = LazyLock::new(|| RwLock::new(None));
 
-/// Applies the `[ssh]` settings: the defaults of every host and the session logs folder.
+/// Seconds between two readings of the remote monitor (Settings > SSH).
+static MONITOR_INTERVAL: AtomicU32 = AtomicU32::new(3);
+
+/// Applies the `[ssh]` settings: the defaults of every host, the session logs folder and the
+/// monitor's interval.
 pub fn apply_settings(settings: &opensesh_core::config::SshSettings) {
+    MONITOR_INTERVAL.store(settings.monitor_interval_secs, Ordering::Relaxed);
     crate::hosts::set_defaults(settings.host_defaults());
     let folder = settings.logs_dir.trim();
     let folder = (!folder.is_empty()).then(|| match opensesh_core::paths::home_dir() {
@@ -372,6 +377,9 @@ fn session_for(
         options: Options {
             detect_os: auto_icon && resolved.flag("ssh.detect_os"),
             install_key: None,
+            monitor: resolved
+                .flag("ssh.monitor")
+                .then(|| Duration::from_secs(u64::from(MONITOR_INTERVAL.load(Ordering::Relaxed)))),
         },
     })
 }
