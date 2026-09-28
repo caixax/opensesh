@@ -165,7 +165,8 @@ fn read_once(shell: &std::path::Path, path: Option<&std::path::Path>) -> monitor
 }
 
 /// The real command reads this Linux system (CI's containers and runners too) with its `sh`
-/// (dash or bash), and with busybox's `sh` and applets where busybox is installed.
+/// (dash or bash), and with busybox's `sh` and applets where busybox is installed (required when
+/// `OPENSESH_EXPECT_BUSYBOX` is set, as in CI's Ubuntu job).
 #[cfg(target_os = "linux")]
 #[test]
 fn the_command_reads_this_linux_system() {
@@ -192,6 +193,10 @@ fn the_command_reads_this_linux_system() {
             .find(|candidate| candidate.is_file())
     });
     let Some(busybox) = busybox else {
+        assert!(
+            std::env::var_os("OPENSESH_EXPECT_BUSYBOX").is_none(),
+            "busybox isn't on PATH"
+        );
         println!("no busybox here: only sh was checked");
         return;
     };
