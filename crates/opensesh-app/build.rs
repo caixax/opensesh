@@ -105,6 +105,98 @@ fn main() {
     builder.build();
 
     add_qt_rpath_for_private_installs();
+    embed_windows_resources();
+}
+
+/// Windows: the icon and version information of OpenSesh.exe, which Explorer, the taskbar,
+/// shortcuts, "Installed apps" and Task Manager show. The `.rc` file is written to `OUT_DIR` (so
+/// the icon's path is absolute and the version comes from Cargo.toml) and compiled by
+/// embed-resource. Numeric constants instead of `winver.h`: no SDK header is needed.
+fn embed_windows_resources() {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
+        return;
+    }
+    let (Ok(manifest_dir), Ok(out_dir)) = (
+        std::env::var("CARGO_MANIFEST_DIR"),
+        std::env::var("OUT_DIR"),
+    ) else {
+        fail("CARGO_MANIFEST_DIR or OUT_DIR is not set");
+    };
+    let icon = Path::new(&manifest_dir).join("data/icons/cc.caixa.OpenSesh.ico");
+    if !icon.is_file() {
+        fail(&format!(
+            "{} is missing: run `cargo xtask icons`",
+            icon.display()
+        ));
+    }
+    let number = |key: &str| {
+        std::env::var(key)
+            .ok()
+            .and_then(|value| value.parse::<u16>().ok())
+            .unwrap_or(0)
+    };
+    let (major, minor, patch) = (
+        number("CARGO_PKG_VERSION_MAJOR"),
+        number("CARGO_PKG_VERSION_MINOR"),
+        number("CARGO_PKG_VERSION_PATCH"),
+    );
+    let version = rc_string(&std::env::var("CARGO_PKG_VERSION").unwrap_or_default());
+    let icon = rc_string(&icon.display().to_string());
+    // FILEFLAGSMASK VS_FFI_FILEFLAGSMASK, FILEOS VOS_NT_WINDOWS32, FILETYPE VFT_APP; the
+    // translation is U.S. English in Unicode.
+    let rc = format!(
+        r#"1 ICON "{icon}"
+
+1 VERSIONINFO
+FILEVERSION {major},{minor},{patch},0
+PRODUCTVERSION {major},{minor},{patch},0
+FILEFLAGSMASK 0x3FL
+FILEFLAGS 0x0L
+FILEOS 0x40004L
+FILETYPE 0x1L
+FILESUBTYPE 0x0L
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "OpenSesh"
+      VALUE "FileDescription", "OpenSesh"
+      VALUE "FileVersion", "{version}"
+      VALUE "InternalName", "OpenSesh"
+      VALUE "LegalCopyright", "GPL-3.0-or-later"
+      VALUE "OriginalFilename", "OpenSesh.exe"
+      VALUE "ProductName", "OpenSesh"
+      VALUE "ProductVersion", "{version}"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END
+"#
+    );
+    let rc_path = Path::new(&out_dir).join("opensesh.rc");
+    if let Err(error) = std::fs::write(&rc_path, rc) {
+        fail(&format!("writing {}: {error}", rc_path.display()));
+    }
+    if let Err(error) = embed_resource::compile(&rc_path, embed_resource::NONE).manifest_required()
+    {
+        fail(&format!("compiling the Windows resources: {error}"));
+    }
+}
+
+/// `text` as the inside of a resource script string: backslashes and quotes escaped.
+fn rc_string(text: &str) -> String {
+    text.replace('\\', "\\\\").replace('"', "\"\"")
+}
+
+/// Stops the build with `message`.
+#[allow(clippy::print_stderr, reason = "a build script reports its errors on stderr")]
+fn fail(message: &str) -> ! {
+    eprintln!("error: {message}");
+    std::process::exit(1);
 }
 
 /// Sorted paths (forward slashes, relative to the crate) of the files in `dir` whose extension

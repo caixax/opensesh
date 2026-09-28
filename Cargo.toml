@@ -122,9 +122,15 @@ ureq = "3.4.2"
 # Exact pin: zip may raise its MSRV (1.88 today) in any minor release. Reading deflate entries is
 # all `cargo xtask fonts` needs.
 zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# The Windows icon (`cargo xtask icons`): the composed app logo rendered at each size and packed as
+# an .ico. resvg without its default features (text, raster images): the logo is plain shapes.
+resvg = { version = "0.48.1", default-features = false }
+ico = "0.5.0"
 
 # Windows only (opensesh-app: console attach and error message box)
 windows-sys = "0.61.2"
+# The icon and version information inside OpenSesh.exe (opensesh-app's build script).
+embed-resource = "3.0.11"
 
 # Tests
 tempfile = "3.27.0"

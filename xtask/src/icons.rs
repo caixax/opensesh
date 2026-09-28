@@ -8,6 +8,8 @@
 //!    adding `fill="currentColor"`); path data is never modified.
 //! 4. Writes them to `crates/opensesh-app/qml/icons/`, composes the placeholder application logo,
 //!    copies the upstream licenses and regenerates `THIRD_PARTY_NOTICES.md`.
+//! 5. Renders the composed logo at the Windows icon sizes into an `.ico` (the executable's icon):
+//!    a rasterization of the same SVG, nothing drawn.
 //!
 //! The generated files are committed, so regular builds work offline.
 
@@ -27,6 +29,8 @@ use crate::common::{
 const MANIFEST: &str = "assets/icons/icons.toml";
 /// Output folder for UI icons, relative to the workspace root.
 const ICONS_OUT: &str = "crates/opensesh-app/qml/icons";
+/// Sizes in the Windows icon: Explorer, the taskbar, shortcuts and the installer pick from these.
+const ICO_SIZES: [u32; 8] = [16, 20, 24, 32, 40, 48, 64, 256];
 /// Output folder for the application logo, relative to the workspace root.
 const APP_ICON_OUT: &str = "crates/opensesh-app/data/icons";
 /// Folder for upstream license texts, relative to the workspace root.
@@ -294,8 +298,55 @@ pub fn run(root: &Path) -> Result<()> {
         "app icon {APP_ICON_OUT}/{}.svg",
         opensesh_core::identity::APP_ID
     );
+    write_if_changed(
+        &app_icon_out.join(format!("{}.ico", opensesh_core::identity::APP_ID)),
+        app_icon_ico(&logo)?,
+    )?;
+    println!(
+        "app icon {APP_ICON_OUT}/{}.ico ({} sizes)",
+        opensesh_core::identity::APP_ID,
+        ICO_SIZES.len()
+    );
 
     crate::notices::write(root)
+}
+
+/// The composed logo rendered at each of [`ICO_SIZES`] and packed as a Windows `.ico`: 32-bit
+/// bitmaps with alpha up to 64 px, PNG at 256 px, as Windows' own icons are.
+fn app_icon_ico(logo_svg: &str) -> Result<Vec<u8>> {
+    use resvg::{tiny_skia, usvg};
+
+    let tree = usvg::Tree::from_str(logo_svg, &usvg::Options::default())
+        .context("reading the composed app logo")?;
+    let mut icon = ico::IconDir::new(ico::ResourceType::Icon);
+    for size in ICO_SIZES {
+        let mut pixmap = tiny_skia::Pixmap::new(size, size).context("an empty icon size")?;
+        let scale = size as f32 / tree.size().width();
+        resvg::render(
+            &tree,
+            tiny_skia::Transform::from_scale(scale, scale),
+            &mut pixmap.as_mut(),
+        );
+        let rgba = pixmap
+            .pixels()
+            .iter()
+            .flat_map(|pixel| {
+                let color = pixel.demultiply();
+                [color.red(), color.green(), color.blue(), color.alpha()]
+            })
+            .collect();
+        let image = ico::IconImage::from_rgba_data(size, size, rgba);
+        let entry = if size >= 256 {
+            ico::IconDirEntry::encode_as_png(&image)
+        } else {
+            ico::IconDirEntry::encode_as_bmp(&image)
+        }
+        .with_context(|| format!("encoding the {size} px icon"))?;
+        icon.add_entry(entry);
+    }
+    let mut out = Vec::new();
+    icon.write(&mut out).context("writing the .ico")?;
+    Ok(out)
 }
 
 /// Returns the verified tarball bytes, downloading them unless a verified cached copy exists.
@@ -659,6 +710,43 @@ mod tests {
         assert!(logo.contains(r#"scale(6.666667)"#));
         assert!(logo.contains(r##"stroke="#FFFFFF""##));
         assert!(!logo.contains("currentColor"));
+    }
+
+    #[test]
+    fn the_windows_icon_has_every_size_of_the_logo() {
+        let spec = AppIcon {
+            glyph: "door-open".to_owned(),
+            background: "#E6B450".to_owned(),
+            foreground: "#FFFFFF".to_owned(),
+            size: 256,
+            corner_radius: 56,
+            padding: 48,
+        };
+        let logo = compose_app_icon(DOOR_OPEN, &spec).unwrap();
+        let bytes = app_icon_ico(&logo).unwrap();
+        let icon = ico::IconDir::read(std::io::Cursor::new(bytes)).unwrap();
+        let sizes: Vec<u32> = icon
+            .entries()
+            .iter()
+            .map(ico::IconDirEntry::width)
+            .collect();
+        assert_eq!(sizes, ICO_SIZES);
+        for entry in icon.entries() {
+            assert_eq!(entry.is_png(), entry.width() >= 256);
+            let image = entry.decode().unwrap();
+            let size = image.width() as usize;
+            let pixel = |x: usize, y: usize| {
+                let at = (y * size + x) * 4;
+                image.rgba_data()[at..at + 4].to_vec()
+            };
+            // The rounded corner is transparent, the background the accent, opaque.
+            assert_eq!(pixel(0, 0)[3], 0, "{size} px corner");
+            assert_eq!(
+                pixel(size / 2, size / 12),
+                [0xE6, 0xB4, 0x50, 0xFF],
+                "{size} px top"
+            );
+        }
     }
 
     #[test]
