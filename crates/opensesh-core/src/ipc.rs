@@ -3,8 +3,8 @@
 //! the app and the `opensesh` CLI hand their request to it instead of opening another window.
 //!
 //! The protocol is one JSON object per line each way: a [`Request`], then a [`Reply`]. The
-//! endpoint name depends on the config directory, so a portable copy and an installed one don't
-//! talk to each other.
+//! endpoint name depends on the default config directory, so a portable copy and an installed one
+//! don't talk to each other.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -86,12 +86,14 @@ fn fnv1a(bytes: &[u8]) -> u64 {
 }
 
 impl Endpoint {
-    /// The endpoint of the instance that uses `paths`.
+    /// The endpoint of the instance that uses `paths`. The tag comes from the default settings
+    /// folder, not the one in use: moving the settings elsewhere (Sprint 16) takes effect at the
+    /// next start, and a start in between must still find the running instance.
     #[must_use]
     pub fn for_paths(paths: &AppPaths) -> Self {
         let tag = format!(
             "{:012x}",
-            fnv1a(paths.config_dir().to_string_lossy().as_bytes()) & 0xffff_ffff_ffff
+            fnv1a(paths.local_config_dir().to_string_lossy().as_bytes()) & 0xffff_ffff_ffff
         );
         if cfg!(windows) {
             let user: String = std::env::var("USERNAME")
@@ -359,5 +361,18 @@ mod tests {
             Endpoint::for_paths(&AppPaths::portable(a.path())),
             Endpoint::for_paths(&AppPaths::portable(b.path()))
         );
+    }
+
+    #[test]
+    fn moving_the_settings_keeps_the_endpoint() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = AppPaths::portable(root.path());
+        std::fs::create_dir_all(paths.local_config_dir()).unwrap();
+        let elsewhere = root.path().join("synced");
+        std::fs::create_dir_all(&elsewhere).unwrap();
+        crate::sync::set_location(paths.local_config_dir(), Some(&elsewhere)).unwrap();
+        let moved = paths.clone().with_location();
+        assert!(moved.settings_moved());
+        assert_eq!(Endpoint::for_paths(&moved), Endpoint::for_paths(&paths));
     }
 }
