@@ -204,6 +204,18 @@ Item {
         onClicked: shellMenu.popup(shellMenuButton, 0, shellMenuButton.height)
     }
 
+    // Screenshots open the menu through the shell.
+    Connections {
+        target: strip.shell
+
+        function onShellMenuRequested(open) {
+            if (!open)
+                shellMenu.close();
+            else if (strip.visible && shellMenuButton.visible)
+                shellMenu.popup(shellMenuButton, 0, shellMenuButton.height);
+        }
+    }
+
     OsContextMenu {
         id: shellMenu
 

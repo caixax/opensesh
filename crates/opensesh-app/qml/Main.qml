@@ -526,9 +526,21 @@ Window {
         prefix: "snippets"
         pages: ["view", "editor", "picker", "paste", "player", "history"]
         prepare: (mode, density, page) => shell.prepareSnippetsScreenshot(page)
+        onFinished: shell.prepareProtocolsScreenshots(() => protocolsScreenshots.start())
+    }
+
+    ScreenshotRunner {
+        id: protocolsScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "protocols"
+        pages: ["newtab", "telnet", "serial", "s3", "serialeditor", "s3editor"]
+        prepare: (mode, density, page) => shell.prepareProtocolScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
                             + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures
-                            + sftpScreenshots.failures + tunnelsScreenshots.failures + snippetsScreenshots.failures > 0 ? 7 : 0)
+                            + sftpScreenshots.failures + tunnelsScreenshots.failures + snippetsScreenshots.failures
+                            + protocolsScreenshots.failures > 0 ? 7 : 0)
     }
 }
