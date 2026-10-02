@@ -98,6 +98,12 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "writeTestFile"]
         fn write_test_file(self: &Self, path: &QString, text: &QString) -> bool;
+
+        /// This process's resident memory in MB (Windows: the working set; Linux: `VmRSS`), for
+        /// the smoke test's leak check; 0 where it isn't known.
+        #[qinvokable]
+        #[cxx_name = "residentMemory"]
+        fn resident_memory(self: &Self) -> f64;
     }
 }
 
@@ -239,6 +245,12 @@ impl qobject::AppInfo {
         } else {
             QString::default()
         }
+    }
+
+    /// See the bridge declaration.
+    pub fn resident_memory(&self) -> f64 {
+        #[allow(clippy::cast_precision_loss, reason = "megabytes for a log line")]
+        crate::platform::resident_memory().map_or(0.0, |bytes| bytes as f64 / (1024.0 * 1024.0))
     }
 
     /// See the bridge declaration.

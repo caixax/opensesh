@@ -63,3 +63,42 @@ pub fn show_fatal_error(message: &str) {
 fn wide(text: &str) -> Vec<u16> {
     text.encode_utf16().chain(std::iter::once(0)).collect()
 }
+
+/// This process's resident memory in bytes: the working set on Windows, `VmRSS` on Linux; `None`
+/// elsewhere or when it can't be read (Sprint 17's leak check).
+#[must_use]
+pub fn resident_memory() -> Option<u64> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::ProcessStatus::{
+            K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
+        };
+        use windows_sys::Win32::System::Threading::GetCurrentProcess;
+
+        let size = u32::try_from(std::mem::size_of::<PROCESS_MEMORY_COUNTERS>()).ok()?;
+        let mut counters = PROCESS_MEMORY_COUNTERS {
+            cb: size,
+            ..PROCESS_MEMORY_COUNTERS::default()
+        };
+        // SAFETY: the pseudo-handle of this process, and a counters struct of the size given.
+        let ok = unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &raw mut counters, size) };
+        (ok != 0).then(|| u64::try_from(counters.WorkingSetSize).unwrap_or(u64::MAX))
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let status = std::fs::read_to_string("/proc/self/status").ok()?;
+        let kilobytes: u64 = status
+            .lines()
+            .find_map(|line| line.strip_prefix("VmRSS:"))?
+            .trim()
+            .trim_end_matches("kB")
+            .trim()
+            .parse()
+            .ok()?;
+        Some(kilobytes * 1024)
+    }
+    #[cfg(not(any(windows, target_os = "linux")))]
+    {
+        None
+    }
+}

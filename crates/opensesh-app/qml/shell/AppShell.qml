@@ -1288,6 +1288,7 @@ Item {
             () => shell.protocolSmokeSteps(smoke),
             () => shell.desktopSmokeSteps(smoke),
             () => shell.vncSmokeSteps(smoke),
+            () => shell.leakSmokeSteps(smoke),
             () => openTab("the second shell's first output"),
             () => {
                 pane.terminal.sendText("exit\r");
@@ -2065,6 +2066,46 @@ Item {
     // wrong password first), the desktop, Ctrl+Alt+Del as keysyms, the clipboard both ways (a
     // stand-in for the user's), the desktop following the pane once asked to, and a disconnected
     // pane connecting again.
+    // Functions for SmokeTest.steps (Sprint 17): a leak check. Terminal tabs and the largest
+    // dialogs are opened and closed again and again; once caches are warm, the process's memory
+    // must come back (within a margin for the allocator).
+    function leakSmokeSteps(smoke) {
+        const rounds = 12;
+        const allowedMb = 30;
+        let before = 0;
+        const round = () => [
+            () => shell.newTab(),
+            () => hostEditor.get().create(""),
+            () => {
+                hostEditor.close();
+                importDialog.get().show("csv");
+            },
+            () => {
+                importDialog.close();
+                shell.closeTab(shell.currentTab);
+            }
+        ];
+        let steps = [];
+        // Two rounds first, so the caches (glyphs, components) are filled before measuring.
+        for (let i = 0; i < 2; ++i)
+            steps = steps.concat(round());
+        steps.push(() => {
+            gc();
+            before = AppInfo.residentMemory();
+        });
+        for (let i = 0; i < rounds; ++i)
+            steps = steps.concat(round());
+        steps.push(() => gc());
+        steps.push(() => {
+            const after = AppInfo.residentMemory();
+            console.info("smoke test: leak check: " + rounds + " terminal tabs and dialogs opened and closed, memory "
+                         + before.toFixed(1) + " MB, then " + after.toFixed(1) + " MB");
+            if (before > 0 && after - before > allowedMb)
+                smoke.fail("memory grew by " + (after - before).toFixed(1) + " MB over " + rounds + " tabs and dialogs");
+        });
+        return steps;
+    }
+
     function vncSmokeSteps(smoke) {
         const timeout = 20000;
         let deadline = 0;
