@@ -6,6 +6,26 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 13: remote desktops over RDP ([ADR 0034](docs/adr/0034-rdp-client.md)).**
+  - **Saved RDP hosts and `rdp://user@host` quick connect** open a remote desktop in a tab, next to terminals: splits, workspaces and moving tabs between windows work as for them.
+  - **The engine** is IronRDP, in a helper program (`opensesh-rdp`) next to the app, one per desktop: NLA (CredSSP) where the server has it, TLS without it (xrdp), RemoteFX and bitmap graphics.
+  - **The server's certificate** is trusted on first use, like a host key: the first one is shown with its fingerprint and subject to trust once or remember (`trusted_certificates.toml`), a changed one warns. Nothing is sent before it is accepted.
+  - **Credentials:** the host's identity (user, password from the vault, and a domain from the host or `DOMAIN\user`), else the password is asked in the pane, and again after a refusal.
+  - **The desktop:**
+    - follows the pane's size (asking the server for the new size once the pane stops changing), or keeps a fixed resolution scaled to fit, or pixel for pixel;
+    - keys go as scan codes, in the server's keyboard layout, with the mouse and the wheel; while the desktop has the keyboard, OpenSesh's shortcuts go to it too, except Ctrl+Alt+Home (a setting in Settings > Shortcuts), which gives the keyboard back;
+    - the text clipboard is shared both ways (a host setting, on by default);
+    - a bar with Ctrl+Alt+Del, full screen and a menu (scaling, reconnecting, disconnecting);
+    - a disconnected desktop connects again with the overlay's Reconnect.
+  - **Through jump hosts:** a local tunnel over the built-in SSH client to the last jump host, started and stopped with the pane; its questions are asked in the pane.
+  - **The host editor** has the RDP rows: domain, scaling, resolution and clipboard; jump hosts work for RDP hosts too.
+  - **Packages** ship the helper: next to `OpenSesh.exe` on Windows, in `/usr/lib/opensesh/` on Linux. `cargo xtask rdp` builds it for development.
+  - **Tests:**
+    - the helper against an in-process IronRDP server (certificate, passwords, pixels, input, clipboard, resize);
+    - the smoke test's desktops through the real helper, directly and through a jump host, and screenshots;
+    - the helper against xrdp in CI.
+  - **Not yet:** drive redirection, audio, multiple monitors, RD Gateway, and on Wayland the compositor's shortcuts still go to the compositor (Qt has no shortcuts inhibitor yet).
+
 - **Sprint 12: more protocols and shells, and S3 ([ADR 0032](docs/adr/0032-terminal-protocols-and-shells.md), [ADR 0033](docs/adr/0033-s3-storage.md)).**
   - **Local shells:** a menu on the new tab button (and the command palette) opens a tab with any shell this computer has:
     - Windows: PowerShell 7, Windows PowerShell, cmd, Git Bash, MSYS2, Cygwin and each WSL distribution;
