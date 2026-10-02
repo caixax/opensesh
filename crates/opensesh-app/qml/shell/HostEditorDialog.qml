@@ -940,8 +940,17 @@ OsDialog {
                             options: [{ text: qsTr("Off"), value: "off" }, { text: qsTr("Untrusted"), value: "untrusted" },
                                 { text: qsTr("Trusted"), value: "trusted" }]
                             helpText: dialog.revision >= 0 && dialog.value("ssh.x11") === "trusted"
-                                      ? qsTr("Trusted forwarding gives remote programs full access to your display. Only the OpenSSH client forwards X11 for now.")
-                                      : qsTr("Only the OpenSSH client forwards X11 for now.")
+                                      ? qsTr("Trusted forwarding gives remote programs full access to your display: they can read what you type in other windows. Use it only for programs that refuse the untrusted kind.")
+                                      : qsTr("Remote X programs show on this computer's display (DISPLAY; on Windows an X server such as VcXsrv). Untrusted keeps them from watching your other windows.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "ssh.waypipe"
+                            visible: dialog.protocol === "ssh"
+                            label: qsTr("Waypipe")
+                            options: [{ text: qsTr("Off"), value: false }, { text: qsTr("On"), value: true }]
+                            helpText: qsTr("Remote Wayland programs show on this computer's Wayland desktop. Needs waypipe installed here and on the server (Linux).")
                         }
 
                         EditorTextRow {

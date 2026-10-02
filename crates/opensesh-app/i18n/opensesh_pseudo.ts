@@ -2729,14 +2729,6 @@
         <translation>[Å þŕöĝŕám ŵĥöšé íñþüť áñď öüťþüť çáŕŕý ťĥé çöññéçťíöñ, íñšťéáď öƒ ťĥé þŕöxý (%ĥ ĥöšť, %þ þöŕť, %ŕ üšéŕ). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Trusted forwarding gives remote programs full access to your display. Only the OpenSSH client forwards X11 for now.</source>
-        <translation>[Ťŕüšťéď ƒöŕŵáŕďíñĝ ĝívéš ŕémöťé þŕöĝŕámš ƒüĺĺ áççéšš ťö ýöüŕ ďíšþĺáý. Öñĺý ťĥé ÖþéñŠŠĤ çĺíéñť ƒöŕŵáŕďš X11 ƒöŕ ñöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Only the OpenSSH client forwards X11 for now.</source>
-        <translation>[Öñĺý ťĥé ÖþéñŠŠĤ çĺíéñť ƒöŕŵáŕďš X11 ƒöŕ ñöŵ. ~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>Environment</source>
         <translation>[Éñvíŕöñméñť ~~~~]</translation>
     </message>
@@ -2975,6 +2967,22 @@
     <message>
         <source>Trusted</source>
         <translation>[Ťŕüšťéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Trusted forwarding gives remote programs full access to your display: they can read what you type in other windows. Use it only for programs that refuse the untrusted kind.</source>
+        <translation>[Ťŕüšťéď ƒöŕŵáŕďíñĝ ĝívéš ŕémöťé þŕöĝŕámš ƒüĺĺ áççéšš ťö ýöüŕ ďíšþĺáý: ťĥéý çáñ ŕéáď ŵĥáť ýöü ťýþé íñ öťĥéŕ ŵíñďöŵš. Üšé íť öñĺý ƒöŕ þŕöĝŕámš ťĥáť ŕéƒüšé ťĥé üñťŕüšťéď ķíñď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remote X programs show on this computer&apos;s display (DISPLAY; on Windows an X server such as VcXsrv). Untrusted keeps them from watching your other windows.</source>
+        <translation>[Ŕémöťé X þŕöĝŕámš šĥöŵ öñ ťĥíš çömþüťéŕ&apos;š ďíšþĺáý (ĎÍŠÞĹÅÝ; öñ Ŵíñďöŵš áñ X šéŕvéŕ šüçĥ áš VçXšŕv). Üñťŕüšťéď ķééþš ťĥém ƒŕöm ŵáťçĥíñĝ ýöüŕ öťĥéŕ ŵíñďöŵš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Waypipe</source>
+        <translation>[Ŵáýþíþé ~~~]</translation>
+    </message>
+    <message>
+        <source>Remote Wayland programs show on this computer&apos;s Wayland desktop. Needs waypipe installed here and on the server (Linux).</source>
+        <translation>[Ŕémöťé Ŵáýĺáñď þŕöĝŕámš šĥöŵ öñ ťĥíš çömþüťéŕ&apos;š Ŵáýĺáñď ďéšķťöþ. Ñééďš ŵáýþíþé íñšťáĺĺéď ĥéŕé áñď öñ ťĥé šéŕvéŕ (Ĺíñüx). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Startup snippet</source>
