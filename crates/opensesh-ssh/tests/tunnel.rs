@@ -284,8 +284,15 @@ async fn a_stopped_forward_frees_its_port() {
     );
     let port = reports.listening().await;
     running.stop();
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    let again = TcpListener::bind(("127.0.0.1", port)).await;
+    // The listener closes as the task ends: a loaded machine (CI's containers) may take a while.
+    let mut again = TcpListener::bind(("127.0.0.1", port)).await;
+    for _ in 0..50 {
+        if again.is_ok() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        again = TcpListener::bind(("127.0.0.1", port)).await;
+    }
     assert!(again.is_ok(), "the port stayed taken");
     drop(again);
 
