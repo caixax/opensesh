@@ -69,6 +69,8 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - A jump host carries the next hop's traffic, but the next hop's key is checked end to end: a malicious jump host can refuse or cut the tunnel, not read it.
 - **Algorithms:** modern ones only by default (the ML-KEM and curve25519 hybrid, curve25519 and SHA-2 Diffie-Hellman groups for key exchange; AES-GCM, AES-CTR and ChaCha20-Poly1305; SHA-2 MACs and signatures). SHA-1, CBC and `hmac-sha1` only come back when a host turns "legacy algorithms" on, for that host.
 - Proxies (SOCKS5, HTTP CONNECT, a proxy command) see where the user connects, not what is sent.
+- **Telnet has no protection at all:** everything, passwords too, crosses the network in clear, and nothing proves who answers. The pane says so in yellow before connecting, and the host editor does too. Use it only on networks the user trusts, for devices without SSH.
+- **S3 over `http://`** (an endpoint the user typed that way, or `s3+http://`) sends requests in clear: the secret key itself never travels (requests are signed), but the objects and their names do, and a signed request can be replayed for a few minutes. `https://` is the default.
 
 ### A malicious server
 
@@ -88,6 +90,22 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - **Following the terminal's folder** (OSC 7) only moves the side panel's listing: a server can make it show another folder, not run anything or write anywhere.
 - **Remote forwards:** a server can open `forwarded-tcpip` channels at any time; the client only accepts them for a port it asked to forward, and connects them only to that tunnel's destination. Others are refused.
 - **RSA signing** (RUSTSEC-2023-0071, see Dependencies): a server could time the client's RSA signatures, one per connection.
+
+### The other terminal kinds (Sprint 12)
+
+- **Serial ports** are local devices: whatever the device prints is terminal output, parsed like a server's (see above). The port list only reads names and descriptions; nothing is opened until the user connects.
+- **Mosh** connects with the built-in SSH client (same host key checks and questions), starts `mosh-server` on the server and closes. The session key it prints goes to `mosh-client` in its environment (`MOSH_KEY`), never on a command line where other users could see it with `ps`, and is never shown or logged. Mosh then talks to the server over UDP, encrypted and authenticated with that key (AES-OCB), straight to the server's address: jump hosts and proxies don't carry it, and the pane says so.
+- **Containers and pods:** `docker`, `podman` and `kubectl` run here with their own configuration and credentials, as the user would run them. The container, pod, namespace, context and shell come from the host and are passed as separate arguments (no shell here); names that start with `-` or hold spaces are refused, so a host can't add options. The running containers and pods are listed only when the host editor or quick connect asks (a background command with a time limit).
+- **Local shells** come from `/etc/shells`, `$SHELL`, known install folders and `wsl.exe -l -q`; choosing one runs it like the default shell.
+
+### S3 storage
+
+- **The secret key** is the password of a keychain identity, in the vault (encrypted); `hosts.toml` holds only the endpoint, region, access key or identity id. Typed when connecting, it is used for that pane only and not stored. Requests are signed with it (SigV4); it is never sent, logged or put in an error.
+- **No other credentials are read:** not `~/.aws`, the environment or instance metadata.
+- **Temporary links** are bearer tokens: anyone with one can download that object until it expires (at most seven days; the menu offers an hour, a day or a week). They are made here without a request, and only copied to the clipboard when the user asks.
+- **Object keys are untrusted** like file names (see above): a download writes only under the folder the user chose, and a key that isn't a plain name is left out.
+- **The server** sees what is uploaded and can serve anything for a download, like an SFTP server.
+- **Test runs** use an in-process S3 server with test keys, never the network.
 
 ### Pasted text
 
@@ -158,6 +176,7 @@ OpenSesh lists the keys of the agents it finds: `SSH_AUTH_SOCK`, the Windows Ope
 ## Dependencies
 
 - Every version is pinned and locked. `cargo deny` and `cargo audit` run in CI.
+- **RUSTSEC-2026-0253** (`lru` 0.16.4, unsound `pop()` when a key's code panics) comes with the AWS SDK, which uses it for its S3 Express session cache with `String` keys, whose code doesn't panic. No fixed 0.16 release exists; reviewed each sprint ([ADR 0033](adr/0033-s3-storage.md)).
 - **RUSTSEC-2023-0071** (the `rsa` crate, the Marvin timing attack) has no fixed version. The vault uses RSA locally (generating, reading and writing keys), which the advisory considers safe ([ADR 0024](adr/0024-crypto-crates-and-ssh-keys.md)). The SSH client signs with RSA keys from the vault and key files: it never decrypts with RSA (the attack's target), it makes one signature per connection, new keys are Ed25519 by default, and keys held by an agent are signed outside OpenSesh. Accepted and reviewed each sprint ([ADR 0027](adr/0027-ssh-client.md)).
 
 ## Known gaps and future work
