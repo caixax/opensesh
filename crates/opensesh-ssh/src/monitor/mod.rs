@@ -462,14 +462,15 @@ fn swap_amount(usage: &str, name: &str) -> u64 {
     else {
         return 0;
     };
-    let (value, unit) = rest.split_at(rest.len().saturating_sub(1));
-    let factor: f64 = match unit {
-        "K" => 1024.0,
-        "M" => 1024.0 * 1024.0,
-        "G" => 1024.0 * 1024.0 * 1024.0,
+    // The unit is the last byte when it is an ASCII letter (a server's text may end in anything).
+    let factor: f64 = match rest.as_bytes().last() {
+        Some(b'K') => 1024.0,
+        Some(b'M') => 1024.0 * 1024.0,
+        Some(b'G') => 1024.0 * 1024.0 * 1024.0,
         _ => return rest.parse::<f64>().map_or(0, |bytes| bytes as u64),
     };
-    value
+    rest.get(..rest.len() - 1)
+        .unwrap_or_default()
         .parse::<f64>()
         .map_or(0, |value| (value * factor) as u64)
 }

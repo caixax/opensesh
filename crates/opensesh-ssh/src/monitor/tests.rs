@@ -329,3 +329,16 @@ fn failures_say_why_in_one_line() {
     assert_eq!(failure(b"", Some(127)), "the command ended with status 127");
     assert_eq!(failure(b"", None), "the server gave no answer");
 }
+
+#[test]
+fn a_unit_after_a_multibyte_character_is_no_crash() {
+    // Found by fuzzing (Sprint 17): `vm.swapusage` whose number ends in a character of several
+    // bytes, which `parse` sees after the lossy decoding of the server's output.
+    let output = String::from_utf8_lossy(include_bytes!("fixtures/fuzz-swapusage.bin"));
+    let _ = parse(&output);
+    assert_eq!(swap_amount("total = 1535.7\u{fffd}", "total"), 0);
+    assert_eq!(
+        swap_amount("total = 2048.00M  used", "total"),
+        2048 * 1024 * 1024
+    );
+}
