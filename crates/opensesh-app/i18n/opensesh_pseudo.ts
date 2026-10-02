@@ -587,6 +587,18 @@
         <translation>[ŵéb-01 ~~]</translation>
     </message>
     <message>
+        <source>NAS (RustFS)</source>
+        <translation>[ÑÅŠ (ŔüšťFŠ) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Core switch console</source>
+        <translation>[Çöŕé šŵíťçĥ çöñšöĺé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>NAS backups</source>
+        <translation>[ÑÅŠ báçķüþš ~~~~]</translation>
+    </message>
+    <message>
         <source>%1 stopped: its pane closed.</source>
         <translation>[%1 šťöþþéď: íťš þáñé çĺöšéď. ~~~~~~~~~]</translation>
     </message>

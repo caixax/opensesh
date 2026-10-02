@@ -63,7 +63,8 @@ OsFormRow {
         if (value === undefined || value === null)
             input.text = "";
         else if (Array.isArray(value))
-            input.text = value.length === 0 ? "none" : value.join(", "); // lint-qml: allow (the keyword typed for no jump hosts)
+            // `none` only means something where an empty list overrides an inherited one.
+            input.text = value.length === 0 ? (inheritKey.length > 0 ? "none" : "") : value.join(", "); // lint-qml: allow (the keyword typed for no jump hosts)
         else if (typeof value === "object")
             input.text = Object.keys(value).length === 0 ? "none" : Object.keys(value).map(name => name + "=" + value[name]).join("; "); // lint-qml: allow (the keyword and the pairs as typed)
         else

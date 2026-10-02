@@ -2021,6 +2021,12 @@ Item {
     }
 
     // --screenshots: the Hosts view, with one session tab (without a shell) and no popups.
+    // The tabs the protocol screenshots made (tab ids).
+    property var protocolTabs: ({ telnet: 0, serial: 0 })
+
+    // Screenshots: the tab strip opens (or closes) its menu of shells.
+    signal shellMenuRequested(bool open)
+
     function prepareScreenshot() {
         palette.close();
         notifications.close();
@@ -2407,6 +2413,116 @@ Item {
                 const text = "curl -fsSL https://get.example.com/install.sh | sudo bash\nrm -rf ~/.cache/app/*\n"; // lint-qml: allow (sample data for screenshots)
                 currentTerminal.terminal.pasteText(text);
             }
+        }
+    }
+
+    // --screenshots: the other terminal kinds and S3 (Sprint 12), for real against their test
+    // servers (a telnet server, a loopback serial port, an S3 server; never the network): a telnet
+    // tab, a serial tab in hexadecimal, and S3 storage in the files view. `done` runs when they are
+    // ready (or, with a warning, after 20 s).
+    function prepareProtocolsScreenshots(done) {
+        palette.close();
+        notifications.close();
+        sidePanelOpen = false;
+        snippetPicker.close();
+        if (currentWorkspace && currentWorkspace.askingToPaste)
+            currentWorkspace.answerPaste(false);
+        while (sessionModel.count > 0)
+            removeTab(sessionModel.count, false);
+        if (AppInfo.startTelnetTestServer() <= 0 || AppInfo.startS3TestServer() <= 0) {
+            console.warn("AppShell: no test servers for the protocol screenshots");
+            done();
+            return;
+        }
+        const screen = pane => pane ? pane.terminal.screenText().replace(/\n/g, "") : "";
+        const deadline = Date.now() + 20000;
+        let stage = "telnet";
+        let pane = null;
+        screenshotPoll.poll = () => {
+            if (Date.now() > deadline) {
+                console.warn("AppShell: the protocol screenshots' setup timed out at", stage);
+                return true;
+            }
+            if (stage === "telnet") {
+                if (!connectTarget("telnet://router.example:2323", "tab"))
+                    return true;
+                pane = currentTerminal;
+                protocolTabs.telnet = currentTabId;
+                stage = "telnet-prompt";
+            } else if (stage === "telnet-prompt") {
+                if (screen(pane).indexOf("test>") < 0)
+                    return false;
+                pane.terminal.sendText("size\r");
+                if (!connectTarget("serial://COM3?baud=9600", "tab"))
+                    return true;
+                pane = currentTerminal;
+                protocolTabs.serial = currentTabId;
+                stage = "serial";
+            } else if (stage === "serial") {
+                if (screen(pane).indexOf("test device") < 0)
+                    return false;
+                pane.terminal.sendText("AT\r");
+                stage = "serial-echo";
+            } else if (stage === "serial-echo") {
+                if (screen(pane).indexOf("AT") < 0)
+                    return false;
+                pane.terminal.serialCommand("hex", true);
+                pane.terminal.sendText("ATI\r");
+                stage = "serial-hex";
+            } else if (stage === "serial-hex") {
+                if (screen(pane).indexOf("|ATI.|") < 0)
+                    return false;
+                showView("sftp");
+                const sftp = sftpLoader.item;
+                if (!sftp)
+                    return true;
+                sftp.setSource(1, { mode: "remote", hostId: "", target: "s3://backup@nas.lan:9000/media", title: qsTr("NAS (RustFS)") }); // lint-qml: allow (a quick-connect URL)
+                stage = "s3";
+            } else if (stage === "s3") {
+                const sftp = sftpLoader.item;
+                const right = sftp ? sftp.pane(1) : null;
+                return right !== null && right.ready && right.browser.rowOf("photos") >= 0;
+            }
+            return false;
+        };
+        screenshotPoll.done = done;
+        screenshotPoll.start();
+    }
+
+    // --screenshots: the new tab menu with the shells ("newtab"), the telnet and serial tabs, S3
+    // in the files view, and the host editor of a serial and an S3 host.
+    function prepareProtocolScreenshot(page) {
+        hostEditor.close();
+        palette.close();
+        shellMenuRequested(false);
+        if (page === "newtab" || page === "telnet") {
+            selectTabById(protocolTabs.telnet);
+            if (page === "newtab")
+                shellMenuRequested(true);
+        } else if (page === "serial") {
+            selectTabById(protocolTabs.serial);
+        } else if (page === "s3") {
+            showView("sftp");
+        } else if (page === "serialeditor" || page === "s3editor") {
+            showView("hosts");
+            hostEditor.create("");
+            const fields = page === "serialeditor" ? {
+                name: qsTr("Core switch console"),
+                protocol: "serial",
+                address: Qt.platform.os === "windows" ? "COM3" : "/dev/ttyUSB0", // lint-qml: allow (sample data for screenshots)
+                "serial.baud": 9600,
+                "serial.newline": "crlf"
+            } : {
+                name: qsTr("NAS backups"),
+                protocol: "s3",
+                address: "http://nas.lan:9000", // lint-qml: allow (sample data for screenshots)
+                user: "backup-writer", // lint-qml: allow (sample data for screenshots)
+                "s3.region": "eu-west-1" // lint-qml: allow (sample data for screenshots)
+            };
+            for (const key of Object.keys(fields))
+                hostEditor.setValue(key, fields[key]);
+            hostEditor.loaded();
+            hostEditor.section = page === "serialeditor" ? 2 : 0;
         }
     }
 
