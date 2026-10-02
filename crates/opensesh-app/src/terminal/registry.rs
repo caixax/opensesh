@@ -643,6 +643,53 @@ fn start_ssh(
     notify: Notify,
     state: &Arc<Mutex<SessionState>>,
 ) -> Result<Session, StartError> {
+    let (asker, status) = ssh_hooks(id, ssh.host.clone(), state);
+    ssh.session.size = options.size;
+    ssh.session.term.clone_from(&options.term);
+    let (backend, events) =
+        opensesh_ssh::backend::start(ssh.connect, ssh.session, ssh.options, asker, status)?;
+    let config = SessionConfig {
+        size: options.size,
+        palette: options.palette,
+        options: options.options,
+        ..SessionConfig::default()
+    };
+    Ok(Session::start(backend, events, config, notify)?)
+}
+
+/// The session of pane `id`, starting a mosh session for it if there is none yet: its SSH part
+/// asks and shows its state like an SSH session.
+///
+/// # Errors
+///
+/// [`StartError`] if the backend or the engine thread could not be started.
+pub fn open_mosh(
+    id: i32,
+    options: LocalOptions,
+    mut spec: opensesh_proto_misc::mosh::MoshSpec,
+) -> Result<Arc<SessionEntry>, StartError> {
+    open_with(id, |notify, state| {
+        let (asker, status) = ssh_hooks(id, None, state);
+        spec.term.clone_from(&options.term);
+        let (backend, events) =
+            opensesh_proto_misc::mosh::start(spec, options.size, asker, status)?;
+        let config = SessionConfig {
+            size: options.size,
+            palette: options.palette,
+            options: options.options,
+            ..SessionConfig::default()
+        };
+        Ok(Session::start(backend, events, config, notify)?)
+    })
+}
+
+/// Where a session's SSH questions and state go: the entry's shared state, waking the item. A
+/// saved host's (`host`) live connection is also told to the tunnels tied to it.
+fn ssh_hooks(
+    id: i32,
+    host: Option<String>,
+    state: &Arc<Mutex<SessionState>>,
+) -> (Asker, opensesh_ssh::backend::StatusSink) {
     lock(state).ssh.active = true;
     let asker: Asker = {
         let state = Arc::clone(state);
@@ -653,7 +700,6 @@ fn start_ssh(
             state.wake();
         })
     };
-    let host = ssh.host.clone();
     let status: opensesh_ssh::backend::StatusSink = {
         let state = Arc::clone(state);
         Arc::new(move |status| {
@@ -686,17 +732,7 @@ fn start_ssh(
             state.wake();
         })
     };
-    ssh.session.size = options.size;
-    ssh.session.term.clone_from(&options.term);
-    let (backend, events) =
-        opensesh_ssh::backend::start(ssh.connect, ssh.session, ssh.options, asker, status)?;
-    let config = SessionConfig {
-        size: options.size,
-        palette: options.palette,
-        options: options.options,
-        ..SessionConfig::default()
-    };
-    Ok(Session::start(backend, events, config, notify)?)
+    (asker, status)
 }
 
 /// [`open_local`] with any way of starting the session (tests use a replay backend).

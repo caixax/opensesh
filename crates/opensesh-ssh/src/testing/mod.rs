@@ -5,8 +5,9 @@
 //! echoes what it gets ("exit" ends it with status 3, "drop" drops the connection, "cd /path"
 //! reports the folder with OSC 7). It also answers the OS detection command, "install my key"
 //! (into [`Rules::authorized_keys`]), and the remote monitor and host info commands (the readings
-//! of a made-up Debian server, one a second, its counters growing), and serves SFTP over a folder
-//! when [`Rules::sftp_root`] names one. Nothing here runs unless a test or the smoke test starts it.
+//! of a made-up Debian server, one a second, its counters growing), `mosh-server new` with
+//! [`Rules::mosh`], and serves SFTP over a folder when [`Rules::sftp_root`] names one. Nothing here
+//! runs unless a test or the smoke test starts it.
 
 mod sftp;
 
@@ -20,7 +21,12 @@ use russh::server::{Auth, Handler, Msg, Session};
 use russh::{Channel, ChannelId, MethodKind, MethodSet};
 use tokio::net::TcpListener;
 
-use crate::{copy_id, monitor, osdetect};
+use crate::{copy_id, monitor, mosh, osdetect};
+
+/// What `mosh-server new` prints here (with [`Rules::mosh`]): a session on UDP port 60001.
+pub const MOSH_OUTPUT: &str = "\r\nMOSH CONNECT 60001 T3BlblNlc2ggdGVzdCBrZQ\r\n\r\n\
+    mosh-server (mosh 1.4.0) [build mosh 1.4.0]\r\n\
+    [mosh-server detached, pid = 4242]\r\n";
 
 /// The user name the server knows.
 pub const USER: &str = "tester";
@@ -51,6 +57,8 @@ pub struct Rules {
     /// Answer the remote monitor and host info commands (else they fail, as on a server without
     /// `sh`).
     pub monitor: bool,
+    /// Answer `mosh-server new` with a session (else it isn't installed).
+    pub mosh: bool,
 }
 
 struct Server {
@@ -362,6 +370,11 @@ impl Handler for Server {
                 }
             });
             self.monitors.insert(channel, task);
+        } else if self.rules.mosh && command == mosh::SERVER_COMMAND.as_bytes() {
+            session.data(channel, MOSH_OUTPUT.as_bytes().to_vec())?;
+            session.exit_status_request(channel, 0)?;
+            session.eof(channel)?;
+            session.close(channel)?;
         } else if self.rules.monitor && command == monitor::info_command().as_bytes() {
             session.data(channel, format!("{SAMPLE_INFO}{}", sample_reading(0)))?;
             session.exit_status_request(channel, 0)?;

@@ -860,7 +860,7 @@ Item {
     // The built-in SSH client's state and questions.
     Loader {
         anchors.fill: terminal
-        active: pane.kind === "ssh" && (pane.startSession || pane.sshSample !== null)
+        active: (pane.kind === "ssh" || pane.kind === "mosh") && (pane.startSession || pane.sshSample !== null)
         z: 3
 
         sourceComponent: SshOverlay {

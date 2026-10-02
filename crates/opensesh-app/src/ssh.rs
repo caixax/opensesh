@@ -331,30 +331,9 @@ fn session_for(
     term: &str,
 ) -> Result<SshStart, String> {
     let services = services::get().ok_or("the app isn't ready")?;
-    let config = services.paths.config_dir();
     let data = services.paths.data_dir();
-    let home = opensesh_core::paths::home_dir();
     let resolved = file.resolve(host);
-    let mut hops = Vec::new();
-    for reference in resolved.jump() {
-        hops.push(jump_hop(file, &reference, home.as_deref())?);
-    }
-    hops.push(host_hop(file, host, home.as_deref()));
-    let keepalive = u64::from(resolved.keepalive_secs());
-    let connect = ConnectSpec {
-        hops,
-        proxy: proxy_of(
-            resolved.string("ssh.proxy"),
-            resolved.string("ssh.proxy_command"),
-        )?,
-        legacy: resolved.flag("ssh.legacy_algorithms"),
-        compression: resolved.flag("ssh.compression"),
-        keepalive: (keepalive > 0).then(|| Duration::from_secs(keepalive)),
-        connect_timeout: CONNECT_TIMEOUT,
-        known_hosts: known_hosts(config, home.as_deref()),
-        agent_forwarding: resolved.flag("ssh.agent_forwarding"),
-        agent_socket: resolved.string("ssh.agent_socket").map(str::to_owned),
-    };
+    let connect = connect_for(file, host)?;
     let mut env: Vec<(String, String)> = if resolved.flag("ssh.send_locale") {
         locale_env()
     } else {
@@ -379,7 +358,7 @@ fn session_for(
     let auto_icon = !host.id.is_empty() && (host.icon.is_empty() || host.icon == "auto");
     Ok(SshStart {
         host: (!host.id.is_empty()).then(|| host.id.clone()),
-        connect: hermetic(connect)?,
+        connect,
         session,
         options: Options {
             detect_os: auto_icon && resolved.flag("ssh.detect_os"),
@@ -389,6 +368,40 @@ fn session_for(
                 .then(|| Duration::from_secs(u64::from(MONITOR_INTERVAL.load(Ordering::Relaxed)))),
         },
     })
+}
+
+/// The SSH connection to `host` (saved, or made from quick-connect text): its jump hosts, proxy
+/// and algorithms, what it and its groups say. A test run's goes to its test server.
+///
+/// # Errors
+///
+/// A message when the app isn't ready, or a jump host or the proxy is bad.
+pub fn connect_for(file: &HostsFile, host: &Host) -> Result<ConnectSpec, String> {
+    let services = services::get().ok_or("the app isn't ready")?;
+    let config = services.paths.config_dir();
+    let home = opensesh_core::paths::home_dir();
+    let resolved = file.resolve(host);
+    let mut hops = Vec::new();
+    for reference in resolved.jump() {
+        hops.push(jump_hop(file, &reference, home.as_deref())?);
+    }
+    hops.push(host_hop(file, host, home.as_deref()));
+    let keepalive = u64::from(resolved.keepalive_secs());
+    let connect = ConnectSpec {
+        hops,
+        proxy: proxy_of(
+            resolved.string("ssh.proxy"),
+            resolved.string("ssh.proxy_command"),
+        )?,
+        legacy: resolved.flag("ssh.legacy_algorithms"),
+        compression: resolved.flag("ssh.compression"),
+        keepalive: (keepalive > 0).then(|| Duration::from_secs(keepalive)),
+        connect_timeout: CONNECT_TIMEOUT,
+        known_hosts: known_hosts(config, home.as_deref()),
+        agent_forwarding: resolved.flag("ssh.agent_forwarding"),
+        agent_socket: resolved.string("ssh.agent_socket").map(str::to_owned),
+    };
+    hermetic(connect)
 }
 
 /// The session of quick-connect `text` (`user@host:port -J jump`).

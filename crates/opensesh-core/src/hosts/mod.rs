@@ -135,8 +135,8 @@ impl Protocol {
         match self {
             Self::Ssh | Self::Local => None,
             Self::Sftp => Some(8),
-            Self::Telnet | Self::Serial => None,
-            Self::Mosh | Self::Docker | Self::Kube => Some(12),
+            Self::Telnet | Self::Serial | Self::Mosh => None,
+            Self::Docker | Self::Kube => Some(12),
             Self::Rdp => Some(13),
             Self::Vnc => Some(14),
         }

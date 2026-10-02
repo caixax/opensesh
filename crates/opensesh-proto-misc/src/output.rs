@@ -110,6 +110,11 @@ impl Output {
         }
     }
 
+    /// The engine's event channel itself, for events passed on as they are (another backend's).
+    pub fn sender(&self) -> Sender<BackendEvent> {
+        self.events.clone()
+    }
+
     /// What the other end printed (logged).
     pub async fn data(&self, bytes: &[u8]) -> bool {
         if bytes.is_empty() {
