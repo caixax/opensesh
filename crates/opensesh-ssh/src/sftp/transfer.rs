@@ -385,8 +385,8 @@ impl Queue {
             id,
             label: label(&request),
             destination: request.destination.clone(),
-            from_remote: request.from.remote().is_some(),
-            to_remote: request.to.remote().is_some(),
+            from_remote: !request.from.is_local(),
+            to_remote: !request.to.is_local(),
             state: State::Queued,
             files_total: 0,
             files_done: 0,
@@ -928,7 +928,7 @@ impl FileJob {
         let mut target = item.to.clone();
         let start = match item.resume_at {
             Some(offset) => Start::At(offset),
-            None => self.decide(&item, &mut target).await?,
+            None => Box::pin(self.decide(&item, &mut target)).await?,
         };
         let offset = match start {
             Start::Skip => {
@@ -950,6 +950,17 @@ impl FileJob {
         self.queue.update(self.id, |progress| {
             progress.current = path::file_name(to.style(), &target);
         });
+        // Inside the same S3 storage, the server copies.
+        if let Some(s3) = to.s3()
+            && from.same(&to)
+        {
+            s3.copy_file(&item.from, &target, item.entry.size).await?;
+            self.counters
+                .bytes_done
+                .fetch_add(item.entry.size, Ordering::Relaxed);
+            self.counters.files_done.fetch_add(1, Ordering::Relaxed);
+            return Ok(Outcome::Done);
+        }
         let mut reader = from.open_read(&item.from, offset).await?;
         let mut writer = to
             .open_write(&target, (offset > 0).then_some(offset))
@@ -960,19 +971,32 @@ impl FileJob {
             let control = *self.control.borrow_and_update();
             match control {
                 Control::Run => {}
-                Control::Pause => {
+                Control::Pause if to.can_resume() => {
                     writer
                         .shutdown()
                         .await
                         .map_err(|error| FsError::io(&target, &error))?;
                     return Ok(Outcome::Paused(written));
                 }
-                Control::Cancel => {
+                Control::Pause => {
+                    // Dropped, not shut down: the upload is abandoned, and starts over.
+                    drop(writer);
+                    self.counters
+                        .bytes_done
+                        .fetch_sub(written, Ordering::Relaxed);
+                    return Ok(Outcome::Paused(0));
+                }
+                Control::Cancel if to.can_resume() => {
                     let _ = writer.shutdown().await;
                     drop(writer);
                     if offset == 0 {
                         let _ = to.remove(&target, false).await;
                     }
+                    return Err(FsError::Cancelled);
+                }
+                Control::Cancel => {
+                    // Abandoned: whatever was there before stays as it was.
+                    drop(writer);
                     return Err(FsError::Cancelled);
                 }
             }
@@ -999,6 +1023,7 @@ impl FileJob {
         drop(writer);
         let options = self.request.options;
         if options.preserve_times
+            && to.keeps_metadata()
             && let Some(modified) = item.entry.modified
         {
             // A server that refuses is not worth failing the copy for.
@@ -1007,6 +1032,7 @@ impl FileJob {
             }
         }
         if options.preserve_permissions
+            && to.keeps_metadata()
             && let Err(error) = to.chmod(&target, item.entry.mode).await
         {
             tracing::info!("permissions not kept: {error}");
@@ -1038,7 +1064,7 @@ impl FileJob {
                 path: target.clone(),
                 source: source.clone(),
                 existing: existing.clone(),
-                resumable: shorter,
+                resumable: shorter && to.can_resume(),
             };
             {
                 let mut jobs = self.queue.jobs();
@@ -1069,12 +1095,14 @@ impl FileJob {
             Policy::Resume => {
                 if existing.size <= source.size
                     && existing.size > 0
-                    && tails_match(from, &item.from, to, target, existing.size).await?
+                    && Box::pin(tails_match(from, &item.from, to, target, existing.size)).await?
                 {
                     if existing.size == source.size {
                         Start::Skip
-                    } else {
+                    } else if to.can_resume() {
                         Start::At(existing.size)
+                    } else {
+                        Start::Fresh
                     }
                 } else {
                     Start::Fresh
