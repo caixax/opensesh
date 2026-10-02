@@ -194,6 +194,31 @@ pub async fn open_remote(
     Ok(Remote::open(connection).await?)
 }
 
+/// Opens the files of `source`: a server's ([`open_remote`]) or S3 storage's (an S3 host or an
+/// `s3://` target, [`crate::s3::open`]), and where to start when the source says so (an `s3://`
+/// path; empty otherwise).
+///
+/// # Errors
+///
+/// [`OpenError`] as for [`open_remote`] and [`crate::s3::open`].
+pub async fn open_files(
+    source: Source,
+    asker: &Asker,
+    notes: &Notes,
+) -> Result<(Fs, String), OpenError> {
+    let s3 = match &source {
+        Source::Host(id) => crate::s3::host_of(Some(id), None),
+        Source::Target(text) => crate::s3::host_of(None, Some(text)),
+        Source::Terminal(_) => None,
+    };
+    if let Some((host, start)) = s3 {
+        let fs = crate::s3::open(&host, &start, asker).await?;
+        return Ok((fs, start));
+    }
+    let remote = open_remote(source, asker, notes).await?;
+    Ok((Fs::Remote(Arc::new(remote)), String::new()))
+}
+
 /// The mark that says the shell integration is in an rc file.
 const INTEGRATION_MARK: &str = "opensesh shell integration";
 

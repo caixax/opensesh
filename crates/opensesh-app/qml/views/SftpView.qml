@@ -266,7 +266,79 @@ Item {
                 return [connectRight, () => wait("the swapped sides", () => left.ready && left.browser.path === folder && right.browser.path === "/",
                                                  () => console.info("smoke test: the SFTP view swapped its sides"))];
             },
+            // S3 storage (its in-process test server): the buckets, a bucket's folders, an
+            // upload, a temporary link, a folder downloaded, a folder made, renamed and deleted.
             () => {
+                if (AppInfo.startS3TestServer() <= 0)
+                    smoke.fail("the S3 test server didn't start");
+                view.setSource(0, leftSide.initial);
+                view.setSource(1, { mode: "remote", hostId: "", target: "s3://smoke@storage.example/media", title: "S3" }); // lint-qml: allow (a quick-connect URL)
+                left = view.pane(0);
+                right = view.pane(1);
+                return wait("the S3 pane", () => left !== null && left.ready && right !== null
+                            && (right.ready || right.browser.status === "error"));
+            },
+            () => {
+                if (right.browser.status === "error")
+                    smoke.fail("the S3 pane couldn't open: " + right.browser.error + " " + right.browser.errorDetail);
+                if (right.browser.storage !== "s3" || !right.s3)
+                    smoke.fail("the right pane isn't S3 storage: " + right.browser.storage);
+                if (right.browser.path !== "/media" || right.browser.rowOf("photos") < 0 || right.browser.rowOf("notes.txt") < 0)
+                    smoke.fail("the S3 pane started at " + right.browser.path + " with " + right.browser.allNames().join(", "));
+                right.browser.done.connect(failOnError);
+                left.navigate(AppInfo.testFolder() + left.browser.separator + "local");
+                right.navigate("/");
+                return wait("the buckets and the local folder", () => right.browser.path === "/" && right.browser.rowOf("backups") >= 0
+                            && right.browser.rowOf("media") >= 0 && left.browser.rowOf("notes.txt") >= 0);
+            },
+            () => {
+                right.navigate("/backups");
+                return wait("a bucket", () => right.browser.path === "/backups" && right.browser.rowOf("db") >= 0);
+            },
+            () => {
+                job = Transfers.copy(left.browser.paneId, left.browser.pathsOf(["notes.txt"]), right.browser.paneId, "/backups", false);
+                if (job <= 0)
+                    smoke.fail("an upload to S3 wasn't queued");
+                return wait("the upload to S3", () => jobState(job) === "done" && right.browser.rowOf("notes.txt") >= 0);
+            },
+            () => {
+                if (entry(right, "notes.txt").size !== 10000)
+                    smoke.fail("the S3 object's size is " + entry(right, "notes.txt").size);
+                let link = "";
+                const token = right.browser.temporaryLink(right.browser.rowOf("notes.txt"), 3600);
+                const onLink = (done, code, detail) => {
+                    if (done === token)
+                        link = code.length === 0 ? detail : "failed: " + code;
+                };
+                right.browser.done.connect(onLink);
+                return wait("a temporary link", () => link.length > 0, () => {
+                    right.browser.done.disconnect(onLink);
+                    if (link.indexOf("/backups/notes.txt?") < 0 || link.indexOf("X-Amz-Expires=3600") < 0)
+                        smoke.fail("the temporary link is " + link);
+                    return [];
+                });
+            },
+            () => {
+                job = Transfers.copy(right.browser.paneId, ["/media/photos"], left.browser.paneId, left.browser.path, false);
+                return wait("a folder downloaded from S3", () => jobState(job) === "done" && left.browser.rowOf("photos") >= 0);
+            },
+            () => {
+                left.browser.remove(left.browser.pathsOf(["photos"]));
+                right.browser.mkdir("albums");
+                return wait("the local copy deleted and a new S3 folder", () => left.browser.rowOf("photos") < 0 && right.browser.rowOf("albums") >= 0);
+            },
+            () => {
+                right.browser.rename(right.browser.rowOf("albums"), "albums-2026");
+                return wait("the S3 folder renamed", () => right.browser.rowOf("albums-2026") >= 0 && right.browser.rowOf("albums") < 0);
+            },
+            () => {
+                right.browser.remove(right.browser.pathsOf(["albums-2026", "notes.txt"]));
+                return wait("the S3 folder and object deleted", () => right.browser.rowOf("albums-2026") < 0 && right.browser.rowOf("notes.txt") < 0);
+            },
+            () => {
+                right.browser.done.disconnect(failOnError);
+                Transfers.clearFinished();
+                console.info("smoke test: the S3 view listed buckets and folders, uploaded, made a temporary link, downloaded a folder, made, renamed and deleted one");
                 view.setSource(0, leftSide.initial);
                 view.setSource(1, rightSide.initial);
             }
@@ -355,7 +427,7 @@ Item {
         readonly property Item pane: loader.item
         // Saved hosts with files to browse (the list follows edits of hosts.toml).
         readonly property var hosts: Hosts.revision >= 0 ? JSON.parse(Hosts.search("", "all", "", "", "name") || "[]")
-            .filter(host => host.protocol === "ssh" || host.protocol === "sftp") : []
+            .filter(host => host.protocol === "ssh" || host.protocol === "sftp" || host.protocol === "s3") : []
         readonly property var choices: [{ text: qsTr("This computer"), value: "local" }]
             .concat(hosts.map(host => ({ text: host.name, value: "host:" + host.id })))
             .concat([{ text: qsTr("Connect to user@host…"), value: "other" }])
@@ -387,7 +459,7 @@ Item {
             spacing: Theme.spacingSm
 
             OsIcon {
-                name: side.source.mode === "local" ? "hard-drive" : "server"
+                name: side.source.mode === "local" ? "hard-drive" : side.pane && side.pane.s3 ? "cloud" : "server"
                 size: Theme.iconSize
                 color: Theme.textMuted
             }
@@ -461,7 +533,7 @@ Item {
             id: targetField
 
             implicitWidth: Math.min(Theme.spacingXxl * 10, targetDialog.maxWidth - targetDialog.leftPadding - targetDialog.rightPadding)
-            placeholderText: qsTr("user@host:port")
+            placeholderText: qsTr("user@host:port, or s3://access_key@host:port")
             Accessible.name: qsTr("Where to connect")
             onAccepted: {
                 if (targetDialog.acceptEnabled)

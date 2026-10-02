@@ -952,6 +952,10 @@
         </translation>
     </message>
     <message>
+        <source>A temporary link is on the clipboard.</source>
+        <translation>[Å ťémþöŕáŕý ĺíñķ íš öñ ťĥé çĺíþböáŕď. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Up (Backspace)</source>
         <translation>[Üþ (Báçķšþáçé) ~~~~~]</translation>
     </message>
@@ -1135,6 +1139,18 @@
         <translation>[Çöþý ťĥé þáťĥ ~~~~]</translation>
     </message>
     <message>
+        <source>Copy a link for an hour</source>
+        <translation>[Çöþý á ĺíñķ ƒöŕ áñ ĥöüŕ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy a link for a day</source>
+        <translation>[Çöþý á ĺíñķ ƒöŕ á ďáý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Copy a link for a week</source>
+        <translation>[Çöþý á ĺíñķ ƒöŕ á ŵééķ ~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Rename…</source>
         <translation>[Ŕéñámé… ~~~]</translation>
     </message>
@@ -1173,6 +1189,10 @@
     <message>
         <source>New folder…</source>
         <translation>[Ñéŵ ƒöĺďéŕ… ~~~~]</translation>
+    </message>
+    <message>
+        <source>New bucket…</source>
+        <translation>[Ñéŵ büçķéť… ~~~~]</translation>
     </message>
     <message>
         <source>F7</source>
@@ -2030,6 +2050,10 @@
         <translation>[Ñöť á çöñťáíñéŕ öŕ þöď ñámé (ñö šþáçéš, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>A server address like https://host:port, with no path.</source>
+        <translation>[Å šéŕvéŕ áďďŕéšš ĺíķé ĥťťþš://ĥöšť:þöŕť, ŵíťĥ ñö þáťĥ. ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Not a host name or address (no spaces, @ or /, and not starting with -).</source>
         <translation>[Ñöť á ĥöšť ñámé öŕ áďďŕéšš (ñö šþáçéš, @ öŕ /, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2044,6 +2068,10 @@
     <message>
         <source>A program and its arguments, with quotes closed.</source>
         <translation>[Å þŕöĝŕám áñď íťš áŕĝüméñťš, ŵíťĥ qüöťéš çĺöšéď. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Letters, digits and hyphens, as in eu-west-1.</source>
+        <translation>[Ĺéťťéŕš, ďíĝíťš áñď ĥýþĥéñš, áš íñ éü-ŵéšť-1. ~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Not a user name (no spaces, and not starting with -).</source>
@@ -2086,6 +2114,10 @@
         <translation>[Ťĥé ĥöšť çöüĺď ñöť bé šávéď. ~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>S3: %1</source>
+        <translation>[Š3: %1 ~~]</translation>
+    </message>
+    <message>
         <source>SSH</source>
         <translation>[ŠŠĤ ~]</translation>
     </message>
@@ -2120,6 +2152,10 @@
     <message>
         <source>Kubernetes pod</source>
         <translation>[Ķübéŕñéťéš þöď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>S3 storage</source>
+        <translation>[Š3 šťöŕáĝé ~~~]</translation>
     </message>
     <message>
         <source>None</source>
@@ -2246,12 +2282,40 @@
         <translation>[Þŕöťöçöĺ ~~~]</translation>
     </message>
     <message>
+        <source>Endpoint</source>
+        <translation>[Éñďþöíñť ~~~]</translation>
+    </message>
+    <message>
+        <source>The server only (empty for AWS): buckets are chosen in the files view.</source>
+        <translation>[Ťĥé šéŕvéŕ öñĺý (émþťý ƒöŕ ÅŴŠ): büçķéťš áŕé çĥöšéñ íñ ťĥé ƒíĺéš víéŵ. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>container name or ID</source>
         <translation>[çöñťáíñéŕ ñámé öŕ ÍĎ ~~~~~~]</translation>
     </message>
     <message>
         <source>pod name</source>
         <translation>[þöď ñámé ~~~]</translation>
+    </message>
+    <message>
+        <source>https://s3.example.com or http://nas:9000</source>
+        <translation>[ĥťťþš://š3.éxámþĺé.çöm öŕ ĥťťþ://ñáš:9000 ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Region</source>
+        <translation>[Ŕéĝíöñ ~~]</translation>
+    </message>
+    <message>
+        <source>Path-style addresses</source>
+        <translation>[Þáťĥ-šťýĺé áďďŕéššéš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Default (on)</source>
+        <translation>[Ďéƒáüĺť (öñ) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Buckets in the path (server/bucket) rather than in the host name (bucket.server): what MinIO, RustFS and most other servers want.</source>
+        <translation>[Büçķéťš íñ ťĥé þáťĥ (šéŕvéŕ/büçķéť) ŕáťĥéŕ ťĥáñ íñ ťĥé ĥöšť ñámé (büçķéť.šéŕvéŕ): ŵĥáť MíñÍÖ, ŔüšťFŠ áñď möšť öťĥéŕ šéŕvéŕš ŵáñť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Engine</source>
@@ -2338,8 +2402,36 @@
         <translation>[Ťéĺñéť šéñďš évéŕýťĥíñĝ íñ çĺéáŕ, þáššŵöŕďš ťöö: áñýöñé öñ ťĥé ñéťŵöŕķ þáťĥ çáñ ŕéáď íť. Üšé ŠŠĤ ŵĥéŕé ťĥé ďévíçé ĥáš íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>For S3, the identity&apos;s user name is the access key and its password the secret key.</source>
+        <translation>[Föŕ Š3, ťĥé íďéñťíťý&apos;š üšéŕ ñámé íš ťĥé áççéšš ķéý áñď íťš þáššŵöŕď ťĥé šéçŕéť ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>A user name with a password and/or a key from the keychain. The OpenSSH client only uses its user name.</source>
         <translation>[Å üšéŕ ñámé ŵíťĥ á þáššŵöŕď áñď/öŕ á ķéý ƒŕöm ťĥé ķéýçĥáíñ. Ťĥé ÖþéñŠŠĤ çĺíéñť öñĺý üšéš íťš üšéŕ ñámé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Access key</source>
+        <translation>[Åççéšš ķéý ~~~]</translation>
+    </message>
+    <message>
+        <source>the identity&apos;s user name</source>
+        <translation>[ťĥé íďéñťíťý&apos;š üšéŕ ñámé ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Secret key</source>
+        <translation>[Šéçŕéť ķéý ~~~]</translation>
+    </message>
+    <message>
+        <source>Saved encrypted in the vault, as the identity&apos;s password (a new identity named after the host when it has none). Left empty, the saved one stays, or it is asked for when connecting.</source>
+        <translation>[Šávéď éñçŕýþťéď íñ ťĥé váüĺť, áš ťĥé íďéñťíťý&apos;š þáššŵöŕď (á ñéŵ íďéñťíťý ñáméď áƒťéŕ ťĥé ĥöšť ŵĥéñ íť ĥáš ñöñé). Ĺéƒť émþťý, ťĥé šávéď öñé šťáýš, öŕ íť íš ášķéď ƒöŕ ŵĥéñ çöññéçťíñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>saved in the vault</source>
+        <translation>[šávéď íñ ťĥé váüĺť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>not saved</source>
+        <translation>[ñöť šávéď ~~~]</translation>
     </message>
     <message>
         <source>~/.ssh/id_ed25519, id_ecdsa or id_rsa, after the agent&apos;s keys</source>
@@ -2875,6 +2967,10 @@
     <message>
         <source>Kubernetes</source>
         <translation>[Ķübéŕñéťéš ~~~]</translation>
+    </message>
+    <message>
+        <source>S3</source>
+        <translation>[Š3 ~]</translation>
     </message>
     <message>
         <source>Save the servers you connect to and open them with one click, or bring in the ones in ~/.ssh/config.</source>
@@ -8875,8 +8971,8 @@
         <translation>[Çöññéçť ~~~]</translation>
     </message>
     <message>
-        <source>user@host:port</source>
-        <translation>[üšéŕ@ĥöšť:þöŕť ~~~~~]</translation>
+        <source>user@host:port, or s3://access_key@host:port</source>
+        <translation>[üšéŕ@ĥöšť:þöŕť, öŕ š3://áççéšš_ķéý@ĥöšť:þöŕť ~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Where to connect</source>

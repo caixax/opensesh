@@ -4,7 +4,10 @@ pragma ComponentBehavior: Bound
 // Each field shows what the host inherits when it sets nothing ("deploy (from Production)"),
 // and an empty field or "Inherit" goes back to inheriting. Problems show under their field as
 // the host is edited (Hosts.validateHost); Save is off until there are none. A host linked from
-// ~/.ssh/config is shown read-only, with Duplicate to make an editable copy.
+// ~/.ssh/config is shown read-only, with Duplicate to make an editable copy. An S3 host's secret
+// key goes into the vault, as the password of the host's identity (a new one named after the
+// host when it has none): hosts.toml keeps only the identity's id.
+//   shell: Item   the AppShell (unlockVault())
 // Functions: edit(id), create(group) (a new host in group `group`, "" for none).
 import QtQuick
 import QtQuick.Dialogs
@@ -17,6 +20,7 @@ OsDialog {
 
     // The host being edited, as Hosts.hostJson gives it (minus `inherited` and `linked`).
     property var draft: ({})
+    property Item shell: null
     property var inheritedMap: ({})
     property var errors: ({})
     property bool readOnly: false
@@ -55,6 +59,7 @@ OsDialog {
     }
 
     function open_(host) {
+        secretField.text = "";
         draft = host;
         section = 0;
         refreshInherited();
@@ -143,6 +148,8 @@ OsDialog {
                 return qsTr("Not a device name.");
             if (protocol === "docker" || protocol === "kube")
                 return qsTr("Not a container or pod name (no spaces, and not starting with -).");
+            if (protocol === "s3")
+                return qsTr("A server address like https://host:port, with no path.");
             return qsTr("Not a host name or address (no spaces, @ or /, and not starting with -).");
         case "container.namespace":
         case "container.pod_container":
@@ -151,6 +158,8 @@ OsDialog {
             return qsTr("Not a context name (no spaces, and not starting with -).");
         case "container.shell":
             return qsTr("A program and its arguments, with quotes closed.");
+        case "s3.region":
+            return qsTr("Letters, digits and hyphens, as in eu-west-1.");
         case "user":
             return qsTr("Not a user name (no spaces, and not starting with -).");
         case "port":
@@ -183,8 +192,46 @@ OsDialog {
                 Qt.callLater(() => dialog.edit(copy));
             return;
         }
+        // Taken out of the field at once: it goes to the vault or nowhere.
+        const secret = secretField.text;
+        secretField.text = "";
+        if (protocol === "s3" && secret.length > 0) {
+            saveS3Keys(secret);
+            return;
+        }
         if (Hosts.saveHost(JSON.stringify(draft)).length === 0)
             Toasts.show(qsTr("The host could not be saved."), "danger");
+    }
+
+    // The secret key into the vault (it must be open), then the host with its identity.
+    function saveS3Keys(secret) {
+        if (Keychain.vaultStatus === "locked" && shell) {
+            shell.unlockVault(() => dialog.saveS3Keys(secret));
+            return;
+        }
+        const current = identityList.find(identity => identity.id === draft.identity);
+        const identity = current ? {
+            id: current.id,
+            name: current.name,
+            user: draft.user ?? current.user,
+            key: current.key ?? "",
+            notes: current.notes ?? ""
+        } : {
+            id: "",
+            name: qsTr("S3: %1").arg(draft.name),
+            user: draft.user ?? "",
+            key: "",
+            notes: ""
+        };
+        KeychainTasks.run(Keychain.saveIdentity(JSON.stringify(identity), "set", secret), (code, detail, value) => {
+            if (code.length > 0) {
+                Toasts.show(KeychainTasks.message(code, detail), "danger");
+                return;
+            }
+            dialog.setValue("identity", value && String(value).length > 0 ? String(value) : identity.id);
+            if (Hosts.saveHost(JSON.stringify(dialog.draft)).length === 0)
+                Toasts.show(qsTr("The host could not be saved."), "danger");
+        });
     }
 
     readonly property var protocolOptions: [
@@ -197,7 +244,8 @@ OsDialog {
         { text: qsTr("VNC"), value: "vnc" },
         { text: qsTr("Local shell"), value: "local" },
         { text: qsTr("Docker container"), value: "docker" },
-        { text: qsTr("Kubernetes pod"), value: "kube" }
+        { text: qsTr("Kubernetes pod"), value: "kube" },
+        { text: qsTr("S3 storage"), value: "s3" }
     ]
     readonly property var onOff: [{ text: qsTr("On"), value: true }, { text: qsTr("Off"), value: false }]
     readonly property var colorOptions: [{ text: qsTr("None"), value: undefined }].concat(TabColors.options)
@@ -229,6 +277,7 @@ OsDialog {
     acceptEnabled: readOnly || (revision >= 0 && !hasErrors())
 
     onAccepted: save()
+    onRejected: secretField.text = ""
 
     // A fixed size the dialog shrinks to fit the window (OsDialog caps it); the sections scroll.
     Item {
@@ -318,6 +367,7 @@ OsDialog {
                                 case "mosh":
                                 case "docker":
                                 case "kube":
+                                case "s3":
                                     return "";
                                 case "sftp":
                                     return qsTr("Saved now; the file browser arrives in Sprint 8.");
@@ -338,8 +388,21 @@ OsDialog {
                             path: "address"
                             inheritKey: ""
                             visible: dialog.protocol !== "local"
-                            label: dialog.protocol === "serial" ? qsTr("Device") : dialog.protocol === "docker" ? qsTr("Container")
-                                                                                                              : dialog.protocol === "kube" ? qsTr("Pod") : qsTr("Address")
+                            label: {
+                                switch (dialog.protocol) {
+                                case "serial":
+                                    return qsTr("Device");
+                                case "docker":
+                                    return qsTr("Container");
+                                case "kube":
+                                    return qsTr("Pod");
+                                case "s3":
+                                    return qsTr("Endpoint");
+                                default:
+                                    return qsTr("Address");
+                                }
+                            }
+                            helpText: dialog.protocol === "s3" ? qsTr("The server only (empty for AWS): buckets are chosen in the files view.") : ""
                             placeholder: {
                                 switch (dialog.protocol) {
                                 case "serial":
@@ -348,10 +411,31 @@ OsDialog {
                                     return qsTr("container name or ID");
                                 case "kube":
                                     return qsTr("pod name");
+                                case "s3":
+                                    return qsTr("https://s3.example.com or http://nas:9000");
                                 default:
                                     return qsTr("host name or IP address");
                                 }
                             }
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "s3.region"
+                            inheritKey: ""
+                            visible: dialog.protocol === "s3"
+                            label: qsTr("Region")
+                            placeholder: "us-east-1"
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "s3.path_style"
+                            inherit: false
+                            visible: dialog.protocol === "s3"
+                            label: qsTr("Path-style addresses")
+                            options: [{ text: qsTr("Default (on)"), value: undefined }].concat(dialog.onOff)
+                            helpText: qsTr("Buckets in the path (server/bucket) rather than in the host name (bucket.server): what MinIO, RustFS and most other servers want.")
                         }
 
                         // Containers and pods: what runs them, and the running ones to pick.
@@ -593,19 +677,41 @@ OsDialog {
                                 text: identity.user.length > 0 ? qsTr("%1 (%2)").arg(identity.name).arg(identity.user) : identity.name,
                                 value: identity.id
                             })))
-                            helpText: qsTr("A user name with a password and/or a key from the keychain. The OpenSSH client only uses its user name.")
+                            helpText: dialog.protocol === "s3" ? qsTr("For S3, the identity's user name is the access key and its password the secret key.")
+                                                               : qsTr("A user name with a password and/or a key from the keychain. The OpenSSH client only uses its user name.")
                         }
 
                         EditorTextRow {
                             editor: dialog
                             path: "user"
-                            label: qsTr("User")
-                            placeholder: qsTr("the identity's, else the local user name")
+                            label: dialog.protocol === "s3" ? qsTr("Access key") : qsTr("User")
+                            placeholder: dialog.protocol === "s3" ? qsTr("the identity's user name") : qsTr("the identity's, else the local user name")
+                        }
+
+                        OsFormRow {
+                            width: parent.width
+                            visible: dialog.protocol === "s3"
+                            label: qsTr("Secret key")
+                            helpText: qsTr("Saved encrypted in the vault, as the identity's password (a new identity named after the host when it has none). Left empty, the saved one stays, or it is asked for when connecting.")
+
+                            OsTextField {
+                                id: secretField
+
+                                width: parent.width
+                                readOnly: dialog.readOnly
+                                echoMode: TextInput.Password
+                                placeholderText: {
+                                    const current = dialog.identityList.find(identity => identity.id === dialog.draft.identity);
+                                    return current && current.hasPassword ? qsTr("saved in the vault") : qsTr("not saved");
+                                }
+                                Accessible.name: qsTr("Secret key")
+                            }
                         }
 
                         EditorTextRow {
                             id: identityRow
 
+                            visible: dialog.protocol !== "s3"
                             editor: dialog
                             path: "identity_file"
                             label: qsTr("Private key file")

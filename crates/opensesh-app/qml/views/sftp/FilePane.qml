@@ -44,6 +44,10 @@ FocusScope {
     property bool compact: false
     property Item peer: null
     readonly property alias browser: browser
+    // S3 storage: no permissions, owners or links; temporary links instead.
+    readonly property bool s3: browser.storage === "s3"
+    // Tokens of temporary links being made (token -> true).
+    property var linkTokens: ({})
     readonly property Item shell: WindowRegistry.mainShell
     readonly property bool ready: browser.status === "ready"
     // Selected names (name -> true); reassigned on each change so bindings follow.
@@ -257,6 +261,22 @@ FocusScope {
             previewDialog.show(browser, row);
     }
 
+    // A link to the selected S3 object that works without the keys for `seconds`.
+    function temporaryLink(seconds) {
+        const names = selectedNames();
+        if (names.length !== 1)
+            return;
+        const token = browser.temporaryLink(browser.rowOf(names[0]), seconds);
+        const next = Object.assign({}, linkTokens);
+        next[token] = true;
+        linkTokens = next;
+    }
+
+    function selectedIsFile() {
+        const names = selectedNames();
+        return names.length === 1 && JSON.parse(browser.entryJson(browser.rowOf(names[0])) || "{}").kind === "file";
+    }
+
     function copyPaths() {
         const paths = selectedPaths();
         if (paths.length > 0) {
@@ -305,6 +325,14 @@ FocusScope {
 
         onListingChanged: pane.pruneSelection()
         onDone: (token, code, detail) => {
+            if (pane.linkTokens[token]) {
+                delete pane.linkTokens[token];
+                if (code.length === 0) {
+                    Platform.copyText(detail);
+                    Toasts.show(qsTr("A temporary link is on the clipboard."), "success");
+                    return;
+                }
+            }
             if (code.length > 0 && code !== "disconnected")
                 Toasts.show(pane.errorText(code, detail), "danger");
         }
@@ -510,13 +538,13 @@ FocusScope {
                 }
                 SortHeader {
                     Layout.preferredWidth: Theme.spacingXxl * 3
-                    visible: !pane.compact
+                    visible: !pane.compact && !pane.s3
                     key: "permissions"
                     text: qsTr("Permissions")
                 }
                 SortHeader {
                     Layout.preferredWidth: Theme.spacingXxl * 2.5
-                    visible: !pane.compact
+                    visible: !pane.compact && !pane.s3
                     key: "owner"
                     text: qsTr("Owner")
                 }
@@ -925,7 +953,7 @@ FocusScope {
 
             Text {
                 Layout.preferredWidth: Theme.spacingXxl * 3
-                visible: !row.pane.compact
+                visible: !row.pane.compact && !row.pane.s3
                 text: row.permissions
                 color: Theme.textMuted
                 font.family: Theme.monoFontFamily
@@ -935,7 +963,7 @@ FocusScope {
 
             OsText {
                 Layout.preferredWidth: Theme.spacingXxl * 2.5
-                visible: !row.pane.compact
+                visible: !row.pane.compact && !row.pane.s3
                 text: row.owner
                 size: "small"
                 muted: true
@@ -1041,6 +1069,28 @@ FocusScope {
             text: qsTr("Copy the path")
             onTriggered: pane.copyPaths()
         }
+        OsMenuItem {
+            visible: pane.s3
+            height: visible ? implicitHeight : 0
+            text: qsTr("Copy a link for an hour")
+            iconName: "link"
+            enabled: pane.s3 && pane.selectedIsFile()
+            onTriggered: pane.temporaryLink(3600)
+        }
+        OsMenuItem {
+            visible: pane.s3
+            height: visible ? implicitHeight : 0
+            text: qsTr("Copy a link for a day")
+            enabled: pane.s3 && pane.selectedIsFile()
+            onTriggered: pane.temporaryLink(86400)
+        }
+        OsMenuItem {
+            visible: pane.s3
+            height: visible ? implicitHeight : 0
+            text: qsTr("Copy a link for a week")
+            enabled: pane.s3 && pane.selectedIsFile()
+            onTriggered: pane.temporaryLink(604800)
+        }
 
         OsMenuSeparator {}
 
@@ -1052,6 +1102,8 @@ FocusScope {
             onTriggered: pane.rename()
         }
         OsMenuItem {
+            visible: !pane.s3
+            height: visible ? implicitHeight : 0
             text: qsTr("Permissions…")
             iconName: "lock"
             onTriggered: pane.permissions()
@@ -1095,7 +1147,7 @@ FocusScope {
         OsMenuSeparator {}
 
         OsMenuItem {
-            text: qsTr("New folder…")
+            text: pane.s3 && browser.path === "/" ? qsTr("New bucket…") : qsTr("New folder…")
             iconName: "folder-plus"
             shortcutText: qsTr("F7")
             enabled: pane.ready
@@ -1108,6 +1160,8 @@ FocusScope {
             onTriggered: nameDialog.show("file", "")
         }
         OsMenuItem {
+            visible: !pane.s3
+            height: visible ? implicitHeight : 0
             text: qsTr("New symbolic link…")
             iconName: "link"
             enabled: pane.ready

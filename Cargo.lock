@@ -3094,6 +3094,7 @@ dependencies = [
  "opensesh-core",
  "opensesh-import",
  "opensesh-proto-misc",
+ "opensesh-s3",
  "opensesh-ssh",
  "opensesh-term",
  "opensesh-vault",

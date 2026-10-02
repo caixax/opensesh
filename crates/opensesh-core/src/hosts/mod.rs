@@ -66,11 +66,13 @@ pub enum Protocol {
     Docker,
     /// `kubectl exec` into a pod; the address is the pod.
     Kube,
+    /// S3 storage (AWS or a compatible server); the address is the endpoint, empty for AWS.
+    S3,
 }
 
 impl Protocol {
     /// Every protocol, in menu order.
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 11] = [
         Self::Ssh,
         Self::Sftp,
         Self::Telnet,
@@ -81,6 +83,7 @@ impl Protocol {
         Self::Local,
         Self::Docker,
         Self::Kube,
+        Self::S3,
     ];
 
     /// The name in files and URLs.
@@ -97,6 +100,7 @@ impl Protocol {
             Self::Local => "local",
             Self::Docker => "docker",
             Self::Kube => "kube",
+            Self::S3 => "s3",
         }
     }
 
@@ -116,14 +120,15 @@ impl Protocol {
             Self::Telnet => Some(23),
             Self::Rdp => Some(3389),
             Self::Vnc => Some(5900),
-            Self::Serial | Self::Local | Self::Docker | Self::Kube => None,
+            Self::Serial | Self::Local | Self::Docker | Self::Kube | Self::S3 => None,
         }
     }
 
-    /// Whether the host needs an address (a device for serial, a container or pod name).
+    /// Whether the host needs an address (a device for serial, a container or pod name). An
+    /// S3 host without one is on AWS.
     #[must_use]
     pub const fn needs_address(self) -> bool {
-        !matches!(self, Self::Local)
+        !matches!(self, Self::Local | Self::S3)
     }
 
     /// Whether the address is a network host with a port.
@@ -138,7 +143,7 @@ impl Protocol {
         match self {
             Self::Ssh | Self::Local => None,
             Self::Sftp => Some(8),
-            Self::Telnet | Self::Serial | Self::Mosh | Self::Docker | Self::Kube => None,
+            Self::Telnet | Self::Serial | Self::Mosh | Self::Docker | Self::Kube | Self::S3 => None,
             Self::Rdp => Some(13),
             Self::Vnc => Some(14),
         }
@@ -367,6 +372,75 @@ impl SerialOptions {
     }
 }
 
+/// S3 settings (an S3 host's address is its endpoint; its identity holds the access key as the
+/// user name and the secret key as the password).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct S3Options {
+    /// The region (unset: [`S3Options::DEFAULT_REGION`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region: Option<String>,
+    /// Buckets in the path rather than in the host name (unset: on, what most S3-compatible
+    /// servers want).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path_style: Option<bool>,
+}
+
+impl S3Options {
+    /// The region when none is set.
+    pub const DEFAULT_REGION: &str = "us-east-1";
+
+    /// Whether nothing is set.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+
+    /// The region.
+    #[must_use]
+    pub fn region(&self) -> &str {
+        self.region
+            .as_deref()
+            .map(str::trim)
+            .filter(|region| !region.is_empty())
+            .unwrap_or(Self::DEFAULT_REGION)
+    }
+
+    /// Path-style addressing.
+    #[must_use]
+    pub fn path_style(&self) -> bool {
+        self.path_style.unwrap_or(true)
+    }
+}
+
+/// Whether `text` can be an S3 endpoint: `host[:port]`, with `http://` or `https://` in front or
+/// not, and no path.
+#[must_use]
+pub fn is_endpoint(text: &str) -> bool {
+    let text = text.trim();
+    let rest = match text.split_once("://") {
+        Some((scheme, rest)) => {
+            if !scheme.eq_ignore_ascii_case("http") && !scheme.eq_ignore_ascii_case("https") {
+                return false;
+            }
+            rest
+        }
+        None => text,
+    };
+    let rest = rest.trim_end_matches('/');
+    !rest.is_empty()
+        && !rest.contains('/')
+        && target::parse_endpoint(rest).is_ok_and(|(user, _, _)| user.is_none())
+}
+
+/// Whether `region` can be a region name (letters, digits and hyphens).
+#[must_use]
+pub fn is_region(region: &str) -> bool {
+    !region.is_empty()
+        && region
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
 /// What a group gives its hosts and subgroups.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct HostDefaults {
@@ -508,6 +582,9 @@ pub struct Host {
     /// How a container or pod is entered (docker and kube hosts).
     #[serde(default, skip_serializing_if = "ContainerOptions::is_empty")]
     pub container: ContainerOptions,
+    /// S3 settings.
+    #[serde(default, skip_serializing_if = "S3Options::is_empty")]
+    pub s3: S3Options,
     /// Terminal options over the profile.
     #[serde(default, skip_serializing_if = "Table::is_empty")]
     pub terminal: Table,
@@ -539,6 +616,7 @@ impl Default for Host {
             sftp: SftpOptions::default(),
             serial: SerialOptions::default(),
             container: ContainerOptions::default(),
+            s3: S3Options::default(),
             terminal: Table::new(),
             extra: Table::new(),
         }
@@ -1304,6 +1382,7 @@ impl HostsFile {
                     !address.starts_with('-')
                         && !address.chars().any(|c| c.is_whitespace() || c.is_control())
                 }
+                Protocol::S3 => is_endpoint(address),
                 _ => target::check_name(address).is_ok() && !address.contains(['[', ']']),
             };
             if !valid {
@@ -1345,6 +1424,15 @@ impl HostsFile {
         check_ssh(&host.ssh, &mut problems);
         if matches!(host.protocol, Protocol::Docker | Protocol::Kube) {
             containers::check(&host.container, &mut problems);
+        }
+        if host
+            .s3
+            .region
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|region| !region.is_empty() && !is_region(region))
+        {
+            problems.push(("s3.region", "invalid"));
         }
         problems
     }

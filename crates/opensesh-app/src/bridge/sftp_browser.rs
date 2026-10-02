@@ -53,6 +53,7 @@ pub mod qobject {
         #[qproperty(QString, error_detail, cxx_name = "errorDetail", READ, NOTIFY = status_changed)]
         #[qproperty(bool, busy, READ, NOTIFY = status_changed)]
         #[qproperty(bool, remote, READ, NOTIFY = status_changed)]
+        #[qproperty(QString, storage, READ, NOTIFY = status_changed)]
         #[qproperty(QString, connection, READ, NOTIFY = status_changed)]
         #[qproperty(QString, prompt, READ, NOTIFY = status_changed)]
         #[qproperty(QString, path, READ, NOTIFY = listing_changed)]
@@ -195,6 +196,12 @@ pub mod qobject {
         #[qinvokable]
         fn symlink(self: Pin<&mut SftpBrowser>, name: &QString, target: &QString) -> i32;
 
+        /// A link to row `row` (an S3 object) that works without the keys for `seconds`; it is
+        /// the `done` detail.
+        #[qinvokable]
+        #[cxx_name = "temporaryLink"]
+        fn temporary_link(self: Pin<&mut SftpBrowser>, row: i32, seconds: i32) -> i32;
+
         /// Reads the start of row `row` for a quick look (`previewReady`).
         #[qinvokable]
         fn preview(self: Pin<&mut SftpBrowser>, row: i32) -> i32;
@@ -301,6 +308,8 @@ pub struct SftpBrowserRust {
     error_detail: QString,
     busy: bool,
     remote: bool,
+    /// `local`, `sftp` or `s3`.
+    storage: QString,
     connection: QString,
     prompt: QString,
     path: QString,
@@ -345,6 +354,7 @@ impl Default for SftpBrowserRust {
             error_detail: QString::default(),
             busy: false,
             remote: false,
+            storage: QString::from("local"),
             connection: QString::default(),
             prompt: QString::default(),
             path: QString::default(),
@@ -530,6 +540,7 @@ impl qobject::SftpBrowser {
                 let mut state = self.as_mut().rust_mut();
                 state.home = qstring(&fs.home());
                 state.remote = false;
+                state.storage = qstring("local");
                 state.separator = qstring(std::path::MAIN_SEPARATOR_STR);
                 state.fs = Some(fs);
             }
@@ -591,17 +602,19 @@ impl qobject::SftpBrowser {
             });
         });
         self.spawn(
-            async move { app::open_remote(source, &asker, &notes).await },
+            async move { app::open_files(source, &asker, &notes).await },
             move |mut object, result| {
                 if object.attempt != attempt {
                     return;
                 }
                 match result {
-                    Ok(remote) => {
-                        let fs = Fs::Remote(Arc::new(remote));
+                    Ok((fs, from_source)) => {
                         app::register(object.pane_id, fs.clone());
+                        // A source's own place (an s3:// path) unless the pane names one.
+                        let start = if start.is_empty() { from_source } else { start };
                         {
                             let mut state = object.as_mut().rust_mut();
+                            state.storage = qstring(if fs.s3().is_some() { "s3" } else { "sftp" });
                             state.home = qstring(&fs.home());
                             state.fs = Some(fs);
                             state.connection = QString::default();
@@ -983,6 +996,31 @@ impl qobject::SftpBrowser {
             }
             object.refresh();
         });
+        token
+    }
+
+    /// See the bridge declaration.
+    pub fn temporary_link(mut self: Pin<&mut Self>, row: i32, seconds: i32) -> i32 {
+        let token = self.as_mut().token();
+        let path = self.path_at(row).to_string();
+        let Some(s3) = self.fs.as_ref().and_then(Fs::s3).cloned() else {
+            self.done(token, qstring("unsupported"), QString::default());
+            return token;
+        };
+        let lifetime = std::time::Duration::from_secs(u64::try_from(seconds).unwrap_or(0));
+        self.spawn(
+            async move { s3.temporary_link(&path, lifetime).await },
+            move |mut object, result| match result {
+                Ok(link) => object
+                    .as_mut()
+                    .done(token, QString::default(), QString::from(&link)),
+                Err(error) => object.as_mut().done(
+                    token,
+                    qstring(error.code()),
+                    QString::from(&error.to_string()),
+                ),
+            },
+        );
         token
     }
 
