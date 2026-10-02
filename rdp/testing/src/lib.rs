@@ -5,7 +5,8 @@
 //! shows a made-up desktop at the size the client asks for (again after a display control
 //! resize), paints a square that changes colour with each key it gets, records the input, and
 //! shares text both ways on the clipboard: what the client copies lands in [`Seen::clipboard`]
-//! (and a second square, green, appears next to the first), and it offers [`SERVER_TEXT`].
+//! (and a second square, green, appears next to the first), and it offers [`SERVER_TEXT`]. Each
+//! connection gets a desktop of its own, so several clients can be connected at once.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, reason = "a test server")]
 
@@ -406,32 +407,35 @@ pub fn serve() -> std::io::Result<TestServer> {
                 .with_single_cert(vec![cert], key)
                 .unwrap();
                 let acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(config));
-                let shared = Arc::new(Mutex::new(Shared {
-                    size: (1024, 768),
-                    seen: Arc::clone(&server_seen),
-                    ..Shared::default()
-                }));
-                let mut server = RdpServer::builder()
-                    .with_addr(address)
-                    .with_hybrid(acceptor, key_bytes)
-                    .with_input_handler(Input(Arc::clone(&shared)))
-                    .with_display_handler(Display(Arc::clone(&shared)))
-                    .with_cliprdr_factory(Some(Box::new(ClipboardFactory {
-                        events: Arc::new(Mutex::new(None)),
-                        shared: Arc::clone(&shared),
-                    })))
-                    .with_honor_client_desktop_size(true)
-                    .build();
-                server.set_credentials(Some(Credentials {
-                    username: USER.to_owned(),
-                    password: PASSWORD.to_owned(),
-                    domain: None,
-                }));
                 let listener = TcpListener::from_std(listener).unwrap();
+                // A server for each connection, so several clients can be connected at once.
                 while let Ok((stream, _)) = listener.accept().await {
-                    if let Err(error) = server.run_connection(stream).await {
-                        tracing::debug!("RDP test server: a connection ended: {error:#}");
-                    }
+                    let shared = Arc::new(Mutex::new(Shared {
+                        size: (1024, 768),
+                        seen: Arc::clone(&server_seen),
+                        ..Shared::default()
+                    }));
+                    let mut server = RdpServer::builder()
+                        .with_addr(address)
+                        .with_hybrid(acceptor.clone(), key_bytes.clone())
+                        .with_input_handler(Input(Arc::clone(&shared)))
+                        .with_display_handler(Display(Arc::clone(&shared)))
+                        .with_cliprdr_factory(Some(Box::new(ClipboardFactory {
+                            events: Arc::new(Mutex::new(None)),
+                            shared: Arc::clone(&shared),
+                        })))
+                        .with_honor_client_desktop_size(true)
+                        .build();
+                    server.set_credentials(Some(Credentials {
+                        username: USER.to_owned(),
+                        password: PASSWORD.to_owned(),
+                        domain: None,
+                    }));
+                    tokio::task::spawn_local(async move {
+                        if let Err(error) = server.run_connection(stream).await {
+                            tracing::debug!("RDP test server: a connection ended: {error:#}");
+                        }
+                    });
                 }
             });
         })?;

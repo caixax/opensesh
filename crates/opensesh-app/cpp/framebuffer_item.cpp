@@ -170,8 +170,9 @@ void FramebufferItemBase::resizeFramebuffer(int width, int height)
             Tile tile;
             tile.x = column * kTile;
             tile.y = row * kTile;
+            // Opaque (the helper sends the fourth byte as 255): drawn without blending.
             tile.image = QImage(std::min(kTile, width - tile.x), std::min(kTile, height - tile.y),
-                                QImage::Format_RGBA8888);
+                                QImage::Format_RGBX8888);
             tile.image.fill(Qt::black);
             m_tiles.push_back(std::move(tile));
         }

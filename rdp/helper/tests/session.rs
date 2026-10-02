@@ -167,6 +167,8 @@ async fn a_session_as_the_app_has_it() {
         app.frame.width() == 640 && close(app.pixel(320, 200), [0xEC, 0xEF, 0xF4])
     })
     .await;
+    // Opaque, whatever the codec left in the fourth byte.
+    assert_eq!(app.pixel(320, 200)[3], 0xFF);
 
     // Keys repaint the square; a click and the wheel reach the server.
     let before = app.pixel(40, 40);
