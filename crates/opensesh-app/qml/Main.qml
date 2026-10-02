@@ -536,7 +536,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "protocols"
-        pages: ["newtab", "telnet", "serial", "s3", "serialeditor", "s3editor"]
+        pages: ["newtab", "telnet", "serial", "s3", "serialeditor", "s3editor", "graphicseditor"]
         prepare: (mode, density, page) => shell.prepareProtocolScreenshot(page)
         onFinished: shell.prepareDesktopScreenshots(() => desktopScreenshots.start())
     }

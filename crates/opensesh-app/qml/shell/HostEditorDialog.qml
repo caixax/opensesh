@@ -185,6 +185,20 @@ OsDialog {
         }
     }
 
+    // Scrolls the shown section to the row of `path` (only "ssh.x11" for now: screenshots).
+    function reveal(path) {
+        const rows = { "ssh.x11": x11Row };
+        const row = rows[path];
+        if (!row)
+            return;
+        let flick = row.parent;
+        while (flick && flick.contentY === undefined)
+            flick = flick.parent;
+        if (flick)
+            flick.contentY = Math.max(0, Math.min(row.mapToItem(flick.contentItem, 0, 0).y - Theme.spacingLg,
+                                                  flick.contentHeight - flick.height));
+    }
+
     function hasErrors() {
         return Object.keys(errors).length > 0;
     }
@@ -933,6 +947,8 @@ OsDialog {
                         }
 
                         EditorChoiceRow {
+                            id: x11Row
+
                             editor: dialog
                             path: "ssh.x11"
                             visible: dialog.protocol === "ssh"

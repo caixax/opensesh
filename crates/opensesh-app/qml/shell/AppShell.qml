@@ -2861,7 +2861,8 @@ Item {
     }
 
     // --screenshots: the new tab menu with the shells ("newtab"), the telnet and serial tabs, S3
-    // in the files view, and the host editor of a serial and an S3 host.
+    // in the files view, and the host editor of a serial and an S3 host, and of an SSH host with
+    // X11 forwarding and Waypipe ("graphicseditor").
     function prepareProtocolScreenshot(page) {
         hostEditor.close();
         palette.close();
@@ -2874,6 +2875,22 @@ Item {
             selectTabById(protocolTabs.serial);
         } else if (page === "s3") {
             showView("sftp");
+        } else if (page === "graphicseditor") {
+            // An SSH host with X11 forwarding and Waypipe (Sprint 15), on the Advanced section.
+            showView("hosts");
+            hostEditor.create("");
+            const fields = {
+                name: qsTr("Build server"),
+                protocol: "ssh",
+                address: "build-01.lan", // lint-qml: allow (sample data for screenshots)
+                "ssh.x11": "untrusted",
+                "ssh.waypipe": true
+            };
+            for (const key of Object.keys(fields))
+                hostEditor.setValue(key, fields[key]);
+            hostEditor.loaded();
+            hostEditor.section = 2;
+            Qt.callLater(() => hostEditor.reveal("ssh.x11"));
         } else if (page === "serialeditor" || page === "s3editor") {
             showView("hosts");
             hostEditor.create("");
