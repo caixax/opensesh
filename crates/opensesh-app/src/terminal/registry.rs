@@ -521,6 +521,35 @@ pub fn open_replay(
     Ok((id, entry))
 }
 
+/// The engine's ends of a backend, as a backend's `start` gives them.
+pub type BackendEnds = (
+    Box<dyn backend::TerminalBackend>,
+    crossbeam_channel::Receiver<backend::BackendEvent>,
+);
+
+/// The session of pane `id`, starting one on the backend `start` makes (for the size it starts
+/// with) if there is none yet: telnet, a serial port, mosh.
+///
+/// # Errors
+///
+/// [`StartError`] if the backend or the engine thread could not be started.
+pub fn open_backend(
+    id: i32,
+    options: LocalOptions,
+    start: impl FnOnce(TermSize) -> Result<BackendEnds, StartError>,
+) -> Result<Arc<SessionEntry>, StartError> {
+    open_with(id, move |notify, _state| {
+        let (backend, events) = start(options.size)?;
+        let config = SessionConfig {
+            size: options.size,
+            palette: options.palette,
+            options: options.options,
+            ..SessionConfig::default()
+        };
+        Ok(Session::start(backend, events, config, notify)?)
+    })
+}
+
 /// The session of pane `id`, starting a player of the recording in `path` for it if there is
 /// none yet (paused; the file is read on the player's thread).
 ///

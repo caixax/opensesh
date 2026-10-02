@@ -50,6 +50,13 @@ pub mod qobject {
         #[cxx_name = "startSshTestServer"]
         fn start_ssh_test_server(self: &Self) -> i32;
 
+        /// Test runs only: starts the in-process telnet test server on 127.0.0.1 and returns its
+        /// port (0 in normal runs or when it can't start). From then on every telnet connection
+        /// of the run goes to it.
+        #[qinvokable]
+        #[cxx_name = "startTelnetTestServer"]
+        fn start_telnet_test_server(self: &Self) -> i32;
+
         /// Test runs only: a temporary folder with `local` and `remote` sample files (the
         /// server's side), made fresh by `startSshTestServer` and removed at exit; empty in
         /// normal runs.
@@ -123,6 +130,26 @@ impl qobject::AppInfo {
             }
             Err(error) => {
                 tracing::warn!("could not start the SSH test server: {error}");
+                0
+            }
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn start_telnet_test_server(&self) -> i32 {
+        if !is_test_run() {
+            return 0;
+        }
+        let Some(runtime) = opensesh_ssh::runtime() else {
+            return 0;
+        };
+        match runtime.block_on(opensesh_proto_misc::telnet::testing::serve()) {
+            Ok(port) => {
+                crate::terminals::set_telnet_test_server(port);
+                i32::from(port)
+            }
+            Err(error) => {
+                tracing::warn!("could not start the telnet test server: {error}");
                 0
             }
         }

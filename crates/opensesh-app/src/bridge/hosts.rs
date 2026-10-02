@@ -66,8 +66,9 @@ pub mod qobject {
             sort: &QString,
         ) -> QString;
 
-        /// Host `id` for the editor (every field as saved, `linked`, and `inherited`: what its
-        /// group gives each field, see `inherited`); empty when unknown.
+        /// Host `id` for the editor (every field as saved, `linked`, `sprint` (0 when it connects
+        /// today) and `inherited`: what its group gives each field, see `inherited`); empty when
+        /// unknown.
         #[qinvokable]
         #[cxx_name = "hostJson"]
         fn host_json(self: &Self, id: &QString) -> QString;
@@ -892,6 +893,11 @@ impl qobject::Hosts {
             object.insert(
                 "protocol".to_owned(),
                 Json::String(host.protocol.as_str().to_owned()),
+            );
+            // The sprint that brings connecting over it, 0 when it connects today.
+            object.insert(
+                "sprint".to_owned(),
+                Json::from(host.protocol.available_in().unwrap_or(0)),
             );
             object.insert(
                 "inherited".to_owned(),

@@ -333,6 +333,14 @@ OsDialog {
                             label: qsTr("Port")
                         }
 
+                        OsText {
+                            width: parent.width
+                            visible: dialog.protocol === "telnet"
+                            text: qsTr("Telnet sends everything in clear, passwords too: anyone on the network path can read it. Use SSH where the device has it.")
+                            color: Theme.warning
+                            wrapMode: Text.Wrap
+                        }
+
                         EditorChoiceRow {
                             editor: dialog
                             path: "group"

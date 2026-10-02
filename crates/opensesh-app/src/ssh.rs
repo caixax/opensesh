@@ -259,6 +259,22 @@ fn proxy_of(text: Option<&str>, command: Option<&str>) -> Result<Option<Proxy>, 
     }))
 }
 
+/// Where a session of the host called `name` is logged, and whether raw; `None` when off.
+#[must_use]
+pub fn session_log(data: &Path, name: &str, mode: SessionLog) -> Option<(PathBuf, bool)> {
+    match mode {
+        SessionLog::Off => None,
+        mode => Some((
+            logs_dir(data).join(format!(
+                "{}_{}.log",
+                safe_name(name),
+                opensesh_ssh::log::timestamp(now_secs())
+            )),
+            mode == SessionLog::Raw,
+        )),
+    }
+}
+
 /// A file name part made of the host's name (letters, digits, `-` and `_`).
 pub fn safe_name(name: &str) -> String {
     let cleaned: String = name
@@ -345,17 +361,8 @@ fn session_for(
         Vec::new()
     };
     env.extend(resolved.string_map("ssh.env"));
-    let log = match resolved.session_log() {
-        SessionLog::Off => None,
-        mode => Some(LogSpec {
-            path: logs_dir(data).join(format!(
-                "{}_{}.log",
-                safe_name(&host.name),
-                opensesh_ssh::log::timestamp(now_secs())
-            )),
-            raw: mode == SessionLog::Raw,
-        }),
-    };
+    let log = session_log(data, &host.name, resolved.session_log())
+        .map(|(path, raw)| LogSpec { path, raw });
     let session = SessionSpec {
         term: term.to_owned(),
         size,
