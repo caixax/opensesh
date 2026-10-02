@@ -23,6 +23,10 @@ use opensesh_core::tunnels::{Kind, Tunnel};
 /// Deepest `Include` chain followed (OpenSSH's limit).
 const MAX_DEPTH: usize = 16;
 
+/// Most files read for one config (`Include /*/*` would read the whole disk otherwise; found by
+/// fuzzing, Sprint 17).
+const MAX_FILES: usize = 256;
+
 /// A host named in the file.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SshHost {
@@ -174,6 +178,9 @@ struct Parser<'a> {
     current: Option<Vec<String>>,
     /// Warned once per file about options outside a usable block.
     warned_outside: bool,
+    /// Files read so far, and whether the limit was reported.
+    read: usize,
+    warned_files: bool,
 }
 
 /// Reads `path` (usually `~/.ssh/config`) and everything it includes. `home` is the user's
@@ -186,6 +193,8 @@ pub fn load(path: &Path, home: &Path) -> SshConfig {
         index: HashMap::new(),
         current: None,
         warned_outside: false,
+        read: 0,
+        warned_files: false,
     };
     parser.read_file(path, 0, &mut Vec::new());
     parser.config
@@ -200,6 +209,8 @@ pub fn parse_str(text: &str, origin: &Path, home: &Path) -> SshConfig {
         index: HashMap::new(),
         current: None,
         warned_outside: false,
+        read: 0,
+        warned_files: false,
     };
     parser.config.files.push(origin.to_path_buf());
     parser.parse(text, origin, 0, &mut vec![origin.to_path_buf()]);
@@ -317,6 +328,18 @@ impl Parser<'_> {
     }
 
     fn read_file(&mut self, path: &Path, depth: usize, chain: &mut Vec<PathBuf>) {
+        if self.read >= MAX_FILES {
+            if !self.warned_files {
+                self.warned_files = true;
+                self.warn(
+                    path,
+                    0,
+                    format!("more than {MAX_FILES} files are included; the rest is skipped"),
+                );
+            }
+            return;
+        }
+        self.read += 1;
         // Regular files only, at most 1 MiB: `Include /dev/zero` must not hang the import.
         let read = crate::common::read_limited(path, 1024 * 1024).and_then(|bytes| {
             String::from_utf8(bytes)
@@ -624,6 +647,37 @@ impl SshConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn includes_stop_after_a_bounded_number_of_files() {
+        // Found by fuzzing (Sprint 17): `Include /*/*` read the whole disk.
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join(".ssh").join("many");
+        std::fs::create_dir_all(&dir).unwrap();
+        for n in 0..MAX_FILES + 20 {
+            std::fs::write(
+                dir.join(format!("{n:04}")),
+                format!(
+                    "Host h{n}
+"
+                ),
+            )
+            .unwrap();
+        }
+        let config = parse_str(
+            "Include many/*
+",
+            &home.path().join(".ssh").join("config"),
+            home.path(),
+        );
+        assert_eq!(config.hosts.len(), MAX_FILES);
+        let limit: Vec<_> = config
+            .warnings
+            .iter()
+            .filter(|warning| warning.message.contains("files are included"))
+            .collect();
+        assert_eq!(limit.len(), 1);
+    }
 
     fn parse(text: &str) -> SshConfig {
         parse_str(
