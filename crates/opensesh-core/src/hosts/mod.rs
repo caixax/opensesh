@@ -144,7 +144,7 @@ impl Protocol {
             Self::Ssh | Self::Local => None,
             Self::Sftp => Some(8),
             Self::Telnet | Self::Serial | Self::Mosh | Self::Docker | Self::Kube | Self::S3 => None,
-            Self::Rdp => Some(13),
+            Self::Rdp => None,
             Self::Vnc => Some(14),
         }
     }
@@ -372,6 +372,75 @@ impl SerialOptions {
     }
 }
 
+/// How a remote desktop fits its pane.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Scaling {
+    /// The desktop follows the pane's size.
+    #[default]
+    Dynamic,
+    /// A fixed size, scaled to fit the pane.
+    Fit,
+    /// A fixed size, one desktop pixel per screen pixel.
+    Actual,
+}
+
+impl Scaling {
+    /// The name in files and the UI.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Dynamic => "dynamic",
+            Self::Fit => "fit",
+            Self::Actual => "actual",
+        }
+    }
+}
+
+/// Remote desktop settings.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RdpOptions {
+    /// The Windows domain (else from the user name, `DOMAIN\user` or `user@domain`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain: Option<String>,
+    /// How the desktop fits the pane (unset: it follows the pane's size).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scaling: Option<Scaling>,
+    /// The desktop's size as `WIDTHxHEIGHT`, for the fixed scalings (unset: the pane's size).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolution: Option<String>,
+    /// Share the text clipboard (unset: on).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clipboard: Option<bool>,
+}
+
+impl RdpOptions {
+    /// Whether nothing is set.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+
+    /// The fixed size, when one is set and valid (200 to 8192 pixels a side).
+    #[must_use]
+    pub fn size(&self) -> Option<(u16, u16)> {
+        parse_resolution(self.resolution.as_deref()?)
+    }
+}
+
+/// `WIDTHxHEIGHT` (200 to 8192 each).
+#[must_use]
+pub fn parse_resolution(text: &str) -> Option<(u16, u16)> {
+    let (width, height) = text.trim().split_once(['x', 'X', '×'])?;
+    let side = |text: &str| {
+        text.trim()
+            .parse::<u16>()
+            .ok()
+            .filter(|side| (200..=8192).contains(side))
+    };
+    Some((side(width)?, side(height)?))
+}
+
 /// S3 settings (an S3 host's address is its endpoint; its identity holds the access key as the
 /// user name and the secret key as the password).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -585,6 +654,9 @@ pub struct Host {
     /// S3 settings.
     #[serde(default, skip_serializing_if = "S3Options::is_empty")]
     pub s3: S3Options,
+    /// Remote desktop settings.
+    #[serde(default, skip_serializing_if = "RdpOptions::is_empty")]
+    pub rdp: RdpOptions,
     /// Terminal options over the profile.
     #[serde(default, skip_serializing_if = "Table::is_empty")]
     pub terminal: Table,
@@ -617,6 +689,7 @@ impl Default for Host {
             serial: SerialOptions::default(),
             container: ContainerOptions::default(),
             s3: S3Options::default(),
+            rdp: RdpOptions::default(),
             terminal: Table::new(),
             extra: Table::new(),
         }
@@ -1426,6 +1499,20 @@ impl HostsFile {
             containers::check(&host.container, &mut problems);
         }
         if host
+            .rdp
+            .resolution
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|text| !text.is_empty() && parse_resolution(text).is_none())
+        {
+            problems.push(("rdp.resolution", "invalid"));
+        }
+        if host.rdp.domain.as_deref().is_some_and(|domain| {
+            domain.trim().starts_with('-') || domain.chars().any(char::is_control)
+        }) {
+            problems.push(("rdp.domain", "invalid"));
+        }
+        if host
             .s3
             .region
             .as_deref()
@@ -1800,6 +1887,37 @@ mod tests {
             ..Host::default()
         };
         assert!(file.validate_host(&serial).is_empty());
+        // Remote desktops: a size of 200 to 8192 pixels a side, a domain that isn't an option.
+        assert_eq!(parse_resolution("1920x1080"), Some((1920, 1080)));
+        assert_eq!(parse_resolution(" 1280 X 800 "), Some((1280, 800)));
+        assert_eq!(parse_resolution("100x800"), None);
+        assert_eq!(parse_resolution("1920"), None);
+        let mut desktop = Host {
+            name: "win11".into(),
+            protocol: Protocol::Rdp,
+            address: "win11.lan".into(),
+            rdp: RdpOptions {
+                domain: Some("CORP".into()),
+                scaling: Some(Scaling::Fit),
+                resolution: Some("1920x1080".into()),
+                clipboard: Some(false),
+            },
+            ..Host::default()
+        };
+        assert!(file.validate_host(&desktop).is_empty());
+        assert_eq!(desktop.rdp.size(), Some((1920, 1080)));
+        let text = toml::to_string(&desktop).unwrap();
+        assert!(text.contains("scaling = \"fit\""), "{text}");
+        let back: Host = toml::from_str(&text).unwrap();
+        assert_eq!(back.rdp, desktop.rdp);
+        desktop.rdp.resolution = Some("huge".into());
+        desktop.rdp.domain = Some("-x".into());
+        let fields: Vec<&str> = file
+            .validate_host(&desktop)
+            .iter()
+            .map(|(field, _)| *field)
+            .collect();
+        assert_eq!(fields, vec!["rdp.resolution", "rdp.domain"]);
         // A group can't move into itself or its own subgroup.
         let mut prod = file.group("01J9ZG0000PROD").unwrap().clone();
         prod.parent = Some("WEB".into());
