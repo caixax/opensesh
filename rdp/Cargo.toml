@@ -1,0 +1,69 @@
+# OpenSesh's RDP helper (ADR 0034): a workspace and a lock file of its own. IronRDP's NLA (`sspi`)
+# pins pre-release cryptography exactly, which can't share a lock file with the app's (russh needs
+# the released curve25519-dalek 5, the vault sha2 0.11), so the RDP engine is a separate program
+# the app starts per pane and talks to over its standard input and output.
+#
+#   cargo xtask rdp            # builds it and puts it next to target/{debug,release}/opensesh-app
+#   cargo test --manifest-path rdp/Cargo.toml
+[workspace]
+resolver = "3"
+members = ["helper", "testing"]
+
+[workspace.package]
+version = "0.1.4"
+edition = "2024"
+# The app's MSRV (rust-toolchain.toml at the repository's root applies here too).
+rust-version = "1.89"
+license = "GPL-3.0-or-later"
+authors = ["OpenSesh contributors"]
+homepage = "https://github.com/caixax/opensesh"
+repository = "https://github.com/caixax/opensesh"
+publish = false
+
+# Every version pinned, as in the app's workspace (verified on crates.io on 2026-10-02).
+[workspace.dependencies]
+opensesh-rdp-protocol = { path = "../crates/opensesh-rdp-protocol" }
+opensesh-rdp-testing = { path = "testing" }
+# IronRDP's client crates (MIT or Apache-2.0). The TLS is ours, on rustls with `ring`
+# (ironrdp-tls logs TLS keys when SSLKEYLOGFILE is set).
+ironrdp = { version = "0.17.0", features = ["connector", "session", "graphics", "input", "cliprdr", "displaycontrol", "svc", "dvc"] }
+ironrdp-tokio = "0.10.0"
+# NLA's NTLM. picky-krb 0.12.5 breaks sspi 0.21.3 (a new enum variant): pinned exactly.
+sspi = { version = "0.21.3", default-features = false }
+picky-krb = "=0.12.4"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+x509-cert = { version = "0.2.5", features = ["std"] }
+sha2 = "0.10.9"
+base64ct = { version = "1.8.3", features = ["alloc"] }
+thiserror = "2.0.21"
+tracing = "0.1.44"
+# The test server (opensesh-rdp-testing, never shipped: tokio-rustls's default features bring
+# aws-lc).
+ironrdp-server = "0.13.0"
+ironrdp-cliprdr = "0.7.0"
+ironrdp-core = "0.2.1"
+ironrdp-displaycontrol = "0.8.0"
+async-trait = "0.1.92"
+anyhow = "1.0.104"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "env-filter"] }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+# As the app's: no unwrap()/expect() in production code (tests are allowed via clippy.toml).
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "warn"
+todo = "warn"
+dbg_macro = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+large_futures = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

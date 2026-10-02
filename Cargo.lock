@@ -3171,6 +3171,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "opensesh-rdp-protocol"
+version = "0.1.4"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "opensesh-s3"
 version = "0.1.4"
 dependencies = [
