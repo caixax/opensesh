@@ -10,8 +10,12 @@
 #             tunnels: curl through -L, -R and -D, and a tunnel back after its session is killed
 #   s3      - S3 storage against RustFS (scripts/s3-test-server.sh): 1 GiB up in 32 MB parts and back
 #             down with the same SHA-256, a temporary link
+#   rdp     - the RDP helper (rdp/, a workspace of its own; ADR 0034): clippy, tests against the
+#             in-process server, then against xrdp (scripts/rdp-test-server.sh)
 #   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, bundled ConPTY, offscreen
 #             smoke test
+# The smoke tests connect a remote desktop to the RDP test server: `cargo xtask rdp --test-server`
+# builds it, with the helper, next to the app first.
 name: CI
 
 on:
@@ -57,6 +61,8 @@ jobs:
         run: cargo fetch --locked
       - name: rustfmt
         run: cargo fmt --all --check
+      - name: rustfmt (RDP helper)
+        run: cargo fmt --manifest-path rdp/Cargo.toml --all --check
       - name: QML lint (hardcoded colors, strings without qsTr)
         run: cargo xtask lint-qml
       - name: Icon pipeline is reproducible
@@ -73,6 +79,12 @@ jobs:
         run: cargo deny --locked check
       # Vulnerabilities only: deny.toml owns the unmaintained/unsound/yanked policy.
       - name: cargo-audit
+        run: cargo audit
+      - name: cargo-deny (RDP helper)
+        run: cargo deny --manifest-path rdp/Cargo.toml --locked check
+      # rdp/.cargo/audit.toml lists the advisory it accepts, and why.
+      - name: cargo-audit (RDP helper)
+        working-directory: rdp
         run: cargo audit
 
   linux:
@@ -112,6 +124,9 @@ jobs:
         run: cargo xtask i18n --check
       - name: Build the app
         run: cargo build --locked -p opensesh-app
+      - name: Build the RDP helper and test server
+        timeout-minutes: 20
+        run: cargo xtask rdp --test-server
       - name: GUI smoke test (offscreen)
         timeout-minutes: 3
         run: target/debug/opensesh-app --smoke-test
@@ -193,6 +208,10 @@ jobs:
       - name: Build the app
         shell: bash
         run: cargo build --locked -p opensesh-app
+      - name: Build the RDP helper and test server
+        shell: bash
+        timeout-minutes: 20
+        run: cargo xtask rdp --test-server
       - name: GUI smoke test (offscreen)
         shell: bash
         timeout-minutes: 3
@@ -266,6 +285,37 @@ jobs:
         if: always()
         run: sudo scripts/s3-test-server.sh stop
 
+  rdp:
+    name: RDP helper against xrdp
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rdp -> target
+          key: rdp-helper
+      - name: Clippy
+        run: cargo clippy --locked --manifest-path rdp/Cargo.toml --workspace --all-targets -- -D warnings
+      - name: Tests (the in-process server)
+        run: cargo test --locked --manifest-path rdp/Cargo.toml --workspace
+      - name: Start xrdp
+        run: sudo scripts/rdp-test-server.sh start
+      - name: The helper against xrdp
+        env:
+          OPENSESH_TEST_XRDP: 127.0.0.1:3389
+          OPENSESH_TEST_XRDP_USER: opensesh-rdp
+          OPENSESH_TEST_XRDP_PASSWORD: opensesh-rdp-test
+          OPENSESH_TEST_XRDP_CLIPBOARD: OpenSesh xrdp clipboard
+        run: cargo test --locked --manifest-path rdp/Cargo.toml --test xrdp -- --nocapture
+      - name: Server logs
+        if: failure()
+        run: sudo scripts/rdp-test-server.sh logs
+      - name: Stop the server
+        if: always()
+        run: sudo scripts/rdp-test-server.sh stop
+
   windows:
     name: Windows (MSVC, aqtinstall Qt)
     runs-on: windows-2022
@@ -312,6 +362,9 @@ jobs:
           if [ -n "$out" ]; then echo "$out"; git diff -- "${paths[@]}"; exit 1; fi
       - name: Compiled shaders are up to date
         run: cargo xtask shaders --check
+      - name: Build the RDP helper and test server
+        timeout-minutes: 20
+        run: cargo xtask rdp --test-server
       - name: GUI smoke test (offscreen)
         timeout-minutes: 3
         run: target/debug/opensesh-app.exe --smoke-test
