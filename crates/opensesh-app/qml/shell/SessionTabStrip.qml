@@ -22,12 +22,13 @@ Item {
     required property Item shell
     // Native text of the "new tab" shortcut, for the "+" tooltip.
     property string newTabShortcut: ""
+    readonly property var shells: JSON.parse(Platform.shells || "[]")
     // While a tab is dragged: its index, and the index it would move to (0: none).
     property int dragFrom: 0
     property int dropTo: 0
     property bool dragOutside: false
 
-    implicitWidth: tabs.implicitWidth + Theme.spacingXs + newTabButton.implicitWidth
+    implicitWidth: tabs.implicitWidth + Theme.spacingXs + newTabButton.implicitWidth + shellMenuButton.implicitWidth
     implicitHeight: Math.max(tabs.implicitHeight, newTabButton.implicitHeight)
 
     // The tab index a pointer at x (strip coordinates) would drop at, for a tab from `from`.
@@ -98,7 +99,7 @@ Item {
 
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(0, Math.min(implicitWidth, strip.width - Theme.spacingXs - newTabButton.width))
+        width: Math.max(0, Math.min(implicitWidth, strip.width - Theme.spacingXs - newTabButton.width - shellMenuButton.width))
         currentIndex: strip.shell.currentTab
         Accessible.name: qsTr("Tabs")
 
@@ -187,6 +188,39 @@ Item {
         iconName: "plus"
         toolTip: strip.newTabShortcut.length > 0 ? qsTr("New tab (%1)").arg(strip.newTabShortcut) : qsTr("New tab")
         onClicked: strip.shell.newTab()
+    }
+
+    // The local shells: a new tab with one of them.
+    OsIconButton {
+        id: shellMenuButton
+
+        anchors.left: newTabButton.right
+        anchors.verticalCenter: parent.verticalCenter
+        implicitWidth: Theme.controlHeightSmall * 0.75
+        implicitHeight: Theme.controlHeightSmall
+        visible: strip.shells.length > 0
+        iconName: "chevron-down"
+        toolTip: qsTr("New tab with a shell")
+        onClicked: shellMenu.popup(shellMenuButton, 0, shellMenuButton.height)
+    }
+
+    OsContextMenu {
+        id: shellMenu
+
+        Instantiator {
+            model: strip.shells
+
+            delegate: OsMenuItem {
+                required property var modelData
+
+                text: modelData.default ? qsTr("%1 (default)").arg(modelData.name) : modelData.name
+                iconName: "square-terminal"
+                onTriggered: strip.shell.newTabWithShell(modelData)
+            }
+
+            onObjectAdded: (index, object) => shellMenu.insertItem(index, object)
+            onObjectRemoved: (index, object) => shellMenu.removeItem(object)
+        }
     }
 
     // Where a dragged tab would land.

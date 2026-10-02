@@ -1,5 +1,6 @@
 //! `Platform` QML singleton: operating-system facts and helpers that need Qt's C++ API
-//! (fonts, key names, translations) or the environment (desktop detection).
+//! (fonts, key names, translations) or the environment (desktop detection), and the local
+//! shells this computer has (found on a background thread at startup).
 
 #[cxx_qt::bridge]
 pub mod qobject {
@@ -26,7 +27,19 @@ pub mod qobject {
         #[qproperty(QString, desktop_name, cxx_name = "desktopName", READ, CONSTANT)]
         #[qproperty(bool, tiling, READ, CONSTANT)]
         #[qproperty(bool, debug_build, cxx_name = "debugBuild", READ, CONSTANT)]
+        #[qproperty(QString, shells, READ, NOTIFY = shells_changed)]
         type Platform = super::PlatformRust;
+
+        /// `shells` changed (found, or found again).
+        #[qsignal]
+        #[cxx_name = "shellsChanged"]
+        fn shells_changed(self: Pin<&mut Self>);
+
+        /// Looks for the local shells again (in the background; `shellsChanged` follows). The
+        /// list is JSON: `[{id, name, command, default}]`, the user's own shell first.
+        #[qinvokable]
+        #[cxx_name = "refreshShells"]
+        fn refresh_shells(self: Pin<&mut Self>);
 
         /// Resolves a `windowDecorations` setting (`auto` depends on the desktop).
         #[qinvokable]
@@ -91,7 +104,16 @@ pub mod qobject {
         #[cxx_name = "debugPanic"]
         fn debug_panic(self: &Self);
     }
+
+    impl cxx_qt::Initialize for Platform {}
+    impl cxx_qt::Threading for Platform {}
 }
+
+use core::pin::Pin;
+
+use cxx_qt::{CxxQtType, Threading};
+use opensesh_term::shells::{self, Shell};
+use serde_json::json;
 
 use cxx_qt_lib::{QString, QStringList, QUrl};
 use opensesh_core::config::Decorations;
@@ -107,6 +129,7 @@ pub struct PlatformRust {
     desktop_name: QString,
     tiling: bool,
     debug_build: bool,
+    shells: QString,
     desktop: DesktopInfo,
 }
 
@@ -118,12 +141,107 @@ impl Default for PlatformRust {
             desktop_name: QString::from(&desktop.name),
             tiling: desktop.tiling,
             debug_build: cfg!(debug_assertions),
+            shells: QString::from("[]"),
             desktop,
         }
     }
 }
 
+/// The shells as JSON for QML.
+fn shells_json(list: &[Shell]) -> String {
+    serde_json::Value::Array(
+        list.iter()
+            .map(|shell| {
+                json!({
+                    "id": shell.id,
+                    "name": shell.name,
+                    "command": shell.command,
+                    "default": shell.default,
+                })
+            })
+            .collect(),
+    )
+    .to_string()
+}
+
+/// What screenshots show instead of the shells of the machine taking them.
+fn sample_shells() -> Vec<Shell> {
+    let shell = |id: &str, name: &str, command: &str, default: bool| Shell {
+        id: id.to_owned(),
+        name: name.to_owned(),
+        command: command.to_owned(),
+        default,
+    };
+    if cfg!(windows) {
+        vec![
+            shell(
+                "pwsh",
+                "PowerShell 7",
+                r#""C:\Program Files\PowerShell\7\pwsh.exe""#,
+                true,
+            ),
+            shell(
+                "powershell",
+                "Windows PowerShell",
+                r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+                false,
+            ),
+            shell(
+                "cmd",
+                "Command Prompt",
+                r"C:\Windows\System32\cmd.exe",
+                false,
+            ),
+            shell(
+                "git-bash",
+                "Git Bash",
+                r#""C:\Program Files\Git\bin\bash.exe" --login -i"#,
+                false,
+            ),
+            shell(
+                "wsl:Ubuntu",
+                "Ubuntu (WSL)",
+                r"C:\Windows\System32\wsl.exe -d Ubuntu",
+                false,
+            ),
+        ]
+    } else {
+        vec![
+            shell("bash", "bash", "/bin/bash", true),
+            shell("fish", "fish", "/usr/bin/fish", false),
+            shell("zsh", "zsh", "/usr/bin/zsh", false),
+            shell("sh", "sh", "/bin/sh", false),
+        ]
+    }
+}
+
 impl qobject::Platform {
+    /// See the bridge declaration.
+    pub fn refresh_shells(self: Pin<&mut Self>) {
+        if crate::bridge::app_info::screenshot_run() {
+            let text = shells_json(&sample_shells());
+            let mut this = self;
+            this.as_mut().rust_mut().shells = QString::from(&text);
+            this.shells_changed();
+            return;
+        }
+        let qt_thread = self.qt_thread();
+        let spawned = std::thread::Builder::new()
+            .name("opensesh-shells".to_owned())
+            .spawn(move || {
+                let text = shells_json(&shells::discover());
+                let _ = qt_thread.queue(move |mut object| {
+                    if object.shells.to_string() != text {
+                        object.as_mut().rust_mut().shells = QString::from(&text);
+                        object.shells_changed();
+                    }
+                });
+            });
+        if let Err(error) = spawned {
+            tracing::warn!("could not look for the local shells: {error}");
+        }
+    }
+
     /// See the bridge declaration.
     pub fn effective_decorations(&self, configured: &QString) -> QString {
         let mode = configured.to_string().parse().unwrap_or(Decorations::Auto);
@@ -206,5 +324,11 @@ pub const DEBUG_PANIC_ENV: &str = "OPENSESH_DEBUG_PANIC";
 fn debug_panic_if_requested() {
     if std::env::var_os(DEBUG_PANIC_ENV).is_some_and(|value| !value.is_empty() && value != "0") {
         panic!("{DEBUG_PANIC_ENV} is set: simulated panic in Platform::debug_panic");
+    }
+}
+
+impl cxx_qt::Initialize for qobject::Platform {
+    fn initialize(self: Pin<&mut Self>) {
+        self.refresh_shells();
     }
 }

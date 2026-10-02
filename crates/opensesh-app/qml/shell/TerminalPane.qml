@@ -21,6 +21,8 @@ pragma ComponentBehavior: Bound
 //   host: string           the saved host it connects to, if any (model role)
 //   target: string         the quick-connect target it connects to, or the recording a
 //                          player plays (model role)
+//   shellCommand: string   a local pane's shell as a command line; empty for the profile's
+//   shellName: string      that shell's name (model role)
 //   commandJson: string    the program and arguments to run instead of a shell, as a JSON list
 //   installKey: string     a public key line to install on the SSH host once connected
 //   label: string          what it connects to, for titles (the host's name or the target)
@@ -51,6 +53,8 @@ Item {
     required property string kind
     required property string host
     required property string target
+    required property string shellCommand
+    required property string shellName
     required property string commandJson
     required property string installKey
     required property string label
@@ -301,6 +305,7 @@ Item {
         hostId: pane.host
         sshTarget: pane.kind === "ssh" && pane.host.length === 0 ? pane.target : ""
         playback: pane.player ? pane.target : ""
+        shell: pane.kind === "local" ? pane.shellCommand : ""
         installKey: pane.installKey
         command: JSON.parse(pane.commandJson || "[]")
         demo: !pane.startSession

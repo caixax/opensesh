@@ -16,7 +16,7 @@ pragma ComponentBehavior: Bound
 // once per broadcast; scrolling can follow along (`syncScroll`).
 //
 // `seed` (JSON) describes the tab when it opens: `{layout, focused, zoomed, panes: [{id, kind,
-// host, target, profile, directory, fontZoom, highlightOn}], broadcast, broadcastExcluded,
+// host, target, shell, shellName, profile, directory, fontZoom, highlightOn}], broadcast, broadcastExcluded,
 // syncScroll, pasteConfirmed}`; empty for one new local pane. A pane of kind `ssh` connects to
 // saved host `host` or to quick-connect `target` (its command is worked out when it opens, so a
 // restored workspace uses the host as it is now); a `player` pane plays the recording `target`. A tab moved to another window takes its seed from
@@ -149,6 +149,9 @@ Item {
             label = host.length > 0 ? (JSON.parse(Hosts.hostJson(host) || "{}").name || target) : target;
         } else if (kind === "player") {
             label = target.split(/[\\/]/).pop();
+        } else if (kind === "local") {
+            // A shell chosen in the new tab menu (empty: the profile's, or the user's own).
+            label = pane.shellName || "";
         }
         // Local panes take the profile of new tabs; a host's panes let the host's chain decide.
         const profile = pane.profile && pane.profile.length > 0 ? pane.profile
@@ -158,6 +161,8 @@ Item {
             kind: kind,
             host: host,
             target: target,
+            shellCommand: kind === "local" ? (pane.shell || "") : "",
+            shellName: kind === "local" ? (pane.shellName || "") : "",
             commandJson: JSON.stringify(command),
             // Only the pane that asked for it: never saved with the workspace.
             installKey: pane.installKey || "",
@@ -181,6 +186,8 @@ Item {
                 kind: row.kind,
                 host: row.host,
                 target: row.target,
+                shell: row.shellCommand,
+                shellName: row.shellName,
                 profile: row.profile,
                 directory: item ? item.currentDirectory() : row.directory,
                 fontZoom: item ? item.fontZoom : row.startZoom,
@@ -236,13 +243,17 @@ Item {
         if (next.length === 0)
             return 0;
         // A copy of a recording's player is a local shell.
-        const copy = connection ?? (source && source.kind !== "player" ? { kind: source.kind, host: source.host, target: source.target } : {});
+        const copy = connection ?? (source && source.kind !== "player"
+                                    ? { kind: source.kind, host: source.host, target: source.target, shell: source.shellCommand, shellName: source.shellName }
+                                    : {});
         const sameKind = source && (copy.kind ?? "local") === source.kind && (copy.host ?? "") === source.host;
         paneModel.append(paneRow({
             id: newId,
             kind: copy.kind ?? "local",
             host: copy.host ?? "",
             target: copy.target ?? "",
+            shell: copy.shell ?? "",
+            shellName: copy.shellName ?? "",
             profile: sameKind ? source.profile : "",
             directory: source && (copy.kind ?? "local") === "local" ? source.currentDirectory() : "",
             fontZoom: source ? source.fontZoom : 0,

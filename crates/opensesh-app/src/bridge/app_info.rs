@@ -253,6 +253,14 @@ fn sample_files(folder: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Whether this is a screenshot run (which shows sample data instead of the machine's).
+#[must_use]
+pub fn screenshot_run() -> bool {
+    STARTUP
+        .get()
+        .is_some_and(|startup| startup.screenshot_dir.is_some())
+}
+
 /// Whether this run must leave the user's files alone: a smoke test or a screenshot run reads
 /// the settings but never writes them (or creates folders for them).
 #[must_use]

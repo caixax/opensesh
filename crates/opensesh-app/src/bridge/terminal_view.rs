@@ -266,6 +266,7 @@ pub mod qobject {
         #[qproperty(QString, ssh_target, cxx_name = "sshTarget", READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, install_key, cxx_name = "installKey", READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, playback, READ, WRITE, NOTIFY = inputs_changed)]
+        #[qproperty(QString, shell, READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, connection, READ, NOTIFY = ssh_changed)]
         #[qproperty(i32, connection_serial, cxx_name = "connectionSerial", READ, NOTIFY = ssh_changed)]
         #[qproperty(QString, prompt, READ, NOTIFY = ssh_changed)]
@@ -928,6 +929,8 @@ pub struct TerminalItemRust {
     install_key: QString,
     /// The recording this pane plays (a `.cast` path); empty for a shell or a connection.
     playback: QString,
+    /// The shell a local pane runs, as a command line; empty for the profile's (or the user's).
+    shell: QString,
     connection: QString,
     /// The remote monitor's latest reading as JSON (see `crate::monitor`); empty without one.
     monitor: QString,
@@ -1046,6 +1049,7 @@ impl Default for TerminalItemRust {
             ssh_target: QString::default(),
             install_key: QString::default(),
             playback: QString::default(),
+            shell: QString::default(),
             connection: QString::default(),
             monitor: QString::default(),
             host_info: QString::default(),
@@ -1275,10 +1279,15 @@ impl TerminalItemRust {
             directory: self.start_directory.to_string(),
             program: {
                 let mut words = self.command.iter().map(ToString::to_string);
-                words
+                let command = words
                     .next()
                     .filter(|program| !program.trim().is_empty())
-                    .map(|program| (program, words.collect()))
+                    .map(|program| (program, words.collect()));
+                // The pane's own shell, else the profile's (or the host's), else the user's.
+                let shell = Some(self.shell.to_string())
+                    .filter(|line| !line.trim().is_empty())
+                    .or_else(|| resolved.map(|r| r.settings.shell.clone()));
+                command.or_else(|| shell.as_deref().and_then(shell_program))
             },
         }
     }
@@ -1296,6 +1305,23 @@ impl TerminalItemRust {
                 ViewportPoint::new(point.row, found.last),
             )),
         })
+    }
+}
+
+/// The program and arguments of a shell's command line; `None` for an empty (or broken) one.
+fn shell_program(line: &str) -> Option<(String, Vec<String>)> {
+    if line.trim().is_empty() {
+        return None;
+    }
+    match opensesh_core::command_line::split(line) {
+        Ok(mut words) => {
+            let program = words.remove(0);
+            Some((program, words))
+        }
+        Err(error) => {
+            tracing::warn!("ignoring the shell `{line}`: {error}");
+            None
+        }
     }
 }
 

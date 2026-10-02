@@ -664,7 +664,7 @@ Item {
             layout: { pane: id },
             focused: id,
             panes: [{ id: id, kind: connection.kind, host: connection.host ?? "", target: connection.target ?? "",
-                    installKey: connection.installKey ?? "" }]
+                    installKey: connection.installKey ?? "", shell: connection.shell ?? "", shellName: connection.shellName ?? "" }]
         };
         selectTab(insertTab({ seed: JSON.stringify(seed) }));
         return true;
@@ -875,6 +875,35 @@ Item {
     function editSnippet(id) {
         const snippet = JSON.parse(Snippets.list || "[]").find(entry => entry.id === id) ?? null;
         snippetEditor.show(snippet);
+    }
+
+    // A new tab running `shell` (an entry of Platform.shells: {name, command}).
+    function newTabWithShell(shell) {
+        return openConnection({ kind: "local", shell: shell.command, shellName: shell.name }, "tab");
+    }
+
+    // Command palette entries to open a tab with each local shell that matches `query`.
+    function shellPaletteEntries(query) {
+        const words = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+        if (words.length === 0)
+            return [];
+        return JSON.parse(Platform.shells || "[]")
+            .filter(entry => {
+                const text = [entry.name, entry.id, qsTr("shell"), qsTr("new tab")].join(" ").toLowerCase();
+                return words.every(word => text.indexOf(word) >= 0);
+            })
+            .slice(0, 8)
+            .map(entry => ({
+                action: {
+                    text: qsTr("New tab: %1").arg(entry.name),
+                    category: qsTr("Terminal"),
+                    iconName: "square-terminal",
+                    shortcut: "",
+                    enabled: true,
+                    actionId: ""
+                },
+                run: () => shell.newTabWithShell(entry)
+            }));
     }
 
     // Plays the session recording in `path` in a new tab.
@@ -1154,6 +1183,31 @@ Item {
                 deadline = Date.now() + timeout;
                 return [waitFor("the pane to fall back to the default profile", () => pane.terminal.fontSize !== 19 && pane.terminal.fontSize > 0,
                                 () => console.info("smoke test: profile changes reached the terminal live"))];
+            },
+            () => {
+                // A shell from the new tab menu (Sprint 12): the list is found in the
+                // background; a test run starts its hermetic shell whatever the choice.
+                deadline = Date.now() + timeout;
+                return [waitFor("the list of local shells", () => JSON.parse(Platform.shells || "[]").length > 0)];
+            },
+            () => {
+                const first = JSON.parse(Platform.shells)[0];
+                if (!shell.newTabWithShell(first))
+                    smoke.fail("a tab with a shell didn't open");
+                const chosen = shell.currentTerminal;
+                if (!chosen || chosen.shellCommand !== first.command || chosen.terminal.shell !== first.command
+                        || chosen.label !== first.name)
+                    smoke.fail("the new tab doesn't run the shell picked: " + JSON.stringify(first));
+                const entry = shell.tabEntry(shell.currentTab, false);
+                if (entry.panes[0].shell !== first.command)
+                    smoke.fail("a saved workspace wouldn't keep the shell");
+                deadline = Date.now() + timeout;
+                return [waitFor("the picked shell's session", () => chosen.terminal.running,
+                                () => {
+                                    console.info("smoke test: a tab opened with a shell from the list (" + first.name + ")");
+                                    shell.closeTab(shell.currentTab);
+                                    return [];
+                                })];
             },
             () => {
                 shell.closeTabById(tabId);
@@ -2607,6 +2661,7 @@ Item {
         topOffset: titleRegion.height + Theme.spacingLg
         shortcutText: action => shell.shortcutText(action.actionId)
         extraResults: query => shell.hostPaletteEntries(query).concat(shell.tunnelPaletteEntries(query))
+                                     .concat(shell.shellPaletteEntries(query))
     }
 
     NotificationsPanel {

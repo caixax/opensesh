@@ -786,6 +786,41 @@ SettingsPage {
 
         TerminalOptionRow {
             page: page
+            key: "shell"
+            label: qsTr("Shell")
+            note: qsTr("What a new local terminal runs, as a command line; empty for your own shell. Quote a path with spaces. A shell picked in the new tab menu wins.")
+
+            Column {
+                width: parent.width
+                spacing: Theme.spacingSm
+
+                OsComboBox {
+                    readonly property var shells: JSON.parse(Platform.shells || "[]")
+                    readonly property var choices: [{ text: qsTr("Your own shell"), value: "" }]
+                        .concat(shells.map(shell => ({ text: shell.name, value: shell.command })))
+
+                    width: Math.min(parent.width, Theme.spacingXxl * 10)
+                    model: choices
+                    textRole: "text"
+                    valueRole: "value"
+                    currentIndex: Math.max(0, choices.findIndex(choice => choice.value === (page.values.shell || "")))
+                    Accessible.name: qsTr("Shell")
+                    onActivated: page.set("shell", currentValue)
+                }
+
+                OsTextField {
+                    width: parent.width
+                    text: page.values.shell || ""
+                    font.family: Theme.monoFontFamily
+                    placeholderText: qsTr("Your own shell")
+                    Accessible.name: qsTr("Shell command line")
+                    onEditingFinished: page.set("shell", text.trim())
+                }
+            }
+        }
+
+        TerminalOptionRow {
+            page: page
             key: "bell"
             label: qsTr("Bell")
             note: qsTr("Notification flashes the taskbar and adds a notice when OpenSesh isn't the active window. The sound is not available on Wayland; the bell flashes instead.")
