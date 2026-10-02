@@ -8,6 +8,8 @@
 #             two jump hosts with an agent, a one-time code through PAM, reconnection; SFTP: 1 GiB
 #             both ways with checksums, an interrupted upload resumed, a server without SFTP;
 #             tunnels: curl through -L, -R and -D, and a tunnel back after its session is killed
+#   s3      - S3 storage against RustFS (scripts/s3-test-server.sh): 1 GiB up in 32 MB parts and back
+#             down with the same SHA-256, a temporary link
 #   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, bundled ConPTY, offscreen
 #             smoke test
 name: CI
@@ -236,6 +238,33 @@ jobs:
       - name: Stop the servers
         if: always()
         run: sudo scripts/ssh-test-servers.sh stop
+
+  s3:
+    name: S3 against RustFS
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libdbus-1-dev
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: s3-server
+      - name: Build the test
+        run: cargo test --locked -p opensesh-ssh --test real_s3 --no-run
+      - name: Start RustFS
+        run: sudo scripts/s3-test-server.sh start
+      - name: A 1 GiB file up and down
+        run: cargo test --locked -p opensesh-ssh --test real_s3 -- --ignored --nocapture
+      - name: Server logs
+        if: failure()
+        run: sudo scripts/s3-test-server.sh logs 2>&1 | tail -n 80
+      - name: Stop the server
+        if: always()
+        run: sudo scripts/s3-test-server.sh stop
 
   windows:
     name: Windows (MSVC, aqtinstall Qt)
