@@ -1,11 +1,12 @@
 // Status bar (PLAN §5.3). Left: the session status: the current terminal's working directory
 // when the shell reports it (OSC 7), else the state of an SSH connection, else its title; the
-// remote monitor's readings of that terminal's server (Sprint 11: the metrics chosen in Settings >
+// remote monitor's readings of that terminal's server; for a remote desktop, its connection's state (Sprint 11: the metrics chosen in Settings >
 // SSH, the details in a tooltip, a click shows the side panel's Info tab); and while the tab
 // broadcasts, how many panes receive the input (click to stop).
 // Right: with a master password, the vault's lock (click to lock or unlock), the notifications
 // button with the unread count, a theme quick switch (System -> Dark -> Light) and the version.
 //   terminal: TerminalItem   the focused terminal of the current tab, or null
+//   desktop: RdpItem         the focused remote desktop of the current tab, or null
 //   label: string            what that terminal connects to (a host's name), if anything
 //   workspace: TabWorkspace  the current tab, or null
 //   signal monitorClicked    the readings were clicked
@@ -17,10 +18,12 @@ Rectangle {
     id: bar
 
     property TerminalItem terminal: null
+    property RdpItem desktop: null
     property string label: ""
     property Item workspace: null
     // The built-in SSH client's state of the terminal ("" for other sessions).
-    readonly property string sshState: terminal && terminal.connection.length > 0 ? JSON.parse(terminal.connection).state ?? "" : ""
+    readonly property string sshState: desktop ? (desktop.connection.length > 0 ? JSON.parse(desktop.connection).state ?? "" : "")
+                                     : terminal && terminal.connection.length > 0 ? JSON.parse(terminal.connection).state ?? "" : ""
     readonly property int receiving: workspace && workspace.broadcast ? workspace.participants.length : 0
     // The remote monitor's latest reading of the terminal's server, while connected; else null.
     readonly property var reading: {
@@ -65,6 +68,18 @@ Rectangle {
     readonly property string sessionText: {
         if (!terminal)
             return qsTr("No active session");
+        if (desktop) {
+            switch (sshState) {
+            case "connecting":
+                return qsTr("Connecting to %1…").arg(label);
+            case "authenticating":
+                return qsTr("Signing in to %1…").arg(label);
+            case "connected":
+                return qsTr("Remote desktop of %1").arg(label);
+            default:
+                return qsTr("Disconnected from %1").arg(label);
+            }
+        }
         if (terminal.workingDirectory.length > 0)
             return terminal.workingDirectory;
         switch (sshState) {
@@ -118,6 +133,7 @@ Rectangle {
             radius: width / 2
             color: !bar.terminal ? Theme.textDisabled
                  : bar.sshState === "connecting" || bar.sshState === "authenticating" ? Theme.warning
+                 : bar.desktop ? (bar.desktop.running ? Theme.success : Theme.danger)
                  : bar.sshState === "disconnected" || !bar.terminal.running ? Theme.danger : Theme.success
         }
 

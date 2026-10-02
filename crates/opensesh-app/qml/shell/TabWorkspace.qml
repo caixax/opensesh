@@ -32,6 +32,7 @@ pragma ComponentBehavior: Bound
 //   focusedPane: int       read-only outside; the pane with the focus
 //   zoomedPane: int        read-only outside; the maximized pane, 0 for none
 //   focusedItem: TerminalPane  read-only; the focused pane's item
+//   icon: string           read-only; the tab's icon ("monitor" for a remote desktop, else empty)
 //   paneCount: int         read-only
 //   broadcast: bool        read-only outside; broadcast is on in this tab
 //   participants: var      read-only; ids of the receiving panes (empty while off)
@@ -73,6 +74,8 @@ Item {
     // The focused terminal's title, else what it connects to.
     readonly property string title: focusedItem ? (focusedItem.terminal.title.length > 0 ? focusedItem.terminal.title
                                                                                         : focusedItem.label) : ""
+    // The tab's icon: a remote desktop's when the focused pane shows one.
+    readonly property string icon: focusedItem && focusedItem.desktop ? "monitor" : ""
     // The keyboard resize step, as a share of the tab.
     readonly property real resizeStep: 0.05
 
@@ -464,6 +467,7 @@ Item {
     onGeometryChanged: syncDividers()
     onZoomedPaneChanged: syncDividers()
     onTitleChanged: shell.updateTab(tabId, "title", title)
+    onIconChanged: shell.updateTab(tabId, "tabIcon", icon)
     Component.onCompleted: {
         load();
         if (current)
