@@ -599,6 +599,10 @@
         <translation>[ÑÅŠ (ŔüšťFŠ) ~~~~]</translation>
     </message>
     <message>
+        <source>Lab workstation</source>
+        <translation>[Ĺáb ŵöŕķšťáťíöñ ~~~~~]</translation>
+    </message>
+    <message>
         <source>Office desktop</source>
         <translation>[Öƒƒíçé ďéšķťöþ ~~~~~]</translation>
     </message>
@@ -810,6 +814,10 @@
     <message>
         <source>Remote desktop</source>
         <translation>[Ŕémöťé ďéšķťöþ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>View only</source>
+        <translation>[Víéŵ öñĺý ~~~]</translation>
     </message>
     <message>
         <source>Send Ctrl+Alt+Del</source>
@@ -2493,6 +2501,62 @@
         <translation>[Ťéxť çöþíéď ĥéŕé çáñ bé þášťéď öñ ťĥé ŕémöťé ďéšķťöþ, áñď ťĥé öťĥéŕ ŵáý ŕöüñď. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>Default (fit in the pane)</source>
+        <translation>[Ďéƒáüĺť (ƒíť íñ ťĥé þáñé) ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Follow the pane&apos;s size</source>
+        <translation>[Föĺĺöŵ ťĥé þáñé&apos;š šížé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Following the pane&apos;s size works with servers that resize their desktop, such as TigerVNC; the others keep theirs.</source>
+        <translation>[Föĺĺöŵíñĝ ťĥé þáñé&apos;š šížé ŵöŕķš ŵíťĥ šéŕvéŕš ťĥáť ŕéšížé ťĥéíŕ ďéšķťöþ, šüçĥ áš ŤíĝéŕVÑÇ; ťĥé öťĥéŕš ķééþ ťĥéíŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Picture quality</source>
+        <translation>[Þíçťüŕé qüáĺíťý ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Default (high)</source>
+        <translation>[Ďéƒáüĺť (ĥíĝĥ) ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Lossless</source>
+        <translation>[Ĺöššĺéšš ~~~]</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>[Ĥíĝĥ ~~]</translation>
+    </message>
+    <message>
+        <source>Medium</source>
+        <translation>[Méďíüm ~~]</translation>
+    </message>
+    <message>
+        <source>Low (least bandwidth)</source>
+        <translation>[Ĺöŵ (ĺéášť báñďŵíďťĥ) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Lower qualities send pictures as JPEG, for slow connections; lossless keeps every pixel exact.</source>
+        <translation>[Ĺöŵéŕ qüáĺíťíéš šéñď þíçťüŕéš áš ĴÞÉĜ, ƒöŕ šĺöŵ çöññéçťíöñš; ĺöššĺéšš ķééþš évéŕý þíxéĺ éxáçť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>View only</source>
+        <translation>[Víéŵ öñĺý ~~~]</translation>
+    </message>
+    <message>
+        <source>Watch the desktop without sending keys, the mouse or the clipboard.</source>
+        <translation>[Ŵáťçĥ ťĥé ďéšķťöþ ŵíťĥöüť šéñďíñĝ ķéýš, ťĥé möüšé öŕ ťĥé çĺíþböáŕď. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Let other viewers stay</source>
+        <translation>[Ĺéť öťĥéŕ víéŵéŕš šťáý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Off asks the server to disconnect the other viewers of this desktop.</source>
+        <translation>[Öƒƒ ášķš ťĥé šéŕvéŕ ťö ďíšçöññéçť ťĥé öťĥéŕ víéŵéŕš öƒ ťĥíš ďéšķťöþ. ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Engine</source>
         <translation>[Éñĝíñé ~~]</translation>
     </message>
@@ -2731,10 +2795,6 @@
     <message>
         <source>Saved now; the file browser arrives in Sprint 8.</source>
         <translation>[Šávéď ñöŵ; ťĥé ƒíĺé bŕöŵšéŕ áŕŕívéš íñ Šþŕíñť 8. ~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Saved now; VNC arrives in Sprint 14.</source>
-        <translation>[Šávéď ñöŵ; VÑÇ áŕŕívéš íñ Šþŕíñť 14. ~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Saved now; connecting arrives in Sprint 12.</source>

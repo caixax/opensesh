@@ -26,11 +26,15 @@ Item {
     required property Item pane
     readonly property alias desktop: rdp
     readonly property var hostData: pane.host.length > 0 ? JSON.parse(Hosts.hostJson(pane.host) || "{}") : ({})
-    property string scaleMode: (hostData.rdp ?? {}).scaling ?? "dynamic"
+    // RDP desktops follow the pane by default; VNC servers mostly keep their size, so they fit.
+    property string scaleMode: view.pane.kind === "vnc" ? ((hostData.vnc ?? {}).scaling ?? "fit")
+                                                        : ((hostData.rdp ?? {}).scaling ?? "dynamic")
     // The workspace goes first when a tab closes.
     readonly property bool zoomed: view.pane.workspace !== null && view.pane.workspace.zoomedPane === view.pane.paneId
     readonly property int paneCount: view.pane.workspace !== null ? view.pane.workspace.paneCount : 1
     readonly property var connection: overlay.connection
+    // A VNC host set to view only: nothing typed or clicked reaches it.
+    readonly property bool viewOnly: pane.kind === "vnc" && (hostData.vnc ?? {}).read_only === true
 
     function focusDesktop() {
         if (overlay.asking)
@@ -108,6 +112,11 @@ Item {
                 size: "small"
             }
 
+            OsTag {
+                visible: view.viewOnly
+                text: qsTr("View only")
+            }
+
             OsText {
                 text: view.stateText()
                 size: "small"
@@ -118,7 +127,7 @@ Item {
             OsIconButton {
                 iconName: "keyboard"
                 toolTip: qsTr("Send Ctrl+Alt+Del")
-                enabled: rdp.running
+                enabled: rdp.running && !view.viewOnly
                 focusPolicy: Qt.NoFocus
                 onClicked: {
                     rdp.sendCtrlAltDel();

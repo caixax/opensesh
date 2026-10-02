@@ -1,5 +1,6 @@
-//! Remote desktop panes (Sprint 13, ADR 0034), without Qt: each RDP pane's session runs in the
-//! helper program `opensesh-rdp` (next to the app), started here and spoken to with
+//! Remote desktop panes (Sprint 13, ADR 0034; VNC in Sprint 14, ADR 0035), without Qt: each RDP
+//! pane's session runs in the helper program `opensesh-rdp` (next to the app), each VNC pane's in
+//! a task on the SSH runtime (`opensesh_vnc::drive`); both are spoken to with
 //! `opensesh-rdp-protocol`. A thread reads what it says into the pane's [`Frame`] and [`State`]
 //! and wakes the pane's item; another writes what the item asks.
 //!
@@ -114,9 +115,29 @@ impl std::fmt::Debug for State {
     }
 }
 
-/// A pane's RDP session: the helper program, the frame and the state.
+/// Where the item's messages go: the RDP helper's input, or a VNC session's task.
+enum Outbox {
+    Helper(Sender<ToHelper>),
+    Task(tokio::sync::mpsc::UnboundedSender<ToHelper>),
+}
+
+impl Outbox {
+    fn send(&self, message: ToHelper) {
+        match self {
+            Self::Helper(sender) => {
+                let _ = sender.send(message);
+            }
+            Self::Task(sender) => {
+                let _ = sender.send(message);
+            }
+        }
+    }
+}
+
+/// A pane's remote desktop session (the RDP helper program, or a VNC task), its frame and its
+/// state.
 pub struct Connection {
-    to: Sender<ToHelper>,
+    to: Outbox,
     child: Mutex<Option<Child>>,
     /// The remote screen.
     pub frame: Mutex<Frame>,
@@ -170,7 +191,7 @@ impl Connection {
         };
         let (to, outbox) = crossbeam_channel::unbounded::<ToHelper>();
         let connection = Arc::new(Self {
-            to,
+            to: Outbox::Helper(to),
             child: Mutex::new(Some(child)),
             frame: Mutex::new(Frame::default()),
             state: Mutex::new(State::default()),
@@ -191,9 +212,44 @@ impl Connection {
         Ok(connection)
     }
 
-    /// Sends `message` to the helper.
+    /// Starts a VNC session (ADR 0035): a task on the SSH runtime that speaks the helper's
+    /// messages. Nothing is sent until the item says to connect.
+    ///
+    /// # Errors
+    ///
+    /// When the runtime isn't there.
+    pub fn start_vnc() -> Result<Arc<Self>, String> {
+        let runtime = opensesh_ssh::runtime().ok_or("the app isn't ready")?;
+        let (to, inbox) = tokio::sync::mpsc::unbounded_channel();
+        let connection = Arc::new(Self {
+            to: Outbox::Task(to),
+            child: Mutex::new(None),
+            frame: Mutex::new(Frame::default()),
+            state: Mutex::new(State::default()),
+            latest: Mutex::new((None, None)),
+            jump: Mutex::new(None),
+        });
+        let weak = Arc::downgrade(&connection);
+        let receiver = weak.clone();
+        let out: opensesh_vnc::drive::Out = Arc::new(move |message| {
+            if let Some(connection) = receiver.upgrade() {
+                connection.receive(message);
+            }
+        });
+        runtime.spawn(async move {
+            opensesh_vnc::drive::drive(inbox, out).await;
+            if let Some(connection) = weak.upgrade() {
+                let ended = "the VNC session ended".to_owned();
+                lock(&connection.latest).1 = Some(ended.clone());
+                connection.notify(|state| state.helper_ended = Some(ended));
+            }
+        });
+        Ok(connection)
+    }
+
+    /// Sends `message` to the session.
     pub fn send(&self, message: ToHelper) {
-        let _ = self.to.send(message);
+        self.to.send(message);
     }
 
     /// Wakes `waker` on every change from now on (and now, if something is waiting).
@@ -383,6 +439,48 @@ pub struct Plan {
     /// The SSH connection to the last jump host, when there are jump hosts: the helper then
     /// connects to a local tunnel to `connect`'s address and port.
     pub jump: Option<ConnectSpec>,
+    /// RDP or VNC.
+    pub protocol: Protocol,
+}
+
+/// The port of the test run's VNC test server (0 until it starts).
+static VNC_TEST_SERVER: AtomicU16 = AtomicU16::new(0);
+
+/// Test runs only: starts the in-process VNC test server (VeNCrypt with its test certificate,
+/// or VNC authentication) and returns its port; 0 when it can't.
+#[must_use]
+pub fn start_vnc_test_server() -> u16 {
+    if !is_test_run() {
+        return 0;
+    }
+    let running = VNC_TEST_SERVER.load(Ordering::Relaxed);
+    if running != 0 {
+        return running;
+    }
+    let Some(runtime) = opensesh_ssh::runtime() else {
+        return 0;
+    };
+    let rules = opensesh_vnc::testing::Rules {
+        offers: vec![
+            opensesh_vnc::testing::Offer::VeNCrypt(&[opensesh_vnc::security::vencrypt::X509_VNC]),
+            opensesh_vnc::testing::Offer::VncAuth,
+        ],
+        greeting: Some(opensesh_vnc::testing::SERVER_TEXT),
+        ..opensesh_vnc::testing::Rules::default()
+    };
+    match runtime.block_on(opensesh_vnc::testing::serve(rules)) {
+        Ok(server) => {
+            let port = server.port;
+            // It runs as long as the app (its listener lives on the runtime).
+            std::mem::forget(server);
+            VNC_TEST_SERVER.store(port, Ordering::Relaxed);
+            port
+        }
+        Err(error) => {
+            tracing::warn!("could not start the VNC test server: {error}");
+            0
+        }
+    }
 }
 
 /// The port of the test run's RDP test server (0 until it starts).
@@ -434,16 +532,16 @@ pub fn start_test_server() -> u16 {
     port
 }
 
-/// What pane `host_id` (a saved host) or `target_text` (`rdp://` text) connects to.
+/// What pane `host_id` (a saved host) or `target_text` (`rdp://` or `vnc://` text) connects to.
 ///
 /// # Errors
 ///
-/// When the host is gone, isn't RDP, or has no address.
+/// When the host is gone, isn't a remote desktop, or has no address.
 pub fn plan_for(host_id: &str, target_text: &str) -> Result<Plan, String> {
     let library = crate::hosts::current();
     let host: Host = if host_id.is_empty() {
         let parsed = target::parse(target_text).map_err(|error| error.to_string())?;
-        if parsed.protocol != Protocol::Rdp {
+        if !matches!(parsed.protocol, Protocol::Rdp | Protocol::Vnc) {
             return Err(format!(
                 "{} isn't a remote desktop",
                 parsed.protocol.as_str()
@@ -468,10 +566,16 @@ pub fn plan_for(host_id: &str, target_text: &str) -> Result<Plan, String> {
     if address.is_empty() {
         return Err("the host has no address".to_owned());
     }
-    let port = resolved.port().unwrap_or(3389);
+    let protocol = host.protocol;
+    let vnc = protocol == Protocol::Vnc;
+    let port = resolved
+        .port()
+        .or_else(|| protocol.default_port())
+        .unwrap_or(3389);
     let RdpOptions {
         domain, clipboard, ..
     } = host.rdp.clone();
+    let clipboard = if vnc { host.vnc.clipboard } else { clipboard };
     let mut connect = Connect {
         address: address.clone(),
         port,
@@ -485,11 +589,31 @@ pub fn plan_for(host_id: &str, target_text: &str) -> Result<Plan, String> {
         clipboard: clipboard.unwrap_or(true),
         timeout_secs: 20,
         client_name: client_name(),
+        read_only: vnc && host.vnc.read_only.unwrap_or(false),
+        quality: if vnc {
+            host.vnc
+                .quality
+                .unwrap_or(opensesh_core::hosts::VncQuality::High)
+                .jpeg_level()
+        } else {
+            None
+        },
+        shared: !vnc || host.vnc.shared.unwrap_or(true),
     };
+    if vnc {
+        connect.domain = None;
+    }
     if is_test_run() {
-        let port = TEST_SERVER.load(Ordering::Relaxed);
+        let port = if vnc {
+            VNC_TEST_SERVER.load(Ordering::Relaxed)
+        } else {
+            TEST_SERVER.load(Ordering::Relaxed)
+        };
         if port == 0 {
-            return Err("a test run connects only to its own RDP server".to_owned());
+            return Err(format!(
+                "a test run connects only to its own {} server",
+                protocol.as_str().to_uppercase()
+            ));
         }
         "127.0.0.1".clone_into(&mut connect.address);
         connect.port = port;
@@ -501,8 +625,9 @@ pub fn plan_for(host_id: &str, target_text: &str) -> Result<Plan, String> {
         connect,
         server: (address, port),
         identity: if is_test_run() { None } else { identity },
-        size: host.rdp.size(),
+        size: if vnc { None } else { host.rdp.size() },
         jump,
+        protocol,
     })
 }
 

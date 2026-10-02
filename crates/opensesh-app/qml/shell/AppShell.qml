@@ -940,7 +940,7 @@ Item {
     // Protocols a terminal pane connects with besides SSH and local shells.
     readonly property var terminalKinds: ["telnet", "serial", "mosh", "docker", "kube"]
     // Protocols whose panes show a remote desktop (DesktopView).
-    readonly property var desktopKinds: ["rdp"]
+    readonly property var desktopKinds: ["rdp", "vnc"]
 
     // Plays the session recording in `path` in a new tab.
     function playRecording(path) {
@@ -1256,6 +1256,7 @@ Item {
             () => shell.tunnelSmokeSteps(smoke),
             () => shell.protocolSmokeSteps(smoke),
             () => shell.desktopSmokeSteps(smoke),
+            () => shell.vncSmokeSteps(smoke),
             () => openTab("the second shell's first output"),
             () => {
                 pane.terminal.sendText("exit\r");
@@ -2028,6 +2029,114 @@ Item {
         ];
     }
 
+    // Functions for SmokeTest.steps: VNC desktops (Sprint 14) against the in-process VNC test
+    // server, never the network: VeNCrypt's certificate and the password asked in the pane (a
+    // wrong password first), the desktop, Ctrl+Alt+Del as keysyms, the clipboard both ways (a
+    // stand-in for the user's), the desktop following the pane once asked to, and a disconnected
+    // pane connecting again.
+    function vncSmokeSteps(smoke) {
+        const timeout = 20000;
+        let deadline = 0;
+        let pane = null;
+        let vnc = null;
+        let asked = [];
+        let answered = {};
+        let wrongFirst = false;
+        const answer = () => {
+            if (!vnc || vnc.prompt.length === 0)
+                return;
+            const question = JSON.parse(vnc.prompt);
+            if (question.id === undefined || answered[question.id])
+                return;
+            answered[question.id] = true;
+            asked.push(question.kind + (question.certificate ? "-certificate" : "") + (question.retry ? "-retry" : ""));
+            if (question.kind === "hostKey") {
+                vnc.answerPrompt(question.id, "trust-once", []);
+            } else if (question.kind === "password" && wrongFirst && !question.retry) {
+                wrongFirst = false;
+                vnc.answerPrompt(question.id, "submit", ["wrong password"]); // lint-qml: allow (a wrong password for the test server)
+            } else {
+                vnc.answerPrompt(question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+            }
+        };
+        const near = (x, y, rgb) => {
+            const text = vnc ? vnc.pixelAt(x, y) : "";
+            if (text.length !== 7)
+                return false;
+            for (let i = 0; i < 3; ++i) {
+                if (Math.abs(parseInt(text.substr(1 + 2 * i, 2), 16) - rgb[i]) > 24)
+                    return false;
+            }
+            return true;
+        };
+        const keySquare = [[0x5e, 0x81, 0xac], [0xa3, 0xbe, 0x8c], [0xeb, 0xcb, 0x8b], [0xbf, 0x61, 0x6a]];
+        const state = () => vnc ? (JSON.parse(vnc.connection || "{}").state ?? "") : "";
+        const wait = (what, condition, next) => {
+            deadline = Date.now() + timeout;
+            const poll = () => {
+                answer();
+                if (condition())
+                    return next ? next() : [];
+                if (Date.now() > deadline) {
+                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what + "; the pane says "
+                               + (vnc ? vnc.connection : "nothing") + ", questions asked: " + asked.join(", "));
+                    return [];
+                }
+                return [poll];
+            };
+            return [poll];
+        };
+        return [
+            () => {
+                if (AppInfo.startVncTestServer() <= 0)
+                    smoke.fail("the VNC test server didn't start");
+                wrongFirst = true;
+                if (!shell.connectTarget("vnc://tester@office-pc.example", "tab"))
+                    smoke.fail("VNC quick connect opened nothing");
+                pane = shell.currentTerminal;
+                vnc = pane && pane.desktopView ? pane.desktopView.desktop : null;
+                if (!pane || pane.kind !== "vnc" || !vnc)
+                    smoke.fail("the pane isn't a VNC pane");
+                return wait("the VNC desktop", () => vnc.running && vnc.desktopWidth > 0 && near(48, 48, keySquare[0]), () => {
+                    if (asked.indexOf("hostKey-certificate") < 0 || asked.indexOf("password-retry") < 0)
+                        smoke.fail("the pane didn't ask for the certificate and again for the password: " + asked.join(", "));
+                    return [];
+                });
+            },
+            () => {
+                // Ctrl, Alt and Del as keysyms: three keys, the fourth colour.
+                vnc.sendCtrlAltDel();
+                return wait("the keys on the VNC desktop", () => near(48, 48, keySquare[3]));
+            },
+            () => wait("the VNC server's clipboard text", () => vnc.testClipboard() === "Copied on the OpenSesh VNC test server"), // lint-qml: allow (the test server's text)
+            () => {
+                vnc.setTestClipboard("Copied in OpenSesh"); // lint-qml: allow (clipboard text for the test server)
+                return wait("the clipboard text on the VNC server", () => near(104, 48, keySquare[1]));
+            },
+            () => {
+                // Scaled to fit by default; asked to follow the pane, the server takes its size.
+                pane.desktopView.setScaleMode("dynamic");
+                return wait("the VNC desktop to follow the pane", () => {
+                    const wanted = vnc.wantedWidth - vnc.wantedWidth % 2;
+                    return vnc.running && vnc.desktopWidth === wanted && wanted !== 1024;
+                });
+            },
+            () => {
+                vnc.disconnect();
+                return wait("the VNC disconnection", () => state() === "disconnected");
+            },
+            () => {
+                answered = {};
+                vnc.reconnect();
+                return wait("the VNC desktop again", () => vnc.running && vnc.desktopWidth > 0, () => {
+                    console.info("smoke test: a VNC desktop asked for its certificate and password, took keys and clipboard text both ways, followed the pane's size and connected again");
+                    shell.closeTab(shell.currentTab);
+                    return [];
+                });
+            }
+        ];
+    }
+
     // Functions for SmokeTest.steps: the SFTP view's (SftpView.smokeSteps), after the SSH steps
     // started the test server.
     function sftpSmokeSteps(smoke) {
@@ -2160,7 +2269,7 @@ Item {
     // --screenshots: the Hosts view, with one session tab (without a shell) and no popups.
     // The tabs the protocol screenshots made (tab ids).
     property var protocolTabs: ({ telnet: 0, serial: 0 })
-    property var desktopTabs: ({ desktop: 0, certificate: 0 })
+    property var desktopTabs: ({ desktop: 0, certificate: 0, vnc: 0 })
 
     // Screenshots: the tab strip opens (or closes) its menu of shells.
     signal shellMenuRequested(bool open)
@@ -2628,8 +2737,9 @@ Item {
     }
 
     // --screenshots: remote desktops, made for real against the RDP test server next to the app
-    // (never the network): a connected desktop, and a second tab waiting on the server's
-    // certificate. `done` runs when both are ready (or, with a warning, after 20 s).
+    // and the in-process VNC test server (never the network): a connected RDP desktop, a second
+    // tab waiting on the server's certificate, and a VNC desktop. `done` runs when they are ready
+    // (or, with a warning, after 20 s).
     function prepareDesktopScreenshots(done) {
         palette.close();
         notifications.close();
@@ -2637,7 +2747,7 @@ Item {
         sidePanelOpen = false;
         while (sessionModel.count > 0)
             removeTab(sessionModel.count, false);
-        if (AppInfo.startRdpTestServer() <= 0) {
+        if (AppInfo.startRdpTestServer() <= 0 || AppInfo.startVncTestServer() <= 0) {
             console.warn("AppShell: no RDP test server for the remote desktop screenshots (cargo xtask rdp --test-server)");
             done();
             return;
@@ -2646,7 +2756,7 @@ Item {
         let stage = "desktop";
         let rdp = null;
         const answered = {};
-        // The password always; the certificate only for the first desktop.
+        // The password always; the certificate on every desktop but the one left asking.
         const answer = trustCertificate => {
             const question = rdp && rdp.prompt.length > 0 ? JSON.parse(rdp.prompt) : {};
             if (question.id === undefined || answered[stage + question.id])
@@ -2687,7 +2797,15 @@ Item {
             } else if (stage === "certificate") {
                 answer(false);
                 const question = rdp.prompt.length > 0 ? JSON.parse(rdp.prompt) : {};
-                return question.kind === "hostKey";
+                if (question.kind !== "hostKey")
+                    return false;
+                if (!open("vnc://tester@office-pc.example")) // lint-qml: allow (a quick-connect URL)
+                    return true;
+                desktopTabs.vnc = currentTabId;
+                stage = "vnc";
+            } else if (stage === "vnc") {
+                answer(true);
+                return rdp.running && rdp.desktopWidth > 0;
             }
             return false;
         };
@@ -2696,7 +2814,8 @@ Item {
     }
 
     // --screenshots: a connected remote desktop ("desktop"), one asking about its certificate
-    // ("certificate"), and the host editor of an RDP host ("editor").
+    // ("certificate"), a VNC desktop ("vnc"), and the host editor of an RDP and a VNC host
+    // ("editor", "vnceditor").
     function prepareDesktopScreenshot(page) {
         hostEditor.close();
         palette.close();
@@ -2704,6 +2823,22 @@ Item {
             selectTabById(desktopTabs.desktop);
         } else if (page === "certificate") {
             selectTabById(desktopTabs.certificate);
+        } else if (page === "vnc") {
+            selectTabById(desktopTabs.vnc);
+        } else if (page === "vnceditor") {
+            showView("hosts");
+            hostEditor.create("");
+            const fields = {
+                name: qsTr("Lab workstation"),
+                protocol: "vnc",
+                address: "lab-07.lan", // lint-qml: allow (sample data for screenshots)
+                "vnc.quality": "medium",
+                "vnc.read_only": true
+            };
+            for (const key of Object.keys(fields))
+                hostEditor.setValue(key, fields[key]);
+            hostEditor.loaded();
+            hostEditor.section = 0;
         } else if (page === "editor") {
             showView("hosts");
             hostEditor.create("");

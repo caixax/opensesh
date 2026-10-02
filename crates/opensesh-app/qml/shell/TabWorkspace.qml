@@ -252,7 +252,7 @@ Item {
             return 0;
         // A copy of a recording's player, or of a remote desktop (a second session to it would
         // usually end the first), is a local shell.
-        const copy = connection ?? (source && source.kind !== "player" && source.kind !== "rdp"
+        const copy = connection ?? (source && source.kind !== "player" && !source.desktop
                                     ? { kind: source.kind, host: source.host, target: source.target, shell: source.shellCommand, shellName: source.shellName }
                                     : {});
         const sameKind = source && (copy.kind ?? "local") === source.kind && (copy.host ?? "") === source.host;
