@@ -225,7 +225,7 @@ impl Keychain {
     }
 
     /// Commits `file`: written first, kept in memory only if that worked.
-    fn commit(&mut self, file: KeychainFile) -> Result<(), KeychainOpError> {
+    pub(crate) fn commit(&mut self, file: KeychainFile) -> Result<(), KeychainOpError> {
         self.save_file(&file)?;
         self.file = file;
         Ok(())

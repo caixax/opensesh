@@ -6,7 +6,8 @@
 //! - [`keys`]: SSH keys (generate, import OpenSSH and PuTTY keys with [`ppk`], export).
 //! - [`keychain`]: `keychain.toml`, the identities and keys without their secrets.
 //! - [`agent`]: keys held by SSH agents; [`known_hosts`]: host keys, read-only for now.
-//! - [`manager`]: the vault and `keychain.toml` together, as the app uses them.
+//! - [`manager`]: the vault and `keychain.toml` together, as the app uses them; [`transfer`]
+//!   the keychain in an OpenSesh bundle, sealed with an export password.
 //!
 //! Secrets are never logged, never put in error messages and never written in clear: types that
 //! hold them wipe their memory on drop and print nothing in `Debug`.
@@ -21,6 +22,7 @@ pub mod known_hosts;
 pub mod manager;
 pub mod ppk;
 pub mod store;
+pub mod transfer;
 pub mod vault;
 
 pub use store::{KeyStore, MemoryKeyStore, StoreError, SystemKeyring};
