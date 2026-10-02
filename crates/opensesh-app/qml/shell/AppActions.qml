@@ -34,6 +34,8 @@ QtObject {
     // The terminal tab shown in the window in use, or null.
     readonly property Item workspace: shell.currentTab > 0 ? shell.currentWorkspace : null
     readonly property bool severalPanes: workspace !== null && workspace.paneCount > 1
+    // The focused pane's remote desktop view, or null.
+    readonly property Item desktopView: root.shell.currentTerminal ? root.shell.currentTerminal.desktopView : null
     readonly property bool currentPinned: shell.tabsRevision >= 0 && shell.currentTab > 0
                                           && shell.currentTab <= shell.sessionCount
                                           && shell.sessionModel.get(shell.currentTab - 1).pinned
@@ -462,6 +464,23 @@ QtObject {
             category: root.categoryApp
             iconName: "settings"
             onTriggered: root.shell.showView("settings")
+        },
+        OsAction {
+            actionId: "desktop.releaseKeyboard"
+            text: qsTr("Give the keyboard back to OpenSesh")
+            defaultShortcut: "Ctrl+Alt+Home"
+            category: root.categorySessions
+            iconName: "keyboard"
+            enabled: root.desktopView !== null
+            onTriggered: root.desktopView.releaseKeyboard()
+        },
+        OsAction {
+            actionId: "desktop.ctrlAltDel"
+            text: qsTr("Send Ctrl+Alt+Del to the remote desktop")
+            category: root.categorySessions
+            iconName: "keyboard"
+            enabled: root.desktopView !== null && root.desktopView.desktop.running
+            onTriggered: root.desktopView.desktop.sendCtrlAltDel()
         },
         OsAction {
             actionId: "app.fullscreen"

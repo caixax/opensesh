@@ -5,8 +5,9 @@ pragma ComponentBehavior: Bound
 // SshOverlay for the server's certificate, the password and disconnections.
 //
 // While the desktop has the keyboard every key goes to it, the app's shortcuts included, except
-// Ctrl+Alt+Home, which gives the keyboard back to OpenSesh (the focus moves to the bar's menu
-// button). A click on the desktop gives it the keyboard again.
+// the "Give the keyboard back" action's (Ctrl+Alt+Home unless changed in Settings > Shortcuts),
+// which moves the focus to the bar's menu button. A click on the desktop gives it the keyboard
+// again.
 //
 // The desktop follows the pane's size ("dynamic": it asks the server for the new size once the
 // pane stops changing), is scaled to fit it ("fit") or is shown one pixel per pixel ("actual"),
@@ -14,7 +15,7 @@ pragma ComponentBehavior: Bound
 //   pane: Item        the TerminalPane (paneId, host, target, label, startSession, edgeInset,
 //                     workspace, shell, closePane())
 //   desktop: RdpItem  read-only
-// Functions: focusDesktop().
+// Functions: focusDesktop(), releaseKeyboard().
 import QtQuick
 import QtQuick.Layouts
 import cc.caixa.opensesh
@@ -38,7 +39,7 @@ Item {
             rdp.forceActiveFocus(Qt.OtherFocusReason);
     }
 
-    // Ctrl+Alt+Home: the app takes the keyboard back.
+    // The app takes the keyboard back.
     function releaseKeyboard() {
         moreButton.forceActiveFocus(Qt.ShortcutFocusReason);
         Toasts.show(qsTr("The keyboard is back with OpenSesh. Click the desktop to give it the keyboard again."), "info");
@@ -158,6 +159,7 @@ Item {
         keyboardLocale: Qt.inputMethod.locale.name
         scaleMode: view.scaleMode
         backgroundColor: Theme.bg
+        releaseShortcut: view.pane.shell.shortcutText("desktop.releaseKeyboard")
         Accessible.role: Accessible.Graphic
         Accessible.name: qsTr("Remote desktop of %1").arg(view.pane.label)
 
@@ -212,7 +214,7 @@ Item {
 
         OsMenuItem {
             text: qsTr("Give the keyboard back to OpenSesh")
-            shortcutText: qsTr("Ctrl+Alt+Home")
+            shortcutText: view.pane.shell.shortcutText("desktop.releaseKeyboard")
             enabled: rdp.activeFocus
             onTriggered: view.releaseKeyboard()
         }

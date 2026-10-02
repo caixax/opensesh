@@ -9,8 +9,9 @@
 // functions: it hands over what changed in `fillFramebuffer` (render thread, GUI thread blocked)
 // by calling `resizeFramebuffer` and `writePixels`, and gets the keyboard (with the native scan
 // code), the mouse and the wheel in desktop pixels. While the item has the focus every key goes
-// to the desktop, shortcuts included, except the escape combination (Ctrl+Alt+Home), which emits
-// `escapeRequested()` so the app can take the keyboard back.
+// to the desktop, shortcuts included, except `releaseShortcut` (Ctrl+Alt+Home unless the user
+// changed it): the window's shortcut for it fires, or else the item emits `escapeRequested()`, so
+// the app can take the keyboard back.
 #pragma once
 
 #include <cstdint>
@@ -19,6 +20,7 @@
 #include <QtCore/QString>
 #include <QtGui/QColor>
 #include <QtGui/QImage>
+#include <QtGui/QKeySequence>
 #include <QtQml/qqmlregistration.h>
 #include <QtQuick/QQuickItem>
 
@@ -42,6 +44,9 @@ class FramebufferItemBase : public QQuickItem
     // The item's size in device pixels: the desktop's size in "dynamic" mode.
     Q_PROPERTY(int wantedWidth READ wantedWidth NOTIFY wantedSizeChanged)
     Q_PROPERTY(int wantedHeight READ wantedHeight NOTIFY wantedSizeChanged)
+    // The key combination that gives the keyboard back (QKeySequence text, portable or native).
+    Q_PROPERTY(QString releaseShortcut READ releaseShortcut WRITE setReleaseShortcut NOTIFY
+                       releaseShortcutChanged)
 
 public:
     // handlePointer kinds.
@@ -60,6 +65,8 @@ public:
     int desktopHeight() const { return m_shownHeight; }
     int wantedWidth() const { return m_wantedWidth; }
     int wantedHeight() const { return m_wantedHeight; }
+    QString releaseShortcut() const { return m_releaseShortcut; }
+    void setReleaseShortcut(const QString &shortcut);
 
     // For fillFramebuffer only (render thread, GUI thread blocked): a new size (black), and
     // pixels of the frame (RGBA, `frameStride` bytes a row) for a rectangle of it.
@@ -86,7 +93,8 @@ Q_SIGNALS:
     void backgroundColorChanged();
     void desktopSizeChanged();
     void wantedSizeChanged();
-    // The escape combination: the app takes the keyboard back.
+    void releaseShortcutChanged();
+    // The release combination, when no window shortcut took it: the app takes the keyboard back.
     void escapeRequested();
     // This computer's clipboard changed while the item has the focus, or it got the focus.
     void localClipboardChanged();
@@ -140,9 +148,11 @@ private:
     bool toDesktop(const QPointF &position, int *x, int *y) const;
     void sendPointer(int kind, int button, const QPointF &position);
     void updateWantedSize();
-    static bool isEscape(const QKeyEvent *event);
+    bool isRelease(const QKeyEvent *event) const;
 
     QString m_scaleMode = QStringLiteral("fit");
+    QString m_releaseShortcut = QStringLiteral("Ctrl+Alt+Home");
+    QKeySequence m_release = QKeySequence(QStringLiteral("Ctrl+Alt+Home"), QKeySequence::PortableText);
     QColor m_background = Qt::black;
     // The frame as the render thread knows it.
     int m_width = 0;

@@ -268,6 +268,14 @@
         <translation>[Öþéñ šéťťíñĝš ~~~~]</translation>
     </message>
     <message>
+        <source>Give the keyboard back to OpenSesh</source>
+        <translation>[Ĝívé ťĥé ķéýböáŕď báçķ ťö ÖþéñŠéšĥ ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Send Ctrl+Alt+Del to the remote desktop</source>
+        <translation>[Šéñď Çťŕĺ+Åĺť+Ďéĺ ťö ťĥé ŕémöťé ďéšķťöþ ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Toggle full screen</source>
         <translation>[Ťöĝĝĺé ƒüĺĺ šçŕééñ ~~~~~~]</translation>
     </message>
@@ -591,6 +599,10 @@
         <translation>[ÑÅŠ (ŔüšťFŠ) ~~~~]</translation>
     </message>
     <message>
+        <source>Office desktop</source>
+        <translation>[Öƒƒíçé ďéšķťöþ ~~~~~]</translation>
+    </message>
+    <message>
         <source>Core switch console</source>
         <translation>[Çöŕé šŵíťçĥ çöñšöĺé ~~~~~~]</translation>
     </message>
@@ -767,6 +779,101 @@
     <message>
         <source>Close</source>
         <translation>[Çĺöšé ~~]</translation>
+    </message>
+</context>
+<context>
+    <name>DesktopView</name>
+    <message>
+        <source>The keyboard is back with OpenSesh. Click the desktop to give it the keyboard again.</source>
+        <translation>[Ťĥé ķéýböáŕď íš báçķ ŵíťĥ ÖþéñŠéšĥ. Çĺíçķ ťĥé ďéšķťöþ ťö ĝívé íť ťĥé ķéýböáŕď áĝáíñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Connecting…</source>
+        <translation>[Çöññéçťíñĝ… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Signing in…</source>
+        <translation>[Šíĝñíñĝ íñ… ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 × %2</source>
+        <translation>[%1 × %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Connected</source>
+        <translation>[Çöññéçťéď ~~~]</translation>
+    </message>
+    <message>
+        <source>Disconnected</source>
+        <translation>[Ďíšçöññéçťéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>Remote desktop</source>
+        <translation>[Ŕémöťé ďéšķťöþ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Send Ctrl+Alt+Del</source>
+        <translation>[Šéñď Çťŕĺ+Åĺť+Ďéĺ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Full screen</source>
+        <translation>[Füĺĺ šçŕééñ ~~~~]</translation>
+    </message>
+    <message>
+        <source>Remote desktop menu</source>
+        <translation>[Ŕémöťé ďéšķťöþ méñü ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remote desktop of %1</source>
+        <translation>[Ŕémöťé ďéšķťöþ öƒ %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Give the keyboard back to OpenSesh</source>
+        <translation>[Ĝívé ťĥé ķéýböáŕď báçķ ťö ÖþéñŠéšĥ ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Scaling</source>
+        <translation>[Šçáĺíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Follow the pane&apos;s size</source>
+        <translation>[Föĺĺöŵ ťĥé þáñé&apos;š šížé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Fit in the pane</source>
+        <translation>[Fíť íñ ťĥé þáñé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Actual size</source>
+        <translation>[Åçťüáĺ šížé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Reconnect</source>
+        <translation>[Ŕéçöññéçť ~~~]</translation>
+    </message>
+    <message>
+        <source>Disconnect</source>
+        <translation>[Ďíšçöññéçť ~~~]</translation>
+    </message>
+    <message>
+        <source>Split right</source>
+        <translation>[Šþĺíť ŕíĝĥť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Split down</source>
+        <translation>[Šþĺíť ďöŵñ ~~~]</translation>
+    </message>
+    <message>
+        <source>Restore pane size</source>
+        <translation>[Ŕéšťöŕé þáñé šížé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Maximize pane</source>
+        <translation>[Máxímížé þáñé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Close pane</source>
+        <translation>[Çĺöšé þáñé ~~~]</translation>
     </message>
 </context>
 <context>
@@ -2086,6 +2193,14 @@
         <translation>[Ĺéťťéŕš, ďíĝíťš áñď ĥýþĥéñš, áš íñ éü-ŵéšť-1. ~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>A width and a height from 200 to 8192 pixels, as in 1920x1080.</source>
+        <translation>[Å ŵíďťĥ áñď á ĥéíĝĥť ƒŕöm 200 ťö 8192 þíxéĺš, áš íñ 1920x1080. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not a domain name (no control characters, and not starting with -).</source>
+        <translation>[Ñöť á ďömáíñ ñámé (ñö çöñťŕöĺ çĥáŕáçťéŕš, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Not a user name (no spaces, and not starting with -).</source>
         <translation>[Ñöť á üšéŕ ñámé (ñö šþáçéš, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2330,6 +2445,54 @@
         <translation>[Büçķéťš íñ ťĥé þáťĥ (šéŕvéŕ/büçķéť) ŕáťĥéŕ ťĥáñ íñ ťĥé ĥöšť ñámé (büçķéť.šéŕvéŕ): ŵĥáť MíñÍÖ, ŔüšťFŠ áñď möšť öťĥéŕ šéŕvéŕš ŵáñť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>Domain</source>
+        <translation>[Ďömáíñ ~~]</translation>
+    </message>
+    <message>
+        <source>none, or the one in the user name</source>
+        <translation>[ñöñé, öŕ ťĥé öñé íñ ťĥé üšéŕ ñámé ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Scaling</source>
+        <translation>[Šçáĺíñĝ ~~~]</translation>
+    </message>
+    <message>
+        <source>Default (follow the pane&apos;s size)</source>
+        <translation>[Ďéƒáüĺť (ƒöĺĺöŵ ťĥé þáñé&apos;š šížé) ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Fit in the pane</source>
+        <translation>[Fíť íñ ťĥé þáñé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Actual size</source>
+        <translation>[Åçťüáĺ šížé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Following the pane, the desktop takes the pane&apos;s size whenever it changes; otherwise it keeps its resolution and is scaled to fit, or shown pixel for pixel.</source>
+        <translation>[Föĺĺöŵíñĝ ťĥé þáñé, ťĥé ďéšķťöþ ťáķéš ťĥé þáñé&apos;š šížé ŵĥéñévéŕ íť çĥáñĝéš; öťĥéŕŵíšé íť ķééþš íťš ŕéšöĺüťíöñ áñď íš šçáĺéď ťö ƒíť, öŕ šĥöŵñ þíxéĺ ƒöŕ þíxéĺ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Resolution</source>
+        <translation>[Ŕéšöĺüťíöñ ~~~]</translation>
+    </message>
+    <message>
+        <source>the pane&apos;s size</source>
+        <translation>[ťĥé þáñé&apos;š šížé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Width and height, as in 1920x1080.</source>
+        <translation>[Ŵíďťĥ áñď ĥéíĝĥť, áš íñ 1920x1080. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Share the clipboard</source>
+        <translation>[Šĥáŕé ťĥé çĺíþböáŕď ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Text copied here can be pasted on the remote desktop, and the other way round.</source>
+        <translation>[Ťéxť çöþíéď ĥéŕé çáñ bé þášťéď öñ ťĥé ŕémöťé ďéšķťöþ, áñď ťĥé öťĥéŕ ŵáý ŕöüñď. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Engine</source>
         <translation>[Éñĝíñé ~~]</translation>
     </message>
@@ -2568,10 +2731,6 @@
     <message>
         <source>Saved now; the file browser arrives in Sprint 8.</source>
         <translation>[Šávéď ñöŵ; ťĥé ƒíĺé bŕöŵšéŕ áŕŕívéš íñ Šþŕíñť 8. ~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Saved now; remote desktop arrives in Sprint 13.</source>
-        <translation>[Šávéď ñöŵ; ŕémöťé ďéšķťöþ áŕŕívéš íñ Šþŕíñť 13. ~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Saved now; VNC arrives in Sprint 14.</source>
@@ -9532,6 +9691,18 @@
         <translation>[Fíŕšť çöññéçťíöñ ťö %1 ~~~~~~~]</translation>
     </message>
     <message>
+        <source>The certificate of %1 changed</source>
+        <translation>[Ťĥé çéŕťíƒíçáťé öƒ %1 çĥáñĝéď ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The server&apos;s certificate isn&apos;t the one saved in %1. Someone may be intercepting the connection, or the certificate was renewed. Don&apos;t connect unless you know why it changed.</source>
+        <translation>[Ťĥé šéŕvéŕ&apos;š çéŕťíƒíçáťé íšñ&apos;ť ťĥé öñé šávéď íñ %1. Šöméöñé máý bé íñťéŕçéþťíñĝ ťĥé çöññéçťíöñ, öŕ ťĥé çéŕťíƒíçáťé ŵáš ŕéñéŵéď. Ďöñ&apos;ť çöññéçť üñĺéšš ýöü ķñöŵ ŵĥý íť çĥáñĝéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh doesn&apos;t know this server&apos;s certificate yet (it is made out to %1). Check that its fingerprint is the server&apos;s before you trust it.</source>
+        <translation>[ÖþéñŠéšĥ ďöéšñ&apos;ť ķñöŵ ťĥíš šéŕvéŕ&apos;š çéŕťíƒíçáťé ýéť (íť íš máďé öüť ťö %1). Çĥéçķ ťĥáť íťš ƒíñĝéŕþŕíñť íš ťĥé šéŕvéŕ&apos;š béƒöŕé ýöü ťŕüšť íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>The server&apos;s key isn&apos;t the one saved in %1 (line %2). Someone may be intercepting the connection, or the server was reinstalled. Don&apos;t connect unless you know why it changed.</source>
         <translation>[Ťĥé šéŕvéŕ&apos;š ķéý íšñ&apos;ť ťĥé öñé šávéď íñ %1 (ĺíñé %2). Šöméöñé máý bé íñťéŕçéþťíñĝ ťĥé çöññéçťíöñ, öŕ ťĥé šéŕvéŕ ŵáš ŕéíñšťáĺĺéď. Ďöñ&apos;ť çöññéçť üñĺéšš ýöü ķñöŵ ŵĥý íť çĥáñĝéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -9570,6 +9741,10 @@
     <message>
         <source>Replace the saved key</source>
         <translation>[Ŕéþĺáçé ťĥé šávéď ķéý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Replace the saved certificate</source>
+        <translation>[Ŕéþĺáçé ťĥé šávéď çéŕťíƒíçáťé ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Passphrase for a key</source>
@@ -9680,6 +9855,14 @@
     <message>
         <source>Disconnected from %1</source>
         <translation>[Ďíšçöññéçťéď ƒŕöm %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Signing in to %1…</source>
+        <translation>[Šíĝñíñĝ íñ ťö %1… ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remote desktop of %1</source>
+        <translation>[Ŕémöťé ďéšķťöþ öƒ %1 ~~~~~~]</translation>
     </message>
     <message>
         <source>Connected to %1</source>
