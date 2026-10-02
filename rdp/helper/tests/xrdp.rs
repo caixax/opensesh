@@ -107,6 +107,9 @@ async fn a_real_xrdp_server() {
         clipboard: true,
         timeout_secs: 30,
         client_name: "opensesh-ci".into(),
+        read_only: false,
+        quality: None,
+        shared: true,
     })))
     .await;
     app.until("the desktop", |app| {

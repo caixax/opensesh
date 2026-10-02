@@ -1,0 +1,28 @@
+[package]
+name = "opensesh-vnc"
+description = "OpenSesh's VNC (RFB) client: the security types, the encodings, input and the clipboard (no Qt)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+base64ct.workspace = true
+des.workspace = true
+flate2.workspace = true
+opensesh-rdp-protocol.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true
+tracing.workspace = true
+x509-cert.workspace = true
+zeroize.workspace = true
+zune-jpeg.workspace = true
+
+[lints]
+workspace = true

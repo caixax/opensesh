@@ -114,6 +114,9 @@ async fn a_session_as_the_app_has_it() {
         clipboard: true,
         timeout_secs: 10,
         client_name: "tests".into(),
+        read_only: false,
+        quality: None,
+        shared: true,
     })))
     .await;
     let question = app
