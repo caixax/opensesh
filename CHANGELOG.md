@@ -4,6 +4,40 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **Sprint 12: more protocols and shells, and S3 ([ADR 0032](docs/adr/0032-terminal-protocols-and-shells.md), [ADR 0033](docs/adr/0033-s3-storage.md)).**
+  - **Local shells:** a menu on the new tab button (and the command palette) opens a tab with any shell this computer has:
+    - Windows: PowerShell 7, Windows PowerShell, cmd, Git Bash, MSYS2, Cygwin and each WSL distribution;
+    - Linux and macOS: the shells in `/etc/shells`.
+
+    A default shell can be set in Settings > Terminal (and per profile or local host), and a pane keeps its shell in workspaces.
+  - **Telnet:** saved hosts and `telnet://` quick connect, with window size and terminal type sent to the server, and a warning that telnet sends everything in clear.
+  - **Serial ports:** saved hosts and `serial://COM3?baud=9600` quick connect.
+    - **Settings:** the speed, data bits, parity, stop bits, flow control, what Enter sends (CR, LF or CR LF) and local echo.
+    - **The host editor** lists the detected ports, refreshed as devices come and go.
+    - **The pane's menu** shows what arrives in hexadecimal and sends a break; the session log works as for SSH.
+  - **Mosh:** the built-in SSH client starts `mosh-server` (asking its questions in the pane as for SSH), and `mosh-client` runs in the pane. The session key never appears on a command line or in a log, and a missing `mosh-server` or `mosh-client` is explained with how to install it.
+  - **Containers and pods:** Docker and Podman containers and Kubernetes pods as hosts, entered with `docker`, `podman` or `kubectl exec`:
+    - bash where the container has it, else sh (or a shell of the host's choice);
+    - for pods, the namespace, the container and the kubeconfig context;
+    - the host editor and quick connect (`docker://`, `podman://`, `kube://`) list the running ones.
+  - **S3 storage** (AWS, MinIO, RustFS and other compatible servers), on the official AWS SDK:
+    - **Hosts:** an endpoint, a region (`us-east-1` by default), path-style addresses (on by default), and the access and secret keys. The secret key is saved encrypted in the vault, as the password of the host's identity; without one, it is asked for when connecting. `s3://access_key@host:port/bucket` quick connect.
+    - **The files view:** buckets, then folders (`ListObjectsV2` with the `/` delimiter), as one more source next to this computer and SFTP hosts.
+    - **Operations:** upload (one request, or a multipart upload in 32 MB parts), download, delete, rename (copy and delete), new folder (an empty object ending in `/`) or bucket, and copies inside the storage done by the server.
+    - **Temporary links** (presigned URLs) for an hour, a day or a week, copied to the clipboard.
+    - **Uploads into S3 can't continue where they stopped:** a paused one starts over, and a cancelled one leaves nothing behind.
+  - **Tests:**
+    - telnet against an in-process server, serial on a loopback device, mosh up to the server's answer;
+    - containers by their command lines and listings;
+    - S3 against an in-process server;
+    - a 1 GiB file to and from RustFS with the same SHA-256 in CI.
+
+### Fixed
+
+- A new host's Tags field showed the word "none".
+
 ## [0.1.4] - 2026-09-28
 
 ### Added

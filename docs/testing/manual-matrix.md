@@ -4,6 +4,37 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 12 (2026-10-02)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 511 steps offscreen and 504 native on Windows):** as before, plus:
+  - a tab with a shell from the list (Windows PowerShell on Windows);
+  - telnet to its in-process server: the warning, the window size the server was told, the end;
+  - a serial port on the loopback device: an echo, the hexadecimal view, a break;
+  - mosh: the questions answered in the pane, `mosh-server` started on the SSH test server, the key never shown;
+  - containers: the commands of `podman://` and `kube://` targets, and the running containers offered in quick connect (samples);
+  - S3 in the files view against the in-process S3 server: buckets, a bucket's folders, an upload, a temporary link, a folder downloaded, a folder made, renamed and deleted.
+- **Screenshots (native, Windows),** in dark and light, comfortable and compact: the new tab menu with the shells, a telnet tab, a serial tab in hexadecimal, S3 in the files view, and the host editor of a serial and an S3 host.
+- **S3 against a real server:** 1 GiB up in 32 MB parts and back down with the same SHA-256, against RustFS 1.0.0 in CI (`scripts/s3-test-server.sh`).
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 653 | ✅ / ✅ | ✅ `windows` | — |
+| Debian 13 (WSLg) | 6.8.2 (distro) | ✅ build and clippy; tests stopped (low memory) | — | — | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ RustFS 1.0.0 (1 GiB, same SHA-256), OpenSSH, Dropbear |
+
+### Manual checks for the owner
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| The new tab menu: each shell opens (PowerShell, cmd, Git Bash, a WSL distro; on Linux, zsh or fish) | ⏳ | ⏳ |
+| A real serial device (a USB serial adapter, an Arduino, a router's console): settings, hexadecimal view, a break, unplugging it | ⏳ | ⏳ |
+| Telnet to a real device or `telnet.example` service, and resizing the pane | ⏳ | ⏳ |
+| Mosh to a server with mosh installed: typing while the network drops, and a server without it | — (no Windows client) | ⏳ |
+| A Docker or Podman container and a Kubernetes pod: the running list, entering one, a container without bash | ⏳ | ⏳ |
+| S3 on AWS and on your RustFS: saving the keys, a big upload, a temporary link opened in a browser | ⏳ | ⏳ |
+
 ## Sprint 11 (2026-09-28)
 
 ### Automated checks
