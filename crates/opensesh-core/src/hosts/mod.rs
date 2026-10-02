@@ -145,7 +145,7 @@ impl Protocol {
             Self::Sftp => Some(8),
             Self::Telnet | Self::Serial | Self::Mosh | Self::Docker | Self::Kube | Self::S3 => None,
             Self::Rdp => None,
-            Self::Vnc => Some(14),
+            Self::Vnc => None,
         }
     }
 }
@@ -428,6 +428,62 @@ impl RdpOptions {
     }
 }
 
+/// How much a VNC desktop's pictures are compressed (Tight's JPEG).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VncQuality {
+    /// No JPEG: every pixel exact.
+    Lossless,
+    /// JPEG at quality 2: the least bandwidth.
+    Low,
+    /// JPEG at quality 5.
+    Medium,
+    /// JPEG at quality 8.
+    High,
+}
+
+impl VncQuality {
+    /// Tight's JPEG quality level (none: lossless).
+    #[must_use]
+    pub const fn jpeg_level(self) -> Option<u8> {
+        match self {
+            Self::Lossless => None,
+            Self::Low => Some(2),
+            Self::Medium => Some(5),
+            Self::High => Some(8),
+        }
+    }
+}
+
+/// VNC settings.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VncOptions {
+    /// How the desktop fits the pane (unset: scaled to fit; following the pane needs a server
+    /// that resizes, as TigerVNC does).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scaling: Option<Scaling>,
+    /// Only watch: no keys, pointer or clipboard go to the server (unset: off).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_only: Option<bool>,
+    /// The pictures' compression (unset: high).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quality: Option<VncQuality>,
+    /// Share the text clipboard (unset: on).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clipboard: Option<bool>,
+    /// Let other viewers stay connected (unset: on).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shared: Option<bool>,
+}
+
+impl VncOptions {
+    /// Whether nothing is set.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
 /// `WIDTHxHEIGHT` (200 to 8192 each).
 #[must_use]
 pub fn parse_resolution(text: &str) -> Option<(u16, u16)> {
@@ -657,6 +713,9 @@ pub struct Host {
     /// Remote desktop settings.
     #[serde(default, skip_serializing_if = "RdpOptions::is_empty")]
     pub rdp: RdpOptions,
+    /// VNC settings.
+    #[serde(default, skip_serializing_if = "VncOptions::is_empty")]
+    pub vnc: VncOptions,
     /// Terminal options over the profile.
     #[serde(default, skip_serializing_if = "Table::is_empty")]
     pub terminal: Table,
@@ -690,6 +749,7 @@ impl Default for Host {
             container: ContainerOptions::default(),
             s3: S3Options::default(),
             rdp: RdpOptions::default(),
+            vnc: VncOptions::default(),
             terminal: Table::new(),
             extra: Table::new(),
         }
