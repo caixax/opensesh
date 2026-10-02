@@ -26,11 +26,13 @@ Item {
         property: "systemDark"
         value: Application.styleHints.colorScheme !== Qt.Light
     }
-    // Qt 6.10: the system's high-contrast preference (Qt.HighContrast).
+    // The system's high-contrast preference (Qt.HighContrast): Qt 6.10 and later. Older Qt (the
+    // distributions' 6.8 and 6.9) has no `accessibility` hints: never high contrast by itself.
     Binding {
         target: Theme
         property: "systemHighContrast"
-        value: Application.styleHints.accessibility.contrastPreference === Qt.HighContrast
+        value: Application.styleHints.accessibility !== undefined
+               && Application.styleHints.accessibility.contrastPreference === Qt.HighContrast
     }
     Binding {
         target: Theme
