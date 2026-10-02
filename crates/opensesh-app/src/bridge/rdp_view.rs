@@ -1,4 +1,4 @@
-//! `RdpItem`: a remote desktop for QML (Sprint 13, ADR 0034).
+//! `RdpItem`: a remote desktop for QML, RDP (Sprint 13, ADR 0034) or VNC (Sprint 14, ADR 0035).
 //!
 //! The C++ base `FramebufferItemBase` (`cpp/framebuffer_item.h`) draws the desktop in tiles and
 //! turns Qt input into calls to its pure virtual functions; this Rust QObject derives from it.
@@ -237,7 +237,7 @@ use std::sync::Arc;
 
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
-use opensesh_core::hosts::Scaling;
+use opensesh_core::hosts::{Protocol, Scaling};
 use opensesh_core::trusted_certificates::Trust;
 use opensesh_rdp_protocol::keys::{self, Platform};
 use opensesh_rdp_protocol::{Button, Control, Status, ToHelper};
@@ -285,6 +285,8 @@ pub struct RdpItemRust {
     jump_ended: bool,
     /// Test runs: the clipboards (the server's text, and this computer's stand-in).
     test_clipboard: (String, String),
+    /// VNC: the keys down, with the keysyms they went down with.
+    keysyms: opensesh_vnc::keysym::Pressed,
     /// The frame's generation last drawn (a new one is drawn whole).
     drawn_generation: u64,
 }
@@ -310,6 +312,7 @@ impl Default for RdpItemRust {
             jump_up: false,
             jump_ended: false,
             test_clipboard: (String::new(), String::new()),
+            keysyms: opensesh_vnc::keysym::Pressed::default(),
             drawn_generation: u64::MAX,
         }
     }
@@ -499,6 +502,11 @@ impl qobject::RdpItem {
             let mut connect = plan.connect;
             connect.width = width;
             connect.height = height;
+            // A VNC desktop keeps the server's size unless it follows the pane.
+            if plan.protocol == Protocol::Vnc && !self.dynamic() {
+                connect.width = 0;
+                connect.height = 0;
+            }
             // Through the jump hosts: the tunnel's end here.
             if let (Some(_), Some(port)) = (&plan.jump, self.jump_port) {
                 "127.0.0.1".clone_into(&mut connect.address);
@@ -708,7 +716,15 @@ impl qobject::RdpItem {
             }
             return;
         }
-        let session = match Connection::start() {
+        let vnc = self
+            .plan
+            .as_ref()
+            .is_some_and(|plan| plan.protocol == Protocol::Vnc);
+        let session = match if vnc {
+            Connection::start_vnc()
+        } else {
+            Connection::start()
+        } {
             Ok(session) => session,
             Err(reason) => {
                 self.as_mut().rust_mut().helper_gone = true;
@@ -1025,7 +1041,7 @@ impl qobject::RdpItem {
 
     /// See the bridge declaration.
     pub fn handle_key(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         native_scan_code: u32,
         key: i32,
         text: &QString,
@@ -1033,6 +1049,26 @@ impl qobject::RdpItem {
         _auto_repeat: bool,
     ) {
         if !self.running {
+            return;
+        }
+        // VNC: X keysyms, a key going up as it went down.
+        if self
+            .plan
+            .as_ref()
+            .is_some_and(|plan| plan.protocol == Protocol::Vnc)
+        {
+            let text = text.to_string();
+            let keysym = {
+                let mut this = self.as_mut().rust_mut();
+                if pressed {
+                    this.keysyms.press(key, native_scan_code, &text)
+                } else {
+                    this.keysyms.release(key, native_scan_code, &text)
+                }
+            };
+            if let Some(keysym) = keysym {
+                self.send(ToHelper::Control(Control::Keysym { keysym, pressed }));
+            }
             return;
         }
         if let Some(scancode) = keys::scancode(platform(), native_scan_code, key) {
@@ -1086,9 +1122,10 @@ impl qobject::RdpItem {
     }
 
     /// See the bridge declaration.
-    pub fn handle_focus_change(self: Pin<&mut Self>, focused: bool) {
+    pub fn handle_focus_change(mut self: Pin<&mut Self>, focused: bool) {
         if !focused && self.running {
             // Nothing stays pressed on the server while the pane can't see the keys come up.
+            self.as_mut().rust_mut().keysyms.release_all();
             self.send(ToHelper::Control(Control::ReleaseAll));
         }
     }

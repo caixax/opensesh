@@ -9,7 +9,8 @@ pragma ComponentBehavior: Bound
 // whose state and questions show in an SshOverlay; the OS it finds becomes the host's icon.
 // A `player` pane plays a session recording, with a bar to play, pause, jump, restart and pick
 // the speed. Any other pane can record its session (the menu; a chip while it records). An `rdp`
-// pane shows a remote desktop (DesktopView) in place of the terminal, which then runs nothing.
+// or `vnc` pane shows a remote desktop (DesktopView) in place of the terminal, which then runs
+// nothing.
 //
 // Broadcast (MultiExec): while the tab broadcasts, what is typed or pasted in a pane that
 // receives broadcast input also goes to the other receiving panes. Those panes, and only those,
@@ -70,7 +71,7 @@ Item {
     // What is typed here is recorded as a macro (Snippets.recordStart).
     property bool recordingMacro: false
     readonly property bool player: kind === "player"
-    readonly property bool desktop: kind === "rdp"
+    readonly property bool desktop: kind === "rdp" || kind === "vnc"
     readonly property Item desktopView: desktopLoader.item
     // It connects somewhere (SSH, telnet, a serial port...), rather than running a shell here.
     readonly property bool remote: kind !== "local" && kind !== "player"

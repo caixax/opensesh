@@ -547,7 +547,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "desktop"
-        pages: ["desktop", "certificate", "editor"]
+        pages: ["desktop", "certificate", "vnc", "editor", "vnceditor"]
         prepare: (mode, density, page) => shell.prepareDesktopScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures

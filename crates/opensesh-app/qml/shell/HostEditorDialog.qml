@@ -373,11 +373,10 @@ OsDialog {
                                 case "kube":
                                 case "s3":
                                 case "rdp":
+                                case "vnc":
                                     return "";
                                 case "sftp":
                                     return qsTr("Saved now; the file browser arrives in Sprint 8.");
-                                case "vnc":
-                                    return qsTr("Saved now; VNC arrives in Sprint 14.");
                                 default:
                                     return qsTr("Saved now; connecting arrives in Sprint 12.");
                                 }
@@ -480,6 +479,61 @@ OsDialog {
                             label: qsTr("Share the clipboard")
                             options: [{ text: qsTr("Default (on)"), value: undefined }].concat(dialog.onOff)
                             helpText: qsTr("Text copied here can be pasted on the remote desktop, and the other way round.")
+                        }
+
+                        // VNC.
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "vnc.scaling"
+                            inherit: false
+                            visible: dialog.protocol === "vnc"
+                            label: qsTr("Scaling")
+                            options: [{ text: qsTr("Default (fit in the pane)"), value: undefined },
+                                { text: qsTr("Actual size"), value: "actual" },
+                                { text: qsTr("Follow the pane's size"), value: "dynamic" }]
+                            helpText: qsTr("Following the pane's size works with servers that resize their desktop, such as TigerVNC; the others keep theirs.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "vnc.quality"
+                            inherit: false
+                            visible: dialog.protocol === "vnc"
+                            label: qsTr("Picture quality")
+                            options: [{ text: qsTr("Default (high)"), value: undefined }, { text: qsTr("Lossless"), value: "lossless" },
+                                { text: qsTr("High"), value: "high" }, { text: qsTr("Medium"), value: "medium" },
+                                { text: qsTr("Low (least bandwidth)"), value: "low" }]
+                            helpText: qsTr("Lower qualities send pictures as JPEG, for slow connections; lossless keeps every pixel exact.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "vnc.read_only"
+                            inherit: false
+                            visible: dialog.protocol === "vnc"
+                            label: qsTr("View only")
+                            options: [{ text: qsTr("Default (off)"), value: undefined }].concat(dialog.onOff)
+                            helpText: qsTr("Watch the desktop without sending keys, the mouse or the clipboard.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "vnc.clipboard"
+                            inherit: false
+                            visible: dialog.protocol === "vnc"
+                            label: qsTr("Share the clipboard")
+                            options: [{ text: qsTr("Default (on)"), value: undefined }].concat(dialog.onOff)
+                            helpText: qsTr("Text copied here can be pasted on the remote desktop, and the other way round.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "vnc.shared"
+                            inherit: false
+                            visible: dialog.protocol === "vnc"
+                            label: qsTr("Let other viewers stay")
+                            options: [{ text: qsTr("Default (on)"), value: undefined }].concat(dialog.onOff)
+                            helpText: qsTr("Off asks the server to disconnect the other viewers of this desktop.")
                         }
 
                         // Containers and pods: what runs them, and the running ones to pick.
@@ -755,7 +809,7 @@ OsDialog {
                         EditorTextRow {
                             id: identityRow
 
-                            visible: dialog.protocol !== "s3" && dialog.protocol !== "rdp"
+                            visible: ["s3", "rdp", "vnc"].indexOf(dialog.protocol) < 0
                             editor: dialog
                             path: "identity_file"
                             label: qsTr("Private key file")
@@ -809,7 +863,7 @@ OsDialog {
                             editor: dialog
                             path: "jump"
                             type: "list"
-                            visible: ["ssh", "sftp", "mosh", "rdp"].indexOf(dialog.protocol) >= 0
+                            visible: ["ssh", "sftp", "mosh", "rdp", "vnc"].indexOf(dialog.protocol) >= 0
                             label: qsTr("Jump hosts")
                             placeholder: qsTr("bastion, ops@hop:2222")
                             helpText: qsTr("Saved hosts or user@host:port, first hop first. \"none\" connects directly even if the group has jump hosts.")

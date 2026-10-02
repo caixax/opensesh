@@ -28,6 +28,7 @@ opensesh-ssh.workspace = true
 opensesh-proto-misc.workspace = true
 opensesh-s3.workspace = true
 opensesh-rdp-protocol.workspace = true
+opensesh-vnc.workspace = true
 crossbeam-channel.workspace = true
 opensesh-vault.workspace = true
 # Macro steps that wait for a pattern (snippets.rs).

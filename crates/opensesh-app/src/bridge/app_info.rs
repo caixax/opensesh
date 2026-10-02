@@ -72,6 +72,13 @@ pub mod qobject {
         #[cxx_name = "startRdpTestServer"]
         fn start_rdp_test_server(self: &Self) -> i32;
 
+        /// Test runs only: starts the in-process VNC test server on 127.0.0.1 (VeNCrypt with a
+        /// test certificate, or VNC authentication; password `right password`) and returns its
+        /// port (0 in normal runs). From then on every VNC connection of the run goes to it.
+        #[qinvokable]
+        #[cxx_name = "startVncTestServer"]
+        fn start_vnc_test_server(self: &Self) -> i32;
+
         /// Test runs only: a temporary folder with `local` and `remote` sample files (the
         /// server's side), made fresh by `startSshTestServer` and removed at exit; empty in
         /// normal runs.
@@ -218,6 +225,11 @@ impl qobject::AppInfo {
     /// See the bridge declaration.
     pub fn start_rdp_test_server(&self) -> i32 {
         i32::from(crate::rdp::start_test_server())
+    }
+
+    /// See the bridge declaration.
+    pub fn start_vnc_test_server(&self) -> i32 {
+        i32::from(crate::rdp::start_vnc_test_server())
     }
 
     /// See the bridge declaration.
