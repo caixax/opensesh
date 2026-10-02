@@ -81,7 +81,7 @@ Item {
 
     // The paste waiting for confirmation.
     property int pastePane: 0
-    readonly property bool askingToPaste: pasteDialog.visible
+    readonly property bool askingToPaste: pasteDialog.item ? pasteDialog.item.visible : false
 
     function focusTerminal() {
         if (focusedItem)
@@ -389,15 +389,15 @@ Item {
     // into several panes while broadcasting (once per broadcast).
     function reviewPaste(id, text, findings, broadcast) {
         pastePane = id;
-        pasteDialog.show(text, findings, broadcast, participants.length);
+        pasteDialog.get().show(text, findings, broadcast, participants.length);
     }
 
     // Closes the paste review; `paste` true pastes the (possibly edited) text.
     function answerPaste(paste) {
         if (paste)
-            pasteDialog.accept();
+            pasteDialog.get().accept();
         else
-            pasteDialog.reject();
+            pasteDialog.get().reject();
     }
 
     // Pixel box of a pane (the dependencies are arguments, so bindings follow them).
@@ -579,20 +579,25 @@ Item {
         }
     }
 
-    PasteReviewDialog {
+    // Created the first time a paste needs a look (Sprint 17).
+    LazyPopup {
         id: pasteDialog
 
-        onPasteRequested: text => {
-            if (broadcast)
-                workspace.pasteConfirmed = true;
-            const item = workspace.paneItem(workspace.pastePane);
-            if (item)
-                item.terminal.pasteReviewed(text);
-        }
-        onClosed: {
-            const item = workspace.paneItem(workspace.pastePane);
-            if (item && workspace.current)
-                item.focusTerminal();
+        sourceComponent: Component {
+            PasteReviewDialog {
+                onPasteRequested: text => {
+                    if (broadcast)
+                        workspace.pasteConfirmed = true;
+                    const item = workspace.paneItem(workspace.pastePane);
+                    if (item)
+                        item.terminal.pasteReviewed(text);
+                }
+                onClosed: {
+                    const item = workspace.paneItem(workspace.pastePane);
+                    if (item && workspace.current)
+                        item.focusTerminal();
+                }
+            }
         }
     }
 }

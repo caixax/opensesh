@@ -379,7 +379,7 @@ Item {
             else
                 Toasts.show(qsTr("Your key couldn't be installed on %1.").arg(pane.label), "danger", "", "", detail);
         }
-        onContextMenuRequested: (x, y) => contextMenu.popup(terminal, x, y)
+        onContextMenuRequested: (x, y) => contextMenu.get().popup(terminal, x, y)
     }
 
     // The demo frame skips the profile (screenshot runs): it needs its own font, as in the gallery.
@@ -900,184 +900,191 @@ Item {
         }
     }
 
-    OsContextMenu {
+    // Created the first time it opens (Sprint 17): one menu per pane adds up.
+    LazyPopup {
         id: contextMenu
 
-        OsMenuItem {
-            text: qsTr("Copy")
-            iconName: "copy"
-            shortcutText: pane.shell.shortcutText("terminal.copy")
-            enabled: terminal.hasSelection
-            onTriggered: terminal.copy()
-        }
+        sourceComponent: Component {
+            OsContextMenu {
+                id: menu
 
-        OsMenuItem {
-            text: qsTr("Paste")
-            shortcutText: pane.shell.shortcutText("terminal.paste")
-            enabled: terminal.running
-            onTriggered: terminal.paste()
-        }
-
-        OsMenuItem {
-            text: qsTr("Select all")
-            onTriggered: terminal.selectAll()
-        }
-
-        OsMenuSeparator {}
-
-        OsMenuItem {
-            text: qsTr("Split right")
-            iconName: "columns-2"
-            shortcutText: pane.shell.shortcutText("pane.splitRight")
-            onTriggered: pane.workspace.splitPane(pane.paneId, "horizontal")
-        }
-
-        OsMenuItem {
-            text: qsTr("Split down")
-            iconName: "rows-2"
-            shortcutText: pane.shell.shortcutText("pane.splitDown")
-            onTriggered: pane.workspace.splitPane(pane.paneId, "vertical")
-        }
-
-        OsMenuItem {
-            text: pane.workspace.zoomedPane === pane.paneId ? qsTr("Restore pane size") : qsTr("Maximize pane")
-            iconName: pane.workspace.zoomedPane === pane.paneId ? "minimize-2" : "maximize-2"
-            shortcutText: pane.shell.shortcutText("pane.zoom")
-            enabled: pane.workspace.paneCount > 1
-            onTriggered: pane.workspace.toggleZoom(pane.paneId)
-        }
-
-        OsMenuItem {
-            text: qsTr("Close pane")
-            iconName: "x"
-            shortcutText: pane.shell.shortcutText("pane.close")
-            onTriggered: pane.closePane()
-        }
-
-        OsMenuSeparator {}
-
-        OsMenuItem {
-            text: qsTr("Broadcast input to all panes")
-            iconName: "radio-tower"
-            shortcutText: pane.shell.shortcutText("pane.broadcast")
-            checkable: true
-            checked: pane.workspace.broadcast
-            onTriggered: pane.workspace.toggleBroadcast()
-        }
-
-        OsMenuItem {
-            text: qsTr("Receive broadcast input")
-            checkable: true
-            checked: pane.participant
-            enabled: pane.workspace.broadcast
-            onTriggered: pane.workspace.setPaneReceiving(pane.paneId, !pane.participant)
-        }
-
-        OsMenuItem {
-            text: qsTr("Synchronize scrolling")
-            checkable: true
-            checked: pane.workspace.syncScroll
-            enabled: pane.workspace.broadcast
-            onTriggered: pane.workspace.syncScroll = !pane.workspace.syncScroll
-        }
-
-        OsMenuSeparator {}
-
-        OsMenuItem {
-            text: qsTr("Find…")
-            iconName: "search"
-            shortcutText: pane.shell.shortcutText("terminal.find")
-            onTriggered: pane.openSearch()
-        }
-
-        OsMenuItem {
-            text: qsTr("Clear scrollback")
-            iconName: "trash-2"
-            onTriggered: terminal.clearScrollback()
-        }
-
-        OsMenuSeparator {}
-
-        OsMenuItem {
-            text: pane.recordingSession ? qsTr("Stop recording the session") : qsTr("Record the session")
-            iconName: pane.recordingSession ? "square" : "circle-dot"
-            visible: !pane.player
-            height: visible ? implicitHeight : 0
-            onTriggered: pane.toggleSessionRecording()
-        }
-
-        OsMenuItem {
-            text: pane.recordingMacro ? qsTr("Stop recording the macro…") : qsTr("Record a macro")
-            iconName: pane.recordingMacro ? "square" : "play"
-            visible: !pane.player
-            height: visible ? implicitHeight : 0
-            onTriggered: pane.toggleMacroRecording()
-        }
-
-        OsMenuItem {
-            text: qsTr("Run a snippet…")
-            iconName: "scroll-text"
-            shortcutText: pane.shell.shortcutText("snippets.quick")
-            visible: !pane.player
-            height: visible ? implicitHeight : 0
-            onTriggered: pane.shell.showSnippetPicker()
-        }
-
-        // A serial port's: what arrives in hexadecimal, and a break (BREAK on the line).
-        OsMenuItem {
-            text: qsTr("Show what arrives in hexadecimal")
-            checkable: true
-            checked: contextMenu.visible && pane.kind === "serial" && terminal.serialHex()
-            visible: pane.kind === "serial"
-            height: visible ? implicitHeight : 0
-            enabled: terminal.running
-            onTriggered: terminal.serialCommand("hex", !terminal.serialHex())
-        }
-
-        OsMenuItem {
-            text: qsTr("Send break")
-            iconName: "zap"
-            visible: pane.kind === "serial"
-            height: visible ? implicitHeight : 0
-            enabled: terminal.running
-            onTriggered: terminal.serialCommand("break", true)
-        }
-
-        OsMenuSeparator {}
-
-        OsMenuItem {
-            text: qsTr("Highlight keywords")
-            checkable: true
-            checked: pane.highlightOn
-            onTriggered: pane.toggleHighlight()
-        }
-
-        OsContextMenu {
-            id: profileMenu
-
-            title: qsTr("Profile")
-
-            Instantiator {
-                model: pane.profileList
-
-                delegate: OsMenuItem {
-                    required property var modelData
-
-                    text: modelData.name
-                    checkable: true
-                    checked: modelData.id === pane.profile
-                    onTriggered: pane.useProfile(modelData.id)
+                OsMenuItem {
+                    text: qsTr("Copy")
+                    iconName: "copy"
+                    shortcutText: pane.shell.shortcutText("terminal.copy")
+                    enabled: terminal.hasSelection
+                    onTriggered: terminal.copy()
                 }
 
-                onObjectAdded: (index, object) => profileMenu.insertItem(index, object)
-                onObjectRemoved: (index, object) => profileMenu.removeItem(object)
-            }
-        }
+                OsMenuItem {
+                    text: qsTr("Paste")
+                    shortcutText: pane.shell.shortcutText("terminal.paste")
+                    enabled: terminal.running
+                    onTriggered: terminal.paste()
+                }
 
-        OsMenuItem {
-            text: qsTr("Terminal settings…")
-            iconName: "sliders-horizontal"
-            onTriggered: pane.shell.openSettings("terminal")
+                OsMenuItem {
+                    text: qsTr("Select all")
+                    onTriggered: terminal.selectAll()
+                }
+
+                OsMenuSeparator {}
+
+                OsMenuItem {
+                    text: qsTr("Split right")
+                    iconName: "columns-2"
+                    shortcutText: pane.shell.shortcutText("pane.splitRight")
+                    onTriggered: pane.workspace.splitPane(pane.paneId, "horizontal")
+                }
+
+                OsMenuItem {
+                    text: qsTr("Split down")
+                    iconName: "rows-2"
+                    shortcutText: pane.shell.shortcutText("pane.splitDown")
+                    onTriggered: pane.workspace.splitPane(pane.paneId, "vertical")
+                }
+
+                OsMenuItem {
+                    text: pane.workspace.zoomedPane === pane.paneId ? qsTr("Restore pane size") : qsTr("Maximize pane")
+                    iconName: pane.workspace.zoomedPane === pane.paneId ? "minimize-2" : "maximize-2"
+                    shortcutText: pane.shell.shortcutText("pane.zoom")
+                    enabled: pane.workspace.paneCount > 1
+                    onTriggered: pane.workspace.toggleZoom(pane.paneId)
+                }
+
+                OsMenuItem {
+                    text: qsTr("Close pane")
+                    iconName: "x"
+                    shortcutText: pane.shell.shortcutText("pane.close")
+                    onTriggered: pane.closePane()
+                }
+
+                OsMenuSeparator {}
+
+                OsMenuItem {
+                    text: qsTr("Broadcast input to all panes")
+                    iconName: "radio-tower"
+                    shortcutText: pane.shell.shortcutText("pane.broadcast")
+                    checkable: true
+                    checked: pane.workspace.broadcast
+                    onTriggered: pane.workspace.toggleBroadcast()
+                }
+
+                OsMenuItem {
+                    text: qsTr("Receive broadcast input")
+                    checkable: true
+                    checked: pane.participant
+                    enabled: pane.workspace.broadcast
+                    onTriggered: pane.workspace.setPaneReceiving(pane.paneId, !pane.participant)
+                }
+
+                OsMenuItem {
+                    text: qsTr("Synchronize scrolling")
+                    checkable: true
+                    checked: pane.workspace.syncScroll
+                    enabled: pane.workspace.broadcast
+                    onTriggered: pane.workspace.syncScroll = !pane.workspace.syncScroll
+                }
+
+                OsMenuSeparator {}
+
+                OsMenuItem {
+                    text: qsTr("Find…")
+                    iconName: "search"
+                    shortcutText: pane.shell.shortcutText("terminal.find")
+                    onTriggered: pane.openSearch()
+                }
+
+                OsMenuItem {
+                    text: qsTr("Clear scrollback")
+                    iconName: "trash-2"
+                    onTriggered: terminal.clearScrollback()
+                }
+
+                OsMenuSeparator {}
+
+                OsMenuItem {
+                    text: pane.recordingSession ? qsTr("Stop recording the session") : qsTr("Record the session")
+                    iconName: pane.recordingSession ? "square" : "circle-dot"
+                    visible: !pane.player
+                    height: visible ? implicitHeight : 0
+                    onTriggered: pane.toggleSessionRecording()
+                }
+
+                OsMenuItem {
+                    text: pane.recordingMacro ? qsTr("Stop recording the macro…") : qsTr("Record a macro")
+                    iconName: pane.recordingMacro ? "square" : "play"
+                    visible: !pane.player
+                    height: visible ? implicitHeight : 0
+                    onTriggered: pane.toggleMacroRecording()
+                }
+
+                OsMenuItem {
+                    text: qsTr("Run a snippet…")
+                    iconName: "scroll-text"
+                    shortcutText: pane.shell.shortcutText("snippets.quick")
+                    visible: !pane.player
+                    height: visible ? implicitHeight : 0
+                    onTriggered: pane.shell.showSnippetPicker()
+                }
+
+                // A serial port's: what arrives in hexadecimal, and a break (BREAK on the line).
+                OsMenuItem {
+                    text: qsTr("Show what arrives in hexadecimal")
+                    checkable: true
+                    checked: menu.visible && pane.kind === "serial" && terminal.serialHex()
+                    visible: pane.kind === "serial"
+                    height: visible ? implicitHeight : 0
+                    enabled: terminal.running
+                    onTriggered: terminal.serialCommand("hex", !terminal.serialHex())
+                }
+
+                OsMenuItem {
+                    text: qsTr("Send break")
+                    iconName: "zap"
+                    visible: pane.kind === "serial"
+                    height: visible ? implicitHeight : 0
+                    enabled: terminal.running
+                    onTriggered: terminal.serialCommand("break", true)
+                }
+
+                OsMenuSeparator {}
+
+                OsMenuItem {
+                    text: qsTr("Highlight keywords")
+                    checkable: true
+                    checked: pane.highlightOn
+                    onTriggered: pane.toggleHighlight()
+                }
+
+                OsContextMenu {
+                    id: profileMenu
+
+                    title: qsTr("Profile")
+
+                    Instantiator {
+                        model: pane.profileList
+
+                        delegate: OsMenuItem {
+                            required property var modelData
+
+                            text: modelData.name
+                            checkable: true
+                            checked: modelData.id === pane.profile
+                            onTriggered: pane.useProfile(modelData.id)
+                        }
+
+                        onObjectAdded: (index, object) => profileMenu.insertItem(index, object)
+                        onObjectRemoved: (index, object) => profileMenu.removeItem(object)
+                    }
+                }
+
+                OsMenuItem {
+                    text: qsTr("Terminal settings…")
+                    iconName: "sliders-horizontal"
+                    onTriggered: pane.shell.openSettings("terminal")
+                }
+            }
         }
     }
 }
