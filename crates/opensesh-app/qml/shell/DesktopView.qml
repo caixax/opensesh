@@ -117,6 +117,39 @@ Item {
                 text: qsTr("View only")
             }
 
+            // VNC without VeNCrypt: said as plainly as for telnet.
+            Row {
+                id: unencrypted
+
+                visible: !rdp.encrypted && rdp.running
+                spacing: Theme.spacingXs
+                Accessible.role: Accessible.StaticText
+                Accessible.name: qsTr("Not encrypted: what you type and see crosses the network as it is.")
+
+                OsIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "triangle-alert"
+                    size: Theme.iconSizeSmall
+                    color: Theme.warning
+                }
+
+                OsText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("Not encrypted")
+                    size: "small"
+                    color: Theme.warning
+                }
+
+                HoverHandler {
+                    id: unencryptedHover
+                }
+
+                OsTooltip {
+                    visible: unencryptedHover.hovered
+                    text: qsTr("This VNC server didn't offer TLS: what you type and see crosses the network as it is. Use VeNCrypt on the server, or reach it through a jump host.")
+                }
+            }
+
             OsText {
                 text: view.stateText()
                 size: "small"

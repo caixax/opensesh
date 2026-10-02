@@ -2100,6 +2100,8 @@ Item {
                 return wait("the VNC desktop", () => vnc.running && vnc.desktopWidth > 0 && near(48, 48, keySquare[0]), () => {
                     if (asked.indexOf("hostKey-certificate") < 0 || asked.indexOf("password-retry") < 0)
                         smoke.fail("the pane didn't ask for the certificate and again for the password: " + asked.join(", "));
+                    if (!vnc.encrypted)
+                        smoke.fail("a VeNCrypt session was taken for unencrypted");
                     return [];
                 });
             },

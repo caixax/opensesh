@@ -64,6 +64,8 @@ pub struct Connected {
     pub version: Version,
     /// The server's init.
     pub init: ServerInit,
+    /// The session runs over TLS (VeNCrypt).
+    pub encrypted: bool,
 }
 
 impl std::fmt::Debug for Connected {
@@ -165,6 +167,7 @@ where
         choice
     };
 
+    let encrypted = choice == Choice::VeNCrypt;
     let mut stream: Box<dyn Stream> = match choice {
         Choice::None => {
             if version == Version::V3_8 {
@@ -210,6 +213,7 @@ where
         stream,
         version,
         init,
+        encrypted,
     })
 }
 

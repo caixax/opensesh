@@ -227,6 +227,9 @@ pub enum Event {
     PointerDefault,
     /// No pointer.
     PointerHidden,
+    /// The session isn't encrypted (VNC without VeNCrypt): what is typed and shown crosses the
+    /// network as it is. Sent after [`Status::Connected`].
+    Unencrypted,
 }
 
 /// A rectangle of the desktop and its RGBA pixels (`width * 4` bytes a row).

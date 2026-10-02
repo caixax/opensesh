@@ -233,6 +233,7 @@ async fn vencrypt_with_a_certificate() {
     );
     assert_eq!(certificate.key_type, "ECDSA");
     assert_eq!(connected.init.name, testing::NAME);
+    assert!(connected.encrypted);
     assert_eq!(server.seen().users, vec![testing::USER.to_owned()]);
 
     // A certificate refused: nothing more is sent.

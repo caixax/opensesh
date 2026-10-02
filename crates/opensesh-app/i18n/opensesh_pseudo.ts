@@ -820,6 +820,18 @@
         <translation>[Víéŵ öñĺý ~~~]</translation>
     </message>
     <message>
+        <source>Not encrypted: what you type and see crosses the network as it is.</source>
+        <translation>[Ñöť éñçŕýþťéď: ŵĥáť ýöü ťýþé áñď šéé çŕöššéš ťĥé ñéťŵöŕķ áš íť íš. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not encrypted</source>
+        <translation>[Ñöť éñçŕýþťéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>This VNC server didn&apos;t offer TLS: what you type and see crosses the network as it is. Use VeNCrypt on the server, or reach it through a jump host.</source>
+        <translation>[Ťĥíš VÑÇ šéŕvéŕ ďíďñ&apos;ť öƒƒéŕ ŤĹŠ: ŵĥáť ýöü ťýþé áñď šéé çŕöššéš ťĥé ñéťŵöŕķ áš íť íš. Üšé VéÑÇŕýþť öñ ťĥé šéŕvéŕ, öŕ ŕéáçĥ íť ťĥŕöüĝĥ á ĵümþ ĥöšť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Send Ctrl+Alt+Del</source>
         <translation>[Šéñď Çťŕĺ+Åĺť+Ďéĺ ~~~~~~]</translation>
     </message>

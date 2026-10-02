@@ -159,6 +159,9 @@ async fn session(
         width,
         height,
     })));
+    if !connected.encrypted {
+        out(FromHelper::Event(Event::Unencrypted));
+    }
 
     let (inputs, receiver) = mpsc::unbounded_channel();
     let (sender, mut updates) = mpsc::channel(64);

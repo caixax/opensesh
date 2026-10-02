@@ -19,7 +19,8 @@
 //! `desktopHeight`, `wantedWidth`, `wantedHeight`, `escapeRequested()`,
 //! `localClipboardChanged()` and `pixelAt(x, y)`):
 //! - properties: `paneId`, `host`, `target`, `keyboardLocale` (Qt's input locale name), and
-//!   read-only `connection`, `prompt`, `running` (the desktop shows), `connectionSerial`;
+//!   read-only `connection`, `prompt`, `running` (the desktop shows), `connectionSerial`,
+//!   `encrypted` (false for a VNC session without VeNCrypt);
 //! - invokables: `start()`, `answerPrompt(id, action, secrets)`, `reconnect()`,
 //!   `disconnect()`, `sendCtrlAltDel()`, `resizeDesktop()` (to the item's size, in dynamic
 //!   mode), `offerClipboard()` (this computer's clipboard to the server), and `sendText(text)`
@@ -62,6 +63,7 @@ pub mod qobject {
         #[qproperty(QString, prompt, READ, NOTIFY = session_changed)]
         #[qproperty(bool, running, READ, NOTIFY = session_changed)]
         #[qproperty(i32, connection_serial, cxx_name = "connectionSerial", READ, NOTIFY = session_changed)]
+        #[qproperty(bool, encrypted, READ, NOTIFY = session_changed)]
         type RdpItem = super::RdpItemRust;
 
         /// `connection`, `prompt` or `running` changed.
@@ -269,6 +271,7 @@ pub struct RdpItemRust {
     prompt: QString,
     running: bool,
     connection_serial: i32,
+    encrypted: bool,
     session: Option<Arc<Connection>>,
     plan: Option<rdp::Plan>,
     question: Option<(i32, Question)>,
@@ -302,6 +305,7 @@ impl Default for RdpItemRust {
             prompt: QString::default(),
             running: false,
             connection_serial: 0,
+            encrypted: true,
             session: None,
             plan: None,
             question: None,
@@ -380,6 +384,10 @@ impl qobject::RdpItem {
             this.connection = QString::from(&status_json(status));
             if running && !this.running {
                 this.connection_serial += 1;
+            }
+            // Each connection says again whether it is encrypted.
+            if matches!(status, Status::Connecting { .. }) {
+                this.encrypted = true;
             }
             this.running = running;
         }
@@ -808,6 +816,10 @@ impl qobject::RdpItem {
                     reason,
                 });
             }
+        }
+        if state.unencrypted {
+            self.as_mut().rust_mut().encrypted = false;
+            self.as_mut().session_changed();
         }
         if state.dirty {
             self.as_mut().update();

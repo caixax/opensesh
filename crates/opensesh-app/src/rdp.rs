@@ -98,6 +98,8 @@ pub struct State {
     pub clipboard: Option<String>,
     /// The frame changed.
     pub dirty: bool,
+    /// The session turned out not to be encrypted (VNC without VeNCrypt).
+    pub unencrypted: bool,
     /// The helper ended (or couldn't start): why.
     pub helper_ended: Option<String>,
     waker: Option<Waker>,
@@ -333,6 +335,7 @@ impl Connection {
             FromHelper::Event(Event::PointerHidden) => {
                 self.notify(|state| state.pointer = Some(PointerChange::Hidden));
             }
+            FromHelper::Event(Event::Unencrypted) => self.notify(|state| state.unencrypted = true),
             FromHelper::Pointer(picture) => {
                 self.notify(|state| state.pointer = Some(PointerChange::Picture(picture)));
             }
