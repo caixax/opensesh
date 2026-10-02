@@ -42,11 +42,14 @@ die() {
 install_packages() {
     if command -v apt-get >/dev/null; then
         DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-            openssh-server openssh-client dropbear-bin libpam-google-authenticator oathtool >/dev/null
+            openssh-server openssh-client dropbear-bin libpam-google-authenticator oathtool \
+            xauth xvfb x11-utils waypipe wayland-utils sway >/dev/null
     elif command -v pacman >/dev/null; then
-        pacman -S --noconfirm --needed openssh dropbear libpam-google-authenticator oath-toolkit >/dev/null
+        pacman -S --noconfirm --needed openssh dropbear libpam-google-authenticator oath-toolkit \
+            xorg-xauth xorg-server-xvfb xorg-xdpyinfo waypipe wayland-utils sway >/dev/null
     elif command -v dnf >/dev/null; then
-        dnf install -y -q openssh-server openssh-clients dropbear google-authenticator oathtool >/dev/null
+        dnf install -y -q openssh-server openssh-clients dropbear google-authenticator oathtool \
+            xorg-x11-xauth xorg-x11-server-Xvfb xdpyinfo waypipe wayland-utils sway >/dev/null
     else
         die "no apt-get, pacman or dnf to install OpenSSH, Dropbear and the PAM TOTP module"
     fi
@@ -148,7 +151,7 @@ UsePAM yes
 AllowTcpForwarding yes
 AllowAgentForwarding yes
 AcceptEnv LANG LC_* OPENSESH_*
-# For spikes/x11-forwarding (the server also needs xauth to store the cookie).
+# X11 forwarding (real_servers' X11 test; the server also needs xauth to store the cookie).
 X11Forwarding yes
 X11UseLocalhost yes
 PrintMotd no
