@@ -19,6 +19,7 @@ pub mod snippets;
 pub mod state;
 pub mod terminal;
 pub mod theme;
+pub mod trusted_certificates;
 pub mod tunnels;
 pub mod watch;
 pub mod workspace;
