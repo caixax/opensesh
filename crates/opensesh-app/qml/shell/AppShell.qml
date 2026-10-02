@@ -705,8 +705,9 @@ Item {
             Hosts.recordHost(id);
             return openFiles({ mode: "remote", hostId: id, target: "", title: host.name });
         }
-        // Terminal kinds the pane starts itself (Sprint 12).
-        if (shell.terminalKinds.indexOf(host.protocol) >= 0 && host.sprint === 0) {
+        // Kinds the pane starts itself: terminals (Sprint 12) and remote desktops (Sprint 13).
+        if ((shell.terminalKinds.indexOf(host.protocol) >= 0 || shell.desktopKinds.indexOf(host.protocol) >= 0)
+                && host.sprint === 0) {
             Hosts.recordHost(id);
             return openConnection({ kind: host.protocol, host: id }, where ?? "tab");
         }
@@ -749,7 +750,8 @@ Item {
         Hosts.recordTarget(parsed.text);
         if (parsed.protocol === "s3")
             return openFiles({ mode: "remote", hostId: "", target: parsed.text, title: parsed.text });
-        const kind = shell.terminalKinds.indexOf(parsed.protocol) >= 0 ? parsed.protocol : "ssh";
+        const kind = shell.terminalKinds.indexOf(parsed.protocol) >= 0 || shell.desktopKinds.indexOf(parsed.protocol) >= 0
+                   ? parsed.protocol : "ssh";
         return openConnection({ kind: kind, target: parsed.text }, where ?? "tab");
     }
 
@@ -934,6 +936,8 @@ Item {
 
     // Protocols a terminal pane connects with besides SSH and local shells.
     readonly property var terminalKinds: ["telnet", "serial", "mosh", "docker", "kube"]
+    // Protocols whose panes show a remote desktop (DesktopView).
+    readonly property var desktopKinds: ["rdp"]
 
     // Plays the session recording in `path` in a new tab.
     function playRecording(path) {
@@ -1248,6 +1252,7 @@ Item {
             () => shell.sftpSmokeSteps(smoke),
             () => shell.tunnelSmokeSteps(smoke),
             () => shell.protocolSmokeSteps(smoke),
+            () => shell.desktopSmokeSteps(smoke),
             () => openTab("the second shell's first output"),
             () => {
                 pane.terminal.sendText("exit\r");
@@ -1888,6 +1893,136 @@ Item {
                                 return [];
                             });
             }
+        ];
+    }
+
+    // Functions for SmokeTest.steps: remote desktops (Sprint 13) against the RDP test server
+    // next to the app (cargo xtask rdp --test-server), never the network. The certificate and
+    // the password are asked in the pane (a wrong password first), the desktop shows, keys reach
+    // it (Ctrl+Alt+Del repaints its square), text goes both ways on the clipboard (a stand-in
+    // for the user's, which a test run leaves alone), the desktop follows the pane's size, and a
+    // disconnected pane connects again with a new helper. Then the same through a jump host (the
+    // SSH steps' test server), over a local tunnel.
+    function desktopSmokeSteps(smoke) {
+        const timeout = 20000;
+        let deadline = 0;
+        let pane = null;
+        let rdp = null;
+        let asked = [];
+        let wrongFirst = false;
+        // Question ids start again with each pane.
+        let answered = {};
+        const desktop = () => pane && pane.desktopView ? pane.desktopView.desktop : null;
+        // Each question once: certificates and host keys trusted for this time only (so the next
+        // run is asked again), passwords answered (wrong first when `wrongFirst`).
+        const answer = () => {
+            if (!rdp || rdp.prompt.length === 0)
+                return;
+            const question = JSON.parse(rdp.prompt);
+            if (question.id === undefined || answered[question.id])
+                return;
+            answered[question.id] = true;
+            asked.push(question.kind + (question.certificate ? "-certificate" : "") + (question.retry ? "-retry" : ""));
+            if (question.kind === "hostKey") {
+                rdp.answerPrompt(question.id, "trust-once", []);
+            } else if (question.kind === "password" && wrongFirst && !question.retry) {
+                wrongFirst = false;
+                rdp.answerPrompt(question.id, "submit", ["wrong password"]); // lint-qml: allow (a wrong password for the test server)
+            } else {
+                rdp.answerPrompt(question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+            }
+        };
+        // A pixel of the desktop near an RGB colour (RemoteFX is lossy).
+        const near = (x, y, rgb) => {
+            const text = rdp ? rdp.pixelAt(x, y) : "";
+            if (text.length !== 7)
+                return false;
+            for (let i = 0; i < 3; ++i) {
+                if (Math.abs(parseInt(text.substr(1 + 2 * i, 2), 16) - rgb[i]) > 24)
+                    return false;
+            }
+            return true;
+        };
+        const keySquare = [[0x5e, 0x81, 0xac], [0xa3, 0xbe, 0x8c], [0xeb, 0xcb, 0x8b], [0xbf, 0x61, 0x6a]];
+        const state = () => rdp ? (JSON.parse(rdp.connection || "{}").state ?? "") : "";
+        const wait = (what, condition, next) => {
+            deadline = Date.now() + timeout;
+            const poll = () => {
+                answer();
+                if (condition())
+                    return next ? next() : [];
+                if (Date.now() > deadline) {
+                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what + "; the pane says "
+                               + (rdp ? rdp.connection : "nothing") + ", questions asked: " + asked.join(", "));
+                    return [];
+                }
+                return [poll];
+            };
+            return [poll];
+        };
+        const open = (text, next) => {
+            asked = [];
+            answered = {};
+            if (!shell.connectTarget(text, "tab"))
+                smoke.fail("RDP quick connect opened nothing for " + text);
+            pane = shell.currentTerminal;
+            rdp = desktop();
+            if (!pane || pane.kind !== "rdp" || !rdp)
+                smoke.fail("the pane isn't a remote desktop pane");
+            // The server keeps its key count between connections: any of the square's colours.
+            return wait("the remote desktop", () => rdp.running && rdp.desktopWidth > 0 && keySquare.some(rgb => near(48, 48, rgb)), next);
+        };
+        let narrower = 0;
+        let splitId = 0;
+        return [
+            () => {
+                if (AppInfo.startRdpTestServer() <= 0)
+                    smoke.fail("the RDP test server didn't start: build it with cargo xtask rdp --test-server");
+                wrongFirst = true;
+                return open("rdp://tester@desktop.example", () => {
+                    if (asked.indexOf("hostKey-certificate") < 0 || asked.indexOf("password-retry") < 0)
+                        smoke.fail("the pane didn't ask for the certificate and again for the password: " + asked.join(", "));
+                    return [];
+                });
+            },
+            () => {
+                // Ctrl, Alt and Del: three keys, so the square takes the fourth colour.
+                rdp.sendCtrlAltDel();
+                return wait("the keys on the desktop", () => near(48, 48, keySquare[3]));
+            },
+            () => wait("the server's clipboard text", () => rdp.testClipboard() === "Copied on the OpenSesh RDP test server"), // lint-qml: allow (the test server's text)
+            () => {
+                rdp.setTestClipboard("Copied in OpenSesh"); // lint-qml: allow (clipboard text for the test server)
+                return wait("the clipboard text on the server", () => near(104, 48, keySquare[1]));
+            },
+            () => {
+                const before = rdp.desktopWidth;
+                splitId = pane.workspace.splitPane(pane.paneId, "horizontal");
+                if (splitId === 0)
+                    smoke.fail("the remote desktop pane didn't split");
+                return wait("the desktop to follow the narrower pane", () => {
+                    narrower = rdp.wantedWidth - rdp.wantedWidth % 2;
+                    return rdp.running && rdp.desktopWidth === narrower && narrower < before;
+                });
+            },
+            () => {
+                pane.workspace.closePane(splitId);
+                rdp.disconnect();
+                return wait("the disconnection", () => state() === "disconnected");
+            },
+            () => {
+                rdp.reconnect();
+                return wait("the desktop again, with a new helper", () => rdp.running && rdp.desktopWidth > 0, () => {
+                    console.info("smoke test: an RDP desktop asked for its certificate and password, took keys and clipboard text both ways, followed the pane's size and connected again");
+                    shell.closeTab(shell.currentTab);
+                    return [];
+                });
+            },
+            () => open("rdp://tester@desktop.example -J tester@bastion.example", () => {
+                console.info("smoke test: an RDP desktop connected through a jump host's tunnel (" + asked.join(", ") + ")");
+                shell.closeTab(shell.currentTab);
+                return [];
+            })
         ];
     }
 

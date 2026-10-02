@@ -6,6 +6,7 @@ pub mod instance;
 pub mod keybindings;
 pub mod keychain;
 pub mod platform;
+pub mod rdp_view;
 pub mod recordings;
 pub mod settings;
 pub mod sftp_browser;

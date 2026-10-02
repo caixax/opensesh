@@ -404,6 +404,43 @@ pub fn connect_for(file: &HostsFile, host: &Host) -> Result<ConnectSpec, String>
     hermetic(connect)
 }
 
+/// The SSH connection to the last of `host`'s jump hosts, through the ones before it: what a
+/// remote desktop's local tunnel runs on (Sprint 13). `None` when the host has no jump hosts.
+///
+/// # Errors
+///
+/// A message when the app isn't ready, or a jump host or the proxy is bad.
+pub fn jump_connect_for(file: &HostsFile, host: &Host) -> Result<Option<ConnectSpec>, String> {
+    let resolved = file.resolve(host);
+    let references = resolved.jump();
+    if references.is_empty() {
+        return Ok(None);
+    }
+    let services = services::get().ok_or("the app isn't ready")?;
+    let config = services.paths.config_dir();
+    let home = opensesh_core::paths::home_dir();
+    let mut hops = Vec::new();
+    for reference in references {
+        hops.push(jump_hop(file, &reference, home.as_deref())?);
+    }
+    let keepalive = u64::from(resolved.keepalive_secs());
+    let connect = ConnectSpec {
+        hops,
+        proxy: proxy_of(
+            resolved.string("ssh.proxy"),
+            resolved.string("ssh.proxy_command"),
+        )?,
+        legacy: resolved.flag("ssh.legacy_algorithms"),
+        compression: false,
+        keepalive: (keepalive > 0).then(|| Duration::from_secs(keepalive)),
+        connect_timeout: CONNECT_TIMEOUT,
+        known_hosts: known_hosts(config, home.as_deref()),
+        agent_forwarding: false,
+        agent_socket: None,
+    };
+    hermetic(connect).map(Some)
+}
+
 /// The session of quick-connect `text` (`user@host:port -J jump`).
 ///
 /// # Errors

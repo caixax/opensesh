@@ -4,7 +4,9 @@ pragma ComponentBehavior: Bound
 // not in dialogs, so several panes can connect at once and each asks in its own place.
 //   - While connecting or authenticating: a chip at the top ("Connecting to web (2 of 3)...").
 //   - A question: a card in the middle. A new host key shows its fingerprint to trust once or
-//     remember; a changed one warns and offers to connect once or replace the saved key.
+//     remember; a changed one warns and offers to connect once or replace the saved key. A
+//     remote desktop's certificate (`certificate: true`, with its `subject`) is asked the same
+//     way.
 //     Passwords, key passphrases and keyboard-interactive prompts (one-time codes) have their
 //     fields; Escape cancels. What is typed goes straight to the connection and the fields
 //     are cleared.
@@ -360,6 +362,7 @@ Item {
 
             readonly property var question: overlay.prompt
             readonly property bool changed: question.changed === true
+            readonly property bool certificate: question.certificate === true
             readonly property string title: header.heading
 
             function takeFocus() {
@@ -374,16 +377,23 @@ Item {
 
                 icon: hostKey.changed ? "triangle-alert" : "shield-check"
                 tint: hostKey.changed ? Theme.danger : Theme.accent
-                heading: hostKey.changed ? qsTr("The host key of %1 changed").arg(hostKey.question.host ?? "")
-                                         : qsTr("First connection to %1").arg(hostKey.question.host ?? "")
+                heading: !hostKey.changed ? qsTr("First connection to %1").arg(hostKey.question.host ?? "")
+                                          : hostKey.certificate ? qsTr("The certificate of %1 changed").arg(hostKey.question.host ?? "")
+                                                                : qsTr("The host key of %1 changed").arg(hostKey.question.host ?? "")
             }
 
             OsText {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 elide: Text.ElideNone
-                text: hostKey.changed ? qsTr("The server's key isn't the one saved in %1 (line %2). Someone may be intercepting the connection, or the server was reinstalled. Don't connect unless you know why it changed.").arg(hostKey.question.file ?? "").arg(hostKey.question.line ?? 0)
-                                      : qsTr("OpenSesh doesn't know this server's key yet. Check that its fingerprint is the server's before you trust it.")
+                text: {
+                    const question = hostKey.question;
+                    if (hostKey.certificate)
+                        return hostKey.changed ? qsTr("The server's certificate isn't the one saved in %1. Someone may be intercepting the connection, or the certificate was renewed. Don't connect unless you know why it changed.").arg(question.file ?? "")
+                                               : qsTr("OpenSesh doesn't know this server's certificate yet (it is made out to %1). Check that its fingerprint is the server's before you trust it.").arg(question.subject ?? "")
+                    return hostKey.changed ? qsTr("The server's key isn't the one saved in %1 (line %2). Someone may be intercepting the connection, or the server was reinstalled. Don't connect unless you know why it changed.").arg(question.file ?? "").arg(question.line ?? 0)
+                                           : qsTr("OpenSesh doesn't know this server's key yet. Check that its fingerprint is the server's before you trust it.");
+                }
             }
 
             Fingerprint {
@@ -443,7 +453,7 @@ Item {
 
                 OsButton {
                     visible: hostKey.changed
-                    text: qsTr("Replace the saved key")
+                    text: hostKey.certificate ? qsTr("Replace the saved certificate") : qsTr("Replace the saved key")
                     variant: "danger"
                     onClicked: overlay.answer("trust-save")
                     Keys.onReturnPressed: overlay.answer("trust-save")
