@@ -13,6 +13,7 @@ mod icons;
 mod lint_qml;
 mod notices;
 mod pseudo;
+mod rdp;
 mod shaders;
 mod vttest;
 
@@ -46,6 +47,10 @@ Tasks:
              target/release (ADR 0014). Also refreshes the license copy and THIRD_PARTY_NOTICES.md.
              --dest <folder>: copy there instead (repeatable).
              --remove: delete the copies, to test the ConPTY built into Windows (no network).
+  rdp        Build the RDP helper (rdp/, a workspace of its own; ADR 0034), optimized, and copy
+             opensesh-rdp next to the app in target/debug and target/release.
+             --test-server: also opensesh-rdp-test-server, for the smoke test.
+             --debug: an unoptimized helper. --dest <folder>: copy there instead (repeatable).
   vttest     Download the pinned vttest release, verify its sha256 and build it with configure
              and make into target/vttest/vttest, for the terminal harness tests. Linux and other
              Unix systems only (use WSL on Windows). --force: rebuild.
@@ -118,6 +123,10 @@ fn run() -> Result<ExitCode> {
         }
         Some("conpty") => {
             conpty::run(&root, &conpty::Options::parse(args)?)?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Some("rdp") => {
+            rdp::run(&root, &rdp::Options::parse(args)?)?;
             Ok(ExitCode::SUCCESS)
         }
         Some("vttest") => {
