@@ -72,6 +72,27 @@ QtObject {
             onTriggered: root.shell.newGroup("")
         },
         OsAction {
+            actionId: "host.import"
+            text: qsTr("Import hosts…")
+            category: root.categorySessions
+            iconName: "import"
+            onTriggered: root.shell.showImport("")
+        },
+        OsAction {
+            actionId: "data.export"
+            text: qsTr("Export hosts and settings…")
+            category: root.categorySessions
+            iconName: "upload"
+            onTriggered: root.shell.showExport([])
+        },
+        OsAction {
+            actionId: "settings.syncConflicts"
+            text: qsTr("Resolve sync conflicts…")
+            category: root.categoryApp
+            iconName: "refresh-cw"
+            onTriggered: root.shell.openSettings("data")
+        },
+        OsAction {
             actionId: "host.importSshConfig"
             text: qsTr("Import ~/.ssh/config…")
             category: root.categorySessions

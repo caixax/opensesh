@@ -78,8 +78,7 @@ FocusScope {
             // No "&": a button text with "&x" registers Alt+X as a mnemonic shortcut.
             text: qsTr("Data and sync"),
             iconName: "refresh-cw",
-            description: qsTr("Import from other clients, export your data and sync it between devices."),
-            sprint: 16
+            description: qsTr("Import from other clients, export your data and sync it between devices.")
         },
         {
             id: "about",
@@ -340,6 +339,8 @@ FocusScope {
                     return sftpPage;
                 case "security":
                     return securityPage;
+                case "data":
+                    return dataPage;
                 case "about":
                     return aboutPage;
                 default:
@@ -411,6 +412,12 @@ FocusScope {
         id: securityPage
 
         SettingsSecurityPage {}
+    }
+
+    Component {
+        id: dataPage
+
+        SettingsDataPage {}
     }
 
     Component {

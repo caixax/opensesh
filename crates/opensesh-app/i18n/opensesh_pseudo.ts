@@ -120,6 +120,18 @@
         <translation>[Ñéŵ ĥöšť ĝŕöüþ… ~~~~~]</translation>
     </message>
     <message>
+        <source>Import hosts…</source>
+        <translation>[Ímþöŕť ĥöšťš… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Export hosts and settings…</source>
+        <translation>[Éxþöŕť ĥöšťš áñď šéťťíñĝš… ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Resolve sync conflicts…</source>
+        <translation>[Ŕéšöĺvé šýñç çöñƒĺíçťš… ~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Import ~/.ssh/config…</source>
         <translation>[Ímþöŕť ~/.ššĥ/çöñƒíĝ… ~~~~~~~]</translation>
     </message>
@@ -646,6 +658,17 @@
         <source>The tunnel %1 needs an answer to connect: see Tunnels.</source>
         <translation>[Ťĥé ťüññéĺ %1 ñééďš áñ áñšŵéŕ ťö çöññéçť: šéé Ťüññéĺš. ~~~~~~~~~~~~~~~~~]</translation>
     </message>
+    <message numerus="yes">
+        <source>Your settings have %n sync conflict(s) to resolve.</source>
+        <translation>
+            <numerusform>[Ýöüŕ šéťťíñĝš ĥávé %n šýñç çöñƒĺíçť(š) ťö ŕéšöĺvé. ~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Ýöüŕ šéťťíñĝš ĥávé %n šýñç çöñƒĺíçť(š) ťö ŕéšöĺvé. ~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Resolve</source>
+        <translation>[Ŕéšöĺvé ~~~]</translation>
+    </message>
     <message>
         <source>Terminal</source>
         <translation>[Ťéŕmíñáĺ ~~~]</translation>
@@ -752,6 +775,117 @@
     <message>
         <source>%1 is coming in Sprint %2.</source>
         <translation>[%1 íš çömíñĝ íñ Šþŕíñť %2. ~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ConflictDialog</name>
+    <message>
+        <source>Host</source>
+        <translation>[Ĥöšť ~~]</translation>
+    </message>
+    <message>
+        <source>Group</source>
+        <translation>[Ĝŕöüþ ~~]</translation>
+    </message>
+    <message>
+        <source>Snippet</source>
+        <translation>[Šñíþþéť ~~~]</translation>
+    </message>
+    <message>
+        <source>Tunnel</source>
+        <translation>[Ťüññéĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Linked file</source>
+        <translation>[Ĺíñķéď ƒíĺé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Setting %1</source>
+        <translation>[Šéťťíñĝ %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>only on this computer</source>
+        <translation>[öñĺý öñ ťĥíš çömþüťéŕ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>only in the other copy</source>
+        <translation>[öñĺý íñ ťĥé öťĥéŕ çöþý ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>changed on both</source>
+        <translation>[çĥáñĝéď öñ böťĥ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Keep it</source>
+        <translation>[Ķééþ íť ~~~]</translation>
+    </message>
+    <message>
+        <source>Remove it</source>
+        <translation>[Ŕémövé íť ~~~]</translation>
+    </message>
+    <message>
+        <source>Leave it out</source>
+        <translation>[Ĺéávé íť öüť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Add it</source>
+        <translation>[Åďď íť ~~]</translation>
+    </message>
+    <message>
+        <source>Keep this computer&apos;s</source>
+        <translation>[Ķééþ ťĥíš çömþüťéŕ&apos;š ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Take the other</source>
+        <translation>[Ťáķé ťĥé öťĥéŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Resolve a sync conflict</source>
+        <translation>[Ŕéšöĺvé á šýñç çöñƒĺíçť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saving…</source>
+        <translation>[Šávíñĝ… ~~~]</translation>
+    </message>
+    <message>
+        <source>Resolve</source>
+        <translation>[Ŕéšöĺvé ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 is resolved.</source>
+        <translation>[%1 íš ŕéšöĺvéď. ~~~~~]</translation>
+    </message>
+    <message>
+        <source>The conflict could not be resolved: %1</source>
+        <translation>[Ťĥé çöñƒĺíçť çöüĺď ñöť bé ŕéšöĺvéď: %1 ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Git left two versions of %1 after a pull.</source>
+        <translation>[Ĝíť ĺéƒť ťŵö véŕšíöñš öƒ %1 áƒťéŕ á þüĺĺ. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Syncthing kept two versions of %1: it changed here and on another computer before they synced.</source>
+        <translation>[Šýñçťĥíñĝ ķéþť ťŵö véŕšíöñš öƒ %1: íť çĥáñĝéď ĥéŕé áñď öñ áñöťĥéŕ çömþüťéŕ béƒöŕé ťĥéý šýñçéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The versions can&apos;t be read: %1</source>
+        <translation>[Ťĥé véŕšíöñš çáñ&apos;ť bé ŕéáď: %1 ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Both versions hold the same: resolving removes the extra copy.</source>
+        <translation>[Böťĥ véŕšíöñš ĥöĺď ťĥé šámé: ŕéšöĺvíñĝ ŕémövéš ťĥé éxťŕá çöþý. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>What differs</source>
+        <translation>[Ŵĥáť ďíƒƒéŕš ~~~~]</translation>
+    </message>
+    <message>
+        <source>%1, %2</source>
+        <translation>[%1, %2 ~~]</translation>
+    </message>
+    <message>
+        <source>Choice for %1</source>
+        <translation>[Çĥöíçé ƒöŕ %1 ~~~~]</translation>
     </message>
 </context>
 <context>
@@ -924,6 +1058,122 @@
     <message>
         <source>Inherit: %1</source>
         <translation>[Íñĥéŕíť: %1 ~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ExportDialog</name>
+    <message>
+        <source>OpenSesh bundle</source>
+        <translation>[ÖþéñŠéšĥ büñďĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSSH config file</source>
+        <translation>[ÖþéñŠŠĤ çöñƒíĝ ƒíĺé ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save: %1</source>
+        <translation>[Çöüĺď ñöť šávé: %1 ~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s) written to %1.</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ŵŕíťťéñ ťö %1. ~~~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ŵŕíťťéñ ťö %1. ~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Choose a password for the keychain, or leave it out.</source>
+        <translation>[Çĥööšé á þáššŵöŕď ƒöŕ ťĥé ķéýçĥáíñ, öŕ ĺéávé íť öüť. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s), %1 snippet(s) and %2 profile and theme file(s) saved to %3.</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š), %1 šñíþþéť(š) áñď %2 þŕöƒíĺé áñď ťĥémé ƒíĺé(š) šávéď ťö %3. ~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š), %1 šñíþþéť(š) áñď %2 þŕöƒíĺé áñď ťĥémé ƒíĺé(š) šávéď ťö %3. ~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>[Éxþöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>Saving…</source>
+        <translation>[Šávíñĝ… ~~~]</translation>
+    </message>
+    <message>
+        <source>Format</source>
+        <translation>[Föŕmáť ~~]</translation>
+    </message>
+    <message>
+        <source>Export format</source>
+        <translation>[Éxþöŕť ƒöŕmáť ~~~~]</translation>
+    </message>
+    <message>
+        <source>Your hosts and groups, snippets, terminal profiles and themes, in one file to import on another computer or keep as a backup.</source>
+        <translation>[Ýöüŕ ĥöšťš áñď ĝŕöüþš, šñíþþéťš, ťéŕmíñáĺ þŕöƒíĺéš áñď ťĥéméš, íñ öñé ƒíĺé ťö ímþöŕť öñ áñöťĥéŕ çömþüťéŕ öŕ ķééþ áš á báçķüþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>The %n selected host(s) that use SSH, as Host blocks for ssh and the tools that read ~/.ssh/config.</source>
+        <translation>
+            <numerusform>[Ťĥé %n šéĺéçťéď ĥöšť(š) ťĥáť üšé ŠŠĤ, áš Ĥöšť bĺöçķš ƒöŕ ššĥ áñď ťĥé ťööĺš ťĥáť ŕéáď ~/.ššĥ/çöñƒíĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Ťĥé %n šéĺéçťéď ĥöšť(š) ťĥáť üšé ŠŠĤ, áš Ĥöšť bĺöçķš ƒöŕ ššĥ áñď ťĥé ťööĺš ťĥáť ŕéáď ~/.ššĥ/çöñƒíĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Every host that uses SSH, as Host blocks for ssh and the tools that read ~/.ssh/config.</source>
+        <translation>[Évéŕý ĥöšť ťĥáť üšéš ŠŠĤ, áš Ĥöšť bĺöçķš ƒöŕ ššĥ áñď ťĥé ťööĺš ťĥáť ŕéáď ~/.ššĥ/çöñƒíĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>hosts.opensesh</source>
+        <translation>[ĥöšťš.öþéñšéšĥ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>config</source>
+        <translation>[çöñƒíĝ ~~]</translation>
+    </message>
+    <message>
+        <source>File to write</source>
+        <translation>[Fíĺé ťö ŵŕíťé ~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose…</source>
+        <translation>[Çĥööšé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Include the keychain: identities, keys and their passwords</source>
+        <translation>[Íñçĺüďé ťĥé ķéýçĥáíñ: íďéñťíťíéš, ķéýš áñď ťĥéíŕ þáššŵöŕďš ~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>They are sealed with this password (as the vault is): anyone with the file and the password has your keys. Without them, hosts keep their identities only where those exist already.</source>
+        <translation>[Ťĥéý áŕé šéáĺéď ŵíťĥ ťĥíš þáššŵöŕď (áš ťĥé váüĺť íš): áñýöñé ŵíťĥ ťĥé ƒíĺé áñď ťĥé þáššŵöŕď ĥáš ýöüŕ ķéýš. Ŵíťĥöüť ťĥém, ĥöšťš ķééþ ťĥéíŕ íďéñťíťíéš öñĺý ŵĥéŕé ťĥöšé éxíšť áĺŕéáďý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Export password</source>
+        <translation>[Éxþöŕť þáššŵöŕď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Confirm the password</source>
+        <translation>[Çöñƒíŕm ťĥé þáššŵöŕď ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Confirm the export password</source>
+        <translation>[Çöñƒíŕm ťĥé éxþöŕť þáššŵöŕď ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The passwords don&apos;t match.</source>
+        <translation>[Ťĥé þáššŵöŕďš ďöñ&apos;ť máťçĥ. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Export to</source>
+        <translation>[Éxþöŕť ťö ~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh bundles (*.opensesh)</source>
+        <translation>[ÖþéñŠéšĥ büñďĺéš (*.öþéñšéšĥ) ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>All files (*)</source>
+        <translation>[Åĺĺ ƒíĺéš (*) ~~~~]</translation>
     </message>
 </context>
 <context>
@@ -3389,6 +3639,17 @@
         <translation>[Ďüþĺíçáťé ~~~]</translation>
     </message>
     <message>
+        <source>Export to an OpenSSH config file…</source>
+        <translation>[Éxþöŕť ťö áñ ÖþéñŠŠĤ çöñƒíĝ ƒíĺé… ~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Export %n host(s) to an OpenSSH config file…</source>
+        <translation>
+            <numerusform>[Éxþöŕť %n ĥöšť(š) ťö áñ ÖþéñŠŠĤ çöñƒíĝ ƒíĺé… ~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Éxþöŕť %n ĥöšť(š) ťö áñ ÖþéñŠŠĤ çöñƒíĝ ƒíĺé… ~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
         <source>Copy the ssh command</source>
         <translation>[Çöþý ťĥé ššĥ çömmáñď ~~~~~~]</translation>
     </message>
@@ -3424,8 +3685,16 @@
         <translation>[Ñéŵ ĝŕöüþ… ~~~]</translation>
     </message>
     <message>
+        <source>Import hosts…</source>
+        <translation>[Ímþöŕť ĥöšťš… ~~~~]</translation>
+    </message>
+    <message>
         <source>Import ~/.ssh/config…</source>
         <translation>[Ímþöŕť ~/.ššĥ/çöñƒíĝ… ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Export…</source>
+        <translation>[Éxþöŕť… ~~~]</translation>
     </message>
     <message>
         <source>Quick connect…</source>
@@ -3560,6 +3829,313 @@
     <message>
         <source>Set a master password…</source>
         <translation>[Šéť á mášťéŕ þáššŵöŕď… ~~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ImportDialog</name>
+    <message>
+        <source>MobaXterm</source>
+        <translation>[MöbáXťéŕm ~~~]</translation>
+    </message>
+    <message>
+        <source>A .mxtsessions export, a single .moba session or MobaXterm.ini. SSH, SFTP, RDP and VNC sessions are imported.</source>
+        <translation>[Å .mxťšéššíöñš éxþöŕť, á šíñĝĺé .möbá šéššíöñ öŕ MöbáXťéŕm.íñí. ŠŠĤ, ŠFŤÞ, ŔĎÞ áñď VÑÇ šéššíöñš áŕé ímþöŕťéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>PuTTY</source>
+        <translation>[ÞüŤŤÝ ~~]</translation>
+    </message>
+    <message>
+        <source>Your saved sessions in the registry, or a .reg file exported from another computer. SSH, Telnet and serial sessions are imported.</source>
+        <translation>[Ýöüŕ šávéď šéššíöñš íñ ťĥé ŕéĝíšťŕý, öŕ á .ŕéĝ ƒíĺé éxþöŕťéď ƒŕöm áñöťĥéŕ çömþüťéŕ. ŠŠĤ, Ťéĺñéť áñď šéŕíáĺ šéššíöñš áŕé ímþöŕťéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The ~/.putty/sessions folder, or a .reg file exported on Windows. SSH, Telnet and serial sessions are imported.</source>
+        <translation>[Ťĥé ~/.þüťťý/šéššíöñš ƒöĺďéŕ, öŕ á .ŕéĝ ƒíĺé éxþöŕťéď öñ Ŵíñďöŵš. ŠŠĤ, Ťéĺñéť áñď šéŕíáĺ šéššíöñš áŕé ímþöŕťéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remmina</source>
+        <translation>[Ŕémmíñá ~~~]</translation>
+    </message>
+    <message>
+        <source>A folder of .remmina profiles, or one profile. RDP, VNC, SSH and SFTP profiles are imported.</source>
+        <translation>[Å ƒöĺďéŕ öƒ .ŕémmíñá þŕöƒíĺéš, öŕ öñé þŕöƒíĺé. ŔĎÞ, VÑÇ, ŠŠĤ áñď ŠFŤÞ þŕöƒíĺéš áŕé ímþöŕťéď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>CSV file</source>
+        <translation>[ÇŠV ƒíĺé ~~~]</translation>
+    </message>
+    <message>
+        <source>A spreadsheet saved as CSV: map its columns to host fields below.</source>
+        <translation>[Å šþŕéáďšĥééť šávéď áš ÇŠV: máþ íťš çöĺümñš ťö ĥöšť ƒíéĺďš béĺöŵ. ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh bundle</source>
+        <translation>[ÖþéñŠéšĥ büñďĺé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Hosts, snippets, profiles and themes exported from OpenSesh, and its keychain when it was exported with a password.</source>
+        <translation>[Ĥöšťš, šñíþþéťš, þŕöƒíĺéš áñď ťĥéméš éxþöŕťéď ƒŕöm ÖþéñŠéšĥ, áñď íťš ķéýçĥáíñ ŵĥéñ íť ŵáš éxþöŕťéď ŵíťĥ á þáššŵöŕď. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>~/.ssh/config</source>
+        <translation>[~/.ššĥ/çöñƒíĝ ~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSSH&apos;s config file, imported or linked.</source>
+        <translation>[ÖþéñŠŠĤ&apos;š çöñƒíĝ ƒíĺé, ímþöŕťéď öŕ ĺíñķéď. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Leave out</source>
+        <translation>[Ĺéávé öüť ~~~]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñámé ~~]</translation>
+    </message>
+    <message>
+        <source>Address</source>
+        <translation>[Åďďŕéšš ~~~]</translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation>[Þöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>User</source>
+        <translation>[Üšéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>Protocol</source>
+        <translation>[Þŕöťöçöĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>Group</source>
+        <translation>[Ĝŕöüþ ~~]</translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation>[Ťáĝš ~~]</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>[Ñöťéš ~~]</translation>
+    </message>
+    <message>
+        <source>Key file</source>
+        <translation>[Ķéý ƒíĺé ~~~]</translation>
+    </message>
+    <message>
+        <source>Jump hosts</source>
+        <translation>[Ĵümþ ĥöšťš ~~~]</translation>
+    </message>
+    <message>
+        <source>Type the bundle&apos;s export password, or leave the keychain out.</source>
+        <translation>[Ťýþé ťĥé büñďĺé&apos;š éxþöŕť þáššŵöŕď, öŕ ĺéávé ťĥé ķéýçĥáíñ öüť. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This password doesn&apos;t open the bundle&apos;s keychain.</source>
+        <translation>[Ťĥíš þáššŵöŕď ďöéšñ&apos;ť öþéñ ťĥé büñďĺé&apos;š ķéýçĥáíñ. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The hosts could not be imported.</source>
+        <translation>[Ťĥé ĥöšťš çöüĺď ñöť bé ímþöŕťéď. ~~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s) imported; %1 left out (saved already, or not valid).</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ímþöŕťéď; %1 ĺéƒť öüť (šávéď áĺŕéáďý, öŕ ñöť váĺíď). ~~~~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ímþöŕťéď; %1 ĺéƒť öüť (šávéď áĺŕéáďý, öŕ ñöť váĺíď). ~~~~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s) imported.</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ímþöŕťéď. ~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ímþöŕťéď. ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n snippet(s) added.</source>
+        <translation>
+            <numerusform>[%n šñíþþéť(š) áďďéď. ~~~~~~]</numerusform>
+            <numerusform>[%n šñíþþéť(š) áďďéď. ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n profile(s) and %1 theme(s) added.</source>
+        <translation>
+            <numerusform>[%n þŕöƒíĺé(š) áñď %1 ťĥémé(š) áďďéď. ~~~~~~~~~~~]</numerusform>
+            <numerusform>[%n þŕöƒíĺé(š) áñď %1 ťĥémé(š) áďďéď. ~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Import hosts</source>
+        <translation>[Ímþöŕť ĥöšťš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Importing…</source>
+        <translation>[Ímþöŕťíñĝ… ~~~]</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>[Ímþöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>From</source>
+        <translation>[Fŕöm ~~]</translation>
+    </message>
+    <message>
+        <source>Import from</source>
+        <translation>[Ímþöŕť ƒŕöm ~~~~]</translation>
+    </message>
+    <message>
+        <source>registry</source>
+        <translation>[ŕéĝíšťŕý ~~~]</translation>
+    </message>
+    <message>
+        <source>File or folder</source>
+        <translation>[Fíĺé öŕ ƒöĺďéŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>File or folder to import</source>
+        <translation>[Fíĺé öŕ ƒöĺďéŕ ťö ímþöŕť ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>File…</source>
+        <translation>[Fíĺé… ~~]</translation>
+    </message>
+    <message>
+        <source>Folder…</source>
+        <translation>[Föĺďéŕ… ~~~]</translation>
+    </message>
+    <message>
+        <source>Registry</source>
+        <translation>[Ŕéĝíšťŕý ~~~]</translation>
+    </message>
+    <message>
+        <source>The first row names the columns</source>
+        <translation>[Ťĥé ƒíŕšť ŕöŵ ñáméš ťĥé çöĺümñš ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The file&apos;s columns</source>
+        <translation>[Ťĥé ƒíĺé&apos;š çöĺümñš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Column %1</source>
+        <translation>[Çöĺümñ %1 ~~~]</translation>
+    </message>
+    <message>
+        <source>Field of %1</source>
+        <translation>[Fíéĺď öƒ %1 ~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose the column with the addresses.</source>
+        <translation>[Çĥööšé ťĥé çöĺümñ ŵíťĥ ťĥé áďďŕéššéš. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This can&apos;t be read: %1</source>
+        <translation>[Ťĥíš çáñ&apos;ť bé ŕéáď: %1 ~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n host(s) found.</source>
+        <translation>
+            <numerusform>[%n ĥöšť(š) ƒöüñď. ~~~~~~]</numerusform>
+            <numerusform>[%n ĥöšť(š) ƒöüñď. ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No hosts found here.</source>
+        <translation>[Ñö ĥöšťš ƒöüñď ĥéŕé. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Hosts to import</source>
+        <translation>[Ĥöšťš ťö ímþöŕť ~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 in %2</source>
+        <translation>[%1 íñ %2 ~~~]</translation>
+    </message>
+    <message>
+        <source>Already saved</source>
+        <translation>[Åĺŕéáďý šávéď ~~~~]</translation>
+    </message>
+    <message>
+        <source>Left out</source>
+        <translation>[Ĺéƒť öüť ~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>…and %n more.</source>
+        <translation>
+            <numerusform>[…áñď %n möŕé. ~~~~]</numerusform>
+            <numerusform>[…áñď %n möŕé. ~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Its %n snippet(s)</source>
+        <translation>
+            <numerusform>[Íťš %n šñíþþéť(š) ~~~~~~]</numerusform>
+            <numerusform>[Íťš %n šñíþþéť(š) ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Its %n profile(s) and %1 theme(s) (names you have already are kept as they are)</source>
+        <translation>
+            <numerusform>[Íťš %n þŕöƒíĺé(š) áñď %1 ťĥémé(š) (ñáméš ýöü ĥávé áĺŕéáďý áŕé ķéþť áš ťĥéý áŕé) ~~~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Íťš %n þŕöƒíĺé(š) áñď %1 ťĥémé(š) (ñáméš ýöü ĥávé áĺŕéáďý áŕé ķéþť áš ťĥéý áŕé) ~~~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Its keychain: identities, keys, passwords</source>
+        <translation>[Íťš ķéýçĥáíñ: íďéñťíťíéš, ķéýš, þáššŵöŕďš ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Export password</source>
+        <translation>[Éxþöŕť þáššŵöŕď ~~~~~]</translation>
+    </message>
+    <message>
+        <source>The bundle&apos;s export password</source>
+        <translation>[Ťĥé büñďĺé&apos;š éxþöŕť þáššŵöŕď ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New group</source>
+        <translation>[Ñéŵ ĝŕöüþ ~~~]</translation>
+    </message>
+    <message>
+        <source>Name of the group for the imported hosts</source>
+        <translation>[Ñámé öƒ ťĥé ĝŕöüþ ƒöŕ ťĥé ímþöŕťéď ĥöšťš ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a file to import</source>
+        <translation>[Çĥööšé á ƒíĺé ťö ímþöŕť ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>MobaXterm sessions (*.mxtsessions *.moba *.ini)</source>
+        <translation>[MöbáXťéŕm šéššíöñš (*.mxťšéššíöñš *.möbá *.íñí) ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>All files (*)</source>
+        <translation>[Åĺĺ ƒíĺéš (*) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Registry exports (*.reg)</source>
+        <translation>[Ŕéĝíšťŕý éxþöŕťš (*.ŕéĝ) ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remmina profiles (*.remmina)</source>
+        <translation>[Ŕémmíñá þŕöƒíĺéš (*.ŕémmíñá) ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>CSV files (*.csv *.txt)</source>
+        <translation>[ÇŠV ƒíĺéš (*.çšv *.ťxť) ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh bundles (*.opensesh)</source>
+        <translation>[ÖþéñŠéšĥ büñďĺéš (*.öþéñšéšĥ) ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a folder to import</source>
+        <translation>[Çĥööšé á ƒöĺďéŕ ťö ímþöŕť ~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -3853,6 +4429,10 @@
     <message>
         <source>The vault can&apos;t be read.</source>
         <translation>[Ťĥé váüĺť çáñ&apos;ť bé ŕéáď. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The password doesn&apos;t open it, or the file was changed.</source>
+        <translation>[Ťĥé þáššŵöŕď ďöéšñ&apos;ť öþéñ íť, öŕ ťĥé ƒíĺé ŵáš çĥáñĝéď. ~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>The file could not be read: %1</source>
@@ -7393,6 +7973,250 @@
     <message>
         <source>None</source>
         <translation>[Ñöñé ~~]</translation>
+    </message>
+</context>
+<context>
+    <name>SettingsDataPage</name>
+    <message>
+        <source>Git isn&apos;t installed on this computer.</source>
+        <translation>[Ĝíť íšñ&apos;ť íñšťáĺĺéď öñ ťĥíš çömþüťéŕ. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This folder isn&apos;t a Git repository.</source>
+        <translation>[Ťĥíš ƒöĺďéŕ íšñ&apos;ť á Ĝíť ŕéþöšíťöŕý. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Branch %1, following %2.</source>
+        <translation>[Bŕáñçĥ %1, ƒöĺĺöŵíñĝ %2. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Branch %1, with no remote branch to follow.</source>
+        <translation>[Bŕáñçĥ %1, ŵíťĥ ñö ŕémöťé bŕáñçĥ ťö ƒöĺĺöŵ. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>(none)</source>
+        <translation>[(ñöñé) ~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) changed.</source>
+        <translation>
+            <numerusform>[%n ƒíĺé(š) çĥáñĝéď. ~~~~~~]</numerusform>
+            <numerusform>[%n ƒíĺé(š) çĥáñĝéď. ~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Nothing changed.</source>
+        <translation>[Ñöťĥíñĝ çĥáñĝéď. ~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n commit(s) to push.</source>
+        <translation>
+            <numerusform>[%n çömmíť(š) ťö þüšĥ. ~~~~~~~]</numerusform>
+            <numerusform>[%n çömmíť(š) ťö þüšĥ. ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n commit(s) to pull.</source>
+        <translation>
+            <numerusform>[%n çömmíť(š) ťö þüĺĺ. ~~~~~~~]</numerusform>
+            <numerusform>[%n çömmíť(š) ťö þüĺĺ. ~~~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Data and sync</source>
+        <translation>[Ďáťá áñď šýñç ~~~~]</translation>
+    </message>
+    <message>
+        <source>Bring your hosts from other programs, export them, and keep your settings in a folder that Git or Syncthing syncs between your computers.</source>
+        <translation>[Bŕíñĝ ýöüŕ ĥöšťš ƒŕöm öťĥéŕ þŕöĝŕámš, éxþöŕť ťĥém, áñď ķééþ ýöüŕ šéťťíñĝš íñ á ƒöĺďéŕ ťĥáť Ĝíť öŕ Šýñçťĥíñĝ šýñçš béťŵééñ ýöüŕ çömþüťéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Wait for the operation in progress to end.</source>
+        <translation>[Ŵáíť ƒöŕ ťĥé öþéŕáťíöñ íñ þŕöĝŕéšš ťö éñď. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Nothing to commit.</source>
+        <translation>[Ñöťĥíñĝ ťö çömmíť. ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>It didn&apos;t work: %1</source>
+        <translation>[Íť ďíďñ&apos;ť ŵöŕķ: %1 ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh uses the new folder from its next start.</source>
+        <translation>[ÖþéñŠéšĥ üšéš ťĥé ñéŵ ƒöĺďéŕ ƒŕöm íťš ñéxť šťáŕť. ~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Committed.</source>
+        <translation>[Çömmíťťéď. ~~~]</translation>
+    </message>
+    <message>
+        <source>Pulled.</source>
+        <translation>[Þüĺĺéď. ~~~]</translation>
+    </message>
+    <message>
+        <source>Pushed.</source>
+        <translation>[Þüšĥéď. ~~~]</translation>
+    </message>
+    <message>
+        <source>The folder is a Git repository now.</source>
+        <translation>[Ťĥé ƒöĺďéŕ íš á Ĝíť ŕéþöšíťöŕý ñöŵ. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import and export</source>
+        <translation>[Ímþöŕť áñď éxþöŕť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>[Ímþöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>From MobaXterm, PuTTY, Remmina, a CSV file, an OpenSesh bundle or ~/.ssh/config.</source>
+        <translation>[Fŕöm MöbáXťéŕm, ÞüŤŤÝ, Ŕémmíñá, á ÇŠV ƒíĺé, áñ ÖþéñŠéšĥ büñďĺé öŕ ~/.ššĥ/çöñƒíĝ. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Import hosts…</source>
+        <translation>[Ímþöŕť ĥöšťš… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>[Éxþöŕť ~~]</translation>
+    </message>
+    <message>
+        <source>An OpenSesh bundle, to move to another computer or keep as a backup, or an OpenSSH config file.</source>
+        <translation>[Åñ ÖþéñŠéšĥ büñďĺé, ťö mövé ťö áñöťĥéŕ çömþüťéŕ öŕ ķééþ áš á báçķüþ, öŕ áñ ÖþéñŠŠĤ çöñƒíĝ ƒíĺé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Export…</source>
+        <translation>[Éxþöŕť… ~~~]</translation>
+    </message>
+    <message>
+        <source>Settings folder</source>
+        <translation>[Šéťťíñĝš ƒöĺďéŕ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>[Föĺďéŕ ~~]</translation>
+    </message>
+    <message>
+        <source>A folder you chose. Hosts, profiles, themes, snippets, tunnels, shortcuts and settings are there.</source>
+        <translation>[Å ƒöĺďéŕ ýöü çĥöšé. Ĥöšťš, þŕöƒíĺéš, ťĥéméš, šñíþþéťš, ťüññéĺš, šĥöŕťçüťš áñď šéťťíñĝš áŕé ťĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>The default folder. Choose one that Git or Syncthing syncs to share your settings between computers.</source>
+        <translation>[Ťĥé ďéƒáüĺť ƒöĺďéŕ. Çĥööšé öñé ťĥáť Ĝíť öŕ Šýñçťĥíñĝ šýñçš ťö šĥáŕé ýöüŕ šéťťíñĝš béťŵééñ çömþüťéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>From the next start</source>
+        <translation>[Fŕöm ťĥé ñéxť šťáŕť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh will use %1.</source>
+        <translation>[ÖþéñŠéšĥ ŵíĺĺ üšé %1. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>[Çĥáñĝé ~~]</translation>
+    </message>
+    <message>
+        <source>The keychain&apos;s identities and keys, and the vault, stay on each computer: bring them with a bundle exported with its keychain.</source>
+        <translation>[Ťĥé ķéýçĥáíñ&apos;š íďéñťíťíéš áñď ķéýš, áñď ťĥé váüĺť, šťáý öñ éáçĥ çömþüťéŕ: bŕíñĝ ťĥém ŵíťĥ á büñďĺé éxþöŕťéď ŵíťĥ íťš ķéýçĥáíñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a folder…</source>
+        <translation>[Çĥööšé á ƒöĺďéŕ… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use the default folder</source>
+        <translation>[Üšé ťĥé ďéƒáüĺť ƒöĺďéŕ ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Conflicts</source>
+        <translation>[Çöñƒĺíçťš ~~~]</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>[Šťáťüš ~~]</translation>
+    </message>
+    <message>
+        <source>No conflicts. When two computers change a file before they sync, it shows up here.</source>
+        <translation>[Ñö çöñƒĺíçťš. Ŵĥéñ ťŵö çömþüťéŕš çĥáñĝé á ƒíĺé béƒöŕé ťĥéý šýñç, íť šĥöŵš üþ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Git&apos;s conflict markers</source>
+        <translation>[Ĝíť&apos;š çöñƒĺíçť máŕķéŕš ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A Syncthing conflict copy</source>
+        <translation>[Å Šýñçťĥíñĝ çöñƒĺíçť çöþý ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Resolve…</source>
+        <translation>[Ŕéšöĺvé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Git</source>
+        <translation>[Ĝíť ~]</translation>
+    </message>
+    <message>
+        <source>Repository</source>
+        <translation>[Ŕéþöšíťöŕý ~~~]</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation>[Šťáŕť ~~]</translation>
+    </message>
+    <message>
+        <source>Makes the folder a repository, ignoring OpenSesh&apos;s backups and temporary files. Add a remote with Git to push it.</source>
+        <translation>[Máķéš ťĥé ƒöĺďéŕ á ŕéþöšíťöŕý, íĝñöŕíñĝ ÖþéñŠéšĥ&apos;š báçķüþš áñď ťémþöŕáŕý ƒíĺéš. Åďď á ŕémöťé ŵíťĥ Ĝíť ťö þüšĥ íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Make it a repository</source>
+        <translation>[Máķé íť á ŕéþöšíťöŕý ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Commit</source>
+        <translation>[Çömmíť ~~]</translation>
+    </message>
+    <message>
+        <source>Pull and push reach the network; nothing else does. Git asks for no password here: use an SSH agent or a credential helper.</source>
+        <translation>[Þüĺĺ áñď þüšĥ ŕéáçĥ ťĥé ñéťŵöŕķ; ñöťĥíñĝ éĺšé ďöéš. Ĝíť ášķš ƒöŕ ñö þáššŵöŕď ĥéŕé: üšé áñ ŠŠĤ áĝéñť öŕ á çŕéďéñťíáĺ ĥéĺþéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh settings</source>
+        <translation>[ÖþéñŠéšĥ šéťťíñĝš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Commit message</source>
+        <translation>[Çömmíť méššáĝé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Pull</source>
+        <translation>[Þüĺĺ ~~]</translation>
+    </message>
+    <message>
+        <source>Push</source>
+        <translation>[Þüšĥ ~~]</translation>
+    </message>
+    <message>
+        <source>Choose the settings folder</source>
+        <translation>[Çĥööšé ťĥé šéťťíñĝš ƒöĺďéŕ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>This folder has settings</source>
+        <translation>[Ťĥíš ƒöĺďéŕ ĥáš šéťťíñĝš ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Use them</source>
+        <translation>[Üšé ťĥém ~~~]</translation>
+    </message>
+    <message>
+        <source>%1 has OpenSesh settings already (from another computer?). Use them as they are, or add the ones from this computer that aren&apos;t there (nothing there is overwritten).</source>
+        <translation>[%1 ĥáš ÖþéñŠéšĥ šéťťíñĝš áĺŕéáďý (ƒŕöm áñöťĥéŕ çömþüťéŕ?). Üšé ťĥém áš ťĥéý áŕé, öŕ áďď ťĥé öñéš ƒŕöm ťĥíš çömþüťéŕ ťĥáť áŕéñ&apos;ť ťĥéŕé (ñöťĥíñĝ ťĥéŕé íš övéŕŵŕíťťéñ). ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Add mine, then use them</source>
+        <translation>[Åďď míñé, ťĥéñ üšé ťĥém ~~~~~~~]</translation>
     </message>
 </context>
 <context>

@@ -76,6 +76,7 @@ impl KeychainOpError {
                 VaultError::Keyring(_) => "keyring",
                 VaultError::Write { .. } => "write",
                 VaultError::Unreadable | VaultError::Newer(_) => "unreadable",
+                VaultError::Decrypt => "decrypt",
                 _ => "vault",
             },
             Self::Key(error) => error.code(),

@@ -163,6 +163,20 @@ pub mod qobject {
             passphrase: &QString,
         ) -> i32;
 
+        /// Writes an OpenSesh bundle to `path` (Sprint 16): hosts, snippets, profiles and
+        /// themes, and with a `password` the keychain sealed under it. `finished`'s value is
+        /// `{hosts, snippets, files, identities, keys}`.
+        #[qinvokable]
+        #[cxx_name = "exportBundle"]
+        fn export_bundle(self: Pin<&mut Self>, path: &QString, password: &QString) -> i32;
+
+        /// Adds the keychain of the bundle at `path`, opened with its export `password`.
+        /// `finished`'s value is `{identities: {bundle id: id here}, added, keys}`; a wrong
+        /// password ends with the vault's `decrypt` code.
+        #[qinvokable]
+        #[cxx_name = "importBundle"]
+        fn import_bundle(self: Pin<&mut Self>, path: &QString, password: &QString) -> i32;
+
         /// Writes the public key of `id` to `path`.
         #[qinvokable]
         #[cxx_name = "exportPublicKey"]
@@ -485,6 +499,28 @@ impl qobject::Keychain {
             id: id.to_string(),
             path: PathBuf::from(path.to_string()),
             passphrase: optional_secret(passphrase),
+        })
+    }
+
+    /// See the bridge declaration.
+    pub fn export_bundle(self: Pin<&mut Self>, path: &QString, password: &QString) -> i32 {
+        if is_test_run() {
+            return self.refuse_in_tests();
+        }
+        self.submit(Job::ExportBundle {
+            path: PathBuf::from(path.to_string()),
+            password: optional_secret(password),
+        })
+    }
+
+    /// See the bridge declaration.
+    pub fn import_bundle(self: Pin<&mut Self>, path: &QString, password: &QString) -> i32 {
+        if is_test_run() {
+            return self.refuse_in_tests();
+        }
+        self.submit(Job::ImportBundle {
+            path: PathBuf::from(path.to_string()),
+            password: secret(password),
         })
     }
 

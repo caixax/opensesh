@@ -6,8 +6,10 @@
 mod bridge;
 mod cli;
 mod crash;
+mod git;
 mod gui;
 mod hosts;
+mod importing;
 mod keychain;
 mod logging;
 mod monitor;

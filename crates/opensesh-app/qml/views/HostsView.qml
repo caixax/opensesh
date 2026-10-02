@@ -844,6 +844,13 @@ Item {
         }
 
         OsMenuItem {
+            text: hostMenu.single ? qsTr("Export to an OpenSSH config file…") : qsTr("Export %n host(s) to an OpenSSH config file…", "", hostMenu.ids.length)
+            iconName: "upload"
+            enabled: hostMenu.first !== null
+            onTriggered: view.shell.showExport(hostMenu.ids)
+        }
+
+        OsMenuItem {
             text: qsTr("Copy the ssh command")
             iconName: "terminal"
             enabled: hostMenu.single && hostMenu.first !== null && hostMenu.first.protocol === "ssh"
@@ -910,9 +917,21 @@ Item {
         }
 
         OsMenuItem {
+            text: qsTr("Import hosts…")
+            iconName: "import"
+            onTriggered: view.shell.showImport("")
+        }
+
+        OsMenuItem {
             text: qsTr("Import ~/.ssh/config…")
             iconName: "import"
             onTriggered: view.shell.showSshImport("")
+        }
+
+        OsMenuItem {
+            text: qsTr("Export…")
+            iconName: "upload"
+            onTriggered: view.shell.showExport([])
         }
 
         OsMenuItem {

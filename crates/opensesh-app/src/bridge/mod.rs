@@ -9,6 +9,7 @@ pub mod platform;
 pub mod rdp_view;
 pub mod recordings;
 pub mod settings;
+pub mod settings_sync;
 pub mod sftp_browser;
 pub mod shim;
 pub mod snippets;

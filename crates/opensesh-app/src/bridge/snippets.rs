@@ -52,6 +52,12 @@ pub mod qobject {
         #[qinvokable]
         fn remove(self: Pin<&mut Self>, id: &QString) -> bool;
 
+        /// Adds the snippets of the OpenSesh bundle at `path` that aren't here yet (by id); how
+        /// many were added.
+        #[qinvokable]
+        #[cxx_name = "importBundle"]
+        fn import_bundle(self: Pin<&mut Self>, path: &QString) -> i32;
+
         /// A copy of snippet `id`, right after it (without its shortcut); its id.
         #[qinvokable]
         fn duplicate(self: Pin<&mut Self>, id: &QString) -> QString;
@@ -316,6 +322,37 @@ impl qobject::Snippets {
             self.as_mut().rust_mut().snippets = file;
             self.refresh();
         }
+    }
+
+    /// See the bridge declaration.
+    pub fn import_bundle(mut self: Pin<&mut Self>, path: &QString) -> i32 {
+        // A small file the user asked to import.
+        let Ok((contents, _)) =
+            opensesh_import::bundle::load(std::path::Path::new(&path.to_string()))
+        else {
+            return 0;
+        };
+        let added = {
+            let mut state = self.as_mut().rust_mut();
+            let mut added: usize = 0;
+            for snippet in contents.snippets.snippets {
+                if !state
+                    .snippets
+                    .snippets
+                    .iter()
+                    .any(|seen| seen.id == snippet.id)
+                {
+                    state.snippets.snippets.push(snippet);
+                    added += 1;
+                }
+            }
+            added
+        };
+        if added > 0 {
+            self.as_mut().save_file();
+            self.as_mut().refresh();
+        }
+        i32::try_from(added).unwrap_or(i32::MAX)
     }
 
     /// See the bridge declaration.

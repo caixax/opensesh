@@ -125,6 +125,12 @@ pub mod qobject {
         #[cxx_name = "deleteTheme"]
         fn delete_theme(self: Pin<&mut Self>, id: &QString) -> bool;
 
+        /// Adds the profile and theme files of the OpenSesh bundle at `path` whose names aren't
+        /// taken here: `{profiles, themes, skipped}`.
+        #[qinvokable]
+        #[cxx_name = "importBundle"]
+        fn import_bundle(self: Pin<&mut Self>, path: &QString) -> QString;
+
         /// Imports the themes of a file (any supported format); reports with `themesImported`.
         #[qinvokable]
         #[cxx_name = "importTheme"]
@@ -554,6 +560,38 @@ impl qobject::TerminalProfiles {
         if self.as_mut().rust_mut().saves.take_reload() {
             self.reload_in_background();
         }
+    }
+
+    /// See the bridge declaration.
+    pub fn import_bundle(mut self: Pin<&mut Self>, path: &QString) -> QString {
+        let Some(dir) = self.config_dir.clone() else {
+            return QString::from(&json!({ "profiles": 0, "themes": 0, "skipped": 0 }).to_string());
+        };
+        // A small file the user asked to import.
+        let files = opensesh_import::bundle::load(Path::new(&path.to_string()))
+            .map(|(contents, _)| contents.files)
+            .unwrap_or_default();
+        let (mut profiles, mut themes, mut skipped) = (0, 0, 0);
+        for (name, text) in files {
+            let target = dir.join(&name);
+            if target.exists() {
+                skipped += 1;
+                continue;
+            }
+            if name.starts_with("profiles/") {
+                profiles += 1;
+            } else {
+                themes += 1;
+            }
+            self.as_mut().queue_write(target, text);
+        }
+        if profiles + themes > 0 {
+            // Read them once the writes settle.
+            self.as_mut().rust_mut().saves.reload_wanted = true;
+        }
+        QString::from(
+            &json!({ "profiles": profiles, "themes": themes, "skipped": skipped }).to_string(),
+        )
     }
 
     /// Saves profile `id` (unless it's protected).

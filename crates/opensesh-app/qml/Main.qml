@@ -549,10 +549,22 @@ Window {
         prefix: "desktop"
         pages: ["desktop", "certificate", "vnc", "editor", "vnceditor"]
         prepare: (mode, density, page) => shell.prepareDesktopScreenshot(page)
+        onFinished: dataScreenshots.start()
+    }
+
+    ScreenshotRunner {
+        id: dataScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "data"
+        pages: ["import", "csv", "export", "settings", "conflict"]
+        prepare: (mode, density, page) => shell.prepareDataScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
                             + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures
                             + sftpScreenshots.failures + tunnelsScreenshots.failures + snippetsScreenshots.failures
-                            + protocolsScreenshots.failures + desktopScreenshots.failures > 0 ? 7 : 0)
+                            + protocolsScreenshots.failures + desktopScreenshots.failures
+                            + dataScreenshots.failures > 0 ? 7 : 0)
     }
 }

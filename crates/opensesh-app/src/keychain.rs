@@ -140,6 +140,23 @@ pub enum Job {
         /// A passphrase for the file, if any.
         passphrase: Option<SecretString>,
     },
+    /// Write an OpenSesh bundle (Sprint 16): the settings folder's hosts, snippets, profiles and
+    /// themes, and with a password the keychain sealed under it. The value is
+    /// `{hosts, snippets, files, identities, keys}`.
+    ExportBundle {
+        /// Where.
+        path: PathBuf,
+        /// The export password; `None` leaves the keychain out.
+        password: Option<SecretString>,
+    },
+    /// Add a bundle's keychain, opened with its export password. The value maps the bundle's
+    /// identity ids to the ones here: `{identities: {old: new}, added, keys}`.
+    ImportBundle {
+        /// The bundle.
+        path: PathBuf,
+        /// Its export password.
+        password: SecretString,
+    },
     /// Write a public key to a file.
     ExportPublic {
         /// Key id.
@@ -484,6 +501,8 @@ impl Worker {
                 )
                 .and_then(|text| write_file(&path, text.as_bytes()))
                 .map(|()| String::new()),
+            Job::ExportBundle { path, password } => self.export_bundle(&path, password.as_ref()),
+            Job::ImportBundle { path, password } => self.import_bundle(&path, &password),
             Job::ExportPublic { id, path } => match self.keychain.file.key(&id) {
                 Some(key) => {
                     let line = format!("{}\n", key.public);
@@ -869,6 +888,118 @@ fn read_key_file(path: &Path) -> Result<Vec<u8>, KeychainOpError> {
 }
 
 /// Writes an exported key: atomically, private to the user on Unix, no backups.
+impl Worker {
+    /// See [`Job::ExportBundle`].
+    fn export_bundle(
+        &self,
+        path: &Path,
+        password: Option<&SecretString>,
+    ) -> Result<String, KeychainOpError> {
+        use opensesh_core::hosts::{HOSTS_FILE, HostsFile};
+        use opensesh_core::snippets::{SNIPPETS_FILE, SnippetsFile};
+        use opensesh_import::bundle::{self, Bundle};
+
+        let Some(settings) = &self.config_dir else {
+            return Err(KeychainOpError::ReadOnly);
+        };
+        // What the app holds goes to disk first; the files are read as they are (not through
+        // the merge's baselines, which belong to their owners).
+        if let Some(services) = crate::services::get() {
+            services.writer.flush();
+        }
+        let read = |name: &str| -> Result<String, KeychainOpError> {
+            match std::fs::read_to_string(settings.join(name)) {
+                Ok(text) => Ok(text),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+                Err(source) => Err(KeychainOpError::Read {
+                    path: settings.join(name).display().to_string(),
+                    source,
+                }),
+            }
+        };
+        let (hosts, _) = HostsFile::from_toml_str(&read(HOSTS_FILE)?).map_err(|message| {
+            KeychainOpError::Read {
+                path: settings.join(HOSTS_FILE).display().to_string(),
+                source: std::io::Error::new(std::io::ErrorKind::InvalidData, message),
+            }
+        })?;
+        let (snippets, _) = SnippetsFile::from_toml_str(&read(SNIPPETS_FILE)?);
+        let keychain = match password {
+            Some(password) => {
+                let sealed = self
+                    .keychain
+                    .export_bundle(password, KdfParams::RECOMMENDED)?;
+                Some(
+                    toml::Table::try_from(&sealed).map_err(|error| KeychainOpError::Write {
+                        path: path.display().to_string(),
+                        source: std::io::Error::other(error.to_string()),
+                    })?,
+                )
+            }
+            None => None,
+        };
+        let contents = Bundle {
+            files: bundle::collect_files(settings),
+            hosts,
+            snippets,
+            keychain,
+        };
+        let text = bundle::write(&contents).map_err(|message| KeychainOpError::Write {
+            path: path.display().to_string(),
+            source: std::io::Error::other(message),
+        })?;
+        write_file(path, text.as_bytes())?;
+        let (identities, keys) = if contents.keychain.is_some() {
+            (
+                self.keychain.file.identities.len(),
+                self.keychain.file.keys.len(),
+            )
+        } else {
+            (0, 0)
+        };
+        Ok(json!({
+            "hosts": contents.hosts.hosts.iter().filter(|host| !host.is_linked()).count(),
+            "snippets": contents.snippets.snippets.len(),
+            "files": contents.files.len(),
+            "identities": identities,
+            "keys": keys,
+        })
+        .to_string())
+    }
+
+    /// See [`Job::ImportBundle`].
+    fn import_bundle(
+        &mut self,
+        path: &Path,
+        password: &SecretString,
+    ) -> Result<String, KeychainOpError> {
+        use opensesh_import::bundle;
+        use opensesh_vault::transfer::KeychainBundle;
+
+        let (contents, _) = bundle::load(path).map_err(|error| KeychainOpError::Read {
+            path: path.display().to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::InvalidData, error.to_string()),
+        })?;
+        let Some(table) = contents.keychain else {
+            return Ok(json!({ "identities": {}, "added": 0, "keys": 0 }).to_string());
+        };
+        let sealed: KeychainBundle =
+            table
+                .try_into()
+                .map_err(|error: toml::de::Error| KeychainOpError::Read {
+                    path: path.display().to_string(),
+                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, error.to_string()),
+                })?;
+        let imported = self.keychain.import_bundle(&sealed, password)?;
+        Ok(json!({
+            "identities": imported.identities,
+            "added": imported.identities_added,
+            "keys": imported.keys_added,
+        })
+        .to_string())
+    }
+}
+
 fn write_file(path: &Path, contents: &[u8]) -> Result<(), KeychainOpError> {
     fsutil::atomic_write(path, contents, 0)
         .map(|_| ())

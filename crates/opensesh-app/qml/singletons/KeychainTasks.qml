@@ -66,6 +66,8 @@ QtObject {
             return qsTr("The system keyring failed: %1").arg(detail);
         case "unreadable":
             return qsTr("The vault can't be read.");
+        case "decrypt":
+            return qsTr("The password doesn't open it, or the file was changed.");
         case "read":
             return qsTr("The file could not be read: %1").arg(detail);
         case "write":

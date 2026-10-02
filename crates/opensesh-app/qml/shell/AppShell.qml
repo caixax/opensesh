@@ -37,13 +37,13 @@ pragma ComponentBehavior: Bound
 // openTabs(tabs, current), closeAllTabs(), showSwitcher(step), askRenameTab(index),
 // showWorkspaces(mode), connectHost(id, where), connectTarget(text, where),
 // showQuickConnect(text), newHost(group), editHost(id), newGroup(parent), editGroup(id),
-// showSshImport(path), closeHostDialogs(), focusInTabStrip(), cycleTab(step), gotoTab(n), toggleSidePanel(),
+// showSshImport(path), showImport(source), showExport(ids), showConflict(index), closeHostDialogs(), focusInTabStrip(), cycleTab(step), gotoTab(n), toggleSidePanel(),
 // togglePalette(), toggleNotifications(), toggleMaximize(), toggleFullScreen(),
 // cycleRegion(step), shortcutText(actionId), smokeSteps(smoke), prepareScreenshot(),
 // prepareSettingsScreenshot(), prepareTerminalScreenshot(), prepareHostsScreenshot(),
 // prepareKeychainScreenshot(), prepareSshScreenshot(), prepareSftpScreenshots(done),
 // prepareSftpScreenshot(page), prepareTunnelsScreenshots(done), prepareTunnelsScreenshot(page),
-// prepareDesktopScreenshots(done), prepareDesktopScreenshot(page).
+// prepareDesktopScreenshots(done), prepareDesktopScreenshot(page), prepareDataScreenshot(page).
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -780,6 +780,36 @@ Item {
 
     function showSshImport(path) {
         sshImport.show(path ?? "");
+    }
+
+    // Import from another program or a bundle (Sprint 16); `source` "" for the first one.
+    function showImport(source) {
+        const main = forwardToMain();
+        if (main) {
+            main.showImport(source);
+            return;
+        }
+        importDialog.show(source ?? "");
+    }
+
+    // Export a bundle, or the hosts `ids` (all when empty) as an OpenSSH config file.
+    function showExport(ids) {
+        const main = forwardToMain();
+        if (main) {
+            main.showExport(ids);
+            return;
+        }
+        exportDialog.show(ids ?? []);
+    }
+
+    // Resolve sync conflict `index` (in SettingsSync.conflicts).
+    function showConflict(index) {
+        const main = forwardToMain();
+        if (main) {
+            main.showConflict(index);
+            return;
+        }
+        conflictDialog.show(index);
     }
 
     function closeHostDialogs() {
@@ -2216,6 +2246,56 @@ Item {
                     smoke.fail("the command palette offers no host for web-01");
                 shell.togglePalette();
             });
+            // Sprint 16: the importers on their samples, an import, export and a sync conflict.
+            let samples = {};
+            steps.push(() => {
+                samples = JSON.parse(Hosts.importSamples() || "{}");
+                if (!samples.dir)
+                    smoke.fail("no import samples were written");
+                importDialog.load("mobaxterm", samples.mobaxterm);
+            });
+            steps.push(() => {
+                if (importDialog.hosts.length !== 6)
+                    smoke.fail("the MobaXterm sample gave " + importDialog.hosts.length + " hosts, not 6");
+                importDialog.load("putty", samples.putty);
+            });
+            steps.push(() => {
+                if (importDialog.hosts.length !== 4)
+                    smoke.fail("the PuTTY sample gave " + importDialog.hosts.length + " hosts, not 4");
+                importDialog.load("remmina", samples.remmina);
+            });
+            steps.push(() => {
+                if (importDialog.hosts.length !== 3)
+                    smoke.fail("the Remmina sample gave " + importDialog.hosts.length + " hosts, not 3");
+                importDialog.load("csv", samples.csv);
+            });
+            steps.push(() => {
+                if (importDialog.hosts.length !== 3 || importDialog.columns[1] !== "address")
+                    smoke.fail("the CSV sample's columns weren't guessed");
+                importDialog.setColumn(1, "ignore");
+            });
+            steps.push(() => {
+                if (!importDialog.needsAddress)
+                    smoke.fail("a CSV without an address column could be imported");
+                importDialog.setColumn(1, "address");
+                const before = Hosts.count;
+                importDialog.submit();
+                if (Hosts.count !== before + 3 || importDialog.opened)
+                    smoke.fail("importing the CSV sample added " + (Hosts.count - before) + " hosts, not 3");
+            });
+            steps.push(() => shell.showExport([]));
+            steps.push(() => {
+                exportDialog.close();
+                SettingsSync.loadSample();
+                shell.showConflict(0);
+            });
+            steps.push(() => {
+                if ((conflictDialog.details.differences ?? []).length !== 4)
+                    smoke.fail("the sample conflict shows no differences");
+                conflictDialog.choose("host\t01J0SAMPLE0000000000000001", "there");
+                conflictDialog.close();
+                console.info("smoke test: the import dialog read MobaXterm, PuTTY, Remmina and CSV samples and imported the CSV; the export and conflict dialogs opened");
+            });
         }
         steps.push(() => shell.togglePalette());
         steps.push(() => palette.setQuery("tab"));
@@ -2860,6 +2940,34 @@ Item {
         }
     }
 
+    // --screenshots (Sprint 16): the import dialog on the MobaXterm sample ("import") and the CSV
+    // one ("csv"), the export dialog, Settings > Data and sync and a sync conflict, with samples.
+    property var screenshotSamples: ({})
+
+    function prepareDataScreenshot(page) {
+        palette.close();
+        closeHostDialogs();
+        importDialog.close();
+        exportDialog.close();
+        conflictDialog.close();
+        if (!screenshotSamples.dir)
+            screenshotSamples = JSON.parse(Hosts.importSamples() || "{}");
+        if (page === "import" || page === "csv" || page === "export")
+            showView("hosts");
+        if (page === "import") {
+            importDialog.load("mobaxterm", screenshotSamples.mobaxterm);
+        } else if (page === "csv") {
+            importDialog.load("csv", screenshotSamples.csv);
+        } else if (page === "export") {
+            exportDialog.show([]);
+        } else {
+            SettingsSync.loadSample();
+            openSettings("data");
+            if (page === "conflict")
+                showConflict(0);
+        }
+    }
+
     // --screenshots: the new tab menu with the shells ("newtab"), the telnet and serial tabs, S3
     // in the files view, and the host editor of a serial and an S3 host, and of an SSH host with
     // X11 forwarding and Waypipe ("graphicseditor").
@@ -3400,6 +3508,39 @@ Item {
 
     SshConfigImportDialog {
         id: sshImport
+    }
+
+    ImportDialog {
+        id: importDialog
+
+        shell: shell
+    }
+
+    ExportDialog {
+        id: exportDialog
+
+        shell: shell
+    }
+
+    ConflictDialog {
+        id: conflictDialog
+    }
+
+    // Sync conflicts in the settings folder (Sprint 16): said once each time more appear, by
+    // the main window only.
+    property int knownConflicts: 0
+
+    Connections {
+        target: SettingsSync
+
+        function onChanged() {
+            if (shell.detached)
+                return;
+            if (SettingsSync.conflictCount > shell.knownConflicts)
+                Toasts.show(qsTr("Your settings have %n sync conflict(s) to resolve.", "", SettingsSync.conflictCount), "warning",
+                            qsTr("Resolve"), "settings.syncConflicts");
+            shell.knownConflicts = SettingsSync.conflictCount;
+        }
     }
 
     InstallKeyDialog {

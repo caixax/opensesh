@@ -223,6 +223,55 @@ pub mod qobject {
             group_name: &QString,
         ) -> QString;
 
+        /// Where `source` (`mobaxterm`, `putty`, `remmina`, `csv`, `bundle`) usually keeps its
+        /// sessions here: a file, a folder, `registry` (PuTTY on Windows), or empty.
+        #[qinvokable]
+        #[cxx_name = "importDefaultPath"]
+        fn import_default_path(self: &Self, source: &QString) -> QString;
+
+        /// What importing `path` as `source` would bring (`options` as `importHosts`):
+        /// `{hosts: [{name, protocol, target, folder, saved}], groups, warnings, error}`, and for
+        /// a bundle `bundle: {snippets, profiles, themes, keychain}`.
+        #[qinvokable]
+        #[cxx_name = "previewImport"]
+        fn preview_import(
+            self: &Self,
+            source: &QString,
+            path: &QString,
+            options: &QString,
+        ) -> QString;
+
+        /// Imports `path` as `source` into a new group called `group_name`. `options` is JSON:
+        /// for CSV `{columns: [field codes], header}`, for a bundle `{identities: {old: new}}`.
+        /// Returns `{added, skipped, group}`, `{error}`, or empty when the file is read-only.
+        #[qinvokable]
+        #[cxx_name = "importHosts"]
+        fn import_hosts(
+            self: Pin<&mut Self>,
+            source: &QString,
+            path: &QString,
+            options: &QString,
+            group_name: &QString,
+        ) -> QString;
+
+        /// A CSV file's first rows and the guessed field of each column:
+        /// `{delimiter, rows, count, fields, error}`.
+        #[qinvokable]
+        #[cxx_name = "csvTable"]
+        fn csv_table(self: &Self, path: &QString) -> QString;
+
+        /// Writes the hosts `ids` (a JSON list; every SSH host when empty) to `path` as an
+        /// OpenSSH config file: `{count, warnings}` or `{error}`.
+        #[qinvokable]
+        #[cxx_name = "exportSshConfig"]
+        fn export_ssh_config(self: &Self, path: &QString, ids: &QString) -> QString;
+
+        /// Test runs only: sample files of each source in a temporary folder, for the smoke
+        /// test and screenshots: `{dir, mobaxterm, putty, remmina, csv}` (empty otherwise).
+        #[qinvokable]
+        #[cxx_name = "importSamples"]
+        fn import_samples(self: &Self) -> QString;
+
         /// Stops following a linked file.
         #[qinvokable]
         #[cxx_name = "unlinkSource"]
@@ -261,6 +310,7 @@ use serde_json::{Value as Json, json};
 
 use crate::bridge::app_info::is_test_run;
 use crate::hosts as library;
+use crate::importing;
 use crate::saves::SaveTracker;
 use crate::services;
 
@@ -1628,6 +1678,92 @@ impl qobject::Hosts {
             ),
             None => QString::default(),
         }
+    }
+
+    /// See the bridge declaration.
+    pub fn import_default_path(&self, source: &QString) -> QString {
+        QString::from(&importing::default_path(&source.to_string(), &self.home))
+    }
+
+    /// See the bridge declaration.
+    pub fn preview_import(&self, source: &QString, path: &QString, options: &QString) -> QString {
+        let options: Json = serde_json::from_str(&options.to_string()).unwrap_or(Json::Null);
+        let (source, path) = (source.to_string(), path.to_string());
+        let library = self.file();
+        let mut shown = match importing::read(&source, &path, &options, &self.home) {
+            Ok(imported) => {
+                let groups = HostsFile {
+                    groups: imported.groups.clone(),
+                    ..HostsFile::default()
+                };
+                importing::preview(&imported, &library.file, |host| target_text(&groups, host))
+            }
+            Err(error) => json!({ "hosts": [], "groups": 0, "warnings": [], "error": error }),
+        };
+        if source == "bundle" {
+            shown["bundle"] = importing::bundle_contents(&path, &self.home);
+        }
+        QString::from(&shown.to_string())
+    }
+
+    /// See the bridge declaration.
+    pub fn import_hosts(
+        self: Pin<&mut Self>,
+        source: &QString,
+        path: &QString,
+        options: &QString,
+        group_name: &QString,
+    ) -> QString {
+        let options: Json = serde_json::from_str(&options.to_string()).unwrap_or(Json::Null);
+        let imported =
+            match importing::read(&source.to_string(), &path.to_string(), &options, &self.home) {
+                Ok(imported) => imported,
+                Err(error) => return QString::from(&json!({ "error": error }).to_string()),
+            };
+        let name = group_name.to_string();
+        let name = if name.trim().is_empty() {
+            "Imported".to_owned()
+        } else {
+            name
+        };
+        match self.modify(move |file| importing::apply(file, imported, &name)) {
+            Some(applied) => QString::from(
+                &json!({
+                    "added": applied.added,
+                    "skipped": applied.skipped,
+                    "group": applied.group,
+                })
+                .to_string(),
+            ),
+            None => QString::default(),
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn import_samples(&self) -> QString {
+        if !is_test_run() {
+            return QString::default();
+        }
+        match importing::write_samples() {
+            Ok(paths) => QString::from(&paths.to_string()),
+            Err(error) => {
+                tracing::warn!("could not write the import samples: {error}");
+                QString::default()
+            }
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn csv_table(&self, path: &QString) -> QString {
+        QString::from(&importing::csv_table(&path.to_string(), &self.home).to_string())
+    }
+
+    /// See the bridge declaration.
+    pub fn export_ssh_config(&self, path: &QString, ids: &QString) -> QString {
+        let ids: Vec<String> = serde_json::from_str(&ids.to_string()).unwrap_or_default();
+        let path = opensesh_core::paths::expand_tilde(path.to_string().trim(), &self.home);
+        let library = self.file();
+        QString::from(&importing::export_ssh_config(&library.file, &ids, &path).to_string())
     }
 
     /// See the bridge declaration.
