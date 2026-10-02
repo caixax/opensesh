@@ -4,6 +4,29 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 15 (2026-10-02)
+
+### Automated checks
+
+- **Main window (`--smoke-test`):** as before (no new steps: a test run never forwards X11 or starts waypipe).
+- **Screenshots (native, Windows):** the host editor's X11 forwarding and Waypipe rows, in dark and light, comfortable and compact.
+- **The SSH client:** the cookie swap (both byte orders, a wrong cookie refused), `DISPLAY` parsing, a forwarded X11 connection through the in-process server to a made-up display (which never sees the made-up cookie), a host without forwarding refusing the server's channel, the Waypipe command on the server.
+- **Against OpenSSH in CI** (the `ssh` job): `xdpyinfo` through the built-in client's forwarding to Xvfb, trusted and untrusted; `wayland-info` through Waypipe to a headless sway, as a user without a login session (no `/run/user/<uid>`).
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 691 + 5 (RDP helper) | ✅ / ✅ | ✅ `windows` | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ OpenSSH (X11 to Xvfb, Waypipe to sway), Dropbear, xrdp, TigerVNC, x11vnc, wayvnc, RustFS |
+
+### Manual checks for the owner
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| `xclock` and `gedit` from an SSH host with X11 forwarding, untrusted then trusted, on Hyprland (Xwayland) and on KDE Plasma | — | ⏳ |
+| The same on Windows with VcXsrv (access control off) or X410 | ⏳ | — |
+| Waypipe: `gedit` or `foot` from a host with Waypipe on, on Hyprland or KDE (waypipe installed on both sides) | — | ⏳ |
+| What a host says when waypipe is missing on the server, or X11 forwarding has no display | ⏳ | ⏳ |
+
 ## Sprint 14 (2026-10-02)
 
 ### Automated checks

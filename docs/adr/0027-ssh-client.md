@@ -109,7 +109,7 @@ See `docs/testing/ssh-servers.md`.
 - SSH hosts connect with the built-in client unless they (or their group, or Settings > SSH)
   choose `openssh`, which still runs the system `ssh` in a PTY (ADR 0022) for Kerberos, smart
   cards and `Match exec`.
-- X11 forwarding is not in the built-in client yet: `ClientHandler` refuses `x11` channels. The
-  spike in `spikes/x11-forwarding` shows how (Sprint 15).
+- X11 forwarding arrived in the built-in client in Sprint 15, with Waypipe: see
+  [ADR 0036](0036-remote-graphics.md).
 - Two `ssh-key` and two `rsa` versions are built until `ssh-key` 0.7 is final.
 - Proxy passwords are not asked for yet: a proxy user name is sent as written.

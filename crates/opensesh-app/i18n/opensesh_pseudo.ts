@@ -607,6 +607,10 @@
         <translation>[Öƒƒíçé ďéšķťöþ ~~~~~]</translation>
     </message>
     <message>
+        <source>Build server</source>
+        <translation>[Büíĺď šéŕvéŕ ~~~~]</translation>
+    </message>
+    <message>
         <source>Core switch console</source>
         <translation>[Çöŕé šŵíťçĥ çöñšöĺé ~~~~~~]</translation>
     </message>

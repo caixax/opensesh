@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 15: remote graphical programs ([ADR 0036](docs/adr/0036-remote-graphics.md), [guide](docs/remote-graphics.md)).**
+  - **X11 forwarding in the built-in SSH client** (it was OpenSSH only): untrusted (the X SECURITY extension keeps remote programs from reading your other windows) or trusted, per host. The server only ever gets a cookie made up for the connection; the real one is put in here, for each connection to the display.
+  - **The display:** `DISPLAY` on Linux (X11, or Xwayland under GNOME, KDE Plasma, Hyprland, Sway), and on Windows an X server such as VcXsrv, X410 or Xming on `localhost:0.0` (the guide says how to set one up; none is bundled).
+  - **Waypipe:** with a host's Waypipe setting on (Linux, a Wayland desktop here, `waypipe` on both sides), the session runs inside `waypipe server`, and the server's Wayland programs open here (on a server without a login session, a private runtime folder stands in for the missing `/run/user/<uid>`).
+  - **What's missing is said** in the terminal, in yellow (no display, no `xauth`, a display without the SECURITY extension, `waypipe` here or on the server), and the session starts without it.
+  - **Tests:** the cookie swap and `DISPLAY` parsing; a forwarded X11 connection to a made-up display through the in-process server; in CI, `xdpyinfo` through OpenSSH to Xvfb (trusted and untrusted) and `wayland-info` through Waypipe to a headless sway.
+
 - **Sprint 14: VNC ([ADR 0035](docs/adr/0035-vnc-client.md)).**
   - **Saved VNC hosts and `vnc://host` quick connect** (`vnc://host:1` is display 1, port 5901) open in the remote desktop pane of Sprint 13: the questions in the pane, the bar, full screen, scaling, jump hosts, reconnecting.
   - **Our own RFB client** (`opensesh-vnc`), versions 3.3 to 3.8:
@@ -67,6 +74,7 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Fixed
 
+- **Forwarded Unix sockets** (`forwarded-streamlocal`) that the client never asked for were accepted (`russh`'s default); they are refused now.
 - A new host's Tags field showed the word "none".
 
 ## [0.1.4] - 2026-09-28
