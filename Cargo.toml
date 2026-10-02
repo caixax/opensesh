@@ -98,7 +98,7 @@ rand_core = { version = "0.6.4", features = ["getrandom"] }
 secrecy = "0.10.3"
 zeroize = "1.9.0"
 ssh-key = { version = "0.6.7", features = ["ed25519", "p256", "p384", "p521", "rsa", "encryption", "getrandom"] }
-ssh-encoding = "0.2.0"
+ssh-encoding = "0.3.0"
 base64ct = { version = "1.8.3", features = ["alloc"] }
 # PuTTY .ppk keys (v2: SHA-1 and HMAC-SHA-1; v3: Argon2 and HMAC-SHA-256; both AES-256-CBC).
 aes = "0.8.4"
