@@ -655,7 +655,7 @@ Item {
 
     // mode: "open" or "save".
     function showWorkspaces(mode) {
-        workspacesDialog.show(mode);
+        workspacesDialog.get().show(mode);
     }
 
     // Opens `connection` ({kind, host, target}): where "tab" (a new tab), "right" or "down" (a
@@ -764,23 +764,23 @@ Item {
     }
 
     function newHost(group) {
-        hostEditor.create(group ?? "");
+        hostEditor.get().create(group ?? "");
     }
 
     function editHost(id) {
-        hostEditor.edit(id);
+        hostEditor.get().edit(id);
     }
 
     function newGroup(parent) {
-        groupEditor.create(parent ?? "");
+        groupEditor.get().create(parent ?? "");
     }
 
     function editGroup(id) {
-        groupEditor.edit(id);
+        groupEditor.get().edit(id);
     }
 
     function showSshImport(path) {
-        sshImport.show(path ?? "");
+        sshImport.get().show(path ?? "");
     }
 
     // Import from another program or a bundle (Sprint 16); `source` "" for the first one.
@@ -790,7 +790,7 @@ Item {
             main.showImport(source);
             return;
         }
-        importDialog.show(source ?? "");
+        importDialog.get().show(source ?? "");
     }
 
     // Export a bundle, or the hosts `ids` (all when empty) as an OpenSSH config file.
@@ -800,7 +800,7 @@ Item {
             main.showExport(ids);
             return;
         }
-        exportDialog.show(ids ?? []);
+        exportDialog.get().show(ids ?? []);
     }
 
     // Resolve sync conflict `index` (in SettingsSync.conflicts).
@@ -810,7 +810,7 @@ Item {
             main.showConflict(index);
             return;
         }
-        conflictDialog.show(index);
+        conflictDialog.get().show(index);
     }
 
     function closeHostDialogs() {
@@ -823,7 +823,7 @@ Item {
 
     // Asks which public key to install on SSH host `id` (see InstallKeyDialog).
     function installKey(id) {
-        installKeyDialog.show(id);
+        installKeyDialog.get().show(id);
     }
 
     // Runs `then` (if any) once the vault is open: at once when it isn't locked, else after the
@@ -852,31 +852,31 @@ Item {
     }
 
     function showMasterPassword(mode) {
-        masterPasswordDialog.show(mode);
+        masterPasswordDialog.get().show(mode);
     }
 
     function showVaultReset() {
-        vaultResetDialog.show();
+        vaultResetDialog.get().show();
     }
 
     function newIdentity() {
-        identityEditor.create();
+        identityEditor.get().create();
     }
 
     function editIdentity(id) {
-        identityEditor.edit(id);
+        identityEditor.get().edit(id);
     }
 
     function generateKey() {
-        keyGenerateDialog.show();
+        keyGenerateDialog.get().show();
     }
 
     function importKey(path) {
-        keyImportDialog.show(path ?? "");
+        keyImportDialog.get().show(path ?? "");
     }
 
     function exportKey(id, which) {
-        keyExportDialog.show(id, which);
+        keyExportDialog.get().show(id, which);
     }
 
     function closeKeychainDialogs() {
@@ -926,7 +926,7 @@ Item {
                       ? (workspace.broadcast && workspace.participants.length > 0 ? "broadcast" : "pane")
                       : where;
         if (where === "ask" || snippet.variables.length > 0) {
-            snippetRunDialog.show(snippet, workspace, start);
+            snippetRunDialog.get().show(snippet, workspace, start);
             return true;
         }
         const panes = start === "tab" ? workspace.paneIds : start === "broadcast" ? workspace.participants : [workspace.focusedPane];
@@ -936,7 +936,7 @@ Item {
     // Opens the snippet editor on snippet `id` ("" for a new one).
     function editSnippet(id) {
         const snippet = JSON.parse(Snippets.list || "[]").find(entry => entry.id === id) ?? null;
-        snippetEditor.show(snippet);
+        snippetEditor.get().show(snippet);
     }
 
     // A new tab running `shell` (an entry of Platform.shells: {name, command}).
@@ -980,7 +980,7 @@ Item {
 
     // A macro just recorded (steps as Snippets.recordStop gives them), to review and save.
     function editRecordedMacro(steps) {
-        snippetEditor.showRecorded(steps);
+        snippetEditor.get().showRecorded(steps);
     }
 
     function showSnippetPicker() {
@@ -1453,7 +1453,7 @@ Item {
                 if (!expect(snippetId.length > 0, "the smoke snippet wasn't saved"))
                     return [];
                 shell.editSnippet(snippetId);
-                expect(snippetEditor.visible && snippetEditor.problem.length === 0, "the snippet editor didn't open on the snippet");
+                expect(snippetEditor.get().visible && snippetEditor.get().problem.length === 0, "the snippet editor didn't open on the snippet");
                 snippetEditor.close();
                 shell.showSnippetPicker();
                 expect(snippetPicker.visible, "the quick picker didn't open");
@@ -1461,11 +1461,11 @@ Item {
                 workspace.toggleBroadcast();
                 workspace.setPaneReceiving(c, false);
                 shell.runSnippet(snippetId, "broadcast");
-                if (!expect(snippetRunDialog.visible && snippetRunDialog.targets.length === 2,
+                if (!expect(snippetRunDialog.get().visible && snippetRunDialog.get().targets.length === 2,
                             "the run dialog didn't open for the two broadcast panes"))
                     return [];
-                snippetRunDialog.set("word", token);
-                snippetRunDialog.accept();
+                snippetRunDialog.get().set("word", token);
+                snippetRunDialog.get().accept();
                 deadline = Date.now() + timeout;
                 return [waitFor("the snippet in both broadcast panes", () => [a, b].every(id => screenOf(id).indexOf(token + "-snippet") >= 0))];
             },
@@ -1760,10 +1760,10 @@ Item {
             // "Install my key": pick a key, connect in a new tab, the key goes in.
             () => {
                 shell.installKey("H00000");
-                if (!installKeyDialog.visible || installKeyDialog.choices.length === 0)
-                    smoke.fail("the install key dialog offers no key (" + installKeyDialog.choices.length + " keys)");
-                installKeyDialog.selected = 0;
-                installKeyDialog.install();
+                if (!installKeyDialog.get().visible || installKeyDialog.get().choices.length === 0)
+                    smoke.fail("the install key dialog offers no key (" + installKeyDialog.get().choices.length + " keys)");
+                installKeyDialog.get().selected = 0;
+                installKeyDialog.get().install();
                 pane = shell.currentTerminal;
                 if (!pane || pane.installKey.length === 0)
                     smoke.fail("installing a key opened no pane for it");
@@ -2253,35 +2253,35 @@ Item {
                 samples = JSON.parse(Hosts.importSamples() || "{}");
                 if (!samples.dir)
                     smoke.fail("no import samples were written");
-                importDialog.load("mobaxterm", samples.mobaxterm);
+                importDialog.get().load("mobaxterm", samples.mobaxterm);
             });
             steps.push(() => {
-                if (importDialog.hosts.length !== 6)
-                    smoke.fail("the MobaXterm sample gave " + importDialog.hosts.length + " hosts, not 6");
-                importDialog.load("putty", samples.putty);
+                if (importDialog.get().hosts.length !== 6)
+                    smoke.fail("the MobaXterm sample gave " + importDialog.get().hosts.length + " hosts, not 6");
+                importDialog.get().load("putty", samples.putty);
             });
             steps.push(() => {
-                if (importDialog.hosts.length !== 4)
-                    smoke.fail("the PuTTY sample gave " + importDialog.hosts.length + " hosts, not 4");
-                importDialog.load("remmina", samples.remmina);
+                if (importDialog.get().hosts.length !== 4)
+                    smoke.fail("the PuTTY sample gave " + importDialog.get().hosts.length + " hosts, not 4");
+                importDialog.get().load("remmina", samples.remmina);
             });
             steps.push(() => {
-                if (importDialog.hosts.length !== 3)
-                    smoke.fail("the Remmina sample gave " + importDialog.hosts.length + " hosts, not 3");
-                importDialog.load("csv", samples.csv);
+                if (importDialog.get().hosts.length !== 3)
+                    smoke.fail("the Remmina sample gave " + importDialog.get().hosts.length + " hosts, not 3");
+                importDialog.get().load("csv", samples.csv);
             });
             steps.push(() => {
-                if (importDialog.hosts.length !== 3 || importDialog.columns[1] !== "address")
+                if (importDialog.get().hosts.length !== 3 || importDialog.get().columns[1] !== "address")
                     smoke.fail("the CSV sample's columns weren't guessed");
-                importDialog.setColumn(1, "ignore");
+                importDialog.get().setColumn(1, "ignore");
             });
             steps.push(() => {
-                if (!importDialog.needsAddress)
+                if (!importDialog.get().needsAddress)
                     smoke.fail("a CSV without an address column could be imported");
-                importDialog.setColumn(1, "address");
+                importDialog.get().setColumn(1, "address");
                 const before = Hosts.count;
-                importDialog.submit();
-                if (Hosts.count !== before + 3 || importDialog.opened)
+                importDialog.get().submit();
+                if (Hosts.count !== before + 3 || importDialog.get().opened)
                     smoke.fail("importing the CSV sample added " + (Hosts.count - before) + " hosts, not 3");
             });
             steps.push(() => shell.showExport([]));
@@ -2291,9 +2291,9 @@ Item {
                 shell.showConflict(0);
             });
             steps.push(() => {
-                if ((conflictDialog.details.differences ?? []).length !== 4)
+                if ((conflictDialog.get().details.differences ?? []).length !== 4)
                     smoke.fail("the sample conflict shows no differences");
-                conflictDialog.choose("host\t01J0SAMPLE0000000000000001", "there");
+                conflictDialog.get().choose("host\t01J0SAMPLE0000000000000001", "there");
                 conflictDialog.close();
                 console.info("smoke test: the import dialog read MobaXterm, PuTTY, Remmina and CSV samples and imported the CSV; the export and conflict dialogs opened");
             });
@@ -2910,7 +2910,7 @@ Item {
             selectTabById(desktopTabs.vnc);
         } else if (page === "vnceditor") {
             showView("hosts");
-            hostEditor.create("");
+            hostEditor.get().create("");
             const fields = {
                 name: qsTr("Lab workstation"),
                 protocol: "vnc",
@@ -2919,12 +2919,12 @@ Item {
                 "vnc.read_only": true
             };
             for (const key of Object.keys(fields))
-                hostEditor.setValue(key, fields[key]);
-            hostEditor.loaded();
-            hostEditor.section = 0;
+                hostEditor.get().setValue(key, fields[key]);
+            hostEditor.get().loaded();
+            hostEditor.get().section = 0;
         } else if (page === "editor") {
             showView("hosts");
-            hostEditor.create("");
+            hostEditor.get().create("");
             const fields = {
                 name: qsTr("Office desktop"),
                 protocol: "rdp",
@@ -2935,9 +2935,9 @@ Item {
                 "rdp.resolution": "1920x1080" // lint-qml: allow (sample data for screenshots)
             };
             for (const key of Object.keys(fields))
-                hostEditor.setValue(key, fields[key]);
-            hostEditor.loaded();
-            hostEditor.section = 0;
+                hostEditor.get().setValue(key, fields[key]);
+            hostEditor.get().loaded();
+            hostEditor.get().section = 0;
         }
     }
 
@@ -2958,7 +2958,7 @@ Item {
             openSettings("appearance");
         } else if (page === "dialog") {
             showView("hosts");
-            exportDialog.show([]);
+            exportDialog.get().show([]);
         } else if (page === "welcome") {
             Hosts.loadFixture(0);
             showView("hosts");
@@ -2980,11 +2980,11 @@ Item {
         if (page === "import" || page === "csv" || page === "export")
             showView("hosts");
         if (page === "import") {
-            importDialog.load("mobaxterm", screenshotSamples.mobaxterm);
+            importDialog.get().load("mobaxterm", screenshotSamples.mobaxterm);
         } else if (page === "csv") {
-            importDialog.load("csv", screenshotSamples.csv);
+            importDialog.get().load("csv", screenshotSamples.csv);
         } else if (page === "export") {
-            exportDialog.show([]);
+            exportDialog.get().show([]);
         } else {
             SettingsSync.loadSample();
             openSettings("data");
@@ -3011,7 +3011,7 @@ Item {
         } else if (page === "graphicseditor") {
             // An SSH host with X11 forwarding and Waypipe (Sprint 15), on the Advanced section.
             showView("hosts");
-            hostEditor.create("");
+            hostEditor.get().create("");
             const fields = {
                 name: qsTr("Build server"),
                 protocol: "ssh",
@@ -3020,13 +3020,13 @@ Item {
                 "ssh.waypipe": true
             };
             for (const key of Object.keys(fields))
-                hostEditor.setValue(key, fields[key]);
-            hostEditor.loaded();
-            hostEditor.section = 2;
-            Qt.callLater(() => hostEditor.reveal("ssh.x11"));
+                hostEditor.get().setValue(key, fields[key]);
+            hostEditor.get().loaded();
+            hostEditor.get().section = 2;
+            Qt.callLater(() => hostEditor.get().reveal("ssh.x11"));
         } else if (page === "serialeditor" || page === "s3editor") {
             showView("hosts");
-            hostEditor.create("");
+            hostEditor.get().create("");
             const fields = page === "serialeditor" ? {
                 name: qsTr("Core switch console"),
                 protocol: "serial",
@@ -3041,9 +3041,9 @@ Item {
                 "s3.region": "eu-west-1" // lint-qml: allow (sample data for screenshots)
             };
             for (const key of Object.keys(fields))
-                hostEditor.setValue(key, fields[key]);
-            hostEditor.loaded();
-            hostEditor.section = page === "serialeditor" ? 2 : 0;
+                hostEditor.get().setValue(key, fields[key]);
+            hostEditor.get().loaded();
+            hostEditor.get().section = page === "serialeditor" ? 2 : 0;
         }
     }
 
@@ -3172,8 +3172,12 @@ Item {
         }
     }
 
-    SnippetEditorDialog {
+    LazyPopup {
         id: snippetEditor
+
+        sourceComponent: Component {
+            SnippetEditorDialog {}
+        }
     }
 
     CloseConfirmDialog {
@@ -3185,8 +3189,12 @@ Item {
         }
     }
 
-    SnippetRunDialog {
+    LazyPopup {
         id: snippetRunDialog
+
+        sourceComponent: Component {
+            SnippetRunDialog {}
+        }
     }
 
     SnippetPicker {
@@ -3511,8 +3519,12 @@ Item {
         }
     }
 
-    WorkspacesDialog {
+    LazyPopup {
         id: workspacesDialog
+
+        sourceComponent: Component {
+            WorkspacesDialog {}
+        }
     }
 
     QuickConnectPopup {
@@ -3521,39 +3533,67 @@ Item {
         shell: shell
     }
 
-    HostEditorDialog {
+    LazyPopup {
         id: hostEditor
 
-        shell: shell
+        sourceComponent: Component {
+            HostEditorDialog {
+                shell: shell
+            }
+        }
     }
 
-    GroupEditorDialog {
+    LazyPopup {
         id: groupEditor
+
+        sourceComponent: Component {
+            GroupEditorDialog {}
+        }
     }
 
-    SshConfigImportDialog {
+    LazyPopup {
         id: sshImport
+
+        sourceComponent: Component {
+            SshConfigImportDialog {}
+        }
     }
 
-    ImportDialog {
+    LazyPopup {
         id: importDialog
 
-        shell: shell
+        sourceComponent: Component {
+            ImportDialog {
+                shell: shell
+            }
+        }
     }
 
-    ExportDialog {
+    LazyPopup {
         id: exportDialog
 
-        shell: shell
+        sourceComponent: Component {
+            ExportDialog {
+                shell: shell
+            }
+        }
     }
 
-    ConflictDialog {
+    LazyPopup {
         id: conflictDialog
+
+        sourceComponent: Component {
+            ConflictDialog {}
+        }
     }
 
     // The technical details behind a toast's message (Sprint 17), in the main window.
-    ErrorDetailsDialog {
+    LazyPopup {
         id: errorDetails
+
+        sourceComponent: Component {
+            ErrorDetailsDialog {}
+        }
     }
 
     Connections {
@@ -3561,7 +3601,7 @@ Item {
 
         function onDetailsRequested(toast) {
             if (!shell.detached)
-                errorDetails.show(toast);
+                errorDetails.get().show(toast);
         }
     }
 
@@ -3582,10 +3622,14 @@ Item {
         }
     }
 
-    InstallKeyDialog {
+    LazyPopup {
         id: installKeyDialog
 
-        shell: shell
+        sourceComponent: Component {
+            InstallKeyDialog {
+                shell: shell
+            }
+        }
     }
 
     // Questions of the transfer queue and of remote edits: once, in the main window.
@@ -3602,39 +3646,63 @@ Item {
     UnlockDialog {
         id: unlockDialog
 
-        onResetRequested: vaultResetDialog.show()
+        onResetRequested: vaultResetDialog.get().show()
     }
 
-    MasterPasswordDialog {
+    LazyPopup {
         id: masterPasswordDialog
+
+        sourceComponent: Component {
+            MasterPasswordDialog {}
+        }
     }
 
-    VaultResetDialog {
+    LazyPopup {
         id: vaultResetDialog
+
+        sourceComponent: Component {
+            VaultResetDialog {}
+        }
     }
 
-    IdentityEditorDialog {
+    LazyPopup {
         id: identityEditor
 
-        shell: shell
+        sourceComponent: Component {
+            IdentityEditorDialog {
+                shell: shell
+            }
+        }
     }
 
-    KeyGenerateDialog {
+    LazyPopup {
         id: keyGenerateDialog
 
-        shell: shell
+        sourceComponent: Component {
+            KeyGenerateDialog {
+                shell: shell
+            }
+        }
     }
 
-    KeyImportDialog {
+    LazyPopup {
         id: keyImportDialog
 
-        shell: shell
+        sourceComponent: Component {
+            KeyImportDialog {
+                shell: shell
+            }
+        }
     }
 
-    KeyExportDialog {
+    LazyPopup {
         id: keyExportDialog
 
-        shell: shell
+        sourceComponent: Component {
+            KeyExportDialog {
+                shell: shell
+            }
+        }
     }
 
     ShortcutHost {
