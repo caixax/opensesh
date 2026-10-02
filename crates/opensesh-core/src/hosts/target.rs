@@ -5,16 +5,20 @@
 //! Accepted forms: `host`, `user@host`, `host:port`, `user@[::1]:2222`, a bare IPv6 address,
 //! `ssh://`, `sftp://`, `telnet://`, `mosh://`, `rdp://` and `vnc://` URLs, the options `-J
 //! jump[,jump]`, `-p port` and `-l user` (a leading `ssh`, `mosh` or `telnet` is allowed, so
-//! a pasted command works), `serial:///dev/ttyUSB0?baud=115200` or `serial://COM3`, and the
+//! a pasted command works), `serial:///dev/ttyUSB0?baud=115200` or `serial://COM3`, the
 //! containers: `docker://[user@]name`, `podman://[user@]name` and
-//! `kube://[namespace/]pod[?container=name&context=name]`.
+//! `kube://[namespace/]pod[?container=name&context=name]`, and S3 storage:
+//! `s3://[access_key@]host[:port][/bucket/folder][?region=name&path_style=false]` (`s3+http://`
+//! for a server without TLS).
 //!
 //! Hosts and users that start with `-` are refused: `ssh` would read them as options.
 
 use std::fmt;
 
 use super::containers::{self, ContainerOptions, Engine};
-use super::{FlowControl, Host, HostsFile, Parity, Protocol, SerialOptions, X11Forwarding};
+use super::{
+    FlowControl, Host, HostsFile, Parity, Protocol, S3Options, SerialOptions, X11Forwarding,
+};
 
 /// A place to connect to.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -33,6 +37,10 @@ pub struct Target {
     pub serial: SerialOptions,
     /// How a container or pod is entered.
     pub container: ContainerOptions,
+    /// S3 settings (the host is then the endpoint URL).
+    pub s3: S3Options,
+    /// Where to start (S3: `/bucket/folder`); empty for the default.
+    pub path: String,
 }
 
 impl Target {
@@ -48,6 +56,7 @@ impl Target {
             jump: (!self.jump.is_empty()).then(|| self.jump.clone()),
             serial: self.serial.clone(),
             container: self.container.clone(),
+            s3: self.s3.clone(),
             ..Host::default()
         }
     }
@@ -89,6 +98,9 @@ pub enum TargetError {
     /// A container or pod that can't be used.
     #[error("{0}")]
     BadContainer(String),
+    /// An S3 address or setting that can't be used.
+    #[error("s3: {0}")]
+    BadS3(String),
 }
 
 impl fmt::Display for Target {
@@ -119,6 +131,9 @@ impl fmt::Display for Target {
         }
         if matches!(self.protocol, Protocol::Docker | Protocol::Kube) {
             return self.fmt_container(f);
+        }
+        if self.protocol == Protocol::S3 {
+            return self.fmt_s3(f);
         }
         if self.protocol != Protocol::Ssh {
             write!(f, "{}://", self.protocol.as_str())?;
@@ -363,6 +378,84 @@ impl Target {
     }
 }
 
+impl Target {
+    /// `s3://[user@]host[:port][path][?region=&path_style=]` (`s3+http://` without TLS).
+    fn fmt_s3(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (scheme, server) = match self.host.split_once("://") {
+            Some((scheme, server)) if scheme.eq_ignore_ascii_case("http") => ("s3+http", server),
+            Some((_, server)) => ("s3", server),
+            None => ("s3", self.host.as_str()),
+        };
+        write!(f, "{scheme}://")?;
+        if let Some(user) = &self.user {
+            write!(f, "{user}@")?;
+        }
+        f.write_str(server)?;
+        f.write_str(&self.path)?;
+        let mut query = Vec::new();
+        if let Some(region) = &self.s3.region {
+            query.push(format!("region={region}"));
+        }
+        if let Some(path_style) = self.s3.path_style {
+            query.push(format!("path_style={path_style}"));
+        }
+        if !query.is_empty() {
+            write!(f, "?{}", query.join("&"))?;
+        }
+        Ok(())
+    }
+}
+
+/// `s3://` (`tls`) or `s3+http://` text after the scheme: `[access_key@]host[:port][/bucket/folder]
+/// [?region=name&path_style=false]`.
+fn parse_s3(rest: &str, tls: bool) -> Result<Target, TargetError> {
+    let bad = |what: &str| TargetError::BadS3(what.to_owned());
+    let (rest, query) = rest.split_once('?').unwrap_or((rest, ""));
+    let (authority, path) = match rest.split_once('/') {
+        Some((authority, path)) => (authority, path.trim_end_matches('/')),
+        None => (rest, ""),
+    };
+    let (user, host, port) =
+        parse_endpoint(authority).map_err(|_| bad("no server (s3://access_key@host:port)"))?;
+    let mut s3 = S3Options::default();
+    for pair in query.split('&').filter(|pair| !pair.is_empty()) {
+        let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
+        let value = percent_decode(value);
+        match key {
+            "region" if super::is_region(&value) => s3.region = Some(value),
+            "path_style" => {
+                s3.path_style = Some(match value.as_str() {
+                    "true" | "1" | "on" => true,
+                    "false" | "0" | "off" => false,
+                    _ => return Err(bad(&format!("path_style={value}"))),
+                });
+            }
+            "region" => return Err(bad(&format!("not a region: {value:?}"))),
+            _ => return Err(bad(&format!("unknown setting {key}"))),
+        }
+    }
+    let mut endpoint = format!(
+        "{}://{}",
+        if tls { "https" } else { "http" },
+        bracket_ipv6(&host)
+    );
+    if let Some(port) = port {
+        endpoint.push_str(&format!(":{port}"));
+    }
+    Ok(Target {
+        protocol: Protocol::S3,
+        user,
+        host: endpoint,
+        s3,
+        path: if path.is_empty() {
+            String::new()
+        } else {
+            format!("/{}", percent_decode(path))
+        },
+        ..Target::default()
+    })
+}
+
 /// `text` with `%`, `&`, `#` and spaces percent-encoded (a query value).
 fn percent_encode(text: &str) -> String {
     let mut out = String::new();
@@ -589,6 +682,10 @@ pub fn parse(text: &str) -> Result<Target, TargetError> {
     });
     let mut target = if let Some(rest) = first.strip_prefix("serial:") {
         parse_serial(rest.trim_start_matches("//"))?
+    } else if let Some(rest) = first.strip_prefix("s3://") {
+        parse_s3(rest, true)?
+    } else if let Some(rest) = first.strip_prefix("s3+http://") {
+        parse_s3(rest, false)?
     } else if let Some((scheme, rest)) = container {
         parse_container(scheme, rest)?
     } else if let Some((scheme, rest)) = first.split_once("://") {
@@ -615,7 +712,7 @@ pub fn parse(text: &str) -> Result<Target, TargetError> {
     }
     if !matches!(
         target.protocol,
-        Protocol::Serial | Protocol::Docker | Protocol::Kube
+        Protocol::Serial | Protocol::Docker | Protocol::Kube | Protocol::S3
     ) {
         if port.is_some() {
             target.port = port;
@@ -933,6 +1030,50 @@ mod tests {
             Some("me@corp")
         );
         assert_eq!(target("mosh://m").protocol, Protocol::Mosh);
+    }
+
+    #[test]
+    fn s3_urls() {
+        let t =
+            target("s3://AKIA123@minio.lan:9000/backups/2026?region=eu-west-1&path_style=false");
+        assert_eq!(
+            (
+                t.protocol,
+                t.user.as_deref(),
+                t.host.as_str(),
+                t.path.as_str(),
+                t.s3.region.as_deref(),
+                t.s3.path_style
+            ),
+            (
+                Protocol::S3,
+                Some("AKIA123"),
+                "https://minio.lan:9000",
+                "/backups/2026",
+                Some("eu-west-1"),
+                Some(false)
+            )
+        );
+        assert_eq!(target(&t.to_string()), t);
+        let t = target("s3+http://127.0.0.1:9000");
+        assert_eq!(
+            (t.host.as_str(), t.user.as_deref()),
+            ("http://127.0.0.1:9000", None)
+        );
+        assert_eq!(t.to_string(), "s3+http://127.0.0.1:9000");
+        let host = t.to_host();
+        assert_eq!(
+            (host.protocol, host.address.as_str()),
+            (Protocol::S3, "http://127.0.0.1:9000")
+        );
+        for bad in [
+            "s3://",
+            "s3://h?x=1",
+            "s3://h?path_style=maybe",
+            "s3://h?region=a%20b",
+        ] {
+            assert!(matches!(parse(bad), Err(TargetError::BadS3(_))), "{bad}");
+        }
     }
 
     #[test]

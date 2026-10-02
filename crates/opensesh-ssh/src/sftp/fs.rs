@@ -276,7 +276,11 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.canonicalize(path).await,
             Self::Remote(fs) => fs.canonicalize(path).await,
-            Self::S3(_) => Ok(normalize_posix(path)),
+            // `~` is the top, where the buckets are.
+            Self::S3(_) => Ok(normalize_posix(&format!(
+                "/{}",
+                path.strip_prefix('~').unwrap_or(path)
+            ))),
         }
     }
 

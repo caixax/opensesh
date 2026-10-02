@@ -700,6 +700,11 @@ Item {
             Hosts.recordHost(id);
             return openConnection({ kind: "local", host: id }, where ?? "tab");
         }
+        // S3 storage opens in the files view.
+        if (host.protocol === "s3") {
+            Hosts.recordHost(id);
+            return openFiles({ mode: "remote", hostId: id, target: "", title: host.name });
+        }
         // Terminal kinds the pane starts itself (Sprint 12).
         if (shell.terminalKinds.indexOf(host.protocol) >= 0 && host.sprint === 0) {
             Hosts.recordHost(id);
@@ -717,6 +722,19 @@ Item {
         return openConnection({ kind: "ssh", host: id }, where ?? "tab");
     }
 
+    // Shows the files view with `source` on its right side (see SftpView.setSource).
+    function openFiles(source) {
+        const main = forwardToMain();
+        if (main)
+            return main.openFiles(source);
+        showView("sftp");
+        const view = sftpLoader.item;
+        if (!view)
+            return false;
+        view.setSource(1, source);
+        return true;
+    }
+
     // Connects to quick-connect text (see openConnection for `where`).
     function connectTarget(text, where) {
         const parsed = JSON.parse(Hosts.parseTarget(text) || "{}");
@@ -729,6 +747,8 @@ Item {
             return false;
         }
         Hosts.recordTarget(parsed.text);
+        if (parsed.protocol === "s3")
+            return openFiles({ mode: "remote", hostId: "", target: parsed.text, title: parsed.text });
         const kind = shell.terminalKinds.indexOf(parsed.protocol) >= 0 ? parsed.protocol : "ssh";
         return openConnection({ kind: kind, target: parsed.text }, where ?? "tab");
     }
@@ -2865,6 +2885,8 @@ Item {
 
     HostEditorDialog {
         id: hostEditor
+
+        shell: shell
     }
 
     GroupEditorDialog {

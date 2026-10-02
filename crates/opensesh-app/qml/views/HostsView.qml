@@ -206,6 +206,8 @@ Item {
             return "folder-sync";
         case "telnet":
             return "network";
+        case "s3":
+            return "cloud";
         default:
             return "server";
         }
@@ -233,6 +235,8 @@ Item {
             return qsTr("Docker");
         case "kube":
             return qsTr("Kubernetes");
+        case "s3":
+            return qsTr("S3");
         default:
             return protocol;
         }
@@ -526,7 +530,7 @@ Item {
                 OsComboBox {
                     Layout.preferredWidth: Theme.spacingXxl * 4
                     model: [{ text: qsTr("All protocols"), value: "" }].concat(["ssh", "sftp", "telnet", "serial", "mosh", "rdp", "vnc", "local",
-                        "docker", "kube"].map(protocol => ({ text: view.protocolLabel(protocol), value: protocol })))
+                        "docker", "kube", "s3"].map(protocol => ({ text: view.protocolLabel(protocol), value: protocol })))
                     textRole: "text"
                     valueRole: "value"
                     Accessible.name: qsTr("Protocol")

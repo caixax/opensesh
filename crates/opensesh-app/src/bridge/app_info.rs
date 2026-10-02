@@ -57,6 +57,13 @@ pub mod qobject {
         #[cxx_name = "startTelnetTestServer"]
         fn start_telnet_test_server(self: &Self) -> i32;
 
+        /// Test runs only: starts the in-process S3 test server on 127.0.0.1, with the buckets
+        /// `backups` and `media` and a few sample objects, and returns its port (0 in normal runs
+        /// or when it can't start). From then on every S3 connection of the run goes to it.
+        #[qinvokable]
+        #[cxx_name = "startS3TestServer"]
+        fn start_s3_test_server(self: &Self) -> i32;
+
         /// Test runs only: a temporary folder with `local` and `remote` sample files (the
         /// server's side), made fresh by `startSshTestServer` and removed at exit; empty in
         /// normal runs.
@@ -158,6 +165,48 @@ impl qobject::AppInfo {
 }
 
 impl qobject::AppInfo {
+    /// See the bridge declaration.
+    pub fn start_s3_test_server(&self) -> i32 {
+        if !is_test_run() {
+            return 0;
+        }
+        let Some(runtime) = opensesh_ssh::runtime() else {
+            return 0;
+        };
+        let started = runtime.block_on(async {
+            let server = opensesh_s3::testing::serve(opensesh_s3::testing::Rules {
+                buckets: vec!["backups".to_owned(), "media".to_owned()],
+                ..opensesh_s3::testing::Rules::default()
+            })
+            .await
+            .map_err(|error| error.to_string())?;
+            let s3 = opensesh_s3::S3::new(&server.spec()).map_err(|error| error.to_string())?;
+            for (bucket, key, text) in [
+                ("backups", "db/2026-09-30.sql.gz", "made-up dump\n"),
+                ("backups", "db/2026-10-01.sql.gz", "made-up dump\n"),
+                ("backups", "etc.tar.zst", "made-up archive\n"),
+                ("media", "photos/", ""),
+                ("media", "photos/harbour.jpg", "made-up photo\n"),
+                ("media", "notes.txt", "Sample notes for the S3 view.\n"),
+            ] {
+                s3.put(bucket, key, text.as_bytes().to_vec())
+                    .await
+                    .map_err(|error| error.to_string())?;
+            }
+            Ok::<_, String>(server.port)
+        });
+        match started {
+            Ok(port) => {
+                crate::s3::set_test_server(port);
+                i32::from(port)
+            }
+            Err(error) => {
+                tracing::warn!("could not start the S3 test server: {error}");
+                0
+            }
+        }
+    }
+
     /// See the bridge declaration.
     pub fn test_folder(&self) -> QString {
         if is_test_run() {
