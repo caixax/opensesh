@@ -5,7 +5,9 @@
 //!   listens on a Unix socket and shows what comes through it;
 //! - **there**, the session's command becomes `waypipe --socket <remote> --unlink-socket server --
 //!   <the shell or command>` ([`server_command`]): the programs it starts talk to its Wayland
-//!   display, and it sends their windows to its socket;
+//!   display, and it sends their windows to its socket. The display is made in
+//!   `XDG_RUNTIME_DIR`, which servers without a login session (no logind) often lack: a private
+//!   one is made for the session then, and removed after it;
 //! - **between them**, the server's socket is forwarded to this one
 //!   (`streamlocal-forward@openssh.com`, as `ssh -R remote:local`).
 //!
@@ -133,17 +135,19 @@ fn quote(text: &str) -> String {
 }
 
 /// The session's command on the server with `waypipe server` around it: `command`, or the user's
-/// login shell.
+/// login shell. It runs in `sh` whatever the user's shell is, with a private `XDG_RUNTIME_DIR`
+/// when theirs is missing.
 #[must_use]
 pub fn server_command(remote_socket: &str, command: Option<&str>) -> String {
-    let inner = match command {
-        Some(command) => format!("sh -c {}", quote(command)),
-        None => r#""${SHELL:-/bin/sh}" -l"#.to_owned(),
+    let (inner, argument) = match command {
+        Some(command) => (r#"sh -c "$1""#, format!(" sh {}", quote(command))),
+        None => (r#""${SHELL:-/bin/sh}" -l"#, String::new()),
     };
-    format!(
-        "waypipe --socket {} --unlink-socket server -- {inner}",
+    let script = format!(
+        r#"d=; if [ ! -d "${{XDG_RUNTIME_DIR:-}}" ] || [ ! -w "${{XDG_RUNTIME_DIR:-}}" ]; then d=$(mktemp -d) || exit 1; XDG_RUNTIME_DIR=$d; export XDG_RUNTIME_DIR; fi; waypipe --socket {} --unlink-socket server -- {inner}; s=$?; if [ -n "$d" ]; then rm -rf "$d"; fi; exit $s"#,
         quote(remote_socket)
-    )
+    );
+    format!("sh -c {}{argument}", quote(&script))
 }
 
 #[cfg(test)]
@@ -152,14 +156,70 @@ mod tests {
 
     #[test]
     fn commands_on_the_server() {
-        assert_eq!(
-            server_command("/tmp/w.sock", None),
-            r#"waypipe --socket '/tmp/w.sock' --unlink-socket server -- "${SHELL:-/bin/sh}" -l"#
+        let shell = server_command("/tmp/w.sock", None);
+        assert!(shell.starts_with("sh -c 'd=; if [ ! -d"), "{shell}");
+        assert!(
+            shell.contains(r#"waypipe --socket '\''/tmp/w.sock'\'' --unlink-socket server -- "${SHELL:-/bin/sh}" -l; s=$?;"#),
+            "{shell}"
         );
-        assert_eq!(
-            server_command("/tmp/w.sock", Some("gedit 'my file'")),
-            r#"waypipe --socket '/tmp/w.sock' --unlink-socket server -- sh -c 'gedit '\''my file'\'''"#
+        let command = server_command("/tmp/w.sock", Some("gedit 'my file'"));
+        assert!(
+            command.contains(r#"server -- sh -c "$1"; s=$?;"#),
+            "{command}"
+        );
+        assert!(
+            command.ends_with(r#"exit $s' sh 'gedit '\''my file'\'''"#),
+            "{command}"
         );
         assert_ne!(unique(), unique());
+    }
+
+    /// The command run by `sh` with a stand-in `waypipe` that runs what follows `--`.
+    #[cfg(unix)]
+    fn run_on_a_server(runtime: &Path, command: &str) -> String {
+        use std::os::unix::fs::PermissionsExt;
+
+        let bin = tempfile::tempdir().unwrap();
+        let fake = bin.path().join("waypipe");
+        std::fs::write(
+            &fake,
+            "#!/bin/sh\nwhile [ \"$1\" != -- ]; do shift; done; shift\necho \"runtime=$XDG_RUNTIME_DIR\"\nexec \"$@\"\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let path = format!(
+            "{}:{}",
+            bin.path().display(),
+            std::env::var("PATH").unwrap_or_default()
+        );
+        let output = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(server_command("/tmp/w.sock", Some(command)))
+            .env("PATH", path)
+            .env("XDG_RUNTIME_DIR", runtime)
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+        String::from_utf8(output.stdout).unwrap()
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_missing_runtime_directory_is_made_for_the_session() {
+        // The user's own directory is used when it is there.
+        let runtime = tempfile::tempdir().unwrap();
+        let text = run_on_a_server(runtime.path(), "echo \"it's\" 'here'");
+        assert_eq!(
+            text,
+            format!("runtime={}\nit's here\n", runtime.path().display())
+        );
+        // Else a private one, removed when the session ends.
+        let missing = runtime.path().join("missing");
+        let text = run_on_a_server(&missing, "echo \"$XDG_RUNTIME_DIR\"");
+        let mut lines = text.lines();
+        let made = lines.next().unwrap().strip_prefix("runtime=").unwrap();
+        assert_ne!(made, missing.display().to_string());
+        assert_eq!(lines.next(), Some(made));
+        assert!(!Path::new(made).exists(), "{made}");
     }
 }
