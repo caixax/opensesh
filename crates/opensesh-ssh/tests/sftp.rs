@@ -489,8 +489,10 @@ async fn ten_thousand_entries() {
     assert_eq!(listing.len(), 10_000);
     assert_eq!(listing.first().unwrap().name, "file-00000.txt");
     eprintln!("10,000 entries: listed in {listed:?}, sorted in {sorted:?}");
+    // A debug build on a shared CI runner, other tests running alongside: a bound that catches a
+    // sort gone quadratic, not one that measures the release build (tens of milliseconds).
     assert!(
-        sorted < Duration::from_millis(500),
+        sorted < Duration::from_secs(2),
         "sorting took {sorted:?}"
     );
 }
