@@ -155,6 +155,7 @@ pub fn bundle_contents(path: &str, home: &Path) -> Json {
                 "profiles": count("profiles"),
                 "themes": count("themes"),
                 "keychain": contents.keychain.is_some(),
+                "runs": profile_shells(&contents.files),
             })
         }
         Err(_) => json!({}),
@@ -225,6 +226,63 @@ pub fn csv_table(path: &str, home: &Path) -> Json {
     }
 }
 
+/// The programs an import would run on this computer, so the user sees them before importing a
+/// file from someone else: `[{name, kind, command}]`, `kind` `proxy` (a host's or group's
+/// ProxyCommand, run to connect) or `shell` (the shell of a local terminal).
+#[must_use]
+pub fn runs_here(imported: &Imported) -> Vec<Json> {
+    let shell = |table: &toml::Table| {
+        table
+            .get("shell")
+            .and_then(toml::Value::as_str)
+            .map(str::trim)
+            .filter(|shell| !shell.is_empty())
+            .map(str::to_owned)
+    };
+    let mut out = Vec::new();
+    let mut add = |name: &str, kind: &str, command: Option<String>| {
+        if let Some(command) = command.filter(|command| !command.trim().is_empty()) {
+            out.push(json!({ "name": name, "kind": kind, "command": command }));
+        }
+    };
+    for group in &imported.groups {
+        add(
+            &group.name,
+            "proxy",
+            group.defaults.ssh.proxy_command.clone(),
+        );
+        add(&group.name, "shell", shell(&group.defaults.terminal));
+    }
+    for host in &imported.hosts {
+        add(&host.name, "proxy", host.ssh.proxy_command.clone());
+        add(&host.name, "shell", shell(&host.terminal));
+    }
+    out
+}
+
+/// The shells a bundle's profiles start in local terminals: `[{name, kind: "shell", command}]`.
+fn profile_shells(files: &[(String, String)]) -> Vec<Json> {
+    files
+        .iter()
+        .filter(|(path, _)| path.starts_with("profiles/"))
+        .filter_map(|(path, text)| {
+            let table: toml::Table = text.parse().ok()?;
+            let shell = table
+                .get("terminal")
+                .and_then(|terminal| terminal.get("shell"))
+                .or_else(|| table.get("shell"))
+                .and_then(toml::Value::as_str)
+                .map(str::trim)
+                .filter(|shell| !shell.is_empty())?;
+            let name = table
+                .get("name")
+                .and_then(toml::Value::as_str)
+                .unwrap_or(path.as_str());
+            Some(json!({ "name": name, "kind": "shell", "command": shell }))
+        })
+        .collect()
+}
+
 /// The hosts and warnings to show before importing.
 #[must_use]
 pub fn preview(imported: &Imported, library: &HostsFile, target: impl Fn(&Host) -> String) -> Json {
@@ -263,6 +321,7 @@ pub fn preview(imported: &Imported, library: &HostsFile, target: impl Fn(&Host) 
         "hosts": hosts,
         "groups": imported.groups.len(),
         "warnings": warnings,
+        "runs": runs_here(imported),
         "error": "",
     })
 }
@@ -433,6 +492,42 @@ mod tests {
         let applied = apply(&mut file, again, "Again");
         assert_eq!((applied.added, applied.skipped), (0, 1));
         assert_eq!(file.groups.len(), groups);
+    }
+
+    #[test]
+    fn what_would_run_here_is_listed() {
+        let mut imported = Imported::default();
+        let mut proxied = host("p", "p.lan");
+        proxied.ssh.proxy_command = Some("nc proxy %h %p".to_owned());
+        let mut local = Host {
+            protocol: Protocol::Local,
+            ..host("l", "")
+        };
+        local.terminal.insert(
+            "shell".to_owned(),
+            toml::Value::String("evil.sh".to_owned()),
+        );
+        imported.hosts = vec![proxied, local, host("plain", "x.lan")];
+        let runs = runs_here(&imported);
+        assert_eq!(
+            runs,
+            [
+                json!({ "name": "p", "kind": "proxy", "command": "nc proxy %h %p" }),
+                json!({ "name": "l", "kind": "shell", "command": "evil.sh" }),
+            ]
+        );
+        let shells = profile_shells(&[
+            (
+                "profiles/x.toml".to_owned(),
+                "name = \"X\"\n[terminal]\nshell = \"zsh -l\"\n".to_owned(),
+            ),
+            ("profiles/y.toml".to_owned(), "name = \"Y\"\n".to_owned()),
+            ("themes/t.toml".to_owned(), "shell = \"no\"\n".to_owned()),
+        ]);
+        assert_eq!(
+            shells,
+            [json!({ "name": "X", "kind": "shell", "command": "zsh -l" })]
+        );
     }
 
     #[test]

@@ -19,6 +19,9 @@ OsDialog {
     property bool working: false
     property string error: ""
     readonly property bool mismatch: withKeychain && confirmField.text !== passwordField.text
+    // As the master password's.
+    readonly property int minimumLength: 8
+    readonly property bool tooShort: withKeychain && passwordField.text.length < minimumLength
     readonly property var formats: [
         { value: "bundle", text: qsTr("OpenSesh bundle") },
         { value: "ssh_config", text: qsTr("OpenSSH config file") }
@@ -52,8 +55,8 @@ OsDialog {
             accept();
             return;
         }
-        if (withKeychain && passwordField.text.length === 0) {
-            error = qsTr("Choose a password for the keychain, or leave it out.");
+        if (tooShort) {
+            error = qsTr("Choose a password of at least %n character(s) for the keychain, or leave it out.", "", minimumLength);
             return;
         }
         if (withKeychain && Keychain.vaultStatus === "locked") {
@@ -79,7 +82,7 @@ OsDialog {
 
     title: qsTr("Export")
     acceptText: working ? qsTr("Saving…") : qsTr("Export")
-    acceptEnabled: !working && pathField.text.trim().length > 0 && !mismatch
+    acceptEnabled: !working && pathField.text.trim().length > 0 && !mismatch && !tooShort
     closeOnAccept: false
     onAcceptClicked: submit()
 
@@ -176,6 +179,14 @@ OsDialog {
                 placeholderText: qsTr("Confirm the password")
                 Accessible.name: qsTr("Confirm the export password")
                 onAccepted: dialog.submit()
+            }
+
+            OsText {
+                width: parent.width
+                visible: dialog.withKeychain && passwordField.text.length > 0 && dialog.tooShort
+                text: qsTr("Use at least %n character(s).", "", dialog.minimumLength)
+                color: Theme.danger
+                size: "small"
             }
 
             OsText {

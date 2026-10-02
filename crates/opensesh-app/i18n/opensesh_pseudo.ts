@@ -1081,9 +1081,12 @@
             <numerusform>[%n ĥöšť(š) ŵŕíťťéñ ťö %1. ~~~~~~~~]</numerusform>
         </translation>
     </message>
-    <message>
-        <source>Choose a password for the keychain, or leave it out.</source>
-        <translation>[Çĥööšé á þáššŵöŕď ƒöŕ ťĥé ķéýçĥáíñ, öŕ ĺéávé íť öüť. ~~~~~~~~~~~~~~~~]</translation>
+    <message numerus="yes">
+        <source>Choose a password of at least %n character(s) for the keychain, or leave it out.</source>
+        <translation>
+            <numerusform>[Çĥööšé á þáššŵöŕď öƒ áť ĺéášť %n çĥáŕáçťéŕ(š) ƒöŕ ťĥé ķéýçĥáíñ, öŕ ĺéávé íť öüť. ~~~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+            <numerusform>[Çĥööšé á þáššŵöŕď öƒ áť ĺéášť %n çĥáŕáçťéŕ(š) ƒöŕ ťĥé ķéýçĥáíñ, öŕ ĺéávé íť öüť. ~~~~~~~~~~~~~~~~~~~~~~~~]</numerusform>
+        </translation>
     </message>
     <message numerus="yes">
         <source>%n host(s), %1 snippet(s) and %2 profile and theme file(s) saved to %3.</source>
@@ -1158,6 +1161,13 @@
     <message>
         <source>Confirm the export password</source>
         <translation>[Çöñƒíŕm ťĥé éxþöŕť þáššŵöŕď ~~~~~~~~~]</translation>
+    </message>
+    <message numerus="yes">
+        <source>Use at least %n character(s).</source>
+        <translation>
+            <numerusform>[Üšé áť ĺéášť %n çĥáŕáçťéŕ(š). ~~~~~~~~~]</numerusform>
+            <numerusform>[Üšé áť ĺéášť %n çĥáŕáçťéŕ(š). ~~~~~~~~~]</numerusform>
+        </translation>
     </message>
     <message>
         <source>The passwords don&apos;t match.</source>
@@ -4070,6 +4080,18 @@
             <numerusform>[…áñď %n möŕé. ~~~~]</numerusform>
             <numerusform>[…áñď %n möŕé. ~~~~]</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Runs programs on this computer</source>
+        <translation>[Ŕüñš þŕöĝŕámš öñ ťĥíš çömþüťéŕ ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 connects by running: %2</source>
+        <translation>[%1 çöññéçťš bý ŕüññíñĝ: %2 ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 starts local terminals with: %2</source>
+        <translation>[%1 šťáŕťš ĺöçáĺ ťéŕmíñáĺš ŵíťĥ: %2 ~~~~~~~~~~~]</translation>
     </message>
     <message numerus="yes">
         <source>Its %n snippet(s)</source>

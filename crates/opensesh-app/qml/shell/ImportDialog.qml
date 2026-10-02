@@ -213,6 +213,9 @@ OsDialog {
     Flickable {
         implicitWidth: body.width
         implicitHeight: body.height
+        width: body.width
+        // The content item, between the header and the footer.
+        height: parent ? Math.min(body.height, parent.height) : body.height
         contentWidth: body.width
         contentHeight: body.height
         clip: true
@@ -412,7 +415,21 @@ OsDialog {
                                                                           ? [qsTr("…and %n more.", "", dialog.preview.warnings.length - 6)] : [])
             }
 
-            // What else a bundle brings.
+            // Programs the import would run on this computer: worth a look before importing a file
+        // from someone else.
+        SettingsNotice {
+            readonly property var runs: (dialog.preview.runs ?? []).concat(dialog.withProfiles ? (dialog.bundle.runs ?? []) : [])
+
+            width: parent.width
+            visible: runs.length > 0
+            kind: "warning"
+            title: qsTr("Runs programs on this computer")
+            lines: runs.slice(0, 6).map(run => run.kind === "proxy" ? qsTr("%1 connects by running: %2").arg(run.name).arg(run.command)
+                                                                     : qsTr("%1 starts local terminals with: %2").arg(run.name).arg(run.command))
+                   .concat(runs.length > 6 ? [qsTr("…and %n more.", "", runs.length - 6)] : [])
+        }
+
+        // What else a bundle brings.
             Column {
                 width: parent.width
                 visible: dialog.source === "bundle" && dialog.hosts.length > 0
