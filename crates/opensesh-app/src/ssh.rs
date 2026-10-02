@@ -12,12 +12,12 @@ use std::sync::{Arc, LazyLock, PoisonError, RwLock};
 use std::time::Duration;
 
 use opensesh_core::hosts::target::{self, ProxyKind};
-use opensesh_core::hosts::{Host, HostsFile, Protocol, SessionLog, SshBackend};
+use opensesh_core::hosts::{Host, HostsFile, Protocol, SessionLog, SshBackend, X11Forwarding};
 use opensesh_ssh::SshError;
 use opensesh_ssh::backend::Options;
 use opensesh_ssh::spec::{
     AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, LogSpec, Proxy, Reconnect,
-    SecretSource, Secrets, SessionSpec, key_from_openssh_bytes, locale_env,
+    SecretSource, Secrets, SessionSpec, X11Spec, key_from_openssh_bytes, locale_env,
 };
 use opensesh_term::backend::TermSize;
 use opensesh_vault::known_hosts::KNOWN_HOSTS_FILE;
@@ -353,6 +353,8 @@ fn session_for(
             ..Reconnect::default()
         },
         log,
+        // Never in test runs: it would start a program here.
+        waypipe: resolved.flag("ssh.waypipe") && !is_test_run(),
     };
     // Only a saved host has an icon to show the OS with.
     let auto_icon = !host.id.is_empty() && (host.icon.is_empty() || host.icon == "auto");
@@ -400,8 +402,27 @@ pub fn connect_for(file: &HostsFile, host: &Host) -> Result<ConnectSpec, String>
         known_hosts: known_hosts(config, home.as_deref()),
         agent_forwarding: resolved.flag("ssh.agent_forwarding"),
         agent_socket: resolved.string("ssh.agent_socket").map(str::to_owned),
+        x11: x11_spec(resolved.x11()),
     };
     hermetic(connect)
+}
+
+/// X11 forwarding as the host asks for it, to this computer's display: `DISPLAY`, else on
+/// Windows an X server on this computer (VcXsrv, X410 and Xming listen on TCP port 6000). Never
+/// in test runs.
+fn x11_spec(mode: X11Forwarding) -> Option<X11Spec> {
+    if mode == X11Forwarding::Off || is_test_run() {
+        return None;
+    }
+    let display = std::env::var("DISPLAY")
+        .ok()
+        .filter(|display| !display.trim().is_empty())
+        .or_else(|| cfg!(windows).then(|| "localhost:0.0".to_owned()))
+        .unwrap_or_default();
+    Some(X11Spec {
+        display,
+        trusted: mode == X11Forwarding::Trusted,
+    })
 }
 
 /// The SSH connection to the last of `host`'s jump hosts, through the ones before it: what a
@@ -437,6 +458,7 @@ pub fn jump_connect_for(file: &HostsFile, host: &Host) -> Result<Option<ConnectS
         known_hosts: known_hosts(config, home.as_deref()),
         agent_forwarding: false,
         agent_socket: None,
+        x11: None,
     };
     hermetic(connect).map(Some)
 }

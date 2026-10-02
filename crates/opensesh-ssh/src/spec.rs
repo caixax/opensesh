@@ -257,6 +257,18 @@ pub struct ConnectSpec {
     pub agent_forwarding: bool,
     /// The agent to forward instead of the usual one (see [`AuthPlan::agent_socket`]).
     pub agent_socket: Option<String>,
+    /// X11 forwarding to the target (never to jump hosts).
+    pub x11: Option<X11Spec>,
+}
+
+/// X11 forwarding: the local display and how much the remote programs are trusted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct X11Spec {
+    /// The local display (`DISPLAY`).
+    pub display: String,
+    /// Trusted: the display's own cookie; untrusted: one made with the X SECURITY extension's
+    /// limits (`xauth generate ... untrusted`).
+    pub trusted: bool,
 }
 
 impl ConnectSpec {
@@ -317,6 +329,8 @@ pub struct SessionSpec {
     pub reconnect: Reconnect,
     /// A session log.
     pub log: Option<LogSpec>,
+    /// Show the server's Wayland programs here through Waypipe (Sprint 15).
+    pub waypipe: bool,
 }
 
 impl Default for SessionSpec {
@@ -329,6 +343,7 @@ impl Default for SessionSpec {
             startup: None,
             reconnect: Reconnect::default(),
             log: None,
+            waypipe: false,
         }
     }
 }

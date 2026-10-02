@@ -1,7 +1,8 @@
 //! The SSH client against real servers (PLAN Sprint 7): OpenSSH and Dropbear, a chain of two jump
 //! hosts authenticated by an agent, a one-time code (TOTP through PAM) after a key, a user
 //! certificate, agent forwarding, the terminal backend reconnecting after the server side of the
-//! session is killed, and the remote monitor and host info (Sprint 11).
+//! session is killed, the remote monitor and host info (Sprint 11), X11 forwarding to an Xvfb
+//! display and Waypipe to a headless sway (Sprint 15).
 //!
 //! The servers come from `scripts/ssh-test-servers.sh start` (127.0.0.1:2221-2225), so these
 //! tests are ignored by default. With the servers up, and an agent that holds
@@ -27,7 +28,7 @@ use opensesh_ssh::connect::{self, Connection};
 use opensesh_ssh::monitor::{self, Monitoring};
 use opensesh_ssh::osdetect;
 use opensesh_ssh::prompt::{Answer, Asker, Prompt, Request};
-use opensesh_ssh::spec::{AuthPlan, ConnectSpec, Hop, KnownHostsFiles, SessionSpec};
+use opensesh_ssh::spec::{AuthPlan, ConnectSpec, Hop, KnownHostsFiles, SessionSpec, X11Spec};
 use opensesh_term::backend::BackendEvent;
 use secrecy::SecretString;
 
@@ -106,6 +107,7 @@ fn spec(dir: &Path, hops: Vec<Hop>) -> ConnectSpec {
         },
         agent_forwarding: false,
         agent_socket: None,
+        x11: None,
     }
 }
 
@@ -426,4 +428,102 @@ fn read_until(
         }
     }
     panic!("timed out; got {text:?}");
+}
+
+/// An Xvfb display here, ended when dropped.
+struct Xvfb(std::process::Child);
+
+impl Drop for Xvfb {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+#[test]
+#[ignore = "needs scripts/ssh-test-servers.sh start, and Xvfb"]
+fn x11_forwarding_to_a_local_display() {
+    // A display here (Xvfb takes local connections without a cookie when started like this).
+    let xvfb = Xvfb(
+        std::process::Command::new("Xvfb")
+            .args([":97", "-screen", "0", "640x480x24", "-nolisten", "tcp"])
+            .spawn()
+            .expect("Xvfb"),
+    );
+    std::thread::sleep(Duration::from_secs(1));
+    let dir = tempfile::tempdir().unwrap();
+    let (asker, _) = user();
+    // The server's X11 program (xdpyinfo) reaches it through the forwarding, both trusted and
+    // untrusted (the untrusted cookie needs the X SECURITY extension, which Xvfb has).
+    for trusted in [true, false] {
+        let connect = ConnectSpec {
+            x11: Some(X11Spec {
+                display: ":97".to_owned(),
+                trusted,
+            }),
+            ..spec(dir.path(), vec![hop(OPENSSH_KEY_ONLY, agent())])
+        };
+        let session = SessionSpec {
+            command: Some("xdpyinfo | head -n 3; echo \"DISPLAY=$DISPLAY\"".to_owned()),
+            ..SessionSpec::default()
+        };
+        let sink: backend::StatusSink = Arc::new(|_| {});
+        let (_terminal, events) = backend::start(
+            connect,
+            session,
+            Options::default(),
+            Arc::clone(&asker),
+            sink,
+        )
+        .unwrap();
+        let (text, all) = read_until(&events, |_, all| {
+            all.iter()
+                .any(|event| matches!(event, BackendEvent::Exited(_)))
+        });
+        assert!(
+            text.contains("name of display:"),
+            "trusted {trusted}: {text:?}"
+        );
+        assert!(
+            text.contains("DISPLAY=localhost:"),
+            "trusted {trusted}: {text:?}"
+        );
+        assert!(all.contains(&BackendEvent::Exited(Some(0))), "{all:?}");
+    }
+    drop(xvfb);
+}
+
+#[test]
+#[ignore = "needs scripts/ssh-test-servers.sh start, waypipe, wayland-info and a Wayland session"]
+fn waypipe_to_a_local_wayland_session() {
+    // CI starts a headless sway for this (WAYLAND_DISPLAY); waypipe runs here and on the server.
+    assert!(
+        std::env::var_os("WAYLAND_DISPLAY").is_some(),
+        "no Wayland session to show the server's programs on"
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let (asker, _) = user();
+    let session = SessionSpec {
+        command: Some("wayland-info | grep -m 1 interface; echo waypipe-done".to_owned()),
+        waypipe: true,
+        ..SessionSpec::default()
+    };
+    let sink: backend::StatusSink = Arc::new(|_| {});
+    let (_terminal, events) = backend::start(
+        spec(dir.path(), vec![hop(OPENSSH_KEY_ONLY, agent())]),
+        session,
+        Options::default(),
+        asker,
+        sink,
+    )
+    .unwrap();
+    let (text, all) = read_until(&events, |_, all| {
+        all.iter()
+            .any(|event| matches!(event, BackendEvent::Exited(_)))
+    });
+    // wayland-info on the server reached this session's compositor through waypipe.
+    assert!(!text.contains("Waypipe is off"), "{text:?}");
+    assert!(text.contains("interface:"), "{text:?}");
+    assert!(text.contains("waypipe-done"), "{text:?}");
+    assert!(all.contains(&BackendEvent::Exited(Some(0))), "{all:?}");
 }

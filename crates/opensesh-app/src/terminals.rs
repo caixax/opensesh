@@ -37,7 +37,7 @@ pub enum Start {
     /// A serial port.
     Serial(SerialSpec),
     /// Mosh (started over SSH).
-    Mosh(MoshSpec),
+    Mosh(Box<MoshSpec>),
 }
 
 /// What the pane of saved host `host_id`, or of quick-connect `target_text`, starts, when it is
@@ -60,14 +60,14 @@ pub fn for_pane(host_id: &str, target_text: &str, term: &str) -> Option<Result<S
             .unwrap_or_else(|| "this container can't be entered".to_owned()))),
         Protocol::Mosh => Some(
             crate::ssh::connect_for(&library.file, &host).map(|connect| {
-                Start::Mosh(MoshSpec {
+                Start::Mosh(Box::new(MoshSpec {
                     connect,
                     term: term.to_owned(),
                     // Looked up on the connection's thread: the PATH can be slow to search.
                     client: None,
                     // A test run starts the server (its test server's) but no mosh-client.
                     dry_run: is_test_run(),
-                })
+                }))
             }),
         ),
         _ => None,
@@ -148,7 +148,7 @@ pub fn open(id: i32, start: Start, options: LocalOptions) -> Result<Arc<SessionE
         Start::Telnet(spec) => {
             registry::open_backend(id, options, |size| Ok(telnet::start(spec, size)?))
         }
-        Start::Mosh(spec) => registry::open_mosh(id, options, spec),
+        Start::Mosh(spec) => registry::open_mosh(id, options, *spec),
         Start::Serial(spec) => registry::open_serial(id, options, || {
             // A test run never opens a real device.
             if is_test_run() {

@@ -30,6 +30,8 @@ pub mod sftp;
 pub mod spec;
 pub mod testing;
 pub mod tunnel;
+pub mod waypipe;
+pub mod x11;
 
 use std::sync::OnceLock;
 

@@ -3227,6 +3227,7 @@ dependencies = [
  "opensesh-term",
  "opensesh-vault",
  "pageant",
+ "rand_core 0.6.4",
  "russh",
  "russh-sftp",
  "secrecy",

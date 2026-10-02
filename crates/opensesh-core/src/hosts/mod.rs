@@ -261,6 +261,9 @@ pub struct SshOptions {
     /// X11 forwarding (off by default, PLAN §8).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub x11: Option<X11Forwarding>,
+    /// Show the server's Wayland programs here through Waypipe (off by default; Sprint 15).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub waypipe: Option<bool>,
     /// Keepalive interval in seconds; 0 turns it off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keepalive_secs: Option<u32>,
@@ -844,6 +847,7 @@ pub const INHERITED_KEYS: &[&str] = &[
     "ssh.backend",
     "ssh.agent_forwarding",
     "ssh.x11",
+    "ssh.waypipe",
     "ssh.keepalive_secs",
     "ssh.compression",
     "ssh.startup_snippet",
@@ -875,6 +879,7 @@ fn builtin(key: &str, protocol: Protocol) -> Option<Value> {
         "jump" => Some(Value::Array(Vec::new())),
         "ssh.backend" => Some(Value::String("internal".to_owned())),
         "ssh.agent_forwarding"
+        | "ssh.waypipe"
         | "ssh.compression"
         | "ssh.legacy_algorithms"
         | "ssh.auto_reconnect" => Some(Value::Boolean(false)),

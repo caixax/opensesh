@@ -59,6 +59,10 @@ pub struct Rules {
     pub monitor: bool,
     /// Answer `mosh-server new` with a session (else it isn't installed).
     pub mosh: bool,
+    /// Take X11 forwarding: "xclock" typed in the shell then opens an `x11` channel with the
+    /// session's cookie, sends an X11 client's first message and prints what the display
+    /// answered (`x11: <its first bytes>`).
+    pub x11: bool,
 }
 
 struct Server {
@@ -76,6 +80,8 @@ struct Server {
     forwards: HashMap<u32, tokio::task::JoinHandle<()>>,
     /// Channels running the remote monitor: the tasks printing their readings.
     monitors: HashMap<ChannelId, tokio::task::JoinHandle<()>>,
+    /// The client's X11 cookie (hexadecimal), once it asked for forwarding.
+    x11_cookie: Option<String>,
 }
 
 impl Drop for Server {
@@ -332,6 +338,24 @@ impl Handler for Server {
         Ok(())
     }
 
+    async fn x11_request(
+        &mut self,
+        channel: ChannelId,
+        _single_connection: bool,
+        x11_auth_protocol: &str,
+        x11_auth_cookie: &str,
+        _x11_screen_number: u32,
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        if self.rules.x11 && x11_auth_protocol == crate::x11::MIT_MAGIC_COOKIE {
+            self.x11_cookie = Some(x11_auth_cookie.to_owned());
+            session.channel_success(channel)?;
+        } else {
+            session.channel_failure(channel)?;
+        }
+        Ok(())
+    }
+
     async fn shell_request(
         &mut self,
         channel: ChannelId,
@@ -457,6 +481,17 @@ impl Handler for Server {
                 .next()
                 .unwrap_or_default()
                 .to_vec();
+            if line == b"xclock"
+                && let Some(cookie) = self.x11_cookie.clone()
+            {
+                let handle = session.handle();
+                tokio::spawn(async move {
+                    let answer = x11_client(&handle, &cookie).await;
+                    let _ = handle
+                        .data(channel, format!("\r\nx11: {answer}\r\ntest$ ").into_bytes())
+                        .await;
+                });
+            }
             if let Some(path) = line.strip_prefix(b"cd /") {
                 let mut reply = b"\r\n\x1b]7;file://test/".to_vec();
                 reply.extend_from_slice(path);
@@ -465,6 +500,37 @@ impl Handler for Server {
             }
         }
         Ok(())
+    }
+}
+
+/// What an X11 program on the server does: opens an `x11` channel, sends the first message
+/// with `cookie` (hexadecimal), and returns the display's first bytes (or why there were none).
+async fn x11_client(handle: &russh::server::Handle, cookie: &str) -> String {
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    let Ok(channel) = handle.channel_open_x11("127.0.0.1", 6010).await else {
+        return "the client refused the channel".to_owned();
+    };
+    let mut stream = channel.into_stream();
+    let cookie: Vec<u8> = (0..cookie.len())
+        .step_by(2)
+        .filter_map(|at| u8::from_str_radix(cookie.get(at..at + 2)?, 16).ok())
+        .collect();
+    let name = crate::x11::MIT_MAGIC_COOKIE.as_bytes();
+    let mut message = vec![b'l', 0, 11, 0, 0, 0];
+    message.extend_from_slice(&u16::try_from(name.len()).unwrap_or(0).to_le_bytes());
+    message.extend_from_slice(&u16::try_from(cookie.len()).unwrap_or(0).to_le_bytes());
+    message.extend_from_slice(&[0, 0]);
+    message.extend_from_slice(name);
+    message.resize(message.len().next_multiple_of(4), 0);
+    message.extend_from_slice(&cookie);
+    message.resize(message.len().next_multiple_of(4), 0);
+    if stream.write_all(&message).await.is_err() {
+        return "the channel closed".to_owned();
+    }
+    let mut answer = [0_u8; 64];
+    match tokio::time::timeout(Duration::from_secs(5), stream.read(&mut answer)).await {
+        Ok(Ok(read)) if read > 0 => String::from_utf8_lossy(&answer[..read]).into_owned(),
+        _ => "no answer from the display".to_owned(),
     }
 }
 
@@ -543,6 +609,7 @@ pub async fn serve(rules: Rules) -> std::io::Result<u16> {
                 monitors: HashMap::new(),
                 channels: HashMap::new(),
                 forwards: HashMap::new(),
+                x11_cookie: None,
             };
             let config = Arc::clone(&config);
             tokio::spawn(async move {

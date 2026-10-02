@@ -55,6 +55,7 @@ async fn remote(root: &Path, known: &Path) -> Arc<Remote> {
         },
         agent_forwarding: false,
         agent_socket: None,
+        x11: None,
     };
     let trust: Asker = Arc::new(|question: Question| question.answer(Answer::TrustOnce));
     let connection: Connection = connect::connect(&spec, &trust, &connect::quiet())

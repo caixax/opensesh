@@ -29,6 +29,7 @@ use crate::prompt::{self, Answer, Asker, Field, HostKeyKind, HostKeyQuestion, Pr
 use crate::proxy::{self, Transport};
 use crate::spec::{AuthMethod, ConnectSpec, Hop, KnownHostsFiles, Proxy};
 use crate::tunnel;
+use crate::x11;
 
 /// Progress of a connection, for the pane.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,6 +50,8 @@ pub enum Note {
     },
     /// The server's authentication banner.
     Banner(String),
+    /// Something the user asked for that won't work (X11 forwarding without a display, say).
+    Warning(String),
 }
 
 /// Where a connection reports its progress.
@@ -73,7 +76,15 @@ pub struct ClientHandler {
     agent_socket: Option<String>,
     /// Where the server's `forwarded-tcpip` channels go (remote forwards; the target hop only).
     routes: tunnel::Routes,
+    /// X11 forwarding (the target hop only): where `x11` channels go.
+    x11: Option<Arc<x11::Live>>,
+    /// The server's Unix sockets forwarded here (Waypipe; the target hop only): server path to
+    /// local path.
+    sockets: Sockets,
 }
+
+/// The server's Unix sockets forwarded here, by the server's path.
+pub(crate) type Sockets = Arc<Mutex<std::collections::HashMap<String, PathBuf>>>;
 
 impl std::fmt::Debug for ClientHandler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -243,18 +254,74 @@ impl Handler for ClientHandler {
         Ok(())
     }
 
+    async fn server_channel_open_forwarded_streamlocal(
+        &mut self,
+        channel: Channel<Msg>,
+        socket_path: &str,
+        reply: client::ChannelOpenHandle,
+        _session: &mut client::Session,
+    ) -> Result<(), Self::Error> {
+        // Only for a socket this client asked to forward (russh would accept any).
+        let local = self
+            .sockets
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(socket_path)
+            .cloned();
+        match local {
+            Some(local) => {
+                reply.accept().await;
+                tokio::spawn(serve_socket(channel, local));
+            }
+            None => {
+                reply
+                    .reject(ChannelOpenFailure::AdministrativelyProhibited)
+                    .await;
+            }
+        }
+        Ok(())
+    }
+
     async fn server_channel_open_x11(
         &mut self,
-        _channel: Channel<Msg>,
+        channel: Channel<Msg>,
         _originator_address: &str,
         _originator_port: u32,
         reply: client::ChannelOpenHandle,
         _session: &mut client::Session,
     ) -> Result<(), Self::Error> {
-        reply
-            .reject(ChannelOpenFailure::AdministrativelyProhibited)
-            .await;
+        // Only when the host asked for X11 forwarding; each connection proves this session's
+        // made-up cookie (checked in `x11::serve`).
+        match &self.x11 {
+            Some(live) => {
+                reply.accept().await;
+                tokio::spawn(x11::serve(channel, Arc::clone(live)));
+            }
+            None => {
+                reply
+                    .reject(ChannelOpenFailure::AdministrativelyProhibited)
+                    .await;
+            }
+        }
         Ok(())
+    }
+}
+
+/// Carries a forwarded Unix socket's channel to the local socket.
+async fn serve_socket(channel: Channel<Msg>, local: PathBuf) {
+    #[cfg(unix)]
+    {
+        let mut stream = channel.into_stream();
+        match tokio::net::UnixStream::connect(&local).await {
+            Ok(mut socket) => {
+                let _ = tokio::io::copy_bidirectional(&mut stream, &mut socket).await;
+            }
+            Err(error) => tracing::debug!("a forwarded socket's connection failed: {error}"),
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (channel, local);
     }
 }
 
@@ -753,6 +820,8 @@ async fn agent_keys(
 pub struct Connection {
     handles: Vec<Handle<ClientHandler>>,
     routes: tunnel::Routes,
+    x11: Option<Arc<x11::Live>>,
+    sockets: Sockets,
 }
 
 impl std::fmt::Debug for Connection {
@@ -778,6 +847,30 @@ impl Connection {
     /// The target's remote forwards.
     pub(crate) fn routes(&self) -> &tunnel::Routes {
         &self.routes
+    }
+
+    /// X11 forwarding, when the host asked for it and the cookies could be made.
+    pub(crate) fn x11(&self) -> Option<&x11::Live> {
+        self.x11.as_deref()
+    }
+
+    /// Forwards the server's Unix socket `remote` to the local one `local`
+    /// (`streamlocal-forward@openssh.com`, as `ssh -R remote:local`).
+    ///
+    /// # Errors
+    ///
+    /// When the server refuses (OpenSSH: `AllowStreamLocalForwarding`).
+    pub async fn forward_socket(&self, remote: &str, local: &Path) -> Result<(), SshError> {
+        self.sockets
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(remote.to_owned(), local.to_owned());
+        self.target()?
+            .streamlocal_forward(remote)
+            .await
+            .map_err(|_| SshError::Refused {
+                what: "forwarding a socket (AllowStreamLocalForwarding)".to_owned(),
+            })
     }
 
     /// Whether the target's connection has ended.
@@ -810,6 +903,19 @@ pub async fn connect(
     let count = spec.hops.len();
     let mut handles: Vec<Handle<ClientHandler>> = Vec::with_capacity(count);
     let routes = tunnel::Routes::default();
+    let sockets = Sockets::default();
+    // X11 forwarding: the cookies, before the connection (a problem is said, and the session
+    // goes on without it).
+    let x11 = match &spec.x11 {
+        Some(x11_spec) => match x11::prepare(x11_spec).await {
+            Ok(live) => Some(Arc::new(live)),
+            Err(reason) => {
+                notes(Note::Warning(format!("X11 forwarding is off: {reason}")));
+                None
+            }
+        },
+        None => None,
+    };
     for (index, hop) in spec.hops.iter().enumerate() {
         let label = hop.label();
         notes(Note::Connecting {
@@ -838,6 +944,12 @@ pub async fn connect(
                 routes.clone()
             } else {
                 tunnel::Routes::default()
+            },
+            x11: x11.clone().filter(|_| index + 1 == count),
+            sockets: if index + 1 == count {
+                Arc::clone(&sockets)
+            } else {
+                Sockets::default()
             },
         };
         let transport: Box<dyn Transport> = match handles.last() {
@@ -883,7 +995,12 @@ pub async fn connect(
         authenticate(&mut handle, hop, asker).await?;
         handles.push(handle);
     }
-    Ok(Connection { handles, routes })
+    Ok(Connection {
+        handles,
+        routes,
+        x11,
+        sockets,
+    })
 }
 
 /// The stream to the first hop: TCP, or through the proxy.

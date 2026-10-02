@@ -18,9 +18,12 @@ opensesh-core.workspace = true
 opensesh-s3.workspace = true
 opensesh-term.workspace = true
 opensesh-vault.workspace = true
+rand_core.workspace = true
 russh.workspace = true
 russh-sftp.workspace = true
 secrecy.workspace = true
+# X11 forwarding's untrusted cookie is made in a file of its own.
+tempfile.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
@@ -31,7 +34,6 @@ pageant.workspace = true
 
 [dev-dependencies]
 sha2.workspace = true
-tempfile.workspace = true
 
 [lints]
 workspace = true

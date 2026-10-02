@@ -48,6 +48,7 @@ fn spec(port: u16, password: &str, known: &std::path::Path) -> ConnectSpec {
         },
         agent_forwarding: false,
         agent_socket: None,
+        x11: None,
     }
 }
 

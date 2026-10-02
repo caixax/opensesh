@@ -593,7 +593,7 @@ impl qobject::SftpBrowser {
                 Note::Authenticating { label } => {
                     json!({ "state": "authenticating", "label": label })
                 }
-                Note::Banner(_) => return,
+                Note::Banner(_) | Note::Warning(_) => return,
             };
             let text = value.to_string();
             let _ = thread.queue(move |mut object| {

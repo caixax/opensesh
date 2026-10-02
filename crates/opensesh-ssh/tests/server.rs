@@ -1,6 +1,6 @@
 //! The SSH client against an in-process `russh` server (PLAN Sprint 7): every authentication
-//! method, host key decisions, a chain of two jump hosts, the agent, and the terminal backend
-//! with reconnection.
+//! method, host key decisions, a chain of two jump hosts, the agent, the terminal backend with
+//! reconnection, and X11 forwarding to a made-up display (Sprint 15).
 
 #![allow(
     clippy::unwrap_used,
@@ -20,6 +20,7 @@ use opensesh_ssh::copy_id::{self, Installed};
 use opensesh_ssh::prompt::{Answer, Asker, HostKeyKind, Prompt, Request};
 use opensesh_ssh::spec::{
     AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, LogSpec, Reconnect, SessionSpec,
+    X11Spec,
 };
 use opensesh_ssh::testing::{self, CODE, PASSWORD, Rules, USER};
 use opensesh_ssh::{SshError, osdetect};
@@ -93,6 +94,7 @@ fn spec(dir: &Path, hops: Vec<Hop>) -> ConnectSpec {
         },
         agent_forwarding: false,
         agent_socket: None,
+        x11: None,
     }
 }
 
@@ -661,3 +663,91 @@ fn the_terminal_backend_reconnects() {
 /// The public key "install my key" adds in the backend test.
 const INSTALLED: &str =
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC6tmVU1VE59P7TYx6UJYcZkhy7FRiLjhH6gdK9Sayyd me@laptop";
+
+#[test]
+fn x11_forwarding_reaches_the_display() {
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    let runtime = opensesh_ssh::runtime().unwrap();
+    let port = runtime.block_on(serve(Rules {
+        password: true,
+        x11: true,
+        ..Rules::default()
+    }));
+    // A made-up display at TCP 6000 + n: it notes the first message's authorization and answers.
+    let display =
+        runtime.block_on(async { tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap() });
+    let number = display.local_addr().unwrap().port() - 6000;
+    let received = Arc::new(Mutex::new(None));
+    let got = Arc::clone(&received);
+    runtime.spawn(async move {
+        let (mut stream, _) = display.accept().await.unwrap();
+        let mut header = [0_u8; 12];
+        stream.read_exact(&mut header).await.unwrap();
+        let name = usize::from(u16::from_le_bytes([header[6], header[7]]));
+        let data = usize::from(u16::from_le_bytes([header[8], header[9]]));
+        let mut rest = vec![0; name.next_multiple_of(4) + data.next_multiple_of(4)];
+        stream.read_exact(&mut rest).await.unwrap();
+        *got.lock().unwrap() = Some((name, data));
+        stream.write_all(b"display-ok").await.unwrap();
+    });
+    let dir = tempfile::tempdir().unwrap();
+    let mut connect = spec(dir.path(), vec![hop(port, password_plan(Some(PASSWORD)))]);
+    connect.x11 = Some(X11Spec {
+        display: format!("127.0.0.1:{number}"),
+        trusted: true,
+    });
+    let answers = script(|prompt| match prompt {
+        Prompt::HostKey(_) => Answer::TrustOnce,
+        other => panic!("unexpected {other:?}"),
+    });
+    let sink: backend::StatusSink = Arc::new(|_| {});
+    let (backend, events) = backend::start(
+        connect,
+        SessionSpec::default(),
+        Options::default(),
+        answers.asker,
+        sink,
+    )
+    .unwrap();
+    read_until(&events, |text, _| text.contains("test$ "));
+    // An X11 program on the server: its channel reaches the display, which answers.
+    backend.write(b"xclock\r").unwrap();
+    let (text, _) = read_until(&events, |text, _| text.contains("x11: "));
+    assert!(text.contains("x11: display-ok"), "{text:?}");
+    // The display never saw the made-up cookie: the real one (from xauth, if it has one for this
+    // display), or no authorization.
+    let (name, data) = received.lock().unwrap().unwrap();
+    assert!(
+        (name, data) == (0, 0) || (name, data) == (18, 16),
+        "{name} {data}"
+    );
+    backend.write(b"exit\r").unwrap();
+    read_until(&events, |_, all| {
+        all.iter()
+            .any(|event| matches!(event, BackendEvent::Exited(_)))
+    });
+
+    // A host without X11 forwarding: the server's channel is refused.
+    let port = runtime.block_on(serve(Rules {
+        password: true,
+        x11: true,
+        ..Rules::default()
+    }));
+    let answers = script(|prompt| match prompt {
+        Prompt::HostKey(_) => Answer::TrustOnce,
+        other => panic!("unexpected {other:?}"),
+    });
+    let (backend, events) = backend::start(
+        spec(dir.path(), vec![hop(port, password_plan(Some(PASSWORD)))]),
+        SessionSpec::default(),
+        Options::default(),
+        answers.asker,
+        Arc::new(|_| {}),
+    )
+    .unwrap();
+    read_until(&events, |text, _| text.contains("test$ "));
+    // Without x11-req the server has no cookie, so "xclock" opens nothing: the shell just echoes.
+    backend.write(b"xclock\r").unwrap();
+    let (text, _) = read_until(&events, |text, _| text.contains("xclock\r"));
+    assert!(!text.contains("x11: "), "{text:?}");
+}

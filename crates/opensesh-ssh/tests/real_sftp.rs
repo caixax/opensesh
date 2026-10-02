@@ -68,6 +68,7 @@ async fn connect(port: u16, known: &Path) -> Arc<Connection> {
         },
         agent_forwarding: false,
         agent_socket: None,
+        x11: None,
     };
     let trust: Asker = Arc::new(|question: Question| question.answer(Answer::TrustOnce));
     Arc::new(

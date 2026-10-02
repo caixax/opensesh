@@ -30,6 +30,8 @@ use crate::monitor::{self, Monitoring};
 use crate::osdetect;
 use crate::prompt::Asker;
 use crate::spec::{ConnectSpec, SessionSpec};
+use crate::waypipe;
+use crate::x11;
 
 /// What the pane shows about the connection.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -402,6 +404,11 @@ pub fn progress_notes(events: Sender<BackendEvent>, status: StatusSink) -> Notes
                 Some(Status::Authenticating { label }),
             ),
             Note::Banner(banner) => (banner.replace('\n', "\r\n"), None),
+            Note::Warning(warning) => {
+                let line = format!("\x1b[33m{warning}\x1b[0m\r\n");
+                let _ = events.try_send(BackendEvent::Output(line.into_bytes()));
+                return;
+            }
         };
         let line = format!("\x1b[2m{text}\x1b[0m\r\n");
         let _ = events.try_send(BackendEvent::Output(line.into_bytes()));
@@ -441,6 +448,28 @@ async fn once(
                 Some(Command::Shutdown) | None => return Ended::Shutdown,
             },
         }
+    };
+    // Waypipe: the client here, the server's socket forwarded to it, and the command wrapped.
+    let mut waypipe = None;
+    let mut wrapped;
+    let session = if session.waypipe {
+        match start_waypipe(&connection).await {
+            Ok(local) => {
+                wrapped = session.clone();
+                wrapped.command = Some(waypipe::server_command(
+                    local.remote(),
+                    session.command.as_deref(),
+                ));
+                waypipe = Some(local);
+                &wrapped
+            }
+            Err(reason) => {
+                notes(Note::Warning(format!("Waypipe is off: {reason}")));
+                session
+            }
+        }
+    } else {
+        session
     };
     let connection = Arc::new(connection);
     status(Status::Connected);
@@ -483,9 +512,24 @@ async fn once(
         detection
     );
     let ended = result.unwrap_or_else(|error| lost(&error));
+    drop(waypipe);
     drop(watching);
     connection.close().await;
     ended
+}
+
+/// Starts `waypipe client` here and forwards the server's socket to it, once the server is known
+/// to have `waypipe`.
+async fn start_waypipe(connection: &Connection) -> Result<waypipe::Local, String> {
+    if !waypipe::on_server(connection).await {
+        return Err("waypipe isn't installed on the server".to_owned());
+    }
+    let local = waypipe::Local::start().await?;
+    connection
+        .forward_socket(local.remote(), local.socket())
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(local)
 }
 
 /// Opens the session channel with a PTY and runs it until it ends.
@@ -514,6 +558,24 @@ async fn shell(
         )
         .await
         .map_err(|_| refused("a terminal (PTY)"))?;
+    // X11: the made-up cookie and the screen; the server then opens an `x11` channel for each
+    // program (ClientHandler carries them to the display).
+    if let Some(live) = connection.x11() {
+        let cookie = live.fake_hex();
+        if channel
+            .request_x11(
+                false,
+                false,
+                x11::MIT_MAGIC_COOKIE,
+                cookie.as_str(),
+                u32::from(live.screen()),
+            )
+            .await
+            .is_err()
+        {
+            return Err(refused("X11 forwarding"));
+        }
+    }
     // The server then opens a channel to the agent for each use (ClientHandler carries it).
     if agent_forwarding {
         channel
