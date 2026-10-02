@@ -30,6 +30,7 @@ zeroize.workspace = true
 pageant.workspace = true
 
 [dev-dependencies]
+sha2.workspace = true
 tempfile.workspace = true
 
 [lints]
