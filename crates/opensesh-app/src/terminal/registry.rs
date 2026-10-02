@@ -16,6 +16,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
+use opensesh_proto_misc::serial::SerialControl;
 use opensesh_ssh::backend::{KeyInstall, Live, Status as SshStatus};
 use opensesh_ssh::connect::Connection;
 use opensesh_ssh::monitor::{HostInfo, Monitoring};
@@ -169,6 +170,8 @@ struct SessionState {
     queued: bool,
     /// The controls of the recording this session plays, if it plays one.
     player: Option<PlayerControl>,
+    /// The controls of the serial port this session is on, if it is one.
+    serial: Option<SerialControl>,
 }
 
 impl SessionState {
@@ -327,6 +330,12 @@ impl SessionEntry {
             .live
             .as_ref()
             .map(|live| Arc::clone(&live.0))
+    }
+
+    /// The controls of this session's serial port; `None` for other sessions.
+    #[must_use]
+    pub fn serial(&self) -> Option<SerialControl> {
+        lock(&self.state).serial.clone()
     }
 
     /// The controls of the recording this session plays; `None` for other sessions.
@@ -540,6 +549,30 @@ pub fn open_backend(
 ) -> Result<Arc<SessionEntry>, StartError> {
     open_with(id, move |notify, _state| {
         let (backend, events) = start(options.size)?;
+        let config = SessionConfig {
+            size: options.size,
+            palette: options.palette,
+            options: options.options,
+            ..SessionConfig::default()
+        };
+        Ok(Session::start(backend, events, config, notify)?)
+    })
+}
+
+/// The session of pane `id`, starting a serial session for it with `start` if there is none
+/// yet (its controls are kept for the pane's hex view and breaks).
+///
+/// # Errors
+///
+/// [`StartError`] if the backend or the engine thread could not be started.
+pub fn open_serial(
+    id: i32,
+    options: LocalOptions,
+    start: impl FnOnce() -> Result<opensesh_proto_misc::serial::Started, StartError>,
+) -> Result<Arc<SessionEntry>, StartError> {
+    open_with(id, move |notify, state| {
+        let (backend, events, control) = start()?;
+        lock(state).serial = Some(control);
         let config = SessionConfig {
             size: options.size,
             palette: options.palette,

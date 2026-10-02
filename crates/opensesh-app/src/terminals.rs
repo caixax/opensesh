@@ -3,13 +3,14 @@
 //! module turns it into what the backend needs, and starts the session.
 //!
 //! A test run (a smoke test or screenshots) never reaches the network or a device: telnet goes
-//! to its in-process test server.
+//! to its in-process test server, and a serial port is a loopback plug.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::Duration;
 
-use opensesh_core::hosts::{Host, Protocol, target};
+use opensesh_core::hosts::{Host, Protocol, SerialOptions, target};
+use opensesh_proto_misc::serial::{self, SerialSpec};
 use opensesh_proto_misc::telnet::{self, TelnetSpec};
 
 use crate::bridge::app_info::is_test_run;
@@ -32,6 +33,8 @@ pub fn set_telnet_test_server(port: u16) {
 pub enum Start {
     /// A telnet connection.
     Telnet(TelnetSpec),
+    /// A serial port.
+    Serial(SerialSpec),
 }
 
 /// What the pane of saved host `host_id`, or of quick-connect `target_text`, starts, when it is
@@ -56,6 +59,7 @@ pub fn for_pane(host_id: &str, target_text: &str, term: &str) -> Option<Result<S
     };
     match host.protocol {
         Protocol::Telnet => Some(telnet_for(&host, &library.file, term)),
+        Protocol::Serial => Some(serial_for(&host, &library.file)),
         _ => None,
     }
 }
@@ -94,6 +98,36 @@ fn telnet_for(
     Ok(Start::Telnet(spec))
 }
 
+fn serial_for(host: &Host, file: &opensesh_core::hosts::HostsFile) -> Result<Start, String> {
+    let device = host.address.trim().to_owned();
+    if device.is_empty() {
+        return Err("the host has no device".to_owned());
+    }
+    let options = &host.serial;
+    let resolved = file.resolve(host);
+    Ok(Start::Serial(SerialSpec {
+        device,
+        baud: options.baud.unwrap_or(SerialOptions::DEFAULT_BAUD),
+        data_bits: options.data_bits.unwrap_or(8),
+        parity: options.parity.unwrap_or_default(),
+        stop_bits: options.stop_bits.unwrap_or(1),
+        flow_control: options.flow_control.unwrap_or_default(),
+        newline: options.newline.unwrap_or_default(),
+        local_echo: options.local_echo.unwrap_or(false),
+        log: if is_test_run() {
+            None
+        } else {
+            services::get().and_then(|services| {
+                crate::ssh::session_log(
+                    services.paths.data_dir(),
+                    &host.name,
+                    resolved.session_log(),
+                )
+            })
+        },
+    }))
+}
+
 /// Starts the session of pane `id`.
 ///
 /// # Errors
@@ -104,5 +138,16 @@ pub fn open(id: i32, start: Start, options: LocalOptions) -> Result<Arc<SessionE
         Start::Telnet(spec) => {
             registry::open_backend(id, options, |size| Ok(telnet::start(spec, size)?))
         }
+        Start::Serial(spec) => registry::open_serial(id, options, || {
+            // A test run never opens a real device.
+            if is_test_run() {
+                Ok(serial::start_with(
+                    spec,
+                    || Ok(serial::testing::loopback()),
+                )?)
+            } else {
+                Ok(serial::start(spec)?)
+            }
+        }),
     }
 }

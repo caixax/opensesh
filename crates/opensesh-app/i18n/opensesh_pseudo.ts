@@ -2230,6 +2230,22 @@
         <translation>[Þŕöťöçöĺ ~~~]</translation>
     </message>
     <message>
+        <source>Detected ports</source>
+        <translation>[Ďéťéçťéď þöŕťš ~~~~~]</translation>
+    </message>
+    <message>
+        <source>None found. Plug the device in: the list refreshes by itself.</source>
+        <translation>[Ñöñé ƒöüñď. Þĺüĝ ťĥé ďévíçé íñ: ťĥé ĺíšť ŕéƒŕéšĥéš bý íťšéĺƒ. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose one to use it as the device.</source>
+        <translation>[Çĥööšé öñé ťö üšé íť áš ťĥé ďévíçé. ~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose a port</source>
+        <translation>[Çĥööšé á þöŕť ~~~~]</translation>
+    </message>
+    <message>
         <source>Telnet sends everything in clear, passwords too: anyone on the network path can read it. Use SSH where the device has it.</source>
         <translation>[Ťéĺñéť šéñďš évéŕýťĥíñĝ íñ çĺéáŕ, þáššŵöŕďš ťöö: áñýöñé öñ ťĥé ñéťŵöŕķ þáťĥ çáñ ŕéáď íť. Üšé ŠŠĤ ŵĥéŕé ťĥé ďévíçé ĥáš íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2596,6 +2612,38 @@
     <message>
         <source>RTS/CTS</source>
         <translation>[ŔŤŠ/ÇŤŠ ~~~]</translation>
+    </message>
+    <message>
+        <source>Enter sends</source>
+        <translation>[Éñťéŕ šéñďš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Default (CR)</source>
+        <translation>[Ďéƒáüĺť (ÇŔ) ~~~~]</translation>
+    </message>
+    <message>
+        <source>CR</source>
+        <translation>[ÇŔ ~]</translation>
+    </message>
+    <message>
+        <source>LF</source>
+        <translation>[ĹF ~]</translation>
+    </message>
+    <message>
+        <source>CR LF</source>
+        <translation>[ÇŔ ĹF ~~]</translation>
+    </message>
+    <message>
+        <source>Local echo</source>
+        <translation>[Ĺöçáĺ éçĥö ~~~]</translation>
+    </message>
+    <message>
+        <source>Default (off)</source>
+        <translation>[Ďéƒáüĺť (öƒƒ) ~~~~]</translation>
+    </message>
+    <message>
+        <source>Shows what you type, for devices that don&apos;t send it back.</source>
+        <translation>[Šĥöŵš ŵĥáť ýöü ťýþé, ƒöŕ ďévíçéš ťĥáť ďöñ&apos;ť šéñď íť báçķ. ~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>No advanced options for this protocol yet.</source>
@@ -9864,6 +9912,14 @@
     <message>
         <source>Run a snippet…</source>
         <translation>[Ŕüñ á šñíþþéť… ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Show what arrives in hexadecimal</source>
+        <translation>[Šĥöŵ ŵĥáť áŕŕívéš íñ ĥéxáďéçímáĺ ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Send break</source>
+        <translation>[Šéñď bŕéáķ ~~~]</translation>
     </message>
     <message>
         <source>Highlight keywords</source>

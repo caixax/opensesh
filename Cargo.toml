@@ -130,6 +130,10 @@ zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate
 resvg = { version = "0.48.1", default-features = false }
 ico = "0.5.0"
 
+# Serial ports (Sprint 12, opensesh-proto-misc). Without the default `libudev` feature: ports are
+# found in /sys/class/tty on Linux, so the packages don't build against libudev.
+serialport = { version = "4.10.1", default-features = false }
+
 # Windows only (opensesh-app: console attach and error message box)
 windows-sys = "0.61.2"
 # The icon and version information inside OpenSesh.exe (opensesh-app's build script).

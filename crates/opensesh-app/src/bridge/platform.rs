@@ -28,6 +28,7 @@ pub mod qobject {
         #[qproperty(bool, tiling, READ, CONSTANT)]
         #[qproperty(bool, debug_build, cxx_name = "debugBuild", READ, CONSTANT)]
         #[qproperty(QString, shells, READ, NOTIFY = shells_changed)]
+        #[qproperty(QString, serial_ports, cxx_name = "serialPorts", READ, NOTIFY = serial_ports_changed)]
         type Platform = super::PlatformRust;
 
         /// `shells` changed (found, or found again).
@@ -40,6 +41,17 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "refreshShells"]
         fn refresh_shells(self: Pin<&mut Self>);
+
+        /// `serialPorts` changed.
+        #[qsignal]
+        #[cxx_name = "serialPortsChanged"]
+        fn serial_ports_changed(self: Pin<&mut Self>);
+
+        /// Lists the serial ports again (in the background; `serialPortsChanged` follows when
+        /// they changed). The list is JSON: `[{name, description}]`.
+        #[qinvokable]
+        #[cxx_name = "refreshSerialPorts"]
+        fn refresh_serial_ports(self: Pin<&mut Self>);
 
         /// Resolves a `windowDecorations` setting (`auto` depends on the desktop).
         #[qinvokable]
@@ -130,6 +142,7 @@ pub struct PlatformRust {
     tiling: bool,
     debug_build: bool,
     shells: QString,
+    serial_ports: QString,
     desktop: DesktopInfo,
 }
 
@@ -142,6 +155,7 @@ impl Default for PlatformRust {
             tiling: desktop.tiling,
             debug_build: cfg!(debug_assertions),
             shells: QString::from("[]"),
+            serial_ports: QString::from("[]"),
             desktop,
         }
     }
@@ -239,6 +253,57 @@ impl qobject::Platform {
             });
         if let Err(error) = spawned {
             tracing::warn!("could not look for the local shells: {error}");
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn refresh_serial_ports(self: Pin<&mut Self>) {
+        let qt_thread = self.qt_thread();
+        let screenshots = crate::bridge::app_info::screenshot_run();
+        let spawned = std::thread::Builder::new()
+            .name("opensesh-ports".to_owned())
+            .spawn(move || {
+                let ports = if screenshots {
+                    // Screenshots show sample ports, never this computer's.
+                    vec![
+                        opensesh_proto_misc::serial::PortInfo {
+                            name: if cfg!(windows) {
+                                "COM3"
+                            } else {
+                                "/dev/ttyUSB0"
+                            }
+                            .to_owned(),
+                            description: "FTDI FT232R USB UART".to_owned(),
+                        },
+                        opensesh_proto_misc::serial::PortInfo {
+                            name: if cfg!(windows) {
+                                "COM4"
+                            } else {
+                                "/dev/ttyACM0"
+                            }
+                            .to_owned(),
+                            description: "Arduino Uno".to_owned(),
+                        },
+                    ]
+                } else {
+                    opensesh_proto_misc::serial::ports()
+                };
+                let text = serde_json::Value::Array(
+                    ports
+                        .iter()
+                        .map(|port| json!({ "name": port.name, "description": port.description }))
+                        .collect(),
+                )
+                .to_string();
+                let _ = qt_thread.queue(move |mut object| {
+                    if object.serial_ports.to_string() != text {
+                        object.as_mut().rust_mut().serial_ports = QString::from(&text);
+                        object.serial_ports_changed();
+                    }
+                });
+            });
+        if let Err(error) = spawned {
+            tracing::warn!("could not list the serial ports: {error}");
         }
     }
 

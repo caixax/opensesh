@@ -16,6 +16,7 @@ opensesh-core.workspace = true
 opensesh-ssh.workspace = true
 opensesh-term.workspace = true
 serde_json.workspace = true
+serialport.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true

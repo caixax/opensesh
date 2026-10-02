@@ -135,8 +135,8 @@ impl Protocol {
         match self {
             Self::Ssh | Self::Local => None,
             Self::Sftp => Some(8),
-            Self::Telnet => None,
-            Self::Serial | Self::Mosh | Self::Docker | Self::Kube => Some(12),
+            Self::Telnet | Self::Serial => None,
+            Self::Mosh | Self::Docker | Self::Kube => Some(12),
             Self::Rdp => Some(13),
             Self::Vnc => Some(14),
         }
@@ -202,6 +202,19 @@ pub enum FlowControl {
     Software,
     /// RTS/CTS.
     Hardware,
+}
+
+/// What Enter sends on a serial line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Newline {
+    /// A carriage return (what most devices expect, and PuTTY's default).
+    #[default]
+    Cr,
+    /// A line feed.
+    Lf,
+    /// Both.
+    Crlf,
 }
 
 /// A session log.
@@ -333,9 +346,18 @@ pub struct SerialOptions {
     /// Flow control.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flow_control: Option<FlowControl>,
+    /// What Enter sends.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub newline: Option<Newline>,
+    /// Show what is typed (for devices that don't echo).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_echo: Option<bool>,
 }
 
 impl SerialOptions {
+    /// The speed when none is set.
+    pub const DEFAULT_BAUD: u32 = 115_200;
+
     /// Whether nothing is set.
     #[must_use]
     pub fn is_empty(&self) -> bool {

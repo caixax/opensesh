@@ -1749,20 +1749,21 @@ Item {
         const timeout = 15000;
         let deadline = 0;
         let pane = null;
+        const screen = () => pane ? pane.terminal.screenText().replace(/\n/g, "") : "";
         const wait = (what, condition, next) => {
             deadline = Date.now() + timeout;
             const poll = () => {
                 if (condition())
                     return next ? next() : [];
                 if (Date.now() > deadline) {
-                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what);
+                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what + "; the screen ends with: "
+                               + screen().trim().slice(-300));
                     return [];
                 }
                 return [poll];
             };
             return [poll];
         };
-        const screen = () => pane ? pane.terminal.screenText().replace(/\n/g, "") : "";
         return [
             () => {
                 if (AppInfo.startTelnetTestServer() <= 0)
@@ -1790,6 +1791,35 @@ Item {
                                 shell.closeTab(shell.currentTab);
                                 return [];
                             });
+            },
+            // A serial port (a loopback plug in a test run): what is typed comes back, then in
+            // hexadecimal, then a break.
+            () => {
+                if (!shell.connectTarget("serial://COM7?baud=9600", "tab"))
+                    smoke.fail("serial quick connect opened nothing");
+                pane = shell.currentTerminal;
+                if (!pane || pane.kind !== "serial")
+                    smoke.fail("the pane isn't a serial pane");
+                return wait("the serial device's greeting", () => screen().indexOf("OpenSesh serial test device") >= 0
+                            && screen().indexOf("9600 8N1") >= 0);
+            },
+            () => {
+                pane.terminal.sendText("ping\r");
+                return wait("the loopback's echo", () => screen().indexOf("ping") >= 0);
+            },
+            () => {
+                if (!pane.terminal.serialCommand("hex", true) || !pane.terminal.serialHex())
+                    smoke.fail("the hexadecimal view didn't turn on");
+                pane.terminal.sendText("Hi");
+                return wait("the bytes in hexadecimal", () => screen().indexOf("48 69") >= 0 && screen().indexOf("|Hi|") >= 0);
+            },
+            () => {
+                pane.terminal.serialCommand("break", true);
+                return wait("the break", () => screen().indexOf("Break sent.") >= 0, () => {
+                    console.info("smoke test: a serial port echoed what was typed, showed it in hexadecimal and sent a break");
+                    shell.closeTab(shell.currentTab);
+                    return [];
+                });
             }
         ];
     }

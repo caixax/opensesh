@@ -302,6 +302,8 @@ OsDialog {
                                 switch (dialog.protocol) {
                                 case "ssh":
                                 case "local":
+                                case "telnet":
+                                case "serial":
                                     return "";
                                 case "sftp":
                                     return qsTr("Saved now; the file browser arrives in Sprint 8.");
@@ -316,6 +318,8 @@ OsDialog {
                         }
 
                         EditorTextRow {
+                            id: addressRow
+
                             editor: dialog
                             path: "address"
                             inheritKey: ""
@@ -323,6 +327,44 @@ OsDialog {
                             label: dialog.protocol === "serial" ? qsTr("Device") : dialog.protocol === "docker" ? qsTr("Container")
                                                                                                               : dialog.protocol === "kube" ? qsTr("Pod") : qsTr("Address")
                             placeholder: dialog.protocol === "serial" ? qsTr("/dev/ttyUSB0 or COM3") : qsTr("host name or IP address")
+                        }
+
+                        OsFormRow {
+                            id: portRow
+
+                            readonly property var ports: JSON.parse(Platform.serialPorts || "[]")
+
+                            width: parent.width
+                            visible: dialog.protocol === "serial"
+                            label: qsTr("Detected ports")
+                            helpText: ports.length === 0 ? qsTr("None found. Plug the device in: the list refreshes by itself.")
+                                                         : qsTr("Choose one to use it as the device.")
+
+                            OsComboBox {
+                                width: parent.width
+                                enabled: !dialog.readOnly && portRow.ports.length > 0
+                                model: portRow.ports.map(port => ({
+                                    text: port.description.length > 0 ? qsTr("%1 (%2)").arg(port.name).arg(port.description) : port.name
+                                }))
+                                textRole: "text"
+                                currentIndex: dialog.revision >= 0 ? portRow.ports.findIndex(port => port.name === dialog.value("address")) : -1
+                                displayText: currentIndex < 0 ? qsTr("Choose a port") : currentText
+                                Accessible.name: portRow.label
+
+                                onActivated: index => {
+                                    dialog.setValue("address", portRow.ports[index].name);
+                                    addressRow.show();
+                                }
+                            }
+                        }
+
+                        // The detected ports, read again every 2 s while a serial host is edited.
+                        Timer {
+                            interval: 2000
+                            repeat: true
+                            triggeredOnStart: true
+                            running: dialog.visible && dialog.protocol === "serial"
+                            onTriggered: Platform.refreshSerialPorts()
                         }
 
                         EditorTextRow {
@@ -600,7 +642,7 @@ OsDialog {
                         EditorChoiceRow {
                             editor: dialog
                             path: "ssh.log"
-                            visible: dialog.protocol === "ssh"
+                            visible: ["ssh", "telnet", "serial"].indexOf(dialog.protocol) >= 0
                             label: qsTr("Session log")
                             options: [{ text: qsTr("Off"), value: "off" }, { text: qsTr("Text"), value: "text" },
                                 { text: qsTr("Raw (with escape codes)"), value: "raw" }]
@@ -679,9 +721,29 @@ OsDialog {
                                 { text: qsTr("XON/XOFF"), value: "software" }, { text: qsTr("RTS/CTS"), value: "hardware" }]
                         }
 
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "serial.newline"
+                            inherit: false
+                            visible: dialog.protocol === "serial"
+                            label: qsTr("Enter sends")
+                            options: [{ text: qsTr("Default (CR)"), value: undefined }, { text: qsTr("CR"), value: "cr" },
+                                { text: qsTr("LF"), value: "lf" }, { text: qsTr("CR LF"), value: "crlf" }]
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "serial.local_echo"
+                            inherit: false
+                            visible: dialog.protocol === "serial"
+                            label: qsTr("Local echo")
+                            options: [{ text: qsTr("Default (off)"), value: undefined }].concat(dialog.onOff)
+                            helpText: qsTr("Shows what you type, for devices that don't send it back.")
+                        }
+
                         OsText {
                             width: parent.width
-                            visible: ["ssh", "serial"].indexOf(dialog.protocol) < 0
+                            visible: ["ssh", "telnet", "serial"].indexOf(dialog.protocol) < 0
                             text: qsTr("No advanced options for this protocol yet.")
                             muted: true
                         }
