@@ -219,13 +219,8 @@ pub fn read(text: &str) -> Result<(Bundle, Vec<String>), BundleError> {
 ///
 /// When it can't be read, is too large, or isn't a bundle.
 pub fn load(path: &Path) -> Result<(Bundle, Vec<String>), BundleError> {
-    let size = std::fs::metadata(path)
-        .map_err(|error| BundleError::Toml(error.to_string()))?
-        .len();
-    if size > MAX_SIZE {
-        return Err(BundleError::Toml("the file is too large".to_owned()));
-    }
-    let bytes = std::fs::read(path).map_err(|error| BundleError::Toml(error.to_string()))?;
+    let bytes = crate::common::read_limited(path, MAX_SIZE)
+        .map_err(|error| BundleError::Toml(error.to_string()))?;
     read(&crate::common::decode_text(&bytes))
 }
 

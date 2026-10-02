@@ -148,6 +148,44 @@ pub(crate) fn folder_path(text: &str, separator: char) -> Vec<String> {
         .collect()
 }
 
+/// Largest file an importer reads (session lists are kilobytes; a CSV of 100,000 hosts is a few
+/// megabytes).
+pub const MAX_FILE: u64 = 16 * 1024 * 1024;
+
+/// Reads `path` when it is a regular file of at most `max` bytes: a device or a FIFO (`Include
+/// /dev/zero`, a pipe named `x.remmina`) would never end, and a huge file isn't a session list.
+///
+/// # Errors
+///
+/// When it can't be read, isn't a regular file, or is larger than `max`.
+pub fn read_limited(path: &Path, max: u64) -> std::io::Result<Vec<u8>> {
+    use std::io::{Error, ErrorKind, Read};
+
+    let metadata = std::fs::metadata(path)?;
+    if !metadata.is_file() {
+        return Err(Error::new(ErrorKind::InvalidInput, "not a regular file"));
+    }
+    if metadata.len() > max {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            format!("larger than {} MiB", max / (1024 * 1024)),
+        ));
+    }
+    // The file may grow between the check and the read: never more than `max`, plus one byte
+    // to tell.
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)?
+        .take(max + 1)
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > max {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            format!("larger than {} MiB", max / (1024 * 1024)),
+        ));
+    }
+    Ok(bytes)
+}
+
 /// Text from a file another program wrote: UTF-16 with a byte order mark (`regedit`'s `.reg`
 /// files), UTF-8 (with or without a mark), else Windows-1252 (MobaXterm, older PuTTY).
 #[must_use]
@@ -295,6 +333,22 @@ mod tests {
         assert_eq!(percent_decode("My%20Server%2Fone%"), "My Server/one%");
         assert_eq!(percent_decode("caf%C3%A9"), "café");
         assert_eq!(percent_decode("caf%E9"), "café");
+    }
+
+    #[test]
+    fn only_regular_files_of_a_bounded_size_are_read() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("a.csv");
+        std::fs::write(&file, "x".repeat(2048)).unwrap();
+        assert_eq!(read_limited(&file, 4096).unwrap().len(), 2048);
+        assert!(read_limited(&file, 1024).is_err());
+        assert!(read_limited(dir.path(), MAX_FILE).is_err());
+        assert!(read_limited(&dir.path().join("missing"), MAX_FILE).is_err());
+        #[cfg(unix)]
+        assert_eq!(
+            read_limited(Path::new("/dev/zero"), MAX_FILE).map_err(|e| e.kind()),
+            Err(std::io::ErrorKind::InvalidInput)
+        );
     }
 
     #[test]

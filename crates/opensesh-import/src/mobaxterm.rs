@@ -31,7 +31,7 @@ const SFTP: &str = "7";
 
 /// Reads a `.mxtsessions`, `.moba` or `MobaXterm.ini` file.
 pub fn load(path: &Path) -> Imported {
-    match std::fs::read(path) {
+    match crate::common::read_limited(path, crate::common::MAX_FILE) {
         Ok(bytes) => parse_str(&decode_text(&bytes), path),
         Err(error) => Imported {
             warnings: vec![ImportWarning::new(

@@ -145,7 +145,7 @@ pub fn load_dir(dir: &Path) -> Imported {
         .filter_map(|path| {
             let escaped = path.file_name()?.to_string_lossy().into_owned();
             // A small file the user asked to import.
-            let bytes = std::fs::read(&path).ok()?;
+            let bytes = crate::common::read_limited(&path, crate::common::MAX_FILE).ok()?;
             Some(parse_session_file(
                 &percent_decode(&escaped),
                 &decode_text(&bytes),
@@ -176,7 +176,7 @@ pub fn parse_session_file(name: &str, text: &str, origin: &Path) -> RawSession {
 /// Reads a `.reg` file exported with `regedit`.
 #[must_use]
 pub fn load_reg(path: &Path) -> Imported {
-    match std::fs::read(path) {
+    match crate::common::read_limited(path, crate::common::MAX_FILE) {
         Ok(bytes) => convert(parse_reg(&decode_text(&bytes), path)),
         Err(error) => Imported {
             warnings: vec![ImportWarning::new(

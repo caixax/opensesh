@@ -317,7 +317,12 @@ impl Parser<'_> {
     }
 
     fn read_file(&mut self, path: &Path, depth: usize, chain: &mut Vec<PathBuf>) {
-        let text = match std::fs::read_to_string(path) {
+        // Regular files only, at most 1 MiB: `Include /dev/zero` must not hang the import.
+        let read = crate::common::read_limited(path, 1024 * 1024).and_then(|bytes| {
+            String::from_utf8(bytes)
+                .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "not UTF-8"))
+        });
+        let text = match read {
             Ok(text) => text,
             Err(error) => {
                 self.warn(path, 0, format!("could not read: {error}"));

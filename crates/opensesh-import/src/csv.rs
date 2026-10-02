@@ -152,7 +152,7 @@ pub fn guess_columns(headers: &[String]) -> Vec<Field> {
 /// When the file can't be read.
 pub fn load(path: &Path) -> std::io::Result<Table> {
     // A file the user asked to import.
-    let bytes = std::fs::read(path)?;
+    let bytes = crate::common::read_limited(path, crate::common::MAX_FILE)?;
     Ok(parse(&decode_text(&bytes)))
 }
 

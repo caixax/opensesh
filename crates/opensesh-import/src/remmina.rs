@@ -67,7 +67,7 @@ pub fn load(path: &Path) -> Imported {
 
 fn load_file(path: &Path) -> Imported {
     // A small file the user asked to import.
-    match std::fs::read(path) {
+    match crate::common::read_limited(path, crate::common::MAX_FILE) {
         Ok(bytes) => parse_str(&decode_text(&bytes), path),
         Err(error) => Imported {
             warnings: vec![ImportWarning::new(
