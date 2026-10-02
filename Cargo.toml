@@ -108,7 +108,7 @@ ssh-encoding = "0.2.0"
 base64ct = { version = "1.8.3", features = ["alloc"] }
 # PuTTY .ppk keys (v2: SHA-1 and HMAC-SHA-1; v3: Argon2 and HMAC-SHA-256; both AES-256-CBC).
 aes = "0.8.4"
-cbc = "0.1.2"
+cbc = "0.2.1"
 hmac = "0.12.1"
 sha1 = "0.10.7"
 # The system keyring: Credential Manager on Windows, Secret Service on Linux (ADR 0023).
