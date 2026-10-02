@@ -308,6 +308,7 @@ jobs:
           OPENSESH_TEST_XRDP_USER: opensesh-rdp
           OPENSESH_TEST_XRDP_PASSWORD: opensesh-rdp-test
           OPENSESH_TEST_XRDP_CLIPBOARD: OpenSesh xrdp clipboard
+          RUST_LOG: info,ironrdp_session=debug,ironrdp_dvc=debug,ironrdp_displaycontrol=debug
         run: cargo test --locked --manifest-path rdp/Cargo.toml --test xrdp -- --nocapture
       - name: Server logs
         if: failure()

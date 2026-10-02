@@ -197,6 +197,10 @@ fn config(
     }
 }
 
+/// How long a server has to apply a resize asked through display control before the helper
+/// connects again at the new size.
+const RESIZE_WAIT: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// The session's way out to the app.
 #[derive(Debug, Clone)]
 pub struct Out(pub Sender<FromHelper>);
@@ -465,8 +469,31 @@ async fn active(
     .await;
     let (mut reader, mut writer) = split_tokio_framed(framed);
     let mut database = Database::new();
+    // A resize asked through display control, and until when the server has to apply it: some
+    // servers accept the request and keep their size (xrdp without RandR resizing).
+    let mut resize_wait: Option<(tokio::time::Instant, u16, u16)> = None;
     loop {
+        let resize_deadline = resize_wait.map_or_else(
+            || tokio::time::Instant::now() + RESIZE_WAIT,
+            |(deadline, _, _)| deadline,
+        );
         let outputs = tokio::select! {
+            () = tokio::time::sleep_until(resize_deadline), if resize_wait.is_some() => {
+                let Some((_, width, height)) = resize_wait.take() else { continue };
+                if (image.width(), image.height()) == (width, height) {
+                    continue;
+                }
+                // Not applied: connect again at that size.
+                tracing::info!("resize: the server kept its size, connecting again at {width}x{height}");
+                if let Ok(outputs) = stage.graceful_shutdown() {
+                    for output in outputs {
+                        if let ActiveStageOutput::ResponseFrame(frame) = output {
+                            let _ = writer.write_all(&frame).await;
+                        }
+                    }
+                }
+                return Ended::Resize(width, height);
+            },
             pdu = reader.read_pdu() => match pdu {
                 Ok((action, payload)) => match stage.process(&mut image, action, &payload) {
                     Ok(outputs) => outputs,
@@ -505,7 +532,14 @@ async fn active(
                         settings.height = u16::try_from(height).unwrap_or(u16::MAX);
                         let scale = (settings.scale_factor > 100).then_some(settings.scale_factor);
                         match stage.encode_resize(width, height, scale, None) {
-                            Some(Ok(frame)) => vec![ActiveStageOutput::ResponseFrame(frame)],
+                            Some(Ok(frame)) => {
+                                resize_wait = Some((
+                                    tokio::time::Instant::now() + RESIZE_WAIT,
+                                    settings.width,
+                                    settings.height,
+                                ));
+                                vec![ActiveStageOutput::ResponseFrame(frame)]
+                            }
                             Some(Err(error)) => {
                                 tracing::info!("resize: {error}");
                                 Vec::new()

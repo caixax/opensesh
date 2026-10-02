@@ -72,6 +72,11 @@ async fn a_real_xrdp_server() {
     let Ok(server) = std::env::var("OPENSESH_TEST_XRDP") else {
         return;
     };
+    // RUST_LOG (set in CI) shows the session; xrdp has no NLA, so no NTLM messages.
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_test_writer()
+        .try_init();
     let (address, port) = server
         .rsplit_once(':')
         .expect("OPENSESH_TEST_XRDP is host:port");
