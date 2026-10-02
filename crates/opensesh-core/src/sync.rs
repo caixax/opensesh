@@ -271,6 +271,32 @@ fn record_key(arrays: &[&[Value]]) -> Option<&'static str> {
     })
 }
 
+/// Whether two values are the same, `nan` included (`NaN != NaN` would make a merge see a
+/// conflict in a value nobody changed; found by fuzzing, Sprint 17).
+fn same(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Float(x), Value::Float(y)) => x == y || (x.is_nan() && y.is_nan()),
+        (Value::Array(x), Value::Array(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(a, b)| same(a, b))
+        }
+        (Value::Table(x), Value::Table(y)) => {
+            x.len() == y.len()
+                && x.iter()
+                    .all(|(key, value)| y.get(key).is_some_and(|other| same(value, other)))
+        }
+        _ => a == b,
+    }
+}
+
+/// [`same`] for values that may be missing.
+fn same_opt(a: Option<&Value>, b: Option<&Value>) -> bool {
+    match (a, b) {
+        (Some(a), Some(b)) => same(a, b),
+        (None, None) => true,
+        _ => false,
+    }
+}
+
 fn record_id<'a>(item: &'a Value, key: &str) -> &'a str {
     item.get(key).and_then(Value::as_str).unwrap_or_default()
 }
@@ -317,10 +343,10 @@ fn merge_value(
     theirs: Option<&Value>,
     conflicts: &mut Vec<Conflict>,
 ) -> Option<Value> {
-    if ours == theirs || theirs == base {
+    if same_opt(ours, theirs) || same_opt(theirs, base) {
         return ours.cloned();
     }
-    if ours == base {
+    if same_opt(ours, base) {
         return theirs.cloned();
     }
     match (ours, theirs) {
@@ -406,7 +432,7 @@ fn merge_records(
             // Added here.
             (None, None) => out.push(item.clone()),
             // Removed there, unchanged here.
-            (None, Some(base_item)) if base_item == item => {}
+            (None, Some(base_item)) if same(base_item, item) => {}
             // Removed there, changed here: kept.
             (None, Some(_)) => {
                 conflict(item);
@@ -421,7 +447,7 @@ fn merge_records(
         }
         match base_ids.get(id) {
             // Removed here, unchanged there.
-            Some(base_item) if base_item == item => continue,
+            Some(base_item) if same(base_item, item) => continue,
             // Removed here, changed there: kept.
             Some(_) => conflict(item),
             // Added there.
@@ -483,7 +509,7 @@ pub fn differences(here: &Table, there: &Table) -> Vec<Difference> {
     keys.extend(there.keys().filter(|key| !here.contains_key(*key)));
     for key in keys {
         let (ours, theirs) = (here.get(key), there.get(key));
-        if ours == theirs {
+        if same_opt(ours, theirs) {
             continue;
         }
         let arrays = (
@@ -516,7 +542,7 @@ pub fn differences(here: &Table, there: &Table) -> Vec<Difference> {
             let other = theirs.iter().find(|other| record_id(other, record) == id);
             let change = match other {
                 None => Change::OnlyHere,
-                Some(other) if other == item => continue,
+                Some(other) if same(other, item) => continue,
                 Some(_) => Change::Different,
             };
             out.push(Difference {
@@ -981,6 +1007,16 @@ address = "c.lan"
         fs::write(&other, "x = 1\n").unwrap();
         write_merging(&other, b"y = 2\n", 0, &one).unwrap();
         assert_eq!(fs::read_to_string(&other).unwrap(), "y = 2\n");
+    }
+
+    #[test]
+    fn nan_is_the_same_as_itself() {
+        // Found by fuzzing: a `nan` nobody changed was a conflict on every merge.
+        let merged = merge3("", "a = nan\nb = [nan]\n", "").unwrap();
+        let again = merge3(&merged.text, &merged.text, &merged.text).unwrap();
+        assert_eq!(again.conflicts, []);
+        let table: Table = merged.text.parse().unwrap();
+        assert_eq!(differences(&table, &table), []);
     }
 
     #[test]
