@@ -707,6 +707,12 @@ pub fn parse(text: &str) -> Result<Target, TargetError> {
     {
         target.port = Some(parse_port(&word)?);
     }
+    // `vnc://host:1`: a display number, as VNC viewers read it (display 1 is port 5901).
+    if target.protocol == Protocol::Vnc
+        && let Some(display) = target.port.filter(|port| *port < 100)
+    {
+        target.port = Some(5900 + display);
+    }
     if let Some(extra) = positional.next() {
         return Err(TargetError::Extra(extra));
     }
@@ -1025,6 +1031,8 @@ mod tests {
         assert_eq!((t.protocol, t.host.as_str()), (Protocol::Rdp, "win-01"));
         assert_eq!(t.to_string(), "rdp://Administrator@win-01");
         assert_eq!(target("vnc://desk:5901").port, Some(5901));
+        // A display number, as VNC viewers take it.
+        assert_eq!(target("vnc://desk:1").port, Some(5901));
         assert_eq!(
             target("sftp://me%40corp@files").user.as_deref(),
             Some("me@corp")
