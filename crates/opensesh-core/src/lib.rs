@@ -5,6 +5,7 @@
 #[macro_use]
 mod macros;
 
+pub mod command_line;
 pub mod config;
 pub mod desktop;
 pub mod fsutil;

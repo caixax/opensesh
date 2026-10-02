@@ -495,6 +495,15 @@ pub fn valid_term(term: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b"-_.+".contains(&b))
 }
 
+fn shell(value: &String) -> Result<(), String> {
+    if value.trim().is_empty() {
+        return Ok(());
+    }
+    crate::command_line::split(value)
+        .map(|_| ())
+        .map_err(|error| format!("`{value}`: {error}"))
+}
+
 fn term(value: &String) -> Result<(), String> {
     if valid_term(value) {
         Ok(())
@@ -749,6 +758,9 @@ terminal_settings! {
     osc52: Osc52Access = Osc52Access::Off, check any;
 
     // ---- Behavior
+    /// The shell a local terminal runs, as a command line (`crate::command_line`); empty for
+    /// the user's own shell. Ignored by connections to servers.
+    shell: String = String::new(), check shell;
     /// What the bell does.
     bell: BellStyle = BellStyle::Visual, check any;
     /// `TERM` for new terminals.
@@ -999,6 +1011,31 @@ mod tests {
             );
         }
         assert_eq!(layer.answerback.as_deref(), Some("OpenSesh"));
+    }
+
+    #[test]
+    fn a_shell_is_a_command_line() {
+        let mut layer = TerminalOverrides::default();
+        for good in [
+            "",
+            "  ",
+            "/usr/bin/fish",
+            r#""C:\Program Files\Git\bin\bash.exe" --login -i"#,
+        ] {
+            assert!(
+                layer.set("shell", &Value::String(good.into())).is_ok(),
+                "{good:?}"
+            );
+        }
+        assert!(
+            layer
+                .set("shell", &Value::String("bash -c 'open".into()))
+                .is_err()
+        );
+        assert_eq!(
+            layer.shell.as_deref(),
+            Some(r#""C:\Program Files\Git\bin\bash.exe" --login -i"#)
+        );
     }
 
     #[test]

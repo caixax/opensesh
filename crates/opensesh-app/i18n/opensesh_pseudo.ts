@@ -503,6 +503,18 @@
         <translation>[Öþéñ á ťéŕmíñáĺ ťö ŕüñ %1 íñ. ~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>shell</source>
+        <translation>[šĥéĺĺ ~~]</translation>
+    </message>
+    <message>
+        <source>new tab</source>
+        <translation>[ñéŵ ťáb ~~~]</translation>
+    </message>
+    <message>
+        <source>New tab: %1</source>
+        <translation>[Ñéŵ ťáb: %1 ~~~~]</translation>
+    </message>
+    <message>
         <source>tunnel</source>
         <translation>[ťüññéĺ ~~]</translation>
     </message>
@@ -6398,6 +6410,14 @@
         <translation>[Ñéŵ ťáb ~~~]</translation>
     </message>
     <message>
+        <source>New tab with a shell</source>
+        <translation>[Ñéŵ ťáb ŵíťĥ á šĥéĺĺ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 (default)</source>
+        <translation>[%1 (ďéƒáüĺť) ~~~~]</translation>
+    </message>
+    <message>
         <source>Drop outside this window to move the tab to another one</source>
         <translation>[Ďŕöþ öüťšíďé ťĥíš ŵíñďöŵ ťö mövé ťĥé ťáb ťö áñöťĥéŕ öñé ~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -8280,6 +8300,22 @@
     <message>
         <source>Behavior</source>
         <translation>[Béĥávíöŕ ~~~]</translation>
+    </message>
+    <message>
+        <source>Shell</source>
+        <translation>[Šĥéĺĺ ~~]</translation>
+    </message>
+    <message>
+        <source>What a new local terminal runs, as a command line; empty for your own shell. Quote a path with spaces. A shell picked in the new tab menu wins.</source>
+        <translation>[Ŵĥáť á ñéŵ ĺöçáĺ ťéŕmíñáĺ ŕüñš, áš á çömmáñď ĺíñé; émþťý ƒöŕ ýöüŕ öŵñ šĥéĺĺ. Qüöťé á þáťĥ ŵíťĥ šþáçéš. Å šĥéĺĺ þíçķéď íñ ťĥé ñéŵ ťáb méñü ŵíñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Your own shell</source>
+        <translation>[Ýöüŕ öŵñ šĥéĺĺ ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Shell command line</source>
+        <translation>[Šĥéĺĺ çömmáñď ĺíñé ~~~~~~]</translation>
     </message>
     <message>
         <source>Bell</source>

@@ -18,4 +18,5 @@ pub mod recording;
 pub mod search;
 pub mod session;
 pub mod shell;
+pub mod shells;
 pub mod snapshot;
