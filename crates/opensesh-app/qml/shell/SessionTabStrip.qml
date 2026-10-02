@@ -129,11 +129,12 @@ Item {
                 required property bool broadcasting
                 required property bool newOutput
                 required property bool bellRang
+                required property string tabIcon
                 readonly property int colorIndex: Theme.tabColorNames.indexOf(color)
                 readonly property int tabIndex: index + 1
 
                 text: customTitle.length > 0 ? customTitle : title.length > 0 ? title : qsTr("Local terminal")
-                iconName: bellRang ? "bell" : broadcasting ? "radio-tower" : pinned ? "pin" : "square-terminal"
+                iconName: bellRang ? "bell" : broadcasting ? "radio-tower" : pinned ? "pin" : tabIcon.length > 0 ? tabIcon : "square-terminal"
                 markColor: colorIndex >= 0 ? Theme.tabColors[colorIndex] : "transparent"
                 // Pinned tabs close from their menu or the shortcut only.
                 closable: !pinned

@@ -42,7 +42,8 @@ pragma ComponentBehavior: Bound
 // cycleRegion(step), shortcutText(actionId), smokeSteps(smoke), prepareScreenshot(),
 // prepareSettingsScreenshot(), prepareTerminalScreenshot(), prepareHostsScreenshot(),
 // prepareKeychainScreenshot(), prepareSshScreenshot(), prepareSftpScreenshots(done),
-// prepareSftpScreenshot(page), prepareTunnelsScreenshots(done), prepareTunnelsScreenshot(page).
+// prepareSftpScreenshot(page), prepareTunnelsScreenshots(done), prepareTunnelsScreenshot(page),
+// prepareDesktopScreenshots(done), prepareDesktopScreenshot(page).
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -249,6 +250,8 @@ Item {
             newOutput: false,
             bellRang: false,
             broadcasting: false,
+            // The tab's own icon ("monitor" for a remote desktop); empty: a terminal's.
+            tabIcon: "",
             startSession: row.startSession ?? true,
             seed: row.seed ?? ""
         };
@@ -627,7 +630,7 @@ Item {
             return {
                 tabId: id,
                 title: tabTitle(row),
-                iconName: row.broadcasting ? "radio-tower" : row.pinned ? "pin" : "square-terminal",
+                iconName: row.broadcasting ? "radio-tower" : row.pinned ? "pin" : row.tabIcon.length > 0 ? row.tabIcon : "square-terminal",
                 color: row.color
             };
         });
@@ -1969,8 +1972,7 @@ Item {
             rdp = desktop();
             if (!pane || pane.kind !== "rdp" || !rdp)
                 smoke.fail("the pane isn't a remote desktop pane");
-            // The server keeps its key count between connections: any of the square's colours.
-            return wait("the remote desktop", () => rdp.running && rdp.desktopWidth > 0 && keySquare.some(rgb => near(48, 48, rgb)), next);
+            return wait("the remote desktop", () => rdp.running && rdp.desktopWidth > 0 && near(48, 48, keySquare[0]), next);
         };
         let narrower = 0;
         let splitId = 0;
@@ -2158,6 +2160,7 @@ Item {
     // --screenshots: the Hosts view, with one session tab (without a shell) and no popups.
     // The tabs the protocol screenshots made (tab ids).
     property var protocolTabs: ({ telnet: 0, serial: 0 })
+    property var desktopTabs: ({ desktop: 0, certificate: 0 })
 
     // Screenshots: the tab strip opens (or closes) its menu of shells.
     signal shellMenuRequested(bool open)
@@ -2624,6 +2627,102 @@ Item {
         screenshotPoll.start();
     }
 
+    // --screenshots: remote desktops, made for real against the RDP test server next to the app
+    // (never the network): a connected desktop, and a second tab waiting on the server's
+    // certificate. `done` runs when both are ready (or, with a warning, after 20 s).
+    function prepareDesktopScreenshots(done) {
+        palette.close();
+        notifications.close();
+        hostEditor.close();
+        sidePanelOpen = false;
+        while (sessionModel.count > 0)
+            removeTab(sessionModel.count, false);
+        if (AppInfo.startRdpTestServer() <= 0) {
+            console.warn("AppShell: no RDP test server for the remote desktop screenshots (cargo xtask rdp --test-server)");
+            done();
+            return;
+        }
+        const deadline = Date.now() + 20000;
+        let stage = "desktop";
+        let rdp = null;
+        const answered = {};
+        // The password always; the certificate only for the first desktop.
+        const answer = trustCertificate => {
+            const question = rdp && rdp.prompt.length > 0 ? JSON.parse(rdp.prompt) : {};
+            if (question.id === undefined || answered[stage + question.id])
+                return;
+            if (question.kind === "password") {
+                answered[stage + question.id] = true;
+                rdp.answerPrompt(question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+            } else if (question.kind === "hostKey" && trustCertificate) {
+                answered[stage + question.id] = true;
+                rdp.answerPrompt(question.id, "trust-once", []);
+            }
+        };
+        const open = text => {
+            if (!connectTarget(text, "tab"))
+                return false;
+            const pane = currentTerminal;
+            rdp = pane && pane.desktopView ? pane.desktopView.desktop : null;
+            return rdp !== null;
+        };
+        screenshotPoll.poll = () => {
+            if (Date.now() > deadline) {
+                console.warn("AppShell: the remote desktop screenshots' setup timed out at", stage);
+                return true;
+            }
+            if (stage === "desktop") {
+                if (!open("rdp://tester@win11.example")) // lint-qml: allow (a quick-connect URL)
+                    return true;
+                desktopTabs.desktop = currentTabId;
+                stage = "desktop-up";
+            } else if (stage === "desktop-up") {
+                answer(true);
+                if (!rdp.running || rdp.desktopWidth === 0)
+                    return false;
+                if (!open("rdp://tester@build-pc.example")) // lint-qml: allow (a quick-connect URL)
+                    return true;
+                desktopTabs.certificate = currentTabId;
+                stage = "certificate";
+            } else if (stage === "certificate") {
+                answer(false);
+                const question = rdp.prompt.length > 0 ? JSON.parse(rdp.prompt) : {};
+                return question.kind === "hostKey";
+            }
+            return false;
+        };
+        screenshotPoll.done = done;
+        screenshotPoll.start();
+    }
+
+    // --screenshots: a connected remote desktop ("desktop"), one asking about its certificate
+    // ("certificate"), and the host editor of an RDP host ("editor").
+    function prepareDesktopScreenshot(page) {
+        hostEditor.close();
+        palette.close();
+        if (page === "desktop") {
+            selectTabById(desktopTabs.desktop);
+        } else if (page === "certificate") {
+            selectTabById(desktopTabs.certificate);
+        } else if (page === "editor") {
+            showView("hosts");
+            hostEditor.create("");
+            const fields = {
+                name: qsTr("Office desktop"),
+                protocol: "rdp",
+                address: "win11.office.lan", // lint-qml: allow (sample data for screenshots)
+                user: "operator", // lint-qml: allow (sample data for screenshots)
+                "rdp.domain": "OFFICE", // lint-qml: allow (sample data for screenshots)
+                "rdp.scaling": "fit",
+                "rdp.resolution": "1920x1080" // lint-qml: allow (sample data for screenshots)
+            };
+            for (const key of Object.keys(fields))
+                hostEditor.setValue(key, fields[key]);
+            hostEditor.loaded();
+            hostEditor.section = 0;
+        }
+    }
+
     // --screenshots: the new tab menu with the shells ("newtab"), the telnet and serial tabs, S3
     // in the files view, and the host editor of a serial and an S3 host.
     function prepareProtocolScreenshot(page) {
@@ -3051,6 +3150,7 @@ Item {
             Layout.fillWidth: true
             visible: shell.showStatusBar
             terminal: shell.currentTerminal ? shell.currentTerminal.terminal : null
+            desktop: shell.currentTerminal && shell.currentTerminal.desktopView ? shell.currentTerminal.desktopView.desktop : null
             label: shell.currentTerminal ? shell.currentTerminal.label : ""
             workspace: shell.currentTab > 0 ? shell.currentWorkspace : null
 

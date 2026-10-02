@@ -427,7 +427,8 @@ Window {
 
     // The series: the shell on the Hosts view, the Settings pages, split terminal tabs, the Hosts
     // view with generated hosts, the Keychain with sample entries, SSH panes with sample states,
-    // the SFTP and Tunnels views, then snippets, the paste review and History.
+    // the SFTP and Tunnels views, then snippets, the paste review and History, the other protocols
+    // and remote desktops.
     ScreenshotRunner {
         id: screenshots
 
@@ -537,10 +538,21 @@ Window {
         prefix: "protocols"
         pages: ["newtab", "telnet", "serial", "s3", "serialeditor", "s3editor"]
         prepare: (mode, density, page) => shell.prepareProtocolScreenshot(page)
+        onFinished: shell.prepareDesktopScreenshots(() => desktopScreenshots.start())
+    }
+
+    ScreenshotRunner {
+        id: desktopScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "desktop"
+        pages: ["desktop", "certificate", "editor"]
+        prepare: (mode, density, page) => shell.prepareDesktopScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
                             + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures
                             + sftpScreenshots.failures + tunnelsScreenshots.failures + snippetsScreenshots.failures
-                            + protocolsScreenshots.failures > 0 ? 7 : 0)
+                            + protocolsScreenshots.failures + desktopScreenshots.failures > 0 ? 7 : 0)
     }
 }
