@@ -1,0 +1,22 @@
+[package]
+name = "rdp-ironrdp-spike"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Sprint 13 spike: an RDP client on IronRDP against an in-process IronRDP server"
+license = "GPL-3.0-or-later"
+
+# A throwaway program: its own workspace, not part of the app's.
+[workspace]
+
+[dependencies]
+ironrdp = { version = "=0.17.0", features = ["connector", "session", "graphics", "input", "cliprdr", "displaycontrol", "svc", "dvc", "server", "acceptor"] }
+ironrdp-tokio = "=0.10.0"
+ironrdp-tls = { version = "=0.2.2", features = ["rustls-ring"] }
+tokio = { version = "=1.53.1", features = ["rt-multi-thread", "net", "io-util", "macros", "time"] }
+anyhow = "1"
+sspi = { version = "=0.21.3", default-features = false }
+tokio-rustls = { version = "=0.26.6", default-features = false, features = ["ring", "tls12", "logging"] }
+x509-cert = { version = "=0.2.5", features = ["std"] }
+async-trait = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
