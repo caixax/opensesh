@@ -1,11 +1,12 @@
 //! `cargo xtask dist windows`: the Windows release packages, written to `<target>/dist/`.
 //!
 //! Builds the release app, deploys Qt next to it (`windeployqt`), adds the bundled ConPTY
-//! ([ADR 0014]) and the MSVC runtime, then makes the portable zip (with the `portable` marker) and
-//! the NSIS installer (`packaging/windows/opensesh.nsi`). The Linux packages are built by
-//! `scripts/linux/build.sh`, on each distribution with its own Qt.
+//! ([ADR 0014]), the RDP helper ([ADR 0034]) and the MSVC runtime, then makes the portable zip
+//! (with the `portable` marker) and the NSIS installer (`packaging/windows/opensesh.nsi`). The
+//! Linux packages are built by `scripts/linux/build.sh`, on each distribution with its own Qt.
 //!
 //! [ADR 0014]: ../../docs/adr/0014-bundled-conpty.md
+//! [ADR 0034]: ../../docs/adr/0034-rdp-client.md
 
 use std::ffi::OsString;
 use std::fs;
@@ -15,7 +16,7 @@ use std::process::Command;
 
 use anyhow::{Context, Result, bail, ensure};
 
-use crate::conpty;
+use crate::{conpty, rdp};
 
 /// Version of every package: the workspace version.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -160,6 +161,11 @@ fn windows(root: &Path, dist: &Path) -> Result<()> {
     conpty::run(
         root,
         &conpty::Options::parse([OsString::from("--dest"), stage.clone().into()])?,
+    )?;
+    // Next to OpenSesh.exe, where the app looks for it.
+    rdp::run(
+        root,
+        &rdp::Options::parse([OsString::from("--dest"), stage.clone().into()])?,
     )?;
     for doc in [
         "LICENSE",
