@@ -276,7 +276,7 @@ pub fn to_hosts(table: &Table, mapping: &[Field], skip_header: bool, origin: &Pa
                 .filter(|text| !text.is_empty())
         };
         let Some(address) = cell(Field::Address) else {
-            warn(format!("row {line}: no address; skipped"));
+            warn("no address; skipped".to_owned());
             continue;
         };
         let protocol = match cell(Field::Protocol) {
@@ -284,7 +284,7 @@ pub fn to_hosts(table: &Table, mapping: &[Field], skip_header: bool, origin: &Pa
             Some(text) => match Protocol::parse(&text.to_ascii_lowercase()) {
                 Some(protocol) => protocol,
                 None => {
-                    warn(format!("row {line}: unknown protocol {text}; skipped"));
+                    warn(format!("unknown protocol {text}; skipped"));
                     continue;
                 }
             },
@@ -302,9 +302,7 @@ pub fn to_hosts(table: &Table, mapping: &[Field], skip_header: bool, origin: &Pa
             Some(text) => match text.parse::<u16>() {
                 Ok(port) => Some(port),
                 Err(_) => {
-                    warn(format!(
-                        "row {line}: the port {text} isn't a number; left out"
-                    ));
+                    warn(format!("the port {text} isn't a number; left out"));
                     port
                 }
             },

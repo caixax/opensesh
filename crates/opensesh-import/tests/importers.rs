@@ -329,10 +329,7 @@ fn csv_with_mapped_columns() {
     assert_eq!(lines, [5, 6]);
     assert_eq!(
         warnings(&imported),
-        [
-            "row 5: no address; skipped",
-            "row 6: unknown protocol gopher; skipped"
-        ]
+        ["no address; skipped", "unknown protocol gopher; skipped"]
     );
 }
 
