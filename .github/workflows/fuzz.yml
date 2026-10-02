@@ -1,0 +1,66 @@
+# Fuzzing (Sprint 17, PLAN §10): every target of fuzz/ (cargo-fuzz, libFuzzer) runs for an hour,
+# starting from corpora made of the repository's fixtures (fuzz/seed.sh). Run by hand (with the
+# seconds per target to spend) and every Sunday. A crash fails its job and uploads the input.
+name: Fuzz
+
+on:
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Seconds per target
+        default: "3600"
+  schedule:
+    - cron: "17 3 * * 0"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fuzz:
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - quick_connect
+          - paste
+          - themes
+          - monitor
+          - ssh_config
+          - mobaxterm
+          - putty
+          - remmina
+          - csv
+          - bundle
+          - sync_merge
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Nightly Rust and cargo-fuzz
+        # libFuzzer's instrumentation needs nightly; cargo-fuzz itself builds with stable.
+        run: |
+          rustup toolchain install nightly --profile minimal
+          rustup toolchain install stable --profile minimal
+          cargo +stable install cargo-fuzz --version 0.13.2 --locked
+      - name: Seed corpus
+        run: sh fuzz/seed.sh
+      - name: Build
+        working-directory: fuzz
+        run: cargo +nightly fuzz build ${{ matrix.target }}
+      - name: Fuzz
+        working-directory: fuzz
+        run: >-
+          cargo +nightly fuzz run ${{ matrix.target }} --
+          -max_total_time=${{ inputs.seconds || '3600' }}
+          -rss_limit_mb=2048 -timeout=10 -print_final_stats=1
+      - name: Crash inputs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: crash-${{ matrix.target }}
+          path: fuzz/artifacts/
+          if-no-files-found: ignore

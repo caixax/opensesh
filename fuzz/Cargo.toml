@@ -1,0 +1,102 @@
+# Fuzz targets (Sprint 17, PLAN §10): `cargo +nightly fuzz run <target>` from this folder
+# (cargo-fuzz). A workspace of its own, so the app's workspace builds on stable without it; its
+# lockfile starts from the app's, so the crates under test are the same versions.
+[package]
+name = "opensesh-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+opensesh-core = { path = "../crates/opensesh-core" }
+opensesh-import = { path = "../crates/opensesh-import" }
+opensesh-ssh = { path = "../crates/opensesh-ssh" }
+toml = "1.1.6"
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "quick_connect"
+path = "fuzz_targets/quick_connect.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "paste"
+path = "fuzz_targets/paste.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "themes"
+path = "fuzz_targets/themes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "monitor"
+path = "fuzz_targets/monitor.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ssh_config"
+path = "fuzz_targets/ssh_config.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mobaxterm"
+path = "fuzz_targets/mobaxterm.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "putty"
+path = "fuzz_targets/putty.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "remmina"
+path = "fuzz_targets/remmina.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "csv"
+path = "fuzz_targets/csv.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bundle"
+path = "fuzz_targets/bundle.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sync_merge"
+path = "fuzz_targets/sync_merge.rs"
+test = false
+doc = false
+bench = false
+

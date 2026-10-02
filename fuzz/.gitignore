@@ -1,0 +1,5 @@
+# Made by cargo-fuzz and seed.sh; seed.sh rebuilds the starting corpora from the fixtures.
+target/
+corpus/
+artifacts/
+coverage/
