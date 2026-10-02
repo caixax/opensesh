@@ -12,6 +12,8 @@
 #             down with the same SHA-256, a temporary link
 #   rdp     - the RDP helper (rdp/, a workspace of its own; ADR 0034): clippy, tests against the
 #             in-process server, then against xrdp (scripts/rdp-test-server.sh)
+#   vnc     - the VNC client (ADR 0035) against TigerVNC (VNC authentication and VeNCrypt), x11vnc
+#             and wayvnc (scripts/vnc-test-servers.sh)
 #   windows - Windows (MSVC) with Qt from aqtinstall: clippy, tests, build, bundled ConPTY, offscreen
 #             smoke test
 # The smoke tests connect a remote desktop to the RDP test server: `cargo xtask rdp --test-server`
@@ -316,6 +318,29 @@ jobs:
       - name: Stop the server
         if: always()
         run: sudo scripts/rdp-test-server.sh stop
+
+  vnc:
+    name: VNC against TigerVNC, x11vnc and wayvnc
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: vnc-servers
+      - name: Build the test
+        run: cargo test --locked -p opensesh-vnc --test real_servers --no-run
+      - name: Start the servers
+        run: sudo scripts/vnc-test-servers.sh start
+      - name: Tests against the servers
+        run: cargo test --locked -p opensesh-vnc --test real_servers -- --ignored --test-threads 1 --nocapture
+      - name: Server logs
+        if: failure()
+        run: sudo scripts/vnc-test-servers.sh logs
+      - name: Stop the servers
+        if: always()
+        run: sudo scripts/vnc-test-servers.sh stop
 
   windows:
     name: Windows (MSVC, aqtinstall Qt)
