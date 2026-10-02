@@ -1,6 +1,6 @@
 [package]
 name = "opensesh-rdp-protocol"
-description = "What OpenSesh and its RDP helper say to each other, keyboard scancodes and the shared frame (no Qt, no IronRDP)"
+description = "What OpenSesh says to a remote desktop session (its RDP helper, or a VNC task), keyboard scancodes and the shared frame (no Qt, no IronRDP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

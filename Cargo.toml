@@ -9,6 +9,7 @@ members = [
     "crates/opensesh-proto-misc",
     "crates/opensesh-s3",
     "crates/opensesh-rdp-protocol",
+    "crates/opensesh-vnc",
     "crates/opensesh-cli",
     "crates/opensesh-app",
     "xtask",
@@ -22,6 +23,7 @@ default-members = [
     "crates/opensesh-proto-misc",
     "crates/opensesh-s3",
     "crates/opensesh-rdp-protocol",
+    "crates/opensesh-vnc",
     "crates/opensesh-cli",
     "crates/opensesh-app",
 ]
@@ -49,6 +51,7 @@ opensesh-ssh = { path = "crates/opensesh-ssh" }
 opensesh-proto-misc = { path = "crates/opensesh-proto-misc" }
 opensesh-s3 = { path = "crates/opensesh-s3" }
 opensesh-rdp-protocol = { path = "crates/opensesh-rdp-protocol" }
+opensesh-vnc = { path = "crates/opensesh-vnc" }
 
 # Qt bridge (KDAB cxx-qt)
 cxx = "1.0.202"
@@ -124,6 +127,12 @@ tokio = { version = "1.53.1", features = ["rt-multi-thread", "net", "io-util", "
 
 # xtask only (regex is also used by opensesh-term)
 flate2 = "1.1.10"
+# VNC (Sprint 14, ADR 0035): VncAuth's DES (already locked through russh), Tight's JPEG pictures,
+# and VeNCrypt's TLS on rustls with `ring` (as the RDP helper's).
+des = "0.9.0"
+zune-jpeg = "0.5.15"
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+x509-cert = { version = "0.3.0", default-features = false, features = ["std"] }
 regex = "1.13.1"
 sha2 = "0.11.0"
 tar = "0.4.46"

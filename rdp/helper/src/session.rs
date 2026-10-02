@@ -795,6 +795,7 @@ fn input_events(database: &mut Database, control: Control) -> Vec<FastPathInputE
         }
         Control::Connect(_)
         | Control::Certificate { .. }
+        | Control::Keysym { .. }
         | Control::Resize { .. }
         | Control::Reconnect
         | Control::Disconnect => return Vec::new(),

@@ -1,6 +1,7 @@
 //! What OpenSesh and its RDP helper say to each other (ADR 0034). The helper (`rdp/`, a program
 //! with its own lock file) runs one RDP session; the app starts it for a pane and talks to it over
-//! its standard input and output, in length-prefixed messages:
+//! its standard input and output, in length-prefixed messages. A VNC session (ADR 0035) is a task
+//! in the app that speaks the same messages over channels, so one pane runs either:
 //!
 //! - **to the helper** ([`ToHelper`]): control in JSON (connect, input, resize, the certificate's
 //!   answer, disconnect), and the password and clipboard text raw, so secrets never sit in JSON;
@@ -49,6 +50,15 @@ pub struct Connect {
     pub timeout_secs: u64,
     /// This computer's name, as the server shows it.
     pub client_name: String,
+    /// VNC: send no input and no clipboard.
+    #[serde(default)]
+    pub read_only: bool,
+    /// VNC: Tight's JPEG quality, 0 to 9 (none: lossless).
+    #[serde(default)]
+    pub quality: Option<u8>,
+    /// VNC: let other viewers stay connected.
+    #[serde(default)]
+    pub shared: bool,
 }
 
 /// A mouse button.
@@ -84,6 +94,13 @@ pub enum Control {
         code: u8,
         /// The `E0` prefix.
         extended: bool,
+        /// Pressed or released.
+        pressed: bool,
+    },
+    /// A key by its X keysym (VNC).
+    Keysym {
+        /// The keysym.
+        keysym: u32,
         /// Pressed or released.
         pressed: bool,
     },
@@ -440,6 +457,9 @@ mod tests {
                 clipboard: true,
                 timeout_secs: 20,
                 client_name: "laptop".into(),
+                read_only: false,
+                quality: None,
+                shared: true,
             })),
             ToHelper::Clipboard("copied".into()),
         ];
