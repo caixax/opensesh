@@ -80,6 +80,7 @@ nohup x11vnc -display :3 -rfbport 5903 -localhost -passwd "$PASSWORD" -forever -
 mkdir -p runtime
 chmod 700 runtime
 cat > sway.config <<SWAY
+xwayland disable
 output HEADLESS-1 resolution 1024x768
 exec foot
 SWAY
@@ -100,7 +101,7 @@ for _ in $(seq 1 30); do
     [ -n "$socket" ] && break
     sleep 1
 done
-WAYLAND_DISPLAY=$(basename "${socket:?sway didn't start}") nohup wayvnc -C wayvnc.config \
+WAYLAND_DISPLAY=$(basename "${socket:?no Wayland socket from sway}") nohup wayvnc -C wayvnc.config \
     > wayvnc.log 2>&1 &
 EOF
     for port in 5901 5902 5903 5904; do
