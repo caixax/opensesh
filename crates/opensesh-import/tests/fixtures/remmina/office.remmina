@@ -1,0 +1,16 @@
+[remmina]
+name=Office PC
+group=Work/Windows
+protocol=RDP
+server=office.example.com:3390
+username=jdoe
+domain=CORP
+password=.
+disableclipboard=1
+ssh_tunnel_enabled=1
+ssh_tunnel_server=gw.example.com:2222
+ssh_tunnel_username=jdoe
+labels=work, windows
+notes_text=Ask%20IT%20first
+resolution_mode=2
+colordepth=99

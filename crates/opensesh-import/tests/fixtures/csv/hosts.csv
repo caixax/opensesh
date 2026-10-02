@@ -1,0 +1,6 @@
+Name,Host,Port,User,Protocol,Folder,Tags,Description
+web,web.example.com,22,deploy,ssh,Prod/Web,"web,linux",Front end
+db,admin@db.example.com:2222,,,,Prod,,"Primary database, ""main"""
+desk,desk.example.com,3389,CORP\me,RDP,Office,windows,
+bad,,22,,ssh,,,
+odd,odd.example.com,22,,gopher,,,

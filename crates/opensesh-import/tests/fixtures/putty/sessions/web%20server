@@ -1,0 +1,7 @@
+HostName=web.example
+PortNumber=22
+Protocol=ssh
+UserName=www
+PublicKeyFile=/home/me/.ssh/id_rsa
+X11Forward=0
+AgentFwd=0

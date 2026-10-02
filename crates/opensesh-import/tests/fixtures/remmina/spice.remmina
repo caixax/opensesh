@@ -1,0 +1,4 @@
+[remmina]
+name=VM console
+protocol=SPICE
+server=vmhost:5930

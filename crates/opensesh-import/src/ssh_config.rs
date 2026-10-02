@@ -14,7 +14,6 @@
 //! used. Every other keyword is left to OpenSSH, which still reads the file when it connects.
 
 use std::collections::HashMap;
-use std::fmt;
 use std::path::{Path, PathBuf};
 
 use opensesh_core::hosts::{Host, LINKED_PREFIX, SOURCE_SSH_CONFIG, Source, new_id};
@@ -152,26 +151,7 @@ impl SshForward {
     }
 }
 
-/// Something that was skipped.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ImportWarning {
-    /// The file.
-    pub file: PathBuf,
-    /// The line (from 1), 0 for the whole file.
-    pub line: usize,
-    /// What and why.
-    pub message: String,
-}
-
-impl fmt::Display for ImportWarning {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.line > 0 {
-            write!(f, "{}:{}: {}", self.file.display(), self.line, self.message)
-        } else {
-            write!(f, "{}: {}", self.file.display(), self.message)
-        }
-    }
-}
+pub use crate::common::ImportWarning;
 
 /// The result of reading a config file and what it includes.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

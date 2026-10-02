@@ -1,0 +1,8 @@
+HostName=
+Protocol=serial
+SerialLine=/dev/ttyUSB0
+SerialSpeed=9600
+SerialDataBits=8
+SerialStopHalfbits=2
+SerialParity=0
+SerialFlowControl=1

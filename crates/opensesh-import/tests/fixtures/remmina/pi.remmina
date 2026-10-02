@@ -1,0 +1,7 @@
+[remmina]
+name=Raspberry Pi
+group=Home
+protocol=VNC
+server=pi.lan:1
+viewonly=1
+ssh_tunnel_enabled=0

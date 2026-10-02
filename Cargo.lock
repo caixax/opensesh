@@ -3168,10 +3168,13 @@ dependencies = [
 name = "opensesh-import"
 version = "0.1.4"
 dependencies = [
+ "encoding_rs",
  "opensesh-core",
  "tempfile",
  "thiserror 2.0.21",
+ "toml",
  "tracing",
+ "winreg 0.55.0",
 ]
 
 [[package]]
