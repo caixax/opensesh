@@ -5,13 +5,16 @@
 //! Accepted forms: `host`, `user@host`, `host:port`, `user@[::1]:2222`, a bare IPv6 address,
 //! `ssh://`, `sftp://`, `telnet://`, `mosh://`, `rdp://` and `vnc://` URLs, the options `-J
 //! jump[,jump]`, `-p port` and `-l user` (a leading `ssh`, `mosh` or `telnet` is allowed, so
-//! a pasted command works), and `serial:///dev/ttyUSB0?baud=115200` or `serial://COM3`.
+//! a pasted command works), `serial:///dev/ttyUSB0?baud=115200` or `serial://COM3`, and the
+//! containers: `docker://[user@]name`, `podman://[user@]name` and
+//! `kube://[namespace/]pod[?container=name&context=name]`.
 //!
 //! Hosts and users that start with `-` are refused: `ssh` would read them as options.
 
 use std::fmt;
 
-use super::{FlowControl, HostsFile, Parity, Protocol, SerialOptions, X11Forwarding};
+use super::containers::{self, ContainerOptions, Engine};
+use super::{FlowControl, Host, HostsFile, Parity, Protocol, SerialOptions, X11Forwarding};
 
 /// A place to connect to.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -28,6 +31,26 @@ pub struct Target {
     pub jump: Vec<String>,
     /// Serial line settings.
     pub serial: SerialOptions,
+    /// How a container or pod is entered.
+    pub container: ContainerOptions,
+}
+
+impl Target {
+    /// The target as an unsaved host (no group: the app's defaults apply).
+    #[must_use]
+    pub fn to_host(&self) -> Host {
+        Host {
+            name: self.host.clone(),
+            protocol: self.protocol,
+            address: self.host.clone(),
+            port: self.port,
+            user: self.user.clone(),
+            jump: (!self.jump.is_empty()).then(|| self.jump.clone()),
+            serial: self.serial.clone(),
+            container: self.container.clone(),
+            ..Host::default()
+        }
+    }
 }
 
 /// Why the text isn't a target.
@@ -63,6 +86,9 @@ pub enum TargetError {
     /// A serial setting that can't be used.
     #[error("serial: {0}")]
     BadSerial(String),
+    /// A container or pod that can't be used.
+    #[error("{0}")]
+    BadContainer(String),
 }
 
 impl fmt::Display for Target {
@@ -90,6 +116,9 @@ impl fmt::Display for Target {
                 write!(f, "?{}", query.join("&"))?;
             }
             return Ok(());
+        }
+        if matches!(self.protocol, Protocol::Docker | Protocol::Kube) {
+            return self.fmt_container(f);
         }
         if self.protocol != Protocol::Ssh {
             write!(f, "{}://", self.protocol.as_str())?;
@@ -304,6 +333,116 @@ fn parse_jump(list: &str, jump: &mut Vec<String>) -> Result<(), TargetError> {
     Ok(())
 }
 
+impl Target {
+    /// `docker://[user@]container`, `podman://...` or `kube://[namespace/]pod[?container=&context=]`.
+    fn fmt_container(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let options = &self.container;
+        if self.protocol == Protocol::Kube {
+            f.write_str("kube://")?;
+            if let Some(namespace) = &options.namespace {
+                write!(f, "{namespace}/")?;
+            }
+            f.write_str(&self.host)?;
+            let mut query = Vec::new();
+            if let Some(container) = &options.pod_container {
+                query.push(format!("container={container}"));
+            }
+            if let Some(context) = &options.context {
+                query.push(format!("context={}", percent_encode(context)));
+            }
+            if !query.is_empty() {
+                write!(f, "?{}", query.join("&"))?;
+            }
+            return Ok(());
+        }
+        write!(f, "{}://", options.engine.unwrap_or_default().program())?;
+        if let Some(user) = &self.user {
+            write!(f, "{user}@")?;
+        }
+        f.write_str(&self.host)
+    }
+}
+
+/// `text` with `%`, `&`, `#` and spaces percent-encoded (a query value).
+fn percent_encode(text: &str) -> String {
+    let mut out = String::new();
+    for c in text.chars() {
+        match c {
+            '%' | '&' | '#' | ' ' | '?' | '=' => out.push_str(&format!("%{:02X}", u32::from(c))),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// `docker://[user@]container`, `podman://[user@]container`, or
+/// `kube://[namespace/]pod[?container=name&context=name]`.
+fn parse_container(scheme: &str, rest: &str) -> Result<Target, TargetError> {
+    let bad = |what: &str| TargetError::BadContainer(what.to_owned());
+    let (path, query) = rest.split_once('?').unwrap_or((rest, ""));
+    let path = path.trim_end_matches('/');
+    let mut container = ContainerOptions::default();
+    let mut user = None;
+    let host = if scheme == "kube" {
+        let (namespace, pod) = match path.split_once('/') {
+            Some((namespace, pod)) => (Some(percent_decode(namespace)), percent_decode(pod)),
+            None => (None, percent_decode(path)),
+        };
+        if let Some(namespace) = namespace {
+            if !containers::is_name(&namespace) {
+                return Err(bad("not a namespace (kube://namespace/pod)"));
+            }
+            container.namespace = Some(namespace);
+        }
+        for pair in query.split('&').filter(|pair| !pair.is_empty()) {
+            let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
+            let value = percent_decode(value);
+            match key {
+                "container" if containers::is_name(&value) => container.pod_container = Some(value),
+                "context" if containers::is_context(&value) => container.context = Some(value),
+                "container" | "context" => {
+                    return Err(bad(&format!("not a {key} name: {value:?}")));
+                }
+                _ => return Err(bad(&format!("unknown setting {key}"))),
+            }
+        }
+        pod
+    } else {
+        if !query.is_empty() {
+            return Err(bad("a container takes no settings"));
+        }
+        if scheme == "podman" {
+            container.engine = Some(Engine::Podman);
+        }
+        match path.rsplit_once('@') {
+            Some((name, rest)) => {
+                check_user(name)?;
+                user = Some(name.to_owned());
+                percent_decode(rest)
+            }
+            None => percent_decode(path),
+        }
+    };
+    if !containers::is_name(&host) {
+        return Err(bad(if scheme == "kube" {
+            "no pod (kube://namespace/pod)"
+        } else {
+            "no container (docker://name)"
+        }));
+    }
+    Ok(Target {
+        protocol: if scheme == "kube" {
+            Protocol::Kube
+        } else {
+            Protocol::Docker
+        },
+        user,
+        host,
+        container,
+        ..Target::default()
+    })
+}
+
 fn parse_serial(rest: &str) -> Result<Target, TargetError> {
     let (device, query) = rest.split_once('?').unwrap_or((rest, ""));
     let device = percent_decode(device.trim());
@@ -442,8 +581,16 @@ pub fn parse(text: &str) -> Result<Target, TargetError> {
             TargetError::MissingHost
         });
     };
+    let container = ["docker", "podman", "kube"].into_iter().find_map(|scheme| {
+        first
+            .strip_prefix(scheme)
+            .and_then(|rest| rest.strip_prefix("://"))
+            .map(|rest| (scheme, rest))
+    });
     let mut target = if let Some(rest) = first.strip_prefix("serial:") {
         parse_serial(rest.trim_start_matches("//"))?
+    } else if let Some((scheme, rest)) = container {
+        parse_container(scheme, rest)?
     } else if let Some((scheme, rest)) = first.split_once("://") {
         parse_url(scheme, rest)?
     } else {
@@ -466,7 +613,10 @@ pub fn parse(text: &str) -> Result<Target, TargetError> {
     if let Some(extra) = positional.next() {
         return Err(TargetError::Extra(extra));
     }
-    if target.protocol != Protocol::Serial {
+    if !matches!(
+        target.protocol,
+        Protocol::Serial | Protocol::Docker | Protocol::Kube
+    ) {
         if port.is_some() {
             target.port = port;
         }
@@ -783,6 +933,54 @@ mod tests {
             Some("me@corp")
         );
         assert_eq!(target("mosh://m").protocol, Protocol::Mosh);
+    }
+
+    #[test]
+    fn container_urls() {
+        let t = target("docker://web");
+        assert_eq!(
+            (t.protocol, t.host.as_str(), t.container.engine),
+            (Protocol::Docker, "web", None)
+        );
+        let t = target("podman://postgres@db");
+        assert_eq!(
+            (t.user.as_deref(), t.container.engine),
+            (Some("postgres"), Some(Engine::Podman))
+        );
+        assert_eq!(t.to_string(), "podman://postgres@db");
+        let t = target(
+            "kube://shop/api-7d9f?container=app&context=arn%3Aaws%3Aeks%3A1%3Acluster%2Fprod",
+        );
+        assert_eq!(
+            (
+                t.protocol,
+                t.host.as_str(),
+                t.container.namespace.as_deref(),
+                t.container.pod_container.as_deref(),
+                t.container.context.as_deref()
+            ),
+            (
+                Protocol::Kube,
+                "api-7d9f",
+                Some("shop"),
+                Some("app"),
+                Some("arn:aws:eks:1:cluster/prod")
+            )
+        );
+        assert_eq!(target(&t.to_string()), t);
+        assert_eq!(t.to_host().container, t.container);
+        for bad in [
+            "docker://",
+            "docker://-rm",
+            "kube://a/b/c",
+            "kube://p?x=1",
+            "docker://a?b",
+        ] {
+            assert!(
+                matches!(parse(bad), Err(TargetError::BadContainer(_))),
+                "{bad}"
+            );
+        }
     }
 
     #[test]

@@ -1850,6 +1850,23 @@ Item {
                     shell.closeTab(shell.currentTab);
                     return [];
                 });
+            },
+            // Containers: the command a quick-connect target runs, and the running ones offered
+            // in quick connect (a test run lists samples, never runs docker or kubectl).
+            () => {
+                const podman = Hosts.targetCommand("podman://postgres@db").join(" ");
+                if (podman.indexOf("podman exec -it") !== 0 || podman.indexOf("--user postgres db sh -c") < 0)
+                    smoke.fail("podman:// runs " + podman);
+                const kube = Hosts.targetCommand("kube://shop/api?container=app").join(" ");
+                if (kube !== "kubectl exec -it --namespace shop api --container app -- sh -c " + Hosts.targetCommand("docker://x").slice(-1)[0])
+                    smoke.fail("kube:// runs " + kube);
+                quickConnect.openWith("docker://we");
+                return wait("the running containers in quick connect", () => quickConnect.suggestions.some(entry => entry.kind === "running" && entry.text === "docker://web"),
+                            () => {
+                                quickConnect.close();
+                                console.info("smoke test: container targets run docker, podman and kubectl, and quick connect lists the running ones");
+                                return [];
+                            });
             }
         ];
     }

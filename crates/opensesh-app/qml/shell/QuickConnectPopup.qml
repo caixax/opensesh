@@ -2,7 +2,8 @@ pragma ComponentBehavior: Bound
 
 // Quick connect (PLAN Sprint 5, Ctrl+Shift+O): a field for user@host:port, ssh://, rdp://,
 // serial://..., with what the text means as it is typed, the saved hosts that match and the
-// recent targets. Up/Down pick a suggestion; Enter connects in a new tab, Shift+Enter in a split
+// recent targets. After docker://, podman:// or kube:// it lists the running containers or pods
+// first (Platform.containers). Up/Down pick a suggestion; Enter connects in a new tab, Shift+Enter in a split
 // to the right, Ctrl+Enter in a split below; Escape closes.
 //   shell: Item   the AppShell (connectHost(id, where), connectTarget(text, where))
 // Functions: openWith(text).
@@ -16,6 +17,15 @@ T.Popup {
     required property Item shell
     readonly property var parsed: JSON.parse(Hosts.parseTarget(field.text) || "{}")
     property var suggestions: []
+    // docker, podman or kube after their scheme; empty for other text.
+    readonly property string containerScheme: {
+        const match = field.text.trim().match(/^(docker|podman|kube):\/\//);
+        return match ? match[1] : "";
+    }
+    readonly property var running: {
+        const listed = JSON.parse(Platform.containers || "{}");
+        return listed.source === containerScheme && (listed.context ?? "") === "" ? listed : { items: [], error: "" };
+    }
 
     function openWith(text) {
         field.text = text ?? "";
@@ -23,7 +33,18 @@ T.Popup {
     }
 
     function refresh() {
-        suggestions = JSON.parse(Hosts.suggest(field.text) || "[]");
+        let found = JSON.parse(Hosts.suggest(field.text) || "[]");
+        if (containerScheme.length > 0) {
+            const typed = field.text.trim().slice(containerScheme.length + 3).toLowerCase();
+            const path = item => (item.namespace ? item.namespace + "/" : "") + item.name;
+            found = (running.items ?? []).filter(item => path(item).toLowerCase().indexOf(typed) >= 0).map(item => ({
+                kind: "running",
+                text: containerScheme + "://" + path(item), // lint-qml: allow (a quick-connect URL, not words)
+                name: item.name,
+                detail: item.detail
+            })).concat(found);
+        }
+        suggestions = found;
         list.currentIndex = -1;
     }
 
@@ -33,7 +54,7 @@ T.Popup {
         let done = false;
         if (entry && entry.kind === "host")
             done = shell.connectHost(entry.id, where);
-        else if (entry && entry.kind === "recent")
+        else if (entry && (entry.kind === "recent" || entry.kind === "running"))
             done = shell.connectTarget(entry.text, where);
         else if (field.text.trim().length > 0) {
             // A saved host's exact name wins over the text as an address.
@@ -76,6 +97,14 @@ T.Popup {
         field.selectAll();
     }
     onClosed: focusReturn.restore()
+    onContainerSchemeChanged: {
+        if (containerScheme.length > 0)
+            Platform.refreshContainers(containerScheme, "", "");
+    }
+    onRunningChanged: {
+        if (visible)
+            refresh();
+    }
 
     contentItem: Column {
         spacing: Theme.spacingSm
@@ -145,6 +174,15 @@ T.Popup {
             }
         }
 
+        OsText {
+            width: parent.width
+            visible: control.containerScheme.length > 0 && (control.running.error ?? "").length > 0
+            text: control.running.error ?? ""
+            size: "small"
+            color: Theme.danger
+            wrapMode: Text.Wrap
+        }
+
         ListView {
             id: list
 
@@ -165,9 +203,27 @@ T.Popup {
                 required property int index
 
                 width: ListView.view.width
-                text: modelData.kind === "host" ? modelData.name : modelData.text
-                subtitle: modelData.kind === "host" ? modelData.target : qsTr("Recent")
-                iconName: modelData.kind === "host" ? "server" : "history"
+                text: modelData.kind === "host" || modelData.kind === "running" ? modelData.name : modelData.text
+                subtitle: {
+                    switch (modelData.kind) {
+                    case "host":
+                        return modelData.target;
+                    case "running":
+                        return modelData.detail.length > 0 ? qsTr("Running · %1").arg(modelData.detail) : qsTr("Running");
+                    default:
+                        return qsTr("Recent");
+                    }
+                }
+                iconName: {
+                    switch (modelData.kind) {
+                    case "host":
+                        return "server";
+                    case "running":
+                        return control.containerScheme === "kube" ? "os-kubernetes" : "os-" + control.containerScheme;
+                    default:
+                        return "history";
+                    }
+                }
                 highlighted: index === list.currentIndex
                 focusPolicy: Qt.NoFocus
 

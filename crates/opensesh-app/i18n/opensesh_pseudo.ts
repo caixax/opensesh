@@ -2026,8 +2026,24 @@
         <translation>[Ñöť á ďévíçé ñámé. ~~~~~~]</translation>
     </message>
     <message>
+        <source>Not a container or pod name (no spaces, and not starting with -).</source>
+        <translation>[Ñöť á çöñťáíñéŕ öŕ þöď ñámé (ñö šþáçéš, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Not a host name or address (no spaces, @ or /, and not starting with -).</source>
         <translation>[Ñöť á ĥöšť ñámé öŕ áďďŕéšš (ñö šþáçéš, @ öŕ /, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not a name (no spaces or /, and not starting with -).</source>
+        <translation>[Ñöť á ñámé (ñö šþáçéš öŕ /, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Not a context name (no spaces, and not starting with -).</source>
+        <translation>[Ñöť á çöñťéxť ñámé (ñö šþáçéš, áñď ñöť šťáŕťíñĝ ŵíťĥ -). ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>A program and its arguments, with quotes closed.</source>
+        <translation>[Å þŕöĝŕám áñď íťš áŕĝüméñťš, ŵíťĥ qüöťéš çĺöšéď. ~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Not a user name (no spaces, and not starting with -).</source>
@@ -2228,6 +2244,78 @@
     <message>
         <source>Protocol</source>
         <translation>[Þŕöťöçöĺ ~~~]</translation>
+    </message>
+    <message>
+        <source>container name or ID</source>
+        <translation>[çöñťáíñéŕ ñámé öŕ ÍĎ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>pod name</source>
+        <translation>[þöď ñámé ~~~]</translation>
+    </message>
+    <message>
+        <source>Engine</source>
+        <translation>[Éñĝíñé ~~]</translation>
+    </message>
+    <message>
+        <source>Default (Docker)</source>
+        <translation>[Ďéƒáüĺť (Ďöçķéŕ) ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Podman</source>
+        <translation>[Þöďmáñ ~~]</translation>
+    </message>
+    <message>
+        <source>Namespace</source>
+        <translation>[Ñáméšþáçé ~~~]</translation>
+    </message>
+    <message>
+        <source>the context&apos;s</source>
+        <translation>[ťĥé çöñťéxť&apos;š ~~~~]</translation>
+    </message>
+    <message>
+        <source>the pod&apos;s default</source>
+        <translation>[ťĥé þöď&apos;š ďéƒáüĺť ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Context</source>
+        <translation>[Çöñťéxť ~~~]</translation>
+    </message>
+    <message>
+        <source>the current one</source>
+        <translation>[ťĥé çüŕŕéñť öñé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Shell</source>
+        <translation>[Šĥéĺĺ ~~]</translation>
+    </message>
+    <message>
+        <source>bash where there is one, else sh</source>
+        <translation>[bášĥ ŵĥéŕé ťĥéŕé íš öñé, éĺšé šĥ ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Running pods</source>
+        <translation>[Ŕüññíñĝ þöďš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Running containers</source>
+        <translation>[Ŕüññíñĝ çöñťáíñéŕš ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>None found yet: Refresh lists them again.</source>
+        <translation>[Ñöñé ƒöüñď ýéť: Ŕéƒŕéšĥ ĺíšťš ťĥém áĝáíñ. ~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose one to use it.</source>
+        <translation>[Çĥööšé öñé ťö üšé íť. ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Choose…</source>
+        <translation>[Çĥööšé… ~~~]</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>[Ŕéƒŕéšĥ ~~~]</translation>
     </message>
     <message>
         <source>Detected ports</source>
@@ -4497,6 +4585,14 @@
     <message>
         <source>Suggestions</source>
         <translation>[Šüĝĝéšťíöñš ~~~~]</translation>
+    </message>
+    <message>
+        <source>Running · %1</source>
+        <translation>[Ŕüññíñĝ · %1 ~~~~]</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>[Ŕüññíñĝ ~~~]</translation>
     </message>
     <message>
         <source>Recent</source>

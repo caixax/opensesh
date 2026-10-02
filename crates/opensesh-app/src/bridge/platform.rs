@@ -29,6 +29,7 @@ pub mod qobject {
         #[qproperty(bool, debug_build, cxx_name = "debugBuild", READ, CONSTANT)]
         #[qproperty(QString, shells, READ, NOTIFY = shells_changed)]
         #[qproperty(QString, serial_ports, cxx_name = "serialPorts", READ, NOTIFY = serial_ports_changed)]
+        #[qproperty(QString, containers, READ, NOTIFY = containers_changed)]
         type Platform = super::PlatformRust;
 
         /// `shells` changed (found, or found again).
@@ -52,6 +53,24 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "refreshSerialPorts"]
         fn refresh_serial_ports(self: Pin<&mut Self>);
+
+        /// `containers` changed.
+        #[qsignal]
+        #[cxx_name = "containersChanged"]
+        fn containers_changed(self: Pin<&mut Self>);
+
+        /// Lists the running containers of `source` (`docker` or `podman`) or the running pods
+        /// (`kube`, of `context` and `pod_namespace`; empty for the current context and every
+        /// namespace) in the background. `containers` then holds `{source, context, namespace,
+        /// items: [{name, detail, namespace, containers}], error}`.
+        #[qinvokable]
+        #[cxx_name = "refreshContainers"]
+        fn refresh_containers(
+            self: Pin<&mut Self>,
+            source: &QString,
+            context: &QString,
+            pod_namespace: &QString,
+        );
 
         /// Resolves a `windowDecorations` setting (`auto` depends on the desktop).
         #[qinvokable]
@@ -143,6 +162,7 @@ pub struct PlatformRust {
     debug_build: bool,
     shells: QString,
     serial_ports: QString,
+    containers: QString,
     desktop: DesktopInfo,
 }
 
@@ -156,6 +176,7 @@ impl Default for PlatformRust {
             debug_build: cfg!(debug_assertions),
             shells: QString::from("[]"),
             serial_ports: QString::from("[]"),
+            containers: QString::from("{}"),
             desktop,
         }
     }
@@ -304,6 +325,72 @@ impl qobject::Platform {
             });
         if let Err(error) = spawned {
             tracing::warn!("could not list the serial ports: {error}");
+        }
+    }
+
+    /// See the bridge declaration.
+    pub fn refresh_containers(
+        self: Pin<&mut Self>,
+        source: &QString,
+        context: &QString,
+        pod_namespace: &QString,
+    ) {
+        use opensesh_core::hosts::containers::Engine;
+        use opensesh_proto_misc::containers::{self, Source};
+
+        let name = source.to_string();
+        let given = |text: &QString| {
+            let text = text.to_string().trim().to_owned();
+            (!text.is_empty()).then_some(text)
+        };
+        let (context, namespace) = (given(context), given(pod_namespace));
+        let source = match name.as_str() {
+            "docker" => Source::Engine(Engine::Docker),
+            "podman" => Source::Engine(Engine::Podman),
+            "kube" => Source::Kube {
+                context: context.clone(),
+                namespace: namespace.clone(),
+            },
+            _ => return,
+        };
+        // Test runs and screenshots never run these programs.
+        let samples = crate::bridge::app_info::is_test_run();
+        let qt_thread = self.qt_thread();
+        let spawned = std::thread::Builder::new()
+            .name("opensesh-containers".to_owned())
+            .spawn(move || {
+                let listed = if samples {
+                    Ok(containers::samples(&source))
+                } else {
+                    containers::list(&source)
+                };
+                let (items, error) = match listed {
+                    Ok(items) => (items, String::new()),
+                    Err(error) => (Vec::new(), error),
+                };
+                let text = json!({
+                    "source": name,
+                    "context": context.unwrap_or_default(),
+                    "namespace": namespace.unwrap_or_default(),
+                    "items": items
+                        .iter()
+                        .map(|item| json!({
+                            "name": item.name,
+                            "detail": item.detail,
+                            "namespace": item.namespace,
+                            "containers": item.containers,
+                        }))
+                        .collect::<Vec<_>>(),
+                    "error": error,
+                })
+                .to_string();
+                let _ = qt_thread.queue(move |mut object| {
+                    object.as_mut().rust_mut().containers = QString::from(&text);
+                    object.containers_changed();
+                });
+            });
+        if let Err(error) = spawned {
+            tracing::warn!("could not list the containers: {error}");
         }
     }
 

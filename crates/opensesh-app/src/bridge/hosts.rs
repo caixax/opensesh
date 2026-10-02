@@ -144,8 +144,9 @@ pub mod qobject {
         #[cxx_name = "sshCommand"]
         fn ssh_command(self: &Self, id: &QString) -> QString;
 
-        /// The program and arguments that connect to host `id` (OpenSSH for SSH hosts); empty
-        /// when the protocol can't connect yet or the host can't be used on a command line.
+        /// The program and arguments that connect to host `id` (OpenSSH for SSH hosts, `docker`,
+        /// `podman` or `kubectl exec` for containers and pods); empty when the protocol has no
+        /// command or the host can't be used on a command line.
         #[qinvokable]
         #[cxx_name = "connectCommand"]
         fn connect_command(self: &Self, id: &QString) -> QStringList;
@@ -168,7 +169,8 @@ pub mod qobject {
         #[cxx_name = "parseTarget"]
         fn parse_target(self: &Self, text: &QString) -> QString;
 
-        /// The program and arguments for quick-connect text (SSH only for now).
+        /// The program and arguments for quick-connect text: OpenSSH for SSH targets, `docker`,
+        /// `podman` or `kubectl exec` for containers and pods; empty for the others.
         #[qinvokable]
         #[cxx_name = "targetCommand"]
         fn target_command(self: &Self, text: &QString) -> QStringList;
@@ -244,6 +246,7 @@ use std::time::Duration;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
 use opensesh_core::fsutil;
+use opensesh_core::hosts::containers;
 use opensesh_core::hosts::detected::{DETECTED_FILE, DetectedOs};
 use opensesh_core::hosts::recent::{RECENT_FILE, RecentList};
 use opensesh_core::hosts::search::{self, Query, Scope, Searcher, Sort, natural_cmp, sample_hosts};
@@ -1248,7 +1251,19 @@ impl qobject::Hosts {
     /// See the bridge declaration.
     pub fn connect_command(&self, id: &QString) -> QStringList {
         let mut list = QStringList::default();
-        if let Some(args) = self.ssh_args_of(&id.to_string()) {
+        let id = id.to_string();
+        if let Some(host) = self
+            .file()
+            .file
+            .host(&id)
+            .filter(|host| matches!(host.protocol, Protocol::Docker | Protocol::Kube))
+        {
+            for arg in containers::command(host).unwrap_or_default() {
+                list.append(QString::from(&arg));
+            }
+            return list;
+        }
+        if let Some(args) = self.ssh_args_of(&id) {
             list.append(QString::from("ssh"));
             for arg in args.to_args() {
                 list.append(QString::from(&arg));
@@ -1333,6 +1348,12 @@ impl qobject::Hosts {
         let Ok(target) = target::parse(&text.to_string()) else {
             return list;
         };
+        if matches!(target.protocol, Protocol::Docker | Protocol::Kube) {
+            for arg in containers::command(&target.to_host()).unwrap_or_default() {
+                list.append(QString::from(&arg));
+            }
+            return list;
+        }
         if target.protocol != Protocol::Ssh {
             return list;
         }
