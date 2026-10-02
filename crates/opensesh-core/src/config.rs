@@ -19,7 +19,7 @@ use std::str::FromStr;
 use toml::{Table, Value};
 
 use crate::fsutil::{self, WriteOutcome};
-use crate::theme::{Density, Rgba, ThemeMode, UI_SCALE_RANGE, UnknownValue};
+use crate::theme::{Contrast, Density, Rgba, ThemeMode, UI_SCALE_RANGE, UnknownValue};
 
 /// Name of the settings file inside the config directory.
 pub const CONFIG_FILE: &str = "config.toml";
@@ -222,6 +222,8 @@ pub struct Appearance {
     pub ui_font: String,
     /// Disable animations.
     pub reduce_motion: bool,
+    /// High contrast: follow the system, or always on or off.
+    pub contrast: Contrast,
     /// Rail placement.
     pub rail_position: RailPosition,
     /// Show text labels under the rail icons.
@@ -245,6 +247,7 @@ impl Default for Appearance {
             ui_scale: 1.0,
             ui_font: String::new(),
             reduce_motion: false,
+            contrast: Contrast::default(),
             rail_position: RailPosition::default(),
             rail_labels: false,
             side_panel_position: SidePanelPosition::default(),
@@ -661,6 +664,7 @@ impl Config {
                 "appearance.reduce_motion",
                 &mut a.reduce_motion,
             );
+            reader.choice(&mut appearance, "appearance.contrast", &mut a.contrast);
             reader.choice(
                 &mut appearance,
                 "appearance.rail_position",
@@ -835,6 +839,7 @@ impl Config {
         appearance.insert("ui_scale".into(), Value::Float(a.ui_scale));
         appearance.insert("ui_font".into(), Value::String(a.ui_font.clone()));
         appearance.insert("reduce_motion".into(), Value::Boolean(a.reduce_motion));
+        appearance.insert("contrast".into(), Value::String(a.contrast.as_str().into()));
         appearance.insert(
             "rail_position".into(),
             Value::String(a.rail_position.as_str().into()),

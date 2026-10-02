@@ -21,6 +21,9 @@ pub const AA_TEXT: f64 = 4.5;
 /// WCAG AA minimum contrast for UI components and large text (SC 1.4.11 / 1.4.3).
 pub const AA_UI: f64 = 3.0;
 
+/// WCAG AAA minimum contrast for normal text (SC 1.4.6): the high-contrast theme's text.
+pub const AAA_TEXT: f64 = 7.0;
+
 /// Default accent ("sesame amber") for dark surfaces (§5.2).
 pub const DEFAULT_ACCENT_DARK: Rgba = Rgba::rgb(0xE6, 0xB4, 0x50);
 
@@ -330,6 +333,58 @@ impl FromStr for Density {
 #[error("unknown value `{0}`")]
 pub struct UnknownValue(pub String);
 
+/// The contrast setting (Sprint 17): follow the system's high-contrast preference, or force it
+/// on or off.
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum Contrast {
+    /// High contrast when the system asks for it (default).
+    #[default]
+    System,
+    /// Always high contrast.
+    High,
+    /// Never high contrast.
+    Standard,
+}
+
+impl Contrast {
+    /// All values, in UI order.
+    pub const ALL: [Self; 3] = [Self::System, Self::High, Self::Standard];
+
+    /// Stable identifier used in `config.toml` and QML.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::System => "system",
+            Self::High => "high",
+            Self::Standard => "standard",
+        }
+    }
+
+    /// Whether the theme is high contrast, given the system's preference.
+    #[must_use]
+    pub const fn resolve(self, system_high: bool) -> bool {
+        match self {
+            Self::System => system_high,
+            Self::High => true,
+            Self::Standard => false,
+        }
+    }
+}
+
+impl FromStr for Contrast {
+    type Err = UnknownValue;
+
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        Self::ALL
+            .into_iter()
+            .find(|contrast| contrast.as_str() == text)
+            .ok_or_else(|| UnknownValue(text.to_owned()))
+    }
+}
+
 /// Everything the theme depends on.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ThemeInputs {
@@ -345,6 +400,9 @@ pub struct ThemeInputs {
     pub ui_scale: f64,
     /// Disable animations.
     pub reduce_motion: bool,
+    /// Stronger text, outlines and indicators (Sprint 17): text at [`AAA_TEXT`], control
+    /// outlines, the focus ring and status colors at [`AA_TEXT`].
+    pub high_contrast: bool,
 }
 
 impl Default for ThemeInputs {
@@ -356,6 +414,7 @@ impl Default for ThemeInputs {
             density: Density::Comfortable,
             ui_scale: 1.0,
             reduce_motion: false,
+            high_contrast: false,
         }
     }
 }
@@ -523,13 +582,60 @@ fn light_base() -> Palette {
     }
 }
 
+/// The dark scheme in high contrast: black surfaces, white text, visible separators.
+fn dark_high_contrast() -> Palette {
+    let text = Rgba::rgb(0xFF, 0xFF, 0xFF);
+    Palette {
+        bg: Rgba::rgb(0x00, 0x00, 0x00),
+        surface: Rgba::rgb(0x0A, 0x0A, 0x0A),
+        surface2: Rgba::rgb(0x16, 0x16, 0x16),
+        border: Rgba::rgb(0x6E, 0x6E, 0x6E),
+        border_strong: Rgba::rgb(0x9E, 0x9E, 0x9E),
+        text,
+        text_muted: Rgba::rgb(0xD4, 0xD4, 0xD4),
+        hover: text.with_alpha(0x24),
+        pressed: text.with_alpha(0x3A),
+        selection: DEFAULT_ACCENT_DARK.with_alpha(0x60),
+        scrim: Rgba::rgb(0, 0, 0).with_alpha(0xB8),
+        ..dark_base()
+    }
+}
+
+/// The light scheme in high contrast: white surfaces, black text, visible separators.
+fn light_high_contrast() -> Palette {
+    let text = Rgba::rgb(0x00, 0x00, 0x00);
+    Palette {
+        bg: Rgba::rgb(0xFF, 0xFF, 0xFF),
+        surface: Rgba::rgb(0xFF, 0xFF, 0xFF),
+        surface2: Rgba::rgb(0xEE, 0xEE, 0xEE),
+        border: Rgba::rgb(0x7A, 0x7A, 0x7A),
+        border_strong: Rgba::rgb(0x55, 0x55, 0x55),
+        text,
+        text_muted: Rgba::rgb(0x2E, 0x2E, 0x2E),
+        hover: text.with_alpha(0x1A),
+        pressed: text.with_alpha(0x30),
+        selection: DEFAULT_ACCENT_LIGHT.with_alpha(0x50),
+        scrim: Rgba::rgb(0, 0, 0).with_alpha(0x80),
+        ..light_base()
+    }
+}
+
 /// Resolves the full theme.
 #[must_use]
 pub fn resolve(inputs: &ThemeInputs) -> ResolvedTheme {
     let scheme = inputs.mode.resolve(inputs.system_scheme);
-    let mut palette = match scheme {
-        ColorScheme::Dark => dark_base(),
-        ColorScheme::Light => light_base(),
+    let high = inputs.high_contrast;
+    let mut palette = match (scheme, high) {
+        (ColorScheme::Dark, false) => dark_base(),
+        (ColorScheme::Light, false) => light_base(),
+        (ColorScheme::Dark, true) => dark_high_contrast(),
+        (ColorScheme::Light, true) => light_high_contrast(),
+    };
+    // High contrast raises text to AAA and outlines and indicators to the text minimum.
+    let (text_ratio, ui_ratio) = if high {
+        (AAA_TEXT, AA_TEXT)
+    } else {
+        (AA_TEXT, AA_UI)
     };
     let surfaces = [palette.bg, palette.surface, palette.surface2];
     // Colors used as text move towards the text color until they are readable.
@@ -539,16 +645,24 @@ pub fn resolve(inputs: &ThemeInputs) -> ResolvedTheme {
         palette.accent = accent.with_alpha(255);
     }
     palette.accent_text = best_text_on(palette.accent);
-    palette.accent_fg = ensure_contrast(palette.accent, readable_target, &surfaces, AA_TEXT);
+    palette.accent_fg = ensure_contrast(palette.accent, readable_target, &surfaces, text_ratio);
+    if high {
+        palette.text_muted =
+            ensure_contrast(palette.text_muted, readable_target, &surfaces, AAA_TEXT);
+    }
     palette.focus_ring = palette.accent_fg;
     // The base palette's selection alpha is the strongest tint allowed.
     let alpha = selection_alpha(&palette, palette.selection.a, &surfaces);
     palette.selection = palette.accent.with_alpha(alpha);
     palette.border_strong = ensure_contrast(
-        palette.border,
+        if high {
+            palette.border_strong
+        } else {
+            palette.border
+        },
         readable_target,
         &[palette.surface, palette.surface2],
-        AA_UI,
+        ui_ratio,
     );
     palette.text_disabled = palette.text_muted.mix(palette.surface, 0.45);
     for status in [
@@ -558,7 +672,7 @@ pub fn resolve(inputs: &ThemeInputs) -> ResolvedTheme {
         &mut palette.info,
     ] {
         // Status icons and outlines are drawn on any surface (e.g. notices on `surface2`).
-        *status = ensure_contrast(*status, readable_target, &surfaces, AA_UI);
+        *status = ensure_contrast(*status, readable_target, &surfaces, ui_ratio);
     }
 
     let accent_low_contrast = contrast_ratio(palette.accent, palette.bg) < AA_UI;
@@ -887,6 +1001,74 @@ mod tests {
                 assert_eq!(
                     theme.accent_low_contrast,
                     contrast_ratio(accent, p.bg) < AA_UI
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn high_contrast_reaches_aaa_text_and_strong_outlines() {
+        let accents = std::iter::once(None).chain(ACCENT_PRESETS.into_iter().map(Some));
+        for accent in accents {
+            for mode in [ThemeMode::Dark, ThemeMode::Light] {
+                let theme = resolve(&ThemeInputs {
+                    mode,
+                    accent,
+                    high_contrast: true,
+                    ..ThemeInputs::default()
+                });
+                let p = theme.palette;
+                let what = format!("{mode:?} {accent:?}");
+                for surface in [p.bg, p.surface, p.surface2] {
+                    assert_contrast(p.text, surface, AAA_TEXT, &format!("text, {what}"));
+                    assert_contrast(
+                        p.text_muted,
+                        surface,
+                        AAA_TEXT,
+                        &format!("text_muted, {what}"),
+                    );
+                    assert_contrast(
+                        p.accent_fg,
+                        surface,
+                        AAA_TEXT,
+                        &format!("accent_fg, {what}"),
+                    );
+                    assert_contrast(
+                        p.focus_ring,
+                        surface,
+                        AA_TEXT,
+                        &format!("focus_ring, {what}"),
+                    );
+                    for status in [p.success, p.warning, p.danger, p.info] {
+                        assert_contrast(status, surface, AA_TEXT, &format!("status, {what}"));
+                    }
+                }
+                for surface in [p.surface, p.surface2] {
+                    assert_contrast(
+                        p.border_strong,
+                        surface,
+                        AA_TEXT,
+                        &format!("border_strong, {what}"),
+                    );
+                }
+                assert_contrast(
+                    p.accent_text,
+                    p.accent,
+                    AA_TEXT,
+                    &format!("accent_text, {what}"),
+                );
+                assert_selection_readable(&p, &what);
+                // Stronger than the normal theme, never weaker.
+                let normal = resolve(&ThemeInputs {
+                    mode,
+                    accent,
+                    ..ThemeInputs::default()
+                })
+                .palette;
+                assert!(
+                    contrast_ratio(p.text_muted, p.surface)
+                        >= contrast_ratio(normal.text_muted, normal.surface),
+                    "{what}"
                 );
             }
         }
