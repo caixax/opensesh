@@ -540,6 +540,17 @@ pub mod qobject {
         #[cxx_name = "playerStatus"]
         fn player_status(self: &TerminalItem) -> QString;
 
+        /// Controls this pane's serial port: `hex` (`on` shows received bytes in hexadecimal) or
+        /// `break`. False when it isn't a serial pane.
+        #[qinvokable]
+        #[cxx_name = "serialCommand"]
+        fn serial_command(self: &TerminalItem, action: &QString, on: bool) -> bool;
+
+        /// Whether this pane's serial port shows received bytes in hexadecimal.
+        #[qinvokable]
+        #[cxx_name = "serialHex"]
+        fn serial_hex(self: &TerminalItem) -> bool;
+
         /// Reads the host info of this pane's server (the side panel's Info tab); it arrives in
         /// `hostInfo`. False without a live SSH connection.
         #[qinvokable]
@@ -1712,6 +1723,26 @@ impl qobject::TerminalItem {
             }
             self.as_mut().monitor_changed();
         }
+    }
+
+    /// See the bridge declaration.
+    pub fn serial_command(&self, action: &QString, on: bool) -> bool {
+        let Some(serial) = self.entry().and_then(|entry| entry.serial()) else {
+            return false;
+        };
+        match action.to_string().as_str() {
+            "hex" => serial.set_hex(on),
+            "break" => serial.send_break(),
+            _ => return false,
+        }
+        true
+    }
+
+    /// See the bridge declaration.
+    pub fn serial_hex(&self) -> bool {
+        self.entry()
+            .and_then(|entry| entry.serial())
+            .is_some_and(|serial| serial.hex())
     }
 
     /// See the bridge declaration.

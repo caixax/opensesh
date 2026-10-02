@@ -998,6 +998,26 @@ Item {
             onTriggered: pane.shell.showSnippetPicker()
         }
 
+        // A serial port's: what arrives in hexadecimal, and a break (BREAK on the line).
+        OsMenuItem {
+            text: qsTr("Show what arrives in hexadecimal")
+            checkable: true
+            checked: contextMenu.visible && pane.kind === "serial" && terminal.serialHex()
+            visible: pane.kind === "serial"
+            height: visible ? implicitHeight : 0
+            enabled: terminal.running
+            onTriggered: terminal.serialCommand("hex", !terminal.serialHex())
+        }
+
+        OsMenuItem {
+            text: qsTr("Send break")
+            iconName: "zap"
+            visible: pane.kind === "serial"
+            height: visible ? implicitHeight : 0
+            enabled: terminal.running
+            onTriggered: terminal.serialCommand("break", true)
+        }
+
         OsMenuSeparator {}
 
         OsMenuItem {
