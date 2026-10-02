@@ -388,6 +388,10 @@ fn pixels_of(image: &DecodedImage, rect: Rect) -> Option<Pixels> {
     for row in y..bottom {
         rgba.extend_from_slice(data.get(row * width * 4 + x * 4..row * width * 4 + right * 4)?);
     }
+    // The desktop is opaque: the decoders leave the fourth byte as they please (RemoteFX: 0).
+    for pixel in rgba.chunks_exact_mut(4) {
+        pixel[3] = 0xFF;
+    }
     Some(Pixels {
         rect: Rect {
             x: u16::try_from(x).ok()?,
