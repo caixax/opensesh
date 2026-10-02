@@ -2503,6 +2503,7 @@ dependencies = [
  "opensesh-core",
  "opensesh-ssh",
  "opensesh-term",
+ "secrecy",
  "serde_json",
  "serialport",
  "tempfile",

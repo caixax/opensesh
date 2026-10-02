@@ -375,6 +375,42 @@ fn lost(error: &SshError) -> Ended {
     }
 }
 
+/// How a connection's progress shows: dim lines in the terminal (`events`), and the
+/// connecting and authenticating states for the pane (`status`).
+#[must_use]
+pub fn progress_notes(events: Sender<BackendEvent>, status: StatusSink) -> Notes {
+    Arc::new(move |note: Note| {
+        let (text, next) = match note {
+            Note::Connecting {
+                index,
+                count,
+                label,
+            } => (
+                if count > 1 {
+                    format!("Connecting to {label} ({} of {count})...", index + 1)
+                } else {
+                    format!("Connecting to {label}...")
+                },
+                Some(Status::Connecting {
+                    index,
+                    count,
+                    label,
+                }),
+            ),
+            Note::Authenticating { label } => (
+                format!("Authenticating as {label}..."),
+                Some(Status::Authenticating { label }),
+            ),
+            Note::Banner(banner) => (banner.replace('\n', "\r\n"), None),
+        };
+        let line = format!("\x1b[2m{text}\x1b[0m\r\n");
+        let _ = events.try_send(BackendEvent::Output(line.into_bytes()));
+        if let Some(next) = next {
+            status(next);
+        }
+    })
+}
+
 /// One connection: connect, run the session, return how it ended.
 #[allow(clippy::too_many_arguments)] // The state of `run`, lent for one connection.
 async fn once(
@@ -389,40 +425,7 @@ async fn once(
     commands: &mut UnboundedReceiver<Command>,
     size: &mut TermSize,
 ) -> Ended {
-    let notes: Notes = {
-        let status = Arc::clone(status);
-        let events = output.events.clone();
-        Arc::new(move |note: Note| {
-            let (text, next) = match note {
-                Note::Connecting {
-                    index,
-                    count,
-                    label,
-                } => (
-                    if count > 1 {
-                        format!("Connecting to {label} ({} of {count})...", index + 1)
-                    } else {
-                        format!("Connecting to {label}...")
-                    },
-                    Some(Status::Connecting {
-                        index,
-                        count,
-                        label,
-                    }),
-                ),
-                Note::Authenticating { label } => (
-                    format!("Authenticating as {label}..."),
-                    Some(Status::Authenticating { label }),
-                ),
-                Note::Banner(banner) => (banner.replace('\n', "\r\n"), None),
-            };
-            let line = format!("\x1b[2m{text}\x1b[0m\r\n");
-            let _ = events.try_send(BackendEvent::Output(line.into_bytes()));
-            if let Some(next) = next {
-                status(next);
-            }
-        })
-    };
+    let notes = progress_notes(output.events.clone(), Arc::clone(status));
     // Connect, while still following resizes and shutdown.
     let connecting = connect::connect(spec, asker, &notes);
     tokio::pin!(connecting);

@@ -1820,6 +1820,36 @@ Item {
                     shell.closeTab(shell.currentTab);
                     return [];
                 });
+            },
+            // Mosh: the SSH part (the SSH steps' test server) asks in the pane like an SSH
+            // session, then starts mosh-server; a test run starts no mosh-client.
+            () => {
+                if (!shell.connectTarget("mosh://tester@mosh.example", "tab"))
+                    smoke.fail("mosh quick connect opened nothing");
+                pane = shell.currentTerminal;
+                if (!pane || pane.kind !== "mosh")
+                    smoke.fail("the pane isn't a mosh pane");
+                const answered = {};
+                const answer = () => {
+                    const question = pane.terminal.prompt.length > 0 ? JSON.parse(pane.terminal.prompt) : {};
+                    if (question.id === undefined || answered[question.id])
+                        return;
+                    answered[question.id] = true;
+                    if (question.kind === "hostKey")
+                        pane.terminal.answerPrompt(question.id, "trust-once", []);
+                    else
+                        pane.terminal.answerPrompt(question.id, "submit", ["right password"]); // lint-qml: allow (the test server's password)
+                };
+                return wait("mosh-server's session", () => {
+                    answer();
+                    return screen().indexOf("listening on UDP port 60001") >= 0 && !pane.terminal.running;
+                }, () => {
+                    if (screen().indexOf("T3BlblNlc2ggdGVzdCBrZQ") >= 0)
+                        smoke.fail("the mosh session key was shown");
+                    console.info("smoke test: mosh asked in the pane, started its server over SSH and kept the key to itself");
+                    shell.closeTab(shell.currentTab);
+                    return [];
+                });
             }
         ];
     }

@@ -304,6 +304,7 @@ OsDialog {
                                 case "local":
                                 case "telnet":
                                 case "serial":
+                                case "mosh":
                                     return "";
                                 case "sftp":
                                     return qsTr("Saved now; the file browser arrives in Sprint 8.");
@@ -483,7 +484,7 @@ OsDialog {
                             editor: dialog
                             path: "ssh.auth_order"
                             type: "list"
-                            visible: dialog.protocol === "ssh"
+                            visible: dialog.protocol === "ssh" || dialog.protocol === "mosh"
                             label: qsTr("Authentication order")
                             helpText: qsTr("The methods to try, in order: publickey (the identity's key, the key file, the agent), keyboard-interactive (one-time codes) and password.")
                         }
@@ -491,7 +492,7 @@ OsDialog {
                         EditorTextRow {
                             editor: dialog
                             path: "ssh.agent_socket"
-                            visible: dialog.protocol === "ssh"
+                            visible: dialog.protocol === "ssh" || dialog.protocol === "mosh"
                             label: qsTr("Agent")
                             placeholder: qsTr("SSH_AUTH_SOCK, else the system's agent")
                             helpText: qsTr("A socket path or a Windows pipe name (\\\\.\\pipe\\...), for an agent other than the usual one.")
@@ -513,7 +514,7 @@ OsDialog {
                             editor: dialog
                             path: "jump"
                             type: "list"
-                            visible: dialog.protocol === "ssh" || dialog.protocol === "sftp"
+                            visible: ["ssh", "sftp", "mosh"].indexOf(dialog.protocol) >= 0
                             label: qsTr("Jump hosts")
                             placeholder: qsTr("bastion, ops@hop:2222")
                             helpText: qsTr("Saved hosts or user@host:port, first hop first. \"none\" connects directly even if the group has jump hosts.")
@@ -531,7 +532,7 @@ OsDialog {
                         EditorChoiceRow {
                             editor: dialog
                             path: "ssh.legacy_algorithms"
-                            visible: dialog.protocol === "ssh"
+                            visible: dialog.protocol === "ssh" || dialog.protocol === "mosh"
                             label: qsTr("Legacy algorithms")
                             options: dialog.onOff
                             helpText: qsTr("For old servers: SHA-1 key exchange and signatures, CBC ciphers and hmac-sha1. They are weaker; turn them on only for a server that needs them.")
@@ -540,7 +541,7 @@ OsDialog {
                         EditorTextRow {
                             editor: dialog
                             path: "ssh.proxy"
-                            visible: dialog.protocol === "ssh"
+                            visible: dialog.protocol === "ssh" || dialog.protocol === "mosh"
                             label: qsTr("Proxy")
                             placeholder: qsTr("socks5://host:1080 or http://host:8080")
                             helpText: qsTr("For the first hop (a jump host, or this host).")
@@ -549,7 +550,7 @@ OsDialog {
                         EditorTextRow {
                             editor: dialog
                             path: "ssh.proxy_command"
-                            visible: dialog.protocol === "ssh"
+                            visible: dialog.protocol === "ssh" || dialog.protocol === "mosh"
                             label: qsTr("Proxy command")
                             placeholder: qsTr("nc -X connect -x proxy:3128 %h %p")
                             helpText: qsTr("A program whose input and output carry the connection, instead of the proxy (%h host, %p port, %r user).")
@@ -743,7 +744,7 @@ OsDialog {
 
                         OsText {
                             width: parent.width
-                            visible: ["ssh", "telnet", "serial"].indexOf(dialog.protocol) < 0
+                            visible: ["ssh", "telnet", "serial", "mosh"].indexOf(dialog.protocol) < 0
                             text: qsTr("No advanced options for this protocol yet.")
                             muted: true
                         }
