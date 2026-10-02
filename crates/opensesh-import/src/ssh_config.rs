@@ -24,8 +24,9 @@ use opensesh_core::tunnels::{Kind, Tunnel};
 const MAX_DEPTH: usize = 16;
 
 /// Most files read for one config (`Include /*/*` would read the whole disk otherwise; found by
-/// fuzzing, Sprint 17).
+/// fuzzing, Sprint 17), and most bytes read in all.
 const MAX_FILES: usize = 256;
+const MAX_BYTES: usize = 8 * 1024 * 1024;
 
 /// A host named in the file.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -178,8 +179,9 @@ struct Parser<'a> {
     current: Option<Vec<String>>,
     /// Warned once per file about options outside a usable block.
     warned_outside: bool,
-    /// Files read so far, and whether the limit was reported.
+    /// Files and bytes read so far, and whether a limit was reported.
     read: usize,
+    bytes: usize,
     warned_files: bool,
 }
 
@@ -194,6 +196,7 @@ pub fn load(path: &Path, home: &Path) -> SshConfig {
         current: None,
         warned_outside: false,
         read: 0,
+        bytes: 0,
         warned_files: false,
     };
     parser.read_file(path, 0, &mut Vec::new());
@@ -210,6 +213,7 @@ pub fn parse_str(text: &str, origin: &Path, home: &Path) -> SshConfig {
         current: None,
         warned_outside: false,
         read: 0,
+        bytes: 0,
         warned_files: false,
     };
     parser.config.files.push(origin.to_path_buf());
@@ -328,13 +332,16 @@ impl Parser<'_> {
     }
 
     fn read_file(&mut self, path: &Path, depth: usize, chain: &mut Vec<PathBuf>) {
-        if self.read >= MAX_FILES {
+        if self.read >= MAX_FILES || self.bytes >= MAX_BYTES {
             if !self.warned_files {
                 self.warned_files = true;
                 self.warn(
                     path,
                     0,
-                    format!("more than {MAX_FILES} files are included; the rest is skipped"),
+                    format!(
+                        "more than {MAX_FILES} files or {} MiB are included; the rest is skipped",
+                        MAX_BYTES / (1024 * 1024)
+                    ),
                 );
             }
             return;
@@ -346,7 +353,10 @@ impl Parser<'_> {
                 .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "not UTF-8"))
         });
         let text = match read {
-            Ok(text) => text,
+            Ok(text) => {
+                self.bytes += text.len();
+                text
+            }
             Err(error) => {
                 self.warn(path, 0, format!("could not read: {error}"));
                 return;
@@ -674,7 +684,7 @@ mod tests {
         let limit: Vec<_> = config
             .warnings
             .iter()
-            .filter(|warning| warning.message.contains("files are included"))
+            .filter(|warning| warning.message.contains("are included"))
             .collect();
         assert_eq!(limit.len(), 1);
     }
