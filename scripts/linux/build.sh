@@ -33,7 +33,9 @@ cd "$work"
 version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
 echo "== building OpenSesh $version with $("$QMAKE" -query QT_VERSION) ($QMAKE)"
 cargo build --release --locked -p opensesh-app -p opensesh-cli
-strip target/release/opensesh-app target/release/opensesh
+# The RDP helper: a workspace with a lock file of its own (ADR 0034), built into target/rdp.
+CARGO_TARGET_DIR="$work/target/rdp" cargo build --release --locked --manifest-path rdp/Cargo.toml --bin opensesh-rdp
+strip target/release/opensesh-app target/release/opensesh target/rdp/release/opensesh-rdp
 
 # The installed tree, shared by every format.
 stage="$work/target/package/root"
@@ -41,6 +43,8 @@ rm -rf "$work/target/package"
 data=crates/opensesh-app/data
 install -Dm755 target/release/opensesh-app "$stage/usr/bin/opensesh-app"
 install -Dm755 target/release/opensesh "$stage/usr/bin/opensesh"
+# Where the app looks for it: ../lib/opensesh/ from its own folder.
+install -Dm755 target/rdp/release/opensesh-rdp "$stage/usr/lib/opensesh/opensesh-rdp"
 install -Dm644 "$data/cc.caixa.OpenSesh.desktop" "$stage/usr/share/applications/cc.caixa.OpenSesh.desktop"
 install -Dm644 "$data/icons/cc.caixa.OpenSesh.svg" "$stage/usr/share/icons/hicolor/scalable/apps/cc.caixa.OpenSesh.svg"
 install -Dm644 LICENSE "$stage/usr/share/licenses/opensesh/LICENSE"
@@ -50,8 +54,8 @@ done
 
 summary="Remote connections client: terminal, SSH, SFTP, tunnels, RDP and VNC"
 description="OpenSesh is an open source, lightweight remote connections client built
- with Rust and Qt 6. This release provides a fast local terminal; SSH, SFTP,
- tunnels and the other protocols follow in later releases."
+ with Rust and Qt 6: local terminals, SSH with SFTP and tunnels, telnet, serial
+ ports, mosh, containers, S3 storage and remote desktops over RDP."
 
 . /etc/os-release
 family=""
@@ -76,7 +80,7 @@ case "$family" in
         printf 'Source: opensesh\n\nPackage: opensesh\nArchitecture: any\n' \
             > "$work/target/package/shlibs/debian/control"
         shlibs="$(cd "$work/target/package/shlibs" && dpkg-shlibdeps -O --ignore-missing-info \
-            "$deb/usr/bin/opensesh-app" | sed -n 's/^shlibs:Depends=//p')"
+            "$deb/usr/bin/opensesh-app" "$deb/usr/lib/opensesh/opensesh-rdp" | sed -n 's/^shlibs:Depends=//p')"
         qml="qml6-module-qtquick, qml6-module-qtquick-templates, qml6-module-qtquick-layouts, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, qml6-module-qtquick-dialogs, qt6-svg-plugins"
         mkdir -p "$deb/DEBIAN"
         size="$(du -sk "$deb/usr" | cut -f1)"
@@ -122,6 +126,7 @@ cp -a "$stage/." %{buildroot}/
 %files
 /usr/bin/opensesh-app
 /usr/bin/opensesh
+/usr/lib/opensesh
 /usr/share/applications/cc.caixa.OpenSesh.desktop
 /usr/share/icons/hicolor/scalable/apps/cc.caixa.OpenSesh.svg
 %license /usr/share/licenses/opensesh/LICENSE
