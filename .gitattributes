@@ -13,3 +13,6 @@
 *.otf binary
 *.woff2 binary
 *.tgz binary
+
+# Importer fixtures keep the bytes other programs write (CRLF, Windows-1252, UTF-16).
+crates/opensesh-import/tests/fixtures/** -text
