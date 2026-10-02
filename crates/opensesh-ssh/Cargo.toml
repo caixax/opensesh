@@ -15,6 +15,7 @@ base64ct.workspace = true
 crossbeam-channel.workspace = true
 futures.workspace = true
 opensesh-core.workspace = true
+opensesh-s3.workspace = true
 opensesh-term.workspace = true
 opensesh-vault.workspace = true
 russh.workspace = true

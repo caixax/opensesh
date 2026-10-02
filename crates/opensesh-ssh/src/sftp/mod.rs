@@ -3,7 +3,8 @@
 //! - [`remote`]: a server's files through the SFTP subsystem (`russh-sftp`), on a new channel of
 //!   a [`Connection`](crate::connect::Connection).
 //! - [`local`]: this computer's files, behind the same operations.
-//! - [`fs`]: either of them ([`Fs`]), which the views and the transfers use.
+//! - [`s3`]: S3 storage (Sprint 12), its buckets as folders.
+//! - [`fs`]: any of them ([`Fs`]), which the views and the transfers use.
 //! - [`entry`]: what a listing holds, sorting, permissions text.
 //! - [`path`]: POSIX paths on servers, native paths here.
 //! - [`transfer`]: the transfer queue (parallel limit, progress, pause, resume, the overwrite
@@ -16,6 +17,7 @@ pub mod fs;
 pub mod local;
 pub mod path;
 pub mod remote;
+pub mod s3;
 pub mod transfer;
 
 pub use entry::{Entry, Kind};

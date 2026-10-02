@@ -1,4 +1,4 @@
-//! Either file system, for the views and the transfers.
+//! Any of the file systems, for the views and the transfers.
 
 use std::sync::Arc;
 
@@ -8,20 +8,24 @@ use super::FsError;
 use super::entry::Entry;
 use super::local::Local;
 use super::path::Style;
+use super::path::normalize_posix;
 use super::remote::Remote;
+use super::s3::S3Fs;
 
 /// A stream a transfer reads.
 pub type Reader = Box<dyn AsyncRead + Send + Unpin>;
 /// A stream a transfer writes.
 pub type Writer = Box<dyn AsyncWrite + Send + Unpin>;
 
-/// This computer's files or a server's.
+/// This computer's files, a server's, or S3 storage.
 #[derive(Debug, Clone)]
 pub enum Fs {
     /// This computer.
     Local(Arc<Local>),
     /// A server, over SFTP.
     Remote(Arc<Remote>),
+    /// S3 storage: buckets and objects.
+    S3(Arc<S3Fs>),
 }
 
 impl Fs {
@@ -36,7 +40,7 @@ impl Fs {
     pub fn style(&self) -> Style {
         match self {
             Self::Local(_) => Style::Local,
-            Self::Remote(_) => Style::Posix,
+            Self::Remote(_) | Self::S3(_) => Style::Posix,
         }
     }
 
@@ -45,8 +49,36 @@ impl Fs {
     pub fn remote(&self) -> Option<&Arc<Remote>> {
         match self {
             Self::Remote(remote) => Some(remote),
-            Self::Local(_) => None,
+            Self::Local(_) | Self::S3(_) => None,
         }
+    }
+
+    /// The S3 storage, if it is.
+    #[must_use]
+    pub fn s3(&self) -> Option<&Arc<S3Fs>> {
+        match self {
+            Self::S3(s3) => Some(s3),
+            Self::Local(_) | Self::Remote(_) => None,
+        }
+    }
+
+    /// Whether these are this computer's files.
+    #[must_use]
+    pub fn is_local(&self) -> bool {
+        matches!(self, Self::Local(_))
+    }
+
+    /// Whether a file can be written from an offset (a paused or partial copy goes on); S3
+    /// starts over.
+    #[must_use]
+    pub fn can_resume(&self) -> bool {
+        !matches!(self, Self::S3(_))
+    }
+
+    /// Whether files keep times and permissions set on them.
+    #[must_use]
+    pub fn keeps_metadata(&self) -> bool {
+        !matches!(self, Self::S3(_))
     }
 
     /// Whether both are the same file system (a rename or a copy can stay inside it).
@@ -55,6 +87,7 @@ impl Fs {
         match (self, other) {
             (Self::Local(_), Self::Local(_)) => true,
             (Self::Remote(a), Self::Remote(b)) => Arc::ptr_eq(a, b),
+            (Self::S3(a), Self::S3(b)) => Arc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -65,6 +98,7 @@ impl Fs {
         match self {
             Self::Local(local) => local.home(),
             Self::Remote(remote) => remote.home().to_owned(),
+            Self::S3(s3) => s3.home(),
         }
     }
 
@@ -77,6 +111,7 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.list(dir).await,
             Self::Remote(fs) => fs.list(dir).await,
+            Self::S3(fs) => fs.list(dir).await,
         }
     }
 
@@ -89,6 +124,7 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.stat(path).await,
             Self::Remote(fs) => fs.stat(path).await,
+            Self::S3(fs) => fs.stat(path).await,
         }
     }
 
@@ -101,6 +137,8 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.lstat(path).await,
             Self::Remote(fs) => fs.lstat(path).await,
+            // No links: an entry is itself.
+            Self::S3(fs) => fs.stat(path).await,
         }
     }
 
@@ -126,6 +164,7 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.mkdir(path).await,
             Self::Remote(fs) => fs.mkdir(path).await,
+            Self::S3(fs) => fs.mkdir(path).await,
         }
     }
 
@@ -138,6 +177,7 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.create_file(path).await,
             Self::Remote(fs) => fs.create_file(path).await,
+            Self::S3(fs) => fs.create_file(path).await,
         }
     }
 
@@ -150,6 +190,7 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.rename(from, to).await,
             Self::Remote(fs) => fs.rename(from, to).await,
+            Self::S3(fs) => fs.rename(from, to).await,
         }
     }
 
@@ -162,6 +203,7 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.remove(path, recursive).await,
             Self::Remote(fs) => fs.remove(path, recursive).await,
+            Self::S3(fs) => fs.remove(path, recursive).await,
         }
     }
 
@@ -174,6 +216,9 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.chmod(path, mode).await,
             Self::Remote(fs) => fs.chmod(path, mode).await,
+            Self::S3(_) => Err(FsError::Unsupported {
+                what: "permissions in S3".to_owned(),
+            }),
         }
     }
 
@@ -186,6 +231,9 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.set_times(path, accessed, modified).await,
             Self::Remote(fs) => fs.set_times(path, accessed, modified).await,
+            Self::S3(_) => Err(FsError::Unsupported {
+                what: "setting times in S3".to_owned(),
+            }),
         }
     }
 
@@ -198,6 +246,9 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.symlink(link, target).await,
             Self::Remote(fs) => fs.symlink(link, target).await,
+            Self::S3(_) => Err(FsError::Unsupported {
+                what: "links in S3".to_owned(),
+            }),
         }
     }
 
@@ -210,6 +261,9 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.read_link(path).await,
             Self::Remote(fs) => fs.read_link(path).await,
+            Self::S3(_) => Err(FsError::Unsupported {
+                what: "links in S3".to_owned(),
+            }),
         }
     }
 
@@ -222,6 +276,7 @@ impl Fs {
         match self {
             Self::Local(fs) => fs.canonicalize(path).await,
             Self::Remote(fs) => fs.canonicalize(path).await,
+            Self::S3(_) => Ok(normalize_posix(path)),
         }
     }
 
@@ -234,6 +289,7 @@ impl Fs {
         Ok(match self {
             Self::Local(fs) => Box::new(fs.open_read(path, offset).await?),
             Self::Remote(fs) => Box::new(fs.open_read(path, offset).await?),
+            Self::S3(fs) => fs.open_read(path, offset).await?,
         })
     }
 
@@ -246,6 +302,7 @@ impl Fs {
         Ok(match self {
             Self::Local(fs) => Box::new(fs.open_write(path, offset).await?),
             Self::Remote(fs) => Box::new(fs.open_write(path, offset).await?),
+            Self::S3(fs) => fs.open_write(path, offset).await?,
         })
     }
 }
