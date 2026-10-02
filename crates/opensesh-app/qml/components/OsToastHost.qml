@@ -31,7 +31,8 @@ Item {
             message: toast.text || "",
             toastKind: toast.kind || "info",
             toastActionText: toast.actionText || "",
-            toastActionId: toast.actionId || ""
+            toastActionId: toast.actionId || "",
+            toastDetails: toast.details || ""
         });
         while (toastModel.count > Math.max(1, maxVisible))
             removeAt(toastModel.count - 1);
@@ -158,6 +159,7 @@ Item {
             required property string toastKind
             required property string toastActionText
             required property string toastActionId
+            required property string toastDetails
 
             // Horizontal slide used by the add and remove transitions.
             property real slide: 0
@@ -184,8 +186,11 @@ Item {
                 actionText: row.toastActionText
 
                 onActionClicked: {
-                    if (row.toastActionId.length > 0)
-                        ActionRegistry.trigger(row.toastActionId);
+                    Toasts.runAction({
+                        id: row.toastId,
+                        actionId: row.toastActionId,
+                        details: row.toastDetails
+                    });
                     host.dismiss(row.toastId);
                 }
                 onCloseClicked: host.dismiss(row.toastId)

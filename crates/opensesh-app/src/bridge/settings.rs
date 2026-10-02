@@ -37,6 +37,7 @@ pub mod qobject {
         #[qproperty(f64, ui_scale, cxx_name = "uiScale", READ = ui_scale, WRITE = set_ui_scale, NOTIFY = settings_changed)]
         #[qproperty(QString, ui_font, cxx_name = "uiFont", READ = ui_font, WRITE = set_ui_font, NOTIFY = settings_changed)]
         #[qproperty(bool, reduce_motion, cxx_name = "reduceMotion", READ = reduce_motion, WRITE = set_reduce_motion, NOTIFY = settings_changed)]
+        #[qproperty(QString, contrast, READ = contrast, WRITE = set_contrast, NOTIFY = settings_changed)]
         #[qproperty(QString, rail_position, cxx_name = "railPosition", READ = rail_position, WRITE = set_rail_position, NOTIFY = settings_changed)]
         #[qproperty(bool, rail_labels, cxx_name = "railLabels", READ = rail_labels, WRITE = set_rail_labels, NOTIFY = settings_changed)]
         #[qproperty(QString, side_panel_position, cxx_name = "sidePanelPosition", READ = side_panel_position, WRITE = set_side_panel_position, NOTIFY = settings_changed)]
@@ -116,6 +117,8 @@ pub mod qobject {
         fn set_ui_font(self: Pin<&mut Self>, value: QString);
         fn reduce_motion(self: &Self) -> bool;
         fn set_reduce_motion(self: Pin<&mut Self>, value: bool);
+        fn contrast(self: &Self) -> QString;
+        fn set_contrast(self: Pin<&mut Self>, value: QString);
         fn rail_position(self: &Self) -> QString;
         fn set_rail_position(self: Pin<&mut Self>, value: QString);
         fn rail_labels(self: &Self) -> bool;
@@ -205,7 +208,7 @@ use opensesh_core::config::{
     SidePanelPosition, SshClient, SshSettings, TabsPosition, TransferPolicy,
 };
 use opensesh_core::fsutil;
-use opensesh_core::theme::{Density, ThemeMode};
+use opensesh_core::theme::{Contrast, Density, ThemeMode};
 use opensesh_core::watch::FileWatcher;
 
 use crate::services;
@@ -527,6 +530,7 @@ impl qobject::AppSettings {
         let values = match key.to_string().as_str() {
             "theme" => names(&ThemeMode::ALL, ThemeMode::as_str),
             "density" => names(&Density::ALL, Density::as_str),
+            "contrast" => names(&Contrast::ALL, Contrast::as_str),
             "onLastTabClosed" => names(LastTabAction::ALL, LastTabAction::as_str),
             "railPosition" => names(RailPosition::ALL, RailPosition::as_str),
             "sidePanelPosition" => names(SidePanelPosition::ALL, SidePanelPosition::as_str),
@@ -844,6 +848,12 @@ impl qobject::AppSettings {
     pub fn set_ui_font(self: Pin<&mut Self>, value: QString) {
         let text = value.to_string().trim().to_owned();
         self.change(|c| replace(&mut c.appearance.ui_font, text));
+    }
+    pub fn contrast(&self) -> QString {
+        qstring(self.config.appearance.contrast.as_str())
+    }
+    pub fn set_contrast(self: Pin<&mut Self>, value: QString) {
+        self.set_choice("contrast", &value, |c| &mut c.appearance.contrast);
     }
     pub fn reduce_motion(&self) -> bool {
         self.config.appearance.reduce_motion

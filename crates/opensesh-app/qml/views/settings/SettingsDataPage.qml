@@ -63,7 +63,7 @@ SettingsPage {
                 return;
             }
             if (code.length > 0) {
-                Toasts.show(qsTr("It didn't work: %1").arg(detail), "danger");
+                Toasts.show(qsTr("It didn't work."), "danger", "", "", detail);
                 return;
             }
             switch (action) {

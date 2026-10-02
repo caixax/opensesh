@@ -43,7 +43,8 @@ pragma ComponentBehavior: Bound
 // prepareSettingsScreenshot(), prepareTerminalScreenshot(), prepareHostsScreenshot(),
 // prepareKeychainScreenshot(), prepareSshScreenshot(), prepareSftpScreenshots(done),
 // prepareSftpScreenshot(page), prepareTunnelsScreenshots(done), prepareTunnelsScreenshot(page),
-// prepareDesktopScreenshots(done), prepareDesktopScreenshot(page), prepareDataScreenshot(page).
+// prepareDesktopScreenshots(done), prepareDesktopScreenshot(page), prepareDataScreenshot(page),
+// prepareContrastScreenshot(page).
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -2940,6 +2941,30 @@ Item {
         }
     }
 
+    // --screenshots (Sprint 17): high contrast on the hosts view, Settings > Appearance, a dialog
+    // and the first start's welcome (an empty hosts list).
+    function prepareContrastScreenshot(page) {
+        palette.close();
+        closeHostDialogs();
+        importDialog.close();
+        exportDialog.close();
+        conflictDialog.close();
+        // The welcome page empties the list; the others show the usual sample.
+        if (page !== "welcome" && Hosts.count === 0)
+            Hosts.loadFixture(60);
+        if (page === "hosts") {
+            showView("hosts");
+        } else if (page === "settings") {
+            openSettings("appearance");
+        } else if (page === "dialog") {
+            showView("hosts");
+            exportDialog.show([]);
+        } else if (page === "welcome") {
+            Hosts.loadFixture(0);
+            showView("hosts");
+        }
+    }
+
     // --screenshots (Sprint 16): the import dialog on the MobaXterm sample ("import") and the CSV
     // one ("csv"), the export dialog, Settings > Data and sync and a sync conflict, with samples.
     property var screenshotSamples: ({})
@@ -3524,6 +3549,20 @@ Item {
 
     ConflictDialog {
         id: conflictDialog
+    }
+
+    // The technical details behind a toast's message (Sprint 17), in the main window.
+    ErrorDetailsDialog {
+        id: errorDetails
+    }
+
+    Connections {
+        target: Toasts
+
+        function onDetailsRequested(toast) {
+            if (!shell.detached)
+                errorDetails.show(toast);
+        }
     }
 
     // Sync conflicts in the settings folder (Sprint 16): said once each time more appear, by

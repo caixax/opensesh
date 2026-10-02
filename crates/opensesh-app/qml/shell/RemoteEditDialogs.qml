@@ -38,7 +38,7 @@ Item {
                 sudoDialog.open();
                 break;
             case "failed":
-                Toasts.show(qsTr("%1 couldn't be saved to the server: %2").arg(name).arg(detail), "danger");
+                Toasts.show(qsTr("%1 couldn't be saved to the server.").arg(name), "danger", "", "", detail);
                 break;
             }
         }

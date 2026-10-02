@@ -277,7 +277,8 @@ pub mod qobject {
         #[cxx_name = "unlinkSource"]
         fn unlink_source(self: Pin<&mut Self>, path: &QString) -> bool;
 
-        /// Test runs only: shows `count` generated hosts instead of the saved ones.
+        /// Test runs only: shows `count` generated hosts instead of the saved ones (none at all for
+        /// 0: the first start).
         #[qinvokable]
         #[cxx_name = "loadFixture"]
         fn load_fixture(self: Pin<&mut Self>, count: i32);
@@ -1794,6 +1795,11 @@ impl qobject::Hosts {
     /// See the bridge declaration.
     pub fn load_fixture(mut self: Pin<&mut Self>, count: i32) {
         if !is_test_run() {
+            return;
+        }
+        if count <= 0 {
+            // No hosts at all: the first start's welcome.
+            self.publish(HostsFile::default());
             return;
         }
         let mut file = sample_hosts(usize::try_from(count).unwrap_or(0));

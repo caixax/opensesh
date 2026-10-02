@@ -1,7 +1,8 @@
 //! `Theme` QML singleton: the design tokens (PLAN §5.2) resolved in `opensesh-core::theme`.
 //!
 //! QML binds the inputs (`requestedMode`, `requestedAccent`, `requestedDensity`, `uiScale`,
-//! `reduceMotion`, `uiFontFamily`, `systemDark`) once in `Main.qml`; every other property is a
+//! `reduceMotion`, `uiFontFamily`, `systemDark`, `requestedContrast`, `systemHighContrast`)
+//! once in `Main.qml`; every other property is a
 //! read-only token that changes together with `themeChanged`. See `docs/design/components.md`.
 
 #[cxx_qt::bridge]
@@ -32,10 +33,13 @@ pub mod qobject {
         #[qproperty(f64, ui_scale, cxx_name = "uiScale", READ, WRITE = set_ui_scale, NOTIFY = inputs_changed)]
         #[qproperty(bool, reduce_motion, cxx_name = "reduceMotion", READ, WRITE = set_reduce_motion, NOTIFY = inputs_changed)]
         #[qproperty(bool, system_dark, cxx_name = "systemDark", READ, WRITE = set_system_dark, NOTIFY = inputs_changed)]
+        #[qproperty(QString, requested_contrast, cxx_name = "requestedContrast", READ, WRITE = set_requested_contrast, NOTIFY = inputs_changed)]
+        #[qproperty(bool, system_high_contrast, cxx_name = "systemHighContrast", READ, WRITE = set_system_high_contrast, NOTIFY = inputs_changed)]
         #[qproperty(QString, ui_font_family, cxx_name = "uiFontFamily", READ, WRITE = set_ui_font_family, NOTIFY = inputs_changed)]
         // Flags.
         #[qproperty(bool, dark, READ, NOTIFY = theme_changed)]
         #[qproperty(bool, compact, READ, NOTIFY = theme_changed)]
+        #[qproperty(bool, high_contrast, cxx_name = "highContrast", READ, NOTIFY = theme_changed)]
         #[qproperty(bool, accent_low_contrast, cxx_name = "accentLowContrast", READ, NOTIFY = theme_changed)]
         // Colors.
         #[qproperty(QColor, bg, READ, NOTIFY = theme_changed)]
@@ -132,6 +136,10 @@ pub mod qobject {
         fn set_reduce_motion(self: Pin<&mut Self>, value: bool);
         /// Whether the OS currently uses a dark color scheme.
         fn set_system_dark(self: Pin<&mut Self>, value: bool);
+        /// `system`, `high` or `standard`.
+        fn set_requested_contrast(self: Pin<&mut Self>, value: QString);
+        /// Whether the OS asks for high contrast.
+        fn set_system_high_contrast(self: Pin<&mut Self>, value: bool);
         /// UI font family; empty uses the bundled default.
         fn set_ui_font_family(self: Pin<&mut Self>, value: QString);
 
@@ -148,7 +156,7 @@ use core::pin::Pin;
 
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QColor, QString, QStringList};
-use opensesh_core::theme::{self, ColorScheme, Density, Rgba, ThemeInputs, ThemeMode};
+use opensesh_core::theme::{self, ColorScheme, Contrast, Density, Rgba, ThemeInputs, ThemeMode};
 
 /// Bundled UI font (registered at startup).
 pub const DEFAULT_UI_FONT: &str = "Inter";
@@ -166,9 +174,12 @@ pub struct ThemeRust {
     reduce_motion: bool,
     system_dark: bool,
     ui_font_family: QString,
+    requested_contrast: QString,
+    system_high_contrast: bool,
 
     dark: bool,
     compact: bool,
+    high_contrast: bool,
     accent_low_contrast: bool,
 
     bg: QColor,
@@ -241,8 +252,11 @@ impl Default for ThemeRust {
             reduce_motion: false,
             system_dark: true,
             ui_font_family: QString::default(),
+            requested_contrast: QString::from(Contrast::System.as_str()),
+            system_high_contrast: false,
             dark: true,
             compact: false,
+            high_contrast: false,
             accent_low_contrast: false,
             bg: QColor::default(),
             surface: QColor::default(),
@@ -344,6 +358,10 @@ impl ThemeRust {
             density: text(&self.requested_density).parse().unwrap_or_default(),
             ui_scale: self.ui_scale,
             reduce_motion: self.reduce_motion,
+            high_contrast: text(&self.requested_contrast)
+                .parse::<Contrast>()
+                .unwrap_or_default()
+                .resolve(self.system_high_contrast),
         }
     }
 
@@ -356,6 +374,9 @@ impl ThemeRust {
 
         self.dark = resolved.scheme == ColorScheme::Dark;
         self.compact = inputs.density == Density::Compact;
+        self.high_contrast = inputs.high_contrast;
+        // A wider focus ring is easier to find.
+        self.focus_ring_width = if inputs.high_contrast { 3.0 } else { 2.0 };
         self.accent_low_contrast = resolved.accent_low_contrast;
 
         self.bg = qcolor(p.bg);
@@ -471,6 +492,16 @@ impl qobject::Theme {
     /// See the bridge declaration.
     pub fn set_system_dark(self: Pin<&mut Self>, value: bool) {
         self.update(|state| replace(&mut state.system_dark, value));
+    }
+
+    /// See the bridge declaration.
+    pub fn set_requested_contrast(self: Pin<&mut Self>, value: QString) {
+        self.update(|state| replace(&mut state.requested_contrast, value));
+    }
+
+    /// See the bridge declaration.
+    pub fn set_system_high_contrast(self: Pin<&mut Self>, value: bool) {
+        self.update(|state| replace(&mut state.system_high_contrast, value));
     }
 
     /// See the bridge declaration.

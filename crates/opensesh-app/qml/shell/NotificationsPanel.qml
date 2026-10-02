@@ -95,10 +95,7 @@ OsDrawer {
                     text: entry.modelData.text
                     actionText: entry.modelData.actionText
                     showClose: false
-                    onActionClicked: {
-                        if (entry.modelData.actionId.length > 0)
-                            ActionRegistry.trigger(entry.modelData.actionId);
-                    }
+                    onActionClicked: Toasts.runAction(entry.modelData)
                 }
             }
 

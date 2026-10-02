@@ -247,6 +247,25 @@ SettingsPage {
         }
 
         SettingsRow {
+            label: qsTr("Contrast")
+            helpText: Theme.systemHighContrast ? qsTr("High contrast makes text, outlines and the focus ring stronger. Your system asks for it.")
+                                               : qsTr("High contrast makes text, outlines and the focus ring stronger.")
+
+            SettingsChoice {
+                width: parent.width
+                values: AppSettings.choices("contrast")
+                labels: ({
+                        system: qsTr("System"),
+                        high: qsTr("High"),
+                        standard: qsTr("Standard")
+                    })
+                value: AppSettings.contrast
+                Accessible.name: qsTr("Contrast")
+                onPicked: value => AppSettings.contrast = value
+            }
+        }
+
+        SettingsRow {
             label: qsTr("Reduce motion")
             helpText: qsTr("Turns off animations and transitions.")
 

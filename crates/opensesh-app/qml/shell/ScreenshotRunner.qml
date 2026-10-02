@@ -17,6 +17,8 @@ Item {
     property var prepare: null
     // Optional page names (e.g. gallery sections); each one is captured in every combination.
     property var pages: []
+    // The contrast of every capture: "standard" (default) or "high".
+    property string contrast: "standard"
 
     readonly property var combos: [["dark", "comfortable"], ["dark", "compact"],
         ["light", "comfortable"], ["light", "compact"]]
@@ -35,6 +37,7 @@ Item {
 
     function start() {
         binder.overrideActive = true;
+        binder.overrideContrast = contrast;
         next();
     }
 

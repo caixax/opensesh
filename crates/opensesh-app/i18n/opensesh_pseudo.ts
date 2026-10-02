@@ -856,8 +856,8 @@
         <translation>[%1 íš ŕéšöĺvéď. ~~~~~]</translation>
     </message>
     <message>
-        <source>The conflict could not be resolved: %1</source>
-        <translation>[Ťĥé çöñƒĺíçť çöüĺď ñöť bé ŕéšöĺvéď: %1 ~~~~~~~~~~~~]</translation>
+        <source>The conflict could not be resolved.</source>
+        <translation>[Ťĥé çöñƒĺíçť çöüĺď ñöť bé ŕéšöĺvéď. ~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Git left two versions of %1 after a pull.</source>
@@ -1058,6 +1058,29 @@
     <message>
         <source>Inherit: %1</source>
         <translation>[Íñĥéŕíť: %1 ~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>ErrorDetailsDialog</name>
+    <message>
+        <source>Details</source>
+        <translation>[Ďéťáíĺš ~~~]</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>[Çöþý ~~]</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>[Çĺöšé ~~]</translation>
+    </message>
+    <message>
+        <source>The details are on the clipboard.</source>
+        <translation>[Ťĥé ďéťáíĺš áŕé öñ ťĥé çĺíþböáŕď. ~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Technical details</source>
+        <translation>[Ťéçĥñíçáĺ ďéťáíĺš ~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -2310,8 +2333,8 @@
 <context>
     <name>HistoryView</name>
     <message>
-        <source>The recording wasn&apos;t deleted: %1</source>
-        <translation>[Ťĥé ŕéçöŕďíñĝ ŵášñ&apos;ť ďéĺéťéď: %1 ~~~~~~~~~~]</translation>
+        <source>The recording wasn&apos;t deleted.</source>
+        <translation>[Ťĥé ŕéçöŕďíñĝ ŵášñ&apos;ť ďéĺéťéď. ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>History</source>
@@ -3412,10 +3435,6 @@
 <context>
     <name>HostsView</name>
     <message>
-        <source>No hosts yet</source>
-        <translation>[Ñö ĥöšťš ýéť ~~~~]</translation>
-    </message>
-    <message>
         <source>New host</source>
         <translation>[Ñéŵ ĥöšť ~~~]</translation>
     </message>
@@ -3488,20 +3507,12 @@
         <translation>[Š3 ~]</translation>
     </message>
     <message>
-        <source>Save the servers you connect to and open them with one click, or bring in the ones in ~/.ssh/config.</source>
-        <translation>[Šávé ťĥé šéŕvéŕš ýöü çöññéçť ťö áñď öþéñ ťĥém ŵíťĥ öñé çĺíçķ, öŕ bŕíñĝ íñ ťĥé öñéš íñ ~/.ššĥ/çöñƒíĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>Quick connect</source>
         <translation>[Qüíçķ çöññéçť ~~~~]</translation>
     </message>
     <message>
         <source>Local terminal</source>
         <translation>[Ĺöçáĺ ťéŕmíñáĺ ~~~~~]</translation>
-    </message>
-    <message>
-        <source>Import</source>
-        <translation>[Ímþöŕť ~~]</translation>
     </message>
     <message>
         <source>Host lists and groups</source>
@@ -3697,6 +3708,18 @@
     <message>
         <source>Import hosts…</source>
         <translation>[Ímþöŕť ĥöšťš… ~~~~]</translation>
+    </message>
+    <message>
+        <source>Welcome to OpenSesh</source>
+        <translation>[Ŵéĺçömé ťö ÖþéñŠéšĥ ~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Bring your hosts from MobaXterm, PuTTY, Remmina, a spreadsheet or ~/.ssh/config, add one, or open a terminal on this computer.</source>
+        <translation>[Bŕíñĝ ýöüŕ ĥöšťš ƒŕöm MöbáXťéŕm, ÞüŤŤÝ, Ŕémmíñá, á šþŕéáďšĥééť öŕ ~/.ššĥ/çöñƒíĝ, áďď öñé, öŕ öþéñ á ťéŕmíñáĺ öñ ťĥíš çömþüťéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>New host…</source>
+        <translation>[Ñéŵ ĥöšť… ~~~]</translation>
     </message>
     <message>
         <source>Import ~/.ssh/config…</source>
@@ -4887,8 +4910,24 @@
         <translation>[Çĥáñĝéš áŕé ñöť šávéď üñťíĺ çöñƒíĝ.ťömĺ íš ƒíxéď. ~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Could not save the settings: %1</source>
-        <translation>[Çöüĺď ñöť šávé ťĥé šéťťíñĝš: %1 ~~~~~~~~~~]</translation>
+        <source>Could not save the settings.</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé šéťťíñĝš. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the hosts.</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé ĥöšťš. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the workspace.</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé ŵöŕķšþáçé. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the terminal settings.</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé ťéŕmíñáĺ šéťťíñĝš. ~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not save the shortcuts.</source>
+        <translation>[Çöüĺď ñöť šávé ťĥé šĥöŕťçüťš. ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>There is a problem with config.toml. The log has the details.</source>
@@ -4901,10 +4940,6 @@
     <message>
         <source>hosts.toml can&apos;t be saved (it could not be read, or a newer OpenSesh wrote it), so this change is not kept.</source>
         <translation>[ĥöšťš.ťömĺ çáñ&apos;ť bé šávéď (íť çöüĺď ñöť bé ŕéáď, öŕ á ñéŵéŕ ÖþéñŠéšĥ ŵŕöťé íť), šö ťĥíš çĥáñĝé íš ñöť ķéþť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Could not save the hosts: %1</source>
-        <translation>[Çöüĺď ñöť šávé ťĥé ĥöšťš: %1 ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Connect to %1?</source>
@@ -4923,24 +4958,12 @@
         <translation>[Åñöťĥéŕ þŕöĝŕám ášķéď ÖþéñŠéšĥ ťö çöññéçť ťö %1, ŵĥíçĥ çáñ&apos;ť bé üšéď: %2 ~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Could not save the workspace: %1</source>
-        <translation>[Çöüĺď ñöť šávé ťĥé ŵöŕķšþáçé: %1 ~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>%1 comes from a newer OpenSesh or can&apos;t be read, so this change is not saved.</source>
         <translation>[%1 çöméš ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ öŕ çáñ&apos;ť bé ŕéáď, šö ťĥíš çĥáñĝé íš ñöť šávéď. ~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Could not save the terminal settings: %1</source>
-        <translation>[Çöüĺď ñöť šávé ťĥé ťéŕmíñáĺ šéťťíñĝš: %1 ~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>%1 comes from a newer OpenSesh or can&apos;t be read, so shortcut changes are not saved.</source>
         <translation>[%1 çöméš ƒŕöm á ñéŵéŕ ÖþéñŠéšĥ öŕ çáñ&apos;ť bé ŕéáď, šö šĥöŕťçüť çĥáñĝéš áŕé ñöť šávéď. ~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Could not save the shortcuts: %1</source>
-        <translation>[Çöüĺď ñöť šávé ťĥé šĥöŕťçüťš: %1 ~~~~~~~~~~]</translation>
     </message>
     <message numerus="yes">
         <source>The vault locked after %n minute(s) without use.</source>
@@ -5563,8 +5586,8 @@
         <translation>[%1 šávéď ťö ťĥé šéŕvéŕ. ~~~~~~~]</translation>
     </message>
     <message>
-        <source>%1 couldn&apos;t be saved to the server: %2</source>
-        <translation>[%1 çöüĺďñ&apos;ť bé šávéď ťö ťĥé šéŕvéŕ: %2 ~~~~~~~~~~~~]</translation>
+        <source>%1 couldn&apos;t be saved to the server.</source>
+        <translation>[%1 çöüĺďñ&apos;ť bé šávéď ťö ťĥé šéŕvéŕ. ~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>%1 changed on the server</source>
@@ -7889,6 +7912,26 @@
         <translation>[Ťĥé ƒöñť öƒ méñüš, ĺábéĺš áñď büťťöñš. Ťĥé ťéŕmíñáĺ ƒöñť íš šéť íñ ťĥé ťéŕmíñáĺ šéťťíñĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>Contrast</source>
+        <translation>[Çöñťŕášť ~~~]</translation>
+    </message>
+    <message>
+        <source>High contrast makes text, outlines and the focus ring stronger. Your system asks for it.</source>
+        <translation>[Ĥíĝĥ çöñťŕášť máķéš ťéxť, öüťĺíñéš áñď ťĥé ƒöçüš ŕíñĝ šťŕöñĝéŕ. Ýöüŕ šýšťém ášķš ƒöŕ íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>High contrast makes text, outlines and the focus ring stronger.</source>
+        <translation>[Ĥíĝĥ çöñťŕášť máķéš ťéxť, öüťĺíñéš áñď ťĥé ƒöçüš ŕíñĝ šťŕöñĝéŕ. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>[Ĥíĝĥ ~~]</translation>
+    </message>
+    <message>
+        <source>Standard</source>
+        <translation>[Šťáñďáŕď ~~~]</translation>
+    </message>
+    <message>
         <source>Reduce motion</source>
         <translation>[Ŕéďüçé möťíöñ ~~~~]</translation>
     </message>
@@ -8061,8 +8104,8 @@
         <translation>[Ñöťĥíñĝ ťö çömmíť. ~~~~~~]</translation>
     </message>
     <message>
-        <source>It didn&apos;t work: %1</source>
-        <translation>[Íť ďíďñ&apos;ť ŵöŕķ: %1 ~~~~~~]</translation>
+        <source>It didn&apos;t work.</source>
+        <translation>[Íť ďíďñ&apos;ť ŵöŕķ. ~~~~~]</translation>
     </message>
     <message>
         <source>OpenSesh uses the new folder from its next start.</source>
@@ -9175,8 +9218,8 @@
         <translation>[Bĺáçķ ~~]</translation>
     </message>
     <message>
-        <source>Could not change this setting: %1</source>
-        <translation>[Çöüĺď ñöť çĥáñĝé ťĥíš šéťťíñĝ: %1 ~~~~~~~~~~]</translation>
+        <source>Could not change this setting.</source>
+        <translation>[Çöüĺď ñöť çĥáñĝé ťĥíš šéťťíñĝ. ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -9810,8 +9853,8 @@
 <context>
     <name>SettingsThemesPage</name>
     <message>
-        <source>Could not change the theme: %1</source>
-        <translation>[Çöüĺď ñöť çĥáñĝé ťĥé ťĥémé: %1 ~~~~~~~~~]</translation>
+        <source>Could not change the theme.</source>
+        <translation>[Çöüĺď ñöť çĥáñĝé ťĥé ťĥémé. ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -9894,8 +9937,12 @@
         <translation>[Ímþöŕť á ťĥémé… ~~~~~]</translation>
     </message>
     <message>
-        <source>Could not import the theme: %1</source>
-        <translation>[Çöüĺď ñöť ímþöŕť ťĥé ťĥémé: %1 ~~~~~~~~~]</translation>
+        <source>Could not import the theme.</source>
+        <translation>[Çöüĺď ñöť ímþöŕť ťĥé ťĥémé. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Could not export the theme.</source>
+        <translation>[Çöüĺď ñöť éxþöŕť ťĥé ťĥémé. ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Theme imported.</source>
@@ -9904,10 +9951,6 @@
     <message>
         <source>%1 themes imported.</source>
         <translation>[%1 ťĥéméš ímþöŕťéď. ~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Could not export the theme: %1</source>
-        <translation>[Çöüĺď ñöť éxþöŕť ťĥé ťĥémé: %1 ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Theme exported to %1.</source>
@@ -10095,8 +10138,8 @@
         <translation>[Åďďéď ťö ~/.%1ŕç. Íť ŵöŕķš íñ ñéŵ šĥéĺĺš, öŕ áƒťéŕ `šöüŕçé ~/.%1ŕç`. ~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>The lines couldn&apos;t be added: %1</source>
-        <translation>[Ťĥé ĺíñéš çöüĺďñ&apos;ť bé áďďéď: %1 ~~~~~~~~~~]</translation>
+        <source>The lines couldn&apos;t be added.</source>
+        <translation>[Ťĥé ĺíñéš çöüĺďñ&apos;ť bé áďďéď. ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>The shell on this server doesn&apos;t say which folder it is in, so the files can&apos;t follow `cd`. These lines make it say so before each prompt.</source>
@@ -11019,8 +11062,8 @@
         <translation>[Ýöüŕ ķéý ŵáš áĺŕéáďý öñ %1. ~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Your key couldn&apos;t be installed on %1: %2</source>
-        <translation>[Ýöüŕ ķéý çöüĺďñ&apos;ť bé íñšťáĺĺéď öñ %1: %2 ~~~~~~~~~~~~]</translation>
+        <source>Your key couldn&apos;t be installed on %1.</source>
+        <translation>[Ýöüŕ ķéý çöüĺďñ&apos;ť bé íñšťáĺĺéď öñ %1. ~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Scrollback</source>
@@ -11443,6 +11486,13 @@
     <message>
         <source>Command palette (%1)</source>
         <translation>[Çömmáñď þáĺéťťé (%1) ~~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>Toasts</name>
+    <message>
+        <source>Details</source>
+        <translation>[Ďéťáíĺš ~~~]</translation>
     </message>
 </context>
 <context>

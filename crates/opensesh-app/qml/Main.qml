@@ -254,7 +254,7 @@ Window {
                 Toasts.show(qsTr("Changes are not saved until config.toml is fixed."), "danger");
                 break;
             case "save-failed":
-                Toasts.show(qsTr("Could not save the settings: %1").arg(detail || ""), "danger");
+                Toasts.show(qsTr("Could not save the settings."), "danger", "", "", detail || "");
                 break;
             default:
                 // A kind this file doesn't know yet (fails the smoke test).
@@ -294,7 +294,7 @@ Window {
             if (kind === "read-only")
                 Toasts.show(qsTr("hosts.toml can't be saved (it could not be read, or a newer OpenSesh wrote it), so this change is not kept."), "danger");
             else
-                Toasts.show(qsTr("Could not save the hosts: %1").arg(detail || ""), "danger");
+                Toasts.show(qsTr("Could not save the hosts."), "danger", "", "", detail || "");
         }
     }
 
@@ -333,7 +333,7 @@ Window {
         target: Workspaces
 
         function onProblem(detail) {
-            Toasts.show(qsTr("Could not save the workspace: %1").arg(detail || ""), "danger");
+            Toasts.show(qsTr("Could not save the workspace."), "danger", "", "", detail || "");
         }
     }
 
@@ -345,7 +345,7 @@ Window {
             if (kind === "read-only")
                 Toasts.show(qsTr("%1 comes from a newer OpenSesh or can't be read, so this change is not saved.").arg(detail), "danger");
             else
-                Toasts.show(qsTr("Could not save the terminal settings: %1").arg(detail || ""), "danger");
+                Toasts.show(qsTr("Could not save the terminal settings."), "danger", "", "", detail || "");
         }
     }
 
@@ -356,7 +356,7 @@ Window {
             if (kind === "read-only")
                 Toasts.show(qsTr("%1 comes from a newer OpenSesh or can't be read, so shortcut changes are not saved.").arg(detail), "danger");
             else
-                Toasts.show(qsTr("Could not save the shortcuts: %1").arg(detail || ""), "danger");
+                Toasts.show(qsTr("Could not save the shortcuts."), "danger", "", "", detail || "");
         }
     }
 
@@ -560,11 +560,23 @@ Window {
         prefix: "data"
         pages: ["import", "csv", "export", "settings", "conflict"]
         prepare: (mode, density, page) => shell.prepareDataScreenshot(page)
+        onFinished: contrastScreenshots.start()
+    }
+
+    ScreenshotRunner {
+        id: contrastScreenshots
+
+        target: window.contentItem
+        binder: themeBinder
+        prefix: "contrast"
+        contrast: "high"
+        pages: ["hosts", "settings", "dialog", "welcome"]
+        prepare: (mode, density, page) => shell.prepareContrastScreenshot(page)
         // Exit code 7: a capture failed (see the warnings in the log).
         onFinished: Qt.exit(screenshots.failures + settingsScreenshots.failures + terminalScreenshots.failures
                             + hostsScreenshots.failures + keychainScreenshots.failures + sshScreenshots.failures
                             + sftpScreenshots.failures + tunnelsScreenshots.failures + snippetsScreenshots.failures
                             + protocolsScreenshots.failures + desktopScreenshots.failures
-                            + dataScreenshots.failures > 0 ? 7 : 0)
+                            + dataScreenshots.failures + contrastScreenshots.failures > 0 ? 7 : 0)
     }
 }

@@ -103,7 +103,7 @@ OsDialog {
                 Toasts.show(qsTr("%1 is resolved.").arg(dialog.details.name), "success");
                 dialog.accept();
             } else if (code !== "test-run") {
-                Toasts.show(qsTr("The conflict could not be resolved: %1").arg(detail), "danger");
+                Toasts.show(qsTr("The conflict could not be resolved."), "danger", "", "", detail);
             } else {
                 dialog.accept();
             }

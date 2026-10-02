@@ -377,7 +377,7 @@ Item {
             else if (result === "present")
                 Toasts.show(qsTr("Your key was already on %1.").arg(pane.label), "info");
             else
-                Toasts.show(qsTr("Your key couldn't be installed on %1: %2").arg(pane.label).arg(detail), "danger");
+                Toasts.show(qsTr("Your key couldn't be installed on %1.").arg(pane.label), "danger", "", "", detail);
         }
         onContextMenuRequested: (x, y) => contextMenu.popup(terminal, x, y)
     }

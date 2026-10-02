@@ -35,7 +35,7 @@ SettingsPage {
     function useFor(key) {
         const error = TerminalProfiles.setOption("default", key, JSON.stringify(selectedId));
         if (error.length > 0)
-            Toasts.show(qsTr("Could not change the theme: %1").arg(error), "warning");
+            Toasts.show(qsTr("Could not change the theme."), "warning", "", "", error);
     }
 
     title: qsTr("Themes")
@@ -191,7 +191,7 @@ SettingsPage {
 
         function onThemesImported(ids, error) {
             if (error.length > 0) {
-                Toasts.show(qsTr("Could not import the theme: %1").arg(error), "danger");
+                Toasts.show(qsTr("Could not import the theme."), "danger", "", "", error);
                 return;
             }
             const list = JSON.parse(ids);
@@ -202,7 +202,7 @@ SettingsPage {
 
         function onThemeExported(path, error) {
             if (error.length > 0)
-                Toasts.show(qsTr("Could not export the theme: %1").arg(error), "danger");
+                Toasts.show(qsTr("Could not export the theme."), "danger", "", "", error);
             else
                 Toasts.show(qsTr("Theme exported to %1.").arg(path), "success");
         }

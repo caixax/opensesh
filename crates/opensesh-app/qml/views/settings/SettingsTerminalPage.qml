@@ -51,7 +51,7 @@ SettingsPage {
     function set(key, value) {
         const error = TerminalProfiles.setOption(profileId, key, JSON.stringify(value));
         if (error.length > 0)
-            Toasts.show(qsTr("Could not change this setting: %1").arg(error), "warning");
+            Toasts.show(qsTr("Could not change this setting."), "warning", "", "", error);
     }
 
     function reset(key) {

@@ -40,7 +40,7 @@ OsDialog {
                 Toasts.show(qsTr("Added to ~/.%1rc. It works in new shells, or after `source ~/.%1rc`.").arg(dialog.shell), "success");
                 dialog.accept();
             } else {
-                Toasts.show(qsTr("The lines couldn't be added: %1").arg(detail.length > 0 ? detail : code), "danger");
+                Toasts.show(qsTr("The lines couldn't be added."), "danger", "", "", detail.length > 0 ? detail : code);
             }
         }
     }

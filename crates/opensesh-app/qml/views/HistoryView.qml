@@ -59,7 +59,7 @@ Item {
 
         function onProblem(detail) {
             if (view.visible)
-                Toasts.show(qsTr("The recording wasn't deleted: %1").arg(detail), "danger");
+                Toasts.show(qsTr("The recording wasn't deleted."), "danger", "", "", detail);
         }
     }
 

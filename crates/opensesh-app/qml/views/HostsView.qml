@@ -303,25 +303,26 @@ Item {
         }
     }
 
-    // The whole list is empty.
+    // The whole list is empty: the first start's welcome (Sprint 17). Each way in is one click
+    // away: bring hosts from another program, add one, or open a terminal here.
     OsEmptyState {
         anchors.fill: parent
         visible: Hosts.count === 0
         iconName: "server"
-        title: qsTr("No hosts yet")
-        description: qsTr("Save the servers you connect to and open them with one click, or bring in the ones in ~/.ssh/config.")
+        title: qsTr("Welcome to OpenSesh")
+        description: qsTr("Bring your hosts from MobaXterm, PuTTY, Remmina, a spreadsheet or ~/.ssh/config, add one, or open a terminal on this computer.")
 
         OsButton {
-            text: qsTr("New host")
-            iconName: "plus"
+            text: qsTr("Import hosts…")
+            iconName: "import"
             variant: "primary"
-            onClicked: view.shell.newHost("")
+            onClicked: view.shell.showImport("")
         }
 
         OsButton {
-            text: qsTr("Quick connect")
-            iconName: "plug-zap"
-            onClicked: ActionRegistry.trigger("app.quickConnect")
+            text: qsTr("New host…")
+            iconName: "plus"
+            onClicked: view.shell.newHost("")
         }
 
         OsButton {
@@ -331,9 +332,10 @@ Item {
         }
 
         OsButton {
-            text: qsTr("Import")
-            iconName: "import"
-            onClicked: view.shell.showSshImport("")
+            text: qsTr("Quick connect")
+            iconName: "plug-zap"
+            variant: "ghost"
+            onClicked: ActionRegistry.trigger("app.quickConnect")
         }
     }
 

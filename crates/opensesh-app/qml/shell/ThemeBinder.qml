@@ -5,6 +5,7 @@
 //   overrideDensity: string     "comfortable" | "compact"
 //   overrideAccent: string      "" keeps the user's accent; "default" or "#RRGGBB" replaces it
 //   overrideReduceMotion: var   null keeps the user's setting; true or false replaces it
+//   overrideContrast: string    "" keeps the user's setting; "high" or "standard" replaces it
 import QtQuick
 import cc.caixa.opensesh
 
@@ -16,6 +17,7 @@ Item {
     property string overrideDensity: "comfortable"
     property string overrideAccent: ""
     property var overrideReduceMotion: null
+    property string overrideContrast: ""
 
     visible: false
 
@@ -23,6 +25,18 @@ Item {
         target: Theme
         property: "systemDark"
         value: Application.styleHints.colorScheme !== Qt.Light
+    }
+    // Qt 6.10: the system's high-contrast preference (Qt.HighContrast).
+    Binding {
+        target: Theme
+        property: "systemHighContrast"
+        value: Application.styleHints.accessibility.contrastPreference === Qt.HighContrast
+    }
+    Binding {
+        target: Theme
+        property: "requestedContrast"
+        value: binder.overrideActive && binder.overrideContrast.length > 0 ? binder.overrideContrast
+                                                                           : AppSettings.contrast
     }
     Binding {
         target: Theme
