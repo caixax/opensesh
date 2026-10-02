@@ -710,7 +710,7 @@ impl ThemeSet {
                 });
                 continue;
             }
-            let result = std::fs::read_to_string(&path)
+            let result = crate::sync::read_to_string(&path)
                 .map_err(|error| format!("could not read: {error}"))
                 .and_then(|text| {
                     TerminalTheme::from_toml_str(id, &text).map_err(|error| error.to_string())

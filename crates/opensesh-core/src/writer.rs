@@ -7,12 +7,13 @@
 use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use crate::fsutil::{self, WriteOutcome};
+use crate::fsutil::WriteOutcome;
+use crate::sync::{self, Baselines};
 
 /// Called on the writer thread once a write finished (or failed).
 pub type WriteCallback = Box<dyn FnOnce(&Path, io::Result<WriteOutcome>) + Send>;
@@ -57,6 +58,16 @@ impl FileWriter {
     ///
     /// Fails if the thread can't be spawned.
     pub fn spawn(debounce: Duration) -> io::Result<Self> {
+        Self::spawn_with(debounce, Baselines::global())
+    }
+
+    /// Starts the writer thread with its own [`Baselines`] (a second instance, in tests): files
+    /// read through them are merged when they changed on disk since ([`sync::write_merging`]).
+    ///
+    /// # Errors
+    ///
+    /// Fails if the thread can't be spawned.
+    pub fn spawn_with(debounce: Duration, baselines: Arc<Baselines>) -> io::Result<Self> {
         let (sender, receiver) = mpsc::channel::<Message>();
         let thread = std::thread::Builder::new()
             .name("opensesh-writer".to_owned())
@@ -76,6 +87,7 @@ impl FileWriter {
                         Ok(Message::Remove { path, done }) => {
                             // A write still waiting for this file would bring it back.
                             pending.remove(&path);
+                            baselines.forget(&path);
                             let result = match std::fs::remove_file(&path) {
                                 Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
                                 other => other,
@@ -88,13 +100,13 @@ impl FileWriter {
                             }
                         }
                         Ok(Message::Flush(reply)) => {
-                            write_all(&mut pending);
+                            write_all(&mut pending, &baselines);
                             // The flusher may have given up waiting; nothing to do then.
                             let _ = reply.send(());
                         }
-                        Err(RecvTimeoutError::Timeout) => write_all(&mut pending),
+                        Err(RecvTimeoutError::Timeout) => write_all(&mut pending, &baselines),
                         Err(RecvTimeoutError::Disconnected) => {
-                            write_all(&mut pending);
+                            write_all(&mut pending, &baselines);
                             break;
                         }
                     }
@@ -173,9 +185,9 @@ impl Drop for FileWriter {
     }
 }
 
-fn write_all(pending: &mut BTreeMap<PathBuf, Job>) {
+fn write_all(pending: &mut BTreeMap<PathBuf, Job>, baselines: &Baselines) {
     for (path, job) in std::mem::take(pending) {
-        let result = fsutil::atomic_write(&path, &job.bytes, job.backups);
+        let result = sync::write_merging(&path, &job.bytes, job.backups, baselines);
         if let Err(error) = &result {
             tracing::warn!(path = %path.display(), "could not save file: {error}");
         }
@@ -237,7 +249,7 @@ mod tests {
             "superseded writes are skipped"
         );
         assert!(
-            !fsutil::backup_path(&path, 1).exists(),
+            !crate::fsutil::backup_path(&path, 1).exists(),
             "no intermediate versions hit disk"
         );
     }

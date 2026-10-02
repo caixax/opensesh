@@ -256,7 +256,7 @@ impl Workspace {
     ///
     /// [`WorkspaceError`] when the file can't be read or isn't a workspace.
     pub fn load(path: &Path) -> Result<(Self, Vec<String>), WorkspaceError> {
-        let text = std::fs::read_to_string(path).map_err(|source| WorkspaceError::Read {
+        let text = crate::sync::read_to_string(path).map_err(|source| WorkspaceError::Read {
             path: path.display().to_string(),
             source,
         })?;

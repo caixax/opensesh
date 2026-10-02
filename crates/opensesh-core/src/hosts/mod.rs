@@ -1303,7 +1303,7 @@ impl HostsFile {
     ///
     /// [`HostsError`] when the file can't be read or isn't TOML.
     pub fn load(path: &Path) -> Result<(Self, Vec<Warning>), HostsError> {
-        let text = match std::fs::read_to_string(path) {
+        let text = match crate::sync::read_to_string(path) {
             Ok(text) => text,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 return Ok((Self::default(), Vec::new()));

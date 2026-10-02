@@ -17,6 +17,7 @@ pub mod paste;
 pub mod paths;
 pub mod snippets;
 pub mod state;
+pub mod sync;
 pub mod terminal;
 pub mod theme;
 pub mod trusted_certificates;

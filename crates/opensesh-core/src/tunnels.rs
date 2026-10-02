@@ -357,7 +357,7 @@ impl TunnelsFile {
     /// Reads the file (a missing file means no tunnels).
     #[must_use]
     pub fn load_file(path: &Path) -> (Self, Vec<Warning>) {
-        match std::fs::read_to_string(path) {
+        match crate::sync::read_to_string(path) {
             Ok(text) => Self::from_toml_str(&text),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 (Self::default(), Vec::new())

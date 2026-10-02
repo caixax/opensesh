@@ -53,6 +53,18 @@ impl std::fmt::Debug for IdentitySecrets {
     }
 }
 
+/// Where the keychain's files are.
+#[derive(Debug, Clone)]
+pub struct KeychainDirs {
+    /// `keychain.toml`: the default settings folder, which stays with this computer's vault
+    /// even when the settings live elsewhere (Sprint 16).
+    pub keychain: PathBuf,
+    /// The settings folder (`known_hosts`).
+    pub settings: PathBuf,
+    /// The data folder (`vault.bin`).
+    pub data: PathBuf,
+}
+
 /// Something for the worker to do.
 pub enum Job {
     /// `keychain.toml` changed on disk.
@@ -249,7 +261,7 @@ fn now_secs() -> u64 {
 ///
 /// When the thread can't start.
 pub fn spawn(
-    dirs: Option<(PathBuf, PathBuf)>,
+    dirs: Option<KeychainDirs>,
     jobs: Receiver<(i32, Job)>,
     send: impl Fn(i32, Outcome) + Send + 'static,
 ) -> std::io::Result<()> {
@@ -263,13 +275,15 @@ pub fn spawn(
                 Arc::new(SystemKeyring::default())
             };
             let keychain = match &dirs {
-                Some((config, data)) => Keychain::open(Some((config, data)), Arc::clone(&store)),
+                Some(dirs) => {
+                    Keychain::open(Some((&dirs.keychain, &dirs.data)), Arc::clone(&store))
+                }
                 None => Keychain::open(None, Arc::clone(&store)),
             };
             let mut worker = Worker {
                 keychain,
                 store,
-                config_dir: dirs.map(|(config, _)| config),
+                config_dir: dirs.map(|dirs| dirs.settings),
                 sample: false,
                 known_query: String::new(),
             };

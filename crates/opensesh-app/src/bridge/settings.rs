@@ -300,7 +300,7 @@ fn parse_config(path: &Path, text: &str) -> Reload {
 /// Reads and parses `config.toml`, returning the text that was read (to recognise our own
 /// writes) with the result. A missing file means the defaults.
 fn read_config(path: &Path) -> (Option<String>, Reload) {
-    match std::fs::read_to_string(path) {
+    match opensesh_core::sync::read_to_string(path) {
         Ok(text) => {
             let reload = parse_config(path, &text);
             (Some(text), reload)

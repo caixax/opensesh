@@ -536,7 +536,7 @@ pub struct Loaded {
 ///
 /// Fails if the file exists but can't be read or isn't valid TOML.
 pub fn load_file(path: &Path) -> Result<Loaded, ConfigError> {
-    let text = match std::fs::read_to_string(path) {
+    let text = match crate::sync::read_to_string(path) {
         Ok(text) => text,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             return Ok(Loaded {

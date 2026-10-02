@@ -15,6 +15,9 @@ pub enum WriteOutcome {
     Written,
     /// The file already had exactly these contents; nothing was touched.
     Unchanged,
+    /// The file had changed on disk since it was read: what is written is the merge of both
+    /// versions ([`crate::sync::write_merging`]), so the caller should read it again.
+    Merged,
 }
 
 /// Longest chain of symbolic links [`resolve_links`] follows (Linux's own limit).

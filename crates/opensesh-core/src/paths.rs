@@ -8,6 +8,8 @@
 //! | Portable | `<exe dir>/data` | `<exe dir>/data` | `<exe dir>/data/cache` |
 //!
 //! Portable mode is enabled when a file named [`PORTABLE_MARKER`] exists next to the executable.
+//! The settings can also live in a folder of the user's choice (a Git repository, a Syncthing
+//! folder: [`crate::sync`]), named by a pointer in the default config folder.
 //! On Windows the roaming profile only holds configuration: logs, recordings and secrets stay on
 //! the local machine.
 
@@ -62,6 +64,9 @@ pub struct AppPaths {
     data_dir: PathBuf,
     cache_dir: PathBuf,
     portable: bool,
+    /// The default settings folder: where the pointer to a moved one ([`crate::sync`]) and the
+    /// keychain (which belongs with this computer's vault) stay.
+    local_config_dir: PathBuf,
 }
 
 /// Platform conventions for the per-user base directories.
@@ -131,12 +136,38 @@ impl AppPaths {
         if let Some(exe_dir) = exe.parent()
             && is_portable_dir(exe_dir)
         {
-            return Ok(Self::portable(exe_dir));
+            return Ok(Self::portable(exe_dir).with_location());
         }
-        Ok(Self::for_platform(
-            Platform::current(),
-            &BaseDirs::from_system()?,
-        ))
+        Ok(Self::for_platform(Platform::current(), &BaseDirs::from_system()?).with_location())
+    }
+
+    /// The settings in the folder the default one points at ([`crate::sync::location`]), when
+    /// it exists; a folder that is gone (an unplugged drive) leaves the default in use.
+    #[must_use]
+    pub fn with_location(mut self) -> Self {
+        if let Some(folder) = crate::sync::location(&self.local_config_dir) {
+            if folder.is_dir() {
+                self.config_dir = folder;
+            } else {
+                tracing::warn!(
+                    folder = %folder.display(),
+                    "the settings folder is missing; using the default one"
+                );
+            }
+        }
+        self
+    }
+
+    /// The default settings folder (where the pointer and the keychain stay).
+    #[must_use]
+    pub fn local_config_dir(&self) -> &Path {
+        &self.local_config_dir
+    }
+
+    /// Whether the settings live in a folder of the user's choice.
+    #[must_use]
+    pub fn settings_moved(&self) -> bool {
+        self.config_dir != self.local_config_dir
     }
 
     /// Directories for a portable installation rooted at `exe_dir`.
@@ -146,6 +177,7 @@ impl AppPaths {
         Self {
             config_dir: root.clone(),
             cache_dir: root.join("cache"),
+            local_config_dir: root.clone(),
             data_dir: root,
             portable: true,
         }
@@ -160,6 +192,7 @@ impl AppPaths {
                 data_dir: base.data_local.join(XDG_DIR_NAME),
                 cache_dir: base.cache.join(XDG_DIR_NAME),
                 portable: false,
+                local_config_dir: base.config.join(XDG_DIR_NAME),
             },
             Platform::Windows => {
                 let local = base.data_local.join(PRETTY_DIR_NAME);
@@ -168,6 +201,7 @@ impl AppPaths {
                     cache_dir: local.join("cache"),
                     data_dir: local,
                     portable: false,
+                    local_config_dir: base.config.join(PRETTY_DIR_NAME),
                 }
             }
             Platform::MacOs => Self {
@@ -175,6 +209,7 @@ impl AppPaths {
                 data_dir: base.data_local.join(PRETTY_DIR_NAME),
                 cache_dir: base.cache.join(PRETTY_DIR_NAME),
                 portable: false,
+                local_config_dir: base.config.join(PRETTY_DIR_NAME),
             },
         }
     }
@@ -228,7 +263,12 @@ impl AppPaths {
     /// Returns [`PathsError::CreateDir`] if a directory can't be created, or
     /// [`PathsError::SetPermissions`] if the data directory can't be made private.
     pub fn ensure_dirs(&self) -> Result<(), PathsError> {
-        for dir in [&self.config_dir, &self.cache_dir, &self.data_dir] {
+        for dir in [
+            &self.local_config_dir,
+            &self.config_dir,
+            &self.cache_dir,
+            &self.data_dir,
+        ] {
             create_dir(dir)?;
         }
         restrict_to_owner(&self.data_dir)?;
@@ -440,5 +480,23 @@ mod tests {
         assert!(base.config.is_absolute());
         assert!(base.data_local.is_absolute());
         assert!(base.cache.is_absolute());
+    }
+
+    #[test]
+    fn the_settings_can_live_elsewhere() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = AppPaths::portable(root.path());
+        assert!(!paths.clone().with_location().settings_moved());
+        std::fs::create_dir_all(paths.local_config_dir()).unwrap();
+        let synced = root.path().join("Sync").join("opensesh");
+        crate::sync::set_location(paths.local_config_dir(), Some(&synced)).unwrap();
+        // Not there (yet): the default stays.
+        assert!(!paths.clone().with_location().settings_moved());
+        std::fs::create_dir_all(&synced).unwrap();
+        let moved = paths.clone().with_location();
+        assert!(moved.settings_moved());
+        assert_eq!(moved.config_dir(), synced);
+        assert_eq!(moved.local_config_dir(), paths.config_dir());
+        assert_eq!(moved.data_dir(), paths.data_dir());
     }
 }

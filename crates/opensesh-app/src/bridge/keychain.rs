@@ -577,14 +577,13 @@ impl cxx_qt::Initialize for qobject::Keychain {
         let dirs = if is_test_run() {
             None
         } else {
-            services::get().map(|services| {
-                (
-                    services.paths.config_dir().to_path_buf(),
-                    services.paths.data_dir().to_path_buf(),
-                )
+            services::get().map(|services| crate::keychain::KeychainDirs {
+                keychain: services.paths.local_config_dir().to_path_buf(),
+                settings: services.paths.config_dir().to_path_buf(),
+                data: services.paths.data_dir().to_path_buf(),
             })
         };
-        let watched = dirs.as_ref().map(|(config, _)| config.join(KEYCHAIN_FILE));
+        let watched = dirs.as_ref().map(|dirs| dirs.keychain.join(KEYCHAIN_FILE));
         let (sender, receiver) = mpsc::channel();
         let qt_thread = self.qt_thread();
         let started = crate::keychain::spawn(dirs, receiver, move |token, outcome| {

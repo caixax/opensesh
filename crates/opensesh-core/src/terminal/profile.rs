@@ -247,7 +247,7 @@ impl ProfileSet {
                 });
                 continue;
             }
-            let text = match std::fs::read_to_string(&path) {
+            let text = match crate::sync::read_to_string(&path) {
                 Ok(text) => text,
                 Err(error) => {
                     problems.push(FileProblem {
