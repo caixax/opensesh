@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::Duration;
 
-use opensesh_core::hosts::{Host, Protocol, SerialOptions, target};
+use opensesh_core::hosts::{Host, Protocol, SerialOptions, containers, target};
 use opensesh_proto_misc::mosh::MoshSpec;
 use opensesh_proto_misc::serial::{self, SerialSpec};
 use opensesh_proto_misc::telnet::{self, TelnetSpec};
@@ -46,23 +46,18 @@ pub enum Start {
 pub fn for_pane(host_id: &str, target_text: &str, term: &str) -> Option<Result<Start, String>> {
     let library = crate::hosts::current();
     let host = if host_id.is_empty() {
-        let parsed = target::parse(target_text).ok()?;
         // An unsaved host: no group, so the app's defaults apply.
-        Host {
-            name: parsed.host.clone(),
-            protocol: parsed.protocol,
-            address: parsed.host,
-            port: parsed.port,
-            user: parsed.user,
-            serial: parsed.serial,
-            ..Host::default()
-        }
+        target::parse(target_text).ok()?.to_host()
     } else {
         library.file.host(host_id)?.clone()
     };
     match host.protocol {
         Protocol::Telnet => Some(telnet_for(&host, &library.file, term)),
         Protocol::Serial => Some(serial_for(&host, &library.file)),
+        // A container's pane runs its command; without one, the host can't be used.
+        Protocol::Docker | Protocol::Kube => Some(Err(containers::command(&host)
+            .err()
+            .unwrap_or_else(|| "this container can't be entered".to_owned()))),
         Protocol::Mosh => Some(
             crate::ssh::connect_for(&library.file, &host).map(|connect| {
                 Start::Mosh(MoshSpec {

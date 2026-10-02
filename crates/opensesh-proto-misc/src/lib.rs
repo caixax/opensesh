@@ -12,6 +12,7 @@
 //! thread. What they print themselves (connecting, why a session ended) is dim or red text in
 //! the terminal, never logged with the session.
 
+pub mod containers;
 pub mod mosh;
 pub mod serial;
 pub mod telnet;

@@ -12,10 +12,13 @@
 //! Secrets are never stored here: a host or group names an identity of the keychain
 //! (`keychain.toml`, Sprint 6), whose password and key live in the vault.
 
+pub mod containers;
 pub mod detected;
 pub mod recent;
 pub mod search;
 pub mod target;
+
+pub use containers::ContainerOptions;
 
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
@@ -135,8 +138,7 @@ impl Protocol {
         match self {
             Self::Ssh | Self::Local => None,
             Self::Sftp => Some(8),
-            Self::Telnet | Self::Serial | Self::Mosh => None,
-            Self::Docker | Self::Kube => Some(12),
+            Self::Telnet | Self::Serial | Self::Mosh | Self::Docker | Self::Kube => None,
             Self::Rdp => Some(13),
             Self::Vnc => Some(14),
         }
@@ -503,6 +505,9 @@ pub struct Host {
     /// Serial line settings.
     #[serde(default, skip_serializing_if = "SerialOptions::is_empty")]
     pub serial: SerialOptions,
+    /// How a container or pod is entered (docker and kube hosts).
+    #[serde(default, skip_serializing_if = "ContainerOptions::is_empty")]
+    pub container: ContainerOptions,
     /// Terminal options over the profile.
     #[serde(default, skip_serializing_if = "Table::is_empty")]
     pub terminal: Table,
@@ -533,6 +538,7 @@ impl Default for Host {
             ssh: SshOptions::default(),
             sftp: SftpOptions::default(),
             serial: SerialOptions::default(),
+            container: ContainerOptions::default(),
             terminal: Table::new(),
             extra: Table::new(),
         }
@@ -1337,6 +1343,9 @@ impl HostsFile {
             problems.push(("group", "unknown"));
         }
         check_ssh(&host.ssh, &mut problems);
+        if matches!(host.protocol, Protocol::Docker | Protocol::Kube) {
+            containers::check(&host.container, &mut problems);
+        }
         problems
     }
 

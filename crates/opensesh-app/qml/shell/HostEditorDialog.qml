@@ -139,7 +139,18 @@ OsDialog {
             return qsTr("Required.");
         switch (field) {
         case "address":
-            return protocol === "serial" ? qsTr("Not a device name.") : qsTr("Not a host name or address (no spaces, @ or /, and not starting with -).");
+            if (protocol === "serial")
+                return qsTr("Not a device name.");
+            if (protocol === "docker" || protocol === "kube")
+                return qsTr("Not a container or pod name (no spaces, and not starting with -).");
+            return qsTr("Not a host name or address (no spaces, @ or /, and not starting with -).");
+        case "container.namespace":
+        case "container.pod_container":
+            return qsTr("Not a name (no spaces or /, and not starting with -).");
+        case "container.context":
+            return qsTr("Not a context name (no spaces, and not starting with -).");
+        case "container.shell":
+            return qsTr("A program and its arguments, with quotes closed.");
         case "user":
             return qsTr("Not a user name (no spaces, and not starting with -).");
         case "port":
@@ -305,6 +316,8 @@ OsDialog {
                                 case "telnet":
                                 case "serial":
                                 case "mosh":
+                                case "docker":
+                                case "kube":
                                     return "";
                                 case "sftp":
                                     return qsTr("Saved now; the file browser arrives in Sprint 8.");
@@ -327,7 +340,138 @@ OsDialog {
                             visible: dialog.protocol !== "local"
                             label: dialog.protocol === "serial" ? qsTr("Device") : dialog.protocol === "docker" ? qsTr("Container")
                                                                                                               : dialog.protocol === "kube" ? qsTr("Pod") : qsTr("Address")
-                            placeholder: dialog.protocol === "serial" ? qsTr("/dev/ttyUSB0 or COM3") : qsTr("host name or IP address")
+                            placeholder: {
+                                switch (dialog.protocol) {
+                                case "serial":
+                                    return qsTr("/dev/ttyUSB0 or COM3");
+                                case "docker":
+                                    return qsTr("container name or ID");
+                                case "kube":
+                                    return qsTr("pod name");
+                                default:
+                                    return qsTr("host name or IP address");
+                                }
+                            }
+                        }
+
+                        // Containers and pods: what runs them, and the running ones to pick.
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "container.engine"
+                            inherit: false
+                            visible: dialog.protocol === "docker"
+                            label: qsTr("Engine")
+                            options: [{ text: qsTr("Default (Docker)"), value: undefined }, { text: qsTr("Docker"), value: "docker" },
+                                { text: qsTr("Podman"), value: "podman" }]
+                        }
+
+                        EditorTextRow {
+                            id: namespaceRow
+
+                            editor: dialog
+                            path: "container.namespace"
+                            inheritKey: ""
+                            visible: dialog.protocol === "kube"
+                            label: qsTr("Namespace")
+                            placeholder: qsTr("the context's")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "container.pod_container"
+                            inheritKey: ""
+                            visible: dialog.protocol === "kube"
+                            label: qsTr("Container")
+                            placeholder: qsTr("the pod's default")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "container.context"
+                            inheritKey: ""
+                            visible: dialog.protocol === "kube"
+                            label: qsTr("Context")
+                            placeholder: qsTr("the current one")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "container.shell"
+                            inheritKey: ""
+                            visible: dialog.protocol === "docker" || dialog.protocol === "kube"
+                            label: qsTr("Shell")
+                            placeholder: qsTr("bash where there is one, else sh")
+                        }
+
+                        OsFormRow {
+                            id: runningRow
+
+                            readonly property bool shown: dialog.visible && (dialog.protocol === "docker" || dialog.protocol === "kube")
+                            readonly property string source: dialog.protocol === "kube" ? "kube"
+                                                                                        : dialog.revision >= 0 && dialog.value("container.engine") === "podman" ? "podman" : "docker"
+                            readonly property string context: dialog.revision >= 0 && source === "kube" ? (dialog.value("container.context") ?? "") : ""
+                            readonly property var listing: {
+                                const listed = JSON.parse(Platform.containers || "{}");
+                                return listed.source === source && (listed.context ?? "") === context ? listed : { items: [], error: "" };
+                            }
+                            readonly property var items: listing.items ?? []
+
+                            // Every namespace of the context: picking a pod sets its namespace.
+                            function refresh() {
+                                Platform.refreshContainers(source, context, "");
+                            }
+
+                            width: parent.width
+                            visible: shown
+                            label: dialog.protocol === "kube" ? qsTr("Running pods") : qsTr("Running containers")
+                            helpText: (listing.error ?? "").length > 0 ? listing.error
+                                                                       : items.length === 0 ? qsTr("None found yet: Refresh lists them again.")
+                                                                                            : qsTr("Choose one to use it.")
+
+                            Row {
+                                width: parent.width
+                                spacing: Theme.spacingSm
+
+                                OsComboBox {
+                                    width: parent.width - refreshButton.width - parent.spacing
+                                    enabled: !dialog.readOnly && runningRow.items.length > 0
+                                    model: runningRow.items.map(item => ({
+                                        text: item.detail.length > 0 ? qsTr("%1 (%2)").arg(item.name).arg(item.detail) : item.name
+                                    }))
+                                    textRole: "text"
+                                    currentIndex: dialog.revision >= 0 ? runningRow.items.findIndex(item => item.name === dialog.value("address")
+                                                                                                    && (!item.namespace || item.namespace === dialog.value("container.namespace"))) : -1
+                                    displayText: currentIndex < 0 ? qsTr("Choose…") : currentText
+                                    Accessible.name: runningRow.label
+
+                                    onActivated: index => {
+                                        const item = runningRow.items[index];
+                                        dialog.setValue("address", item.name);
+                                        addressRow.show();
+                                        if (item.namespace) {
+                                            dialog.setValue("container.namespace", item.namespace);
+                                            namespaceRow.show();
+                                        }
+                                    }
+                                }
+
+                                OsButton {
+                                    id: refreshButton
+
+                                    text: qsTr("Refresh")
+                                    iconName: "refresh-cw"
+                                    onClicked: runningRow.refresh()
+                                }
+                            }
+
+                            onShownChanged: {
+                                if (shown)
+                                    refresh();
+                            }
+                            onSourceChanged: {
+                                if (shown)
+                                    refresh();
+                            }
                         }
 
                         OsFormRow {
