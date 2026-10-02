@@ -127,6 +127,19 @@ async fn file_operations() {
     ));
     assert!(fs.open_write("/", None).await.is_err());
     assert!(!fs.can_resume() && !fs.keeps_metadata() && !fs.is_local());
+    // Keys that aren't one plain name aren't listed (they could be copied out of their folder).
+    for key in ["odd/..", "odd/./x", "odd/ok.txt"] {
+        fs.s3()
+            .unwrap()
+            .client()
+            .put("data", key, Vec::new())
+            .await
+            .unwrap();
+    }
+    assert_eq!(
+        names(&fs.list("/data/odd").await.unwrap()),
+        [("ok.txt".into(), Kind::File)]
+    );
     // A temporary link.
     fs.create_file("/data/shared.txt").await.unwrap();
     let link = fs

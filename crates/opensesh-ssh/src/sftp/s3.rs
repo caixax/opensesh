@@ -13,7 +13,7 @@ use opensesh_s3::{PART_SIZE, S3, S3Error};
 use super::FsError;
 use super::entry::{Entry, Kind};
 use super::fs::{Reader, Writer};
-use super::path::normalize_posix;
+use super::path::{Style, is_plain_name, normalize_posix};
 
 /// An S3 endpoint's buckets as files.
 #[derive(Debug, Clone)]
@@ -122,6 +122,7 @@ impl S3Fs {
                 let buckets = self.s3.buckets().await.map_err(fail)?;
                 return Ok(buckets
                     .into_iter()
+                    .filter(|bucket| is_plain_name(Style::Posix, &bucket.name))
                     .map(|bucket| Self::dir(bucket.name, bucket.created))
                     .collect());
             }
@@ -133,14 +134,16 @@ impl S3Fs {
             .folders
             .iter()
             .filter_map(|folder| {
-                let name = folder.get(prefix.len()..)?.trim_end_matches('/');
-                (!name.is_empty()).then(|| Self::dir(name.to_owned(), None))
+                let name = folder.get(prefix.len()..)?.strip_suffix('/')?;
+                // Keys come from the server: `..`, `.` and empty names aren't listed (see
+                // path::is_plain_name), so they can't be copied out of their folder.
+                is_plain_name(Style::Posix, name).then(|| Self::dir(name.to_owned(), None))
             })
             .collect();
         entries.extend(listing.objects.into_iter().filter_map(|object| {
-            // The folder's own marker isn't listed in it.
+            // The folder's own marker (an empty name) isn't listed in it.
             let name = object.key.get(prefix.len()..)?;
-            (!name.is_empty() && !name.contains('/'))
+            is_plain_name(Style::Posix, name)
                 .then(|| Self::file(name.to_owned(), object.size, object.modified))
         }));
         Ok(entries)
