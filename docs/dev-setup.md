@@ -136,6 +136,32 @@ Local terminals on Windows run through ConPTY. OpenSesh bundles the modern ConPT
 - **Is it in use?** While a terminal is open, `Get-CimInstance Win32_Process -Filter "Name='OpenConsole.exe'" | Select-Object ProcessId, ParentProcessId, CommandLine` lists the bundled host (`...\target\debug\OpenConsole.exe --headless --inheritcursor ...`). With the built-in ConPTY the host is `conhost.exe --headless ...` instead.
 - If the copy fails with "access denied", an OpenSesh (or a test) that uses the files is still running.
 
+### The RDP helper
+
+Remote desktops run in a helper program, `opensesh-rdp`, built from a workspace of its own in `rdp/` with its own `Cargo.lock` ([ADR 0034](adr/0034-rdp-client.md)): IronRDP's dependencies can't share the app's lock file. The app looks for it next to its executable, or in `../lib/opensesh/` (Linux packages).
+
+```sh
+cargo build -p opensesh-app
+cargo xtask rdp                  # builds the helper (optimized) into target/rdp and copies it to target/debug and target/release
+cargo xtask rdp --test-server    # also the RDP test server the smoke test and screenshots connect to
+```
+
+- **`--debug`** builds an unoptimized helper, to debug it (RemoteFX decoding is then slow).
+- **`--dest <folder>`** copies it somewhere else.
+- `cargo clean` deletes the copies: run the task again afterwards. Without the helper, an RDP tab says it is missing; without the test server, the smoke test fails at its remote desktop steps.
+- **Its checks** run on its own workspace:
+
+  ```sh
+  cargo fmt --manifest-path rdp/Cargo.toml --all --check
+  cargo clippy --manifest-path rdp/Cargo.toml --workspace --all-targets -- -D warnings
+  cargo test --manifest-path rdp/Cargo.toml --workspace
+  cargo deny --manifest-path rdp/Cargo.toml check
+  (cd rdp && cargo audit)
+  ```
+
+- **Against a real server:** `sudo scripts/rdp-test-server.sh start` installs xrdp with a test account on a Debian or Ubuntu machine you can throw away; the script's header has the test command.
+- **The helper never logs:** IronRDP and `sspi` write NTLM messages to their debug logs, so it installs no log output, even in debug builds. Its integration test shows them with `RUST_LOG=debug`.
+
 ### AltGr
 
 On Windows, the app starts Qt with `QT_QPA_PLATFORM=windows:altgr` unless you set `QT_QPA_PLATFORM` yourself. With that option, Qt reports AltGr as its own modifier instead of Ctrl+Alt, so the terminal can tell AltGr+Q (`@` on a German layout) from Ctrl+Alt+Q. The value is removed from the environment of shells started in local terminals. If you set `QT_QPA_PLATFORM=windows` (or anything else), it is left alone and AltGr arrives as Ctrl+Alt.
@@ -173,6 +199,7 @@ The assets these tasks generate are committed, so normal builds work offline:
 - **`cargo xtask i18n`** updates the `.ts` files with `lupdate`, regenerates the pseudo-locale and compiles the `.qm` files with `lrelease` ([ADR 0009](adr/0009-i18n-pipeline.md)). With `--check` it changes nothing, and fails when a `.ts` file is out of date or a `.qm` file differs from what `lrelease` builds. CI runs `--check` with Qt 6.10.3, so commit `.qm` files built with that version.
 
 - **`cargo xtask conpty`** (Windows) copies the bundled ConPTY next to the app; see [ConPTY](#conpty-windows-pseudoconsole-host). Its outputs in `target/` are not committed; the license copy and the notices are.
+- **`cargo xtask rdp`** builds the RDP helper and puts it next to the app; see [The RDP helper](#the-rdp-helper).
 - **`cargo xtask vttest`** (Linux) builds the pinned vttest used by the terminal harness tests; see [vttest](#vttest).
 - **`cargo xtask notices`** regenerates `THIRD_PARTY_NOTICES.md` from the manifests (icons, fonts, the terminal themes in `assets/themes/themes.toml`, ConPTY) without the network; a test fails when the committed file is stale. The built-in terminal themes are upstream files kept in `assets/themes/upstream/` at the commits `themes.toml` pins; to update one, fetch the file at a new commit, update the manifest and run the task.
 

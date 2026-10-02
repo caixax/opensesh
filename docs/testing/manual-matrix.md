@@ -4,6 +4,35 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 13 (2026-10-02)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 533 steps offscreen and 537 native on Windows):** as before, plus remote desktops against the RDP test server (`cargo xtask rdp --test-server`) through the real helper:
+  - the certificate and the password asked in the pane, a wrong password first;
+  - the desktop's pixels, Ctrl+Alt+Del repainting a square, the clipboard both ways (a stand-in for the user's);
+  - the desktop following a narrower pane after a split, a disconnection, and a new helper connecting again;
+  - the same desktop through a jump host (the SSH test server), over the local tunnel.
+- **Screenshots (native, Windows),** in dark and light, comfortable and compact: a connected desktop, one asking about its certificate, and the host editor of an RDP host.
+- **The helper against its in-process server:** the certificate, a refused password then the right one, pixels (opaque), keys, a click, the wheel, the clipboard both ways, a resize, the end.
+- **The helper against xrdp** in CI (`scripts/rdp-test-server.sh`): TLS without NLA, the desktop, keys and the mouse, the X session's clipboard, a resize.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 666 + 5 (helper) | ✅ / ✅ | ✅ `windows` | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ xrdp 0.9.24 (desktop, keys, clipboard, resize), OpenSSH, Dropbear, RustFS |
+
+### Manual checks for the owner
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| Windows 11 (or Windows Server) with NLA: the certificate question, the password from an identity, typing in your keyboard layout, the clipboard both ways, resizing the pane, Ctrl+Alt+Del | ⏳ | ⏳ |
+| xrdp on a Linux machine: logging in, a resize, copy and paste | ⏳ | ⏳ |
+| Full screen (F11) with a desktop, and giving the keyboard back (Ctrl+Alt+Home) | ⏳ | ⏳ |
+| A desktop through a jump host (a saved SSH host as the jump) | ⏳ | ⏳ |
+| On Wayland: which shortcuts the compositor keeps (Super, Alt+Tab) while a desktop has the keyboard | — | ⏳ |
+| A high-DPI screen (150 %): the desktop sharp at "Actual size", and following the pane | ⏳ | ⏳ |
+
 ## Sprint 12 (2026-10-02)
 
 ### Automated checks

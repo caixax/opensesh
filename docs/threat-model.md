@@ -71,6 +71,10 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - Proxies (SOCKS5, HTTP CONNECT, a proxy command) see where the user connects, not what is sent.
 - **Telnet has no protection at all:** everything, passwords too, crosses the network in clear, and nothing proves who answers. The pane says so in yellow before connecting, and the host editor does too. Use it only on networks the user trusts, for devices without SSH.
 - **S3 over `http://`** (an endpoint the user typed that way, or `s3+http://`) sends requests in clear: the secret key itself never travels (requests are signed), but the objects and their names do, and a signed request can be replayed for a few minutes. `https://` is the default.
+- **Remote desktops** always run over TLS (rustls on `ring`, no key logging, no session resumption).
+  - **The server's certificate** is trusted on first use, like a host key: the first one is shown with its SHA-256 fingerprint and subject, and a changed one warns, defaulting to "Don't connect". Remembered certificates are in `trusted_certificates.toml`.
+  - **Nothing is sent before the certificate is accepted.** Servers with NLA (Windows) then get the credentials through CredSSP; servers without it (xrdp) get them inside the TLS session.
+  - **Through jump hosts** the desktop's TLS still ends at the server, and its certificate is checked against the server's name: the jump hosts carry it, they can't read it.
 
 ### A malicious server
 
@@ -107,6 +111,20 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - **The server** sees what is uploaded and can serve anything for a download, like an SFTP server.
 - **Test runs** use an in-process S3 server with test keys, never the network.
 
+### Remote desktops (Sprint 13)
+
+- **A program of its own:** each remote desktop pane runs `opensesh-rdp` (ADR 0034), which talks only to OpenSesh, over its standard input and output.
+  - Everything the server sends is decoded there, in Rust, so a decoder that fails ends that pane, not the app.
+  - It never logs: IronRDP and `sspi` write NTLM messages to their debug logs, so the helper installs no log output at all, and its standard error goes nowhere.
+- **The password** goes to the helper once, through that pipe (never on a command line or in the environment), and only when a connection needs it. IronRDP keeps it as a plain string for that connection, which isn't wiped (see Memory).
+- **The server sees what is typed while the desktop has the keyboard,** OpenSesh's own shortcuts included. The "Give the keyboard back" combination (Ctrl+Alt+Home unless changed) is the one exception. On Wayland the compositor's shortcuts still go to the compositor (Qt has no shortcuts inhibitor yet).
+- **The clipboard** is shared both ways unless the host turns it off.
+  - This computer's text is handed to the helper when the desktop gets the keyboard, or when the clipboard changes while it has it. The server asks for it when something there pastes, but nothing stops a malicious server from asking at any moment while connected: with sharing on, it can read whatever text was copied here last.
+  - The server can put text into this computer's clipboard at any time while connected.
+- **The pointer pictures** the server sends are checked against their size before they are drawn.
+- **The local tunnel through jump hosts** listens on `127.0.0.1` while the pane is open. Programs on this computer could connect to it, as with a local tunnel (see Tunnels), and reach the desktop's login.
+- **Test runs** connect only to an RDP test server started next to the app, remember certificates in their temporary folder, and never touch the user's clipboard.
+
 ### Pasted text
 
 A web page, a chat or a document that gives the user a command to paste.
@@ -137,6 +155,7 @@ A web page, a chat or a document that gives the user a command to paste.
   - They can't read secrets this way. An identity's key is used from the vault, and its public half is derived from it, not trusted from the file.
   - Connecting to a changed address is caught by host key verification: the new server's key is unknown or different.
 - **`known_hosts`** (OpenSesh's file and `~/.ssh/known_hosts`) is not authenticated either. Someone who can write it can make a key trusted, as with OpenSSH. OpenSesh only ever writes its own file, atomically.
+- **`trusted_certificates.toml`** is the same for remote desktops' certificates: someone who can write it can make a certificate trusted.
 - A value in `keychain.toml` that looks like a secret instead of a `vault:` reference is dropped when read, and never written back. Warnings about the file never quote its values.
 
 ### Leaks through the app itself
@@ -178,6 +197,7 @@ OpenSesh lists the keys of the agents it finds: `SSH_AUTH_SOCK`, the Windows Ope
 - Every version is pinned and locked. `cargo deny` and `cargo audit` run in CI.
 - **RUSTSEC-2026-0253** (`lru` 0.16.4, unsound `pop()` when a key's code panics) comes with the AWS SDK, which uses it for its S3 Express session cache with `String` keys, whose code doesn't panic. No fixed 0.16 release exists; reviewed each sprint ([ADR 0033](adr/0033-s3-storage.md)).
 - **RUSTSEC-2023-0071** (the `rsa` crate, the Marvin timing attack) has no fixed version. The vault uses RSA locally (generating, reading and writing keys), which the advisory considers safe ([ADR 0024](adr/0024-crypto-crates-and-ssh-keys.md)). The SSH client signs with RSA keys from the vault and key files: it never decrypts with RSA (the attack's target), it makes one signature per connection, new keys are Ed25519 by default, and keys held by an agent are signed outside OpenSesh. Accepted and reviewed each sprint ([ADR 0027](adr/0027-ssh-client.md)).
+  - **The RDP helper** gets `rsa` too, through `sspi`'s `picky` (Kerberos and smart cards). It never decrypts with an RSA private key: its NLA is NTLM, and rustls on `ring` checks the server's TLS signature. Its workspace has a lock file of its own (`rdp/`), checked by `cargo deny` and `cargo audit` in CI ([ADR 0034](adr/0034-rdp-client.md)).
 
 ## Known gaps and future work
 
