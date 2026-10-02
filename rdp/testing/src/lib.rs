@@ -4,8 +4,8 @@
 //! It listens on 127.0.0.1 with NLA for [`USER`] and [`PASSWORD`] and a fixed test certificate,
 //! shows a made-up desktop at the size the client asks for (again after a display control
 //! resize), paints a square that changes colour with each key it gets, records the input, and
-//! shares text both ways on the clipboard: what the client copies lands in [`Seen::clipboard`],
-//! and it offers [`SERVER_TEXT`].
+//! shares text both ways on the clipboard: what the client copies lands in [`Seen::clipboard`]
+//! (and a second square, green, appears next to the first), and it offers [`SERVER_TEXT`].
 
 #![allow(clippy::unwrap_used, clippy::expect_used, reason = "a test server")]
 
@@ -70,9 +70,10 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// The desktop's pixels: a background, a "window" with a title bar, and the key square in
-/// `colour`. BGRA, `width * 4` a row.
-fn paint(width: u16, height: u16, keys: usize) -> Vec<u8> {
+/// The desktop's pixels: a background, a "window" with a title bar, the key square (its colour
+/// changes with each key) and, once the client copied text, the clipboard square. BGRA,
+/// `width * 4` a row.
+fn paint(width: u16, height: u16, keys: usize, clipboard: bool) -> Vec<u8> {
     let (w, h) = (usize::from(width), usize::from(height));
     let mut pixels = vec![0_u8; w * h * 4];
     let square = [
@@ -97,6 +98,9 @@ fn paint(width: u16, height: u16, keys: usize) -> Vec<u8> {
             if (24..72).contains(&x) && (24..72).contains(&y) {
                 rgb = square;
             }
+            if clipboard && (80..128).contains(&x) && (24..72).contains(&y) {
+                rgb = [0xA3, 0xBE, 0x8C];
+            }
             let at = (y * w + x) * 4;
             pixels[at..at + 4].copy_from_slice(&[rgb[2], rgb[1], rgb[0], 0xFF]);
         }
@@ -104,14 +108,14 @@ fn paint(width: u16, height: u16, keys: usize) -> Vec<u8> {
     pixels
 }
 
-fn full(width: u16, height: u16, keys: usize) -> DisplayUpdate {
+fn full(width: u16, height: u16, keys: usize, clipboard: bool) -> DisplayUpdate {
     DisplayUpdate::Bitmap(BitmapUpdate {
         x: 0,
         y: 0,
         width: NonZeroU16::new(width).unwrap(),
         height: NonZeroU16::new(height).unwrap(),
         format: PixelFormat::BgrA32,
-        data: paint(width, height, keys).into(),
+        data: paint(width, height, keys, clipboard).into(),
         stride: NonZeroUsize::new(usize::from(width) * 4).unwrap(),
     })
 }
@@ -121,6 +125,8 @@ fn full(width: u16, height: u16, keys: usize) -> DisplayUpdate {
 struct Shared {
     size: (u16, u16),
     keys: usize,
+    /// The client copied text.
+    clipboard: bool,
     updates: Option<UnboundedSender<DisplayUpdate>>,
     seen: Arc<Mutex<Seen>>,
 }
@@ -129,7 +135,7 @@ impl Shared {
     fn repaint(&self) {
         if let Some(updates) = &self.updates {
             let (width, height) = self.size;
-            let _ = updates.send(full(width, height, self.keys));
+            let _ = updates.send(full(width, height, self.keys, self.clipboard));
         }
     }
 }
@@ -222,10 +228,15 @@ impl RdpServerInputHandler for Input {
 }
 
 /// The server's clipboard: it takes the client's text and offers [`SERVER_TEXT`].
-#[derive(Debug)]
 struct Clipboard {
     events: Arc<Mutex<Option<UnboundedSender<ServerEvent>>>>,
-    seen: Arc<Mutex<Seen>>,
+    shared: Arc<Mutex<Shared>>,
+}
+
+impl std::fmt::Debug for Clipboard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Clipboard").finish_non_exhaustive()
+    }
 }
 
 impl Clipboard {
@@ -295,7 +306,10 @@ impl ironrdp_cliprdr::backend::CliprdrBackend for Clipboard {
 
     fn on_format_data_response(&mut self, response: ironrdp_cliprdr::pdu::FormatDataResponse<'_>) {
         if let Ok(text) = response.to_unicode_string() {
-            lock(&self.seen).clipboard = Some(text);
+            let mut shared = lock(&self.shared);
+            lock(&shared.seen).clipboard = Some(text);
+            shared.clipboard = true;
+            shared.repaint();
         }
     }
 
@@ -314,14 +328,14 @@ impl ironrdp_cliprdr::backend::CliprdrBackend for Clipboard {
 
 struct ClipboardFactory {
     events: Arc<Mutex<Option<UnboundedSender<ServerEvent>>>>,
-    seen: Arc<Mutex<Seen>>,
+    shared: Arc<Mutex<Shared>>,
 }
 
 impl ironrdp_cliprdr::backend::CliprdrBackendFactory for ClipboardFactory {
     fn build_cliprdr_backend(&self) -> Box<dyn ironrdp_cliprdr::backend::CliprdrBackend> {
         Box::new(Clipboard {
             events: Arc::clone(&self.events),
-            seen: Arc::clone(&self.seen),
+            shared: Arc::clone(&self.shared),
         })
     }
 }
@@ -404,7 +418,7 @@ pub fn serve() -> std::io::Result<TestServer> {
                     .with_display_handler(Display(Arc::clone(&shared)))
                     .with_cliprdr_factory(Some(Box::new(ClipboardFactory {
                         events: Arc::new(Mutex::new(None)),
-                        seen: server_seen,
+                        shared: Arc::clone(&shared),
                     })))
                     .with_honor_client_desktop_size(true)
                     .build();
