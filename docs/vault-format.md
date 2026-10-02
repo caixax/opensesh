@@ -84,3 +84,7 @@ These files hold no secrets:
 ## Changing the format
 
 A new layout gets a new version number. Older versions keep being read, and the file is rewritten in the new version on the next change.
+
+## In bundles (Sprint 16)
+
+An OpenSesh bundle exported with its keychain carries the identities' and keys' secrets as a file in this format, Base64-encoded in its `[keychain]` table (`sealed`), held by a password slot for the export password (a random vault id and key of its own). Opening it is the same as unlocking a vault with a master password; see [ADR 0037](adr/0037-importers-bundles-and-sync.md).

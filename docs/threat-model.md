@@ -16,6 +16,7 @@ This document says what OpenSesh protects, from whom, how, and where it stops. I
 | Snippets and macros | `snippets.toml`, readable; their secrets stay in the vault (`{{secret:identity}}`) |
 | Files on servers | the servers; copies the user transfers; private copies of files being edited, in the cache folder |
 | The user's SSH sessions themselves | the network, between OpenSesh and each server |
+| Bundles exported with their keychain | wherever the user saves them; the passwords and private keys sealed with an export password |
 
 Hosts and public keys are not secret, but they are private: they show where the user connects and as whom. They are kept readable on purpose (PLAN §0, local-first), like OpenSSH's own `~/.ssh/config` and `known_hosts`.
 
@@ -134,6 +135,19 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - **The local tunnel through jump hosts** listens on `127.0.0.1` while the pane is open. Programs on this computer could connect to it, as with a local tunnel (see Tunnels), and reach the desktop's login.
 - **Test runs** connect only to an RDP test server started next to the app, remember certificates in their temporary folder, and never touch the user's clipboard.
 - **VNC** (Sprint 14) runs in the app rather than a helper, in Rust (`opensesh-vnc`): what the server sends is bounded before it is decoded (desktops up to 8192 pixels a side, cursors up to 256, compressed rectangles up to 64 MiB, texts up to 1 MiB), and a rectangle outside the desktop ends the session. The password goes to the session once, kept in a wiped string; VeNCrypt's user name and password are sent in one wiped buffer. The clipboard is shared as for RDP (a host setting), and a view-only host sends no keys, pointer or clipboard at all.
+
+### Imports, exports and sync (Sprint 16)
+
+[ADR 0037](adr/0037-importers-bundles-and-sync.md).
+
+- **Imported files are untrusted input,** whoever sent them: MobaXterm, PuTTY and Remmina files, `.reg` exports, CSV files and bundles are parsed as data (bounded: bundles up to 64 MiB, CSV files up to 100,000 rows), never run, and their hosts go through the same checks as typed ones (addresses, ids, groups). Passwords are never imported from them.
+- **What an import would run here is shown before importing:** a host's or group's ProxyCommand (run to connect) and the shell of a local terminal (from a host, a group or a bundle's profile) are listed in a warning, with the command, so a file from someone else can't quietly bring a command to run.
+- **A bundle with its keychain** holds every password and private key, sealed as the vault is: Argon2id (64 MiB, 3 passes) then XChaCha20-Poly1305, the export password's key wrapping a random one. Anyone with the file can guess the password offline; the dialog asks for at least 8 characters. Without the keychain, a bundle holds no secret (identities are only referred to by id).
+- **The bundle is written by the keychain worker,** so the secrets go from the vault to the file without passing through the UI; the export password is typed once and not kept.
+- **Importing a bundle's keychain** asks for its password and refuses a wrong one (the tag doesn't match); nothing is added then.
+- **The settings folder** can be a Git repository or a Syncthing folder. Its files are not secret but private (where the user connects, as whom, `known_hosts`): a repository should be private. The vault, the keychain's list and the window's state stay on each computer.
+- **Merging and conflicts** read TOML as data and write it back; nothing in them is run. A merge keeps this computer's value where both changed the same one, and the backups (`.bak.N`) keep the versions before it.
+- **The Git helper** runs `git` only when the user presses a button, in the settings folder, with the user's own Git setup (credentials, hooks): a folder synced from the user's other computers is trusted like those computers. Pull and push are the only network calls; `git` never prompts for a password here.
 
 ### Pasted text
 

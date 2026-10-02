@@ -4,6 +4,32 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 16 (2026-10-03)
+
+### Automated checks
+
+- **Main window (`--smoke-test`):** the import dialog reads the MobaXterm, PuTTY (`.reg`), Remmina and CSV samples (6, 4, 3 and 3 hosts), a CSV without an address column can't be imported, the CSV import adds 3 hosts; the export dialog opens; a sample sync conflict lists its 4 differences in the conflict dialog; Settings > Data and sync opens.
+- **Screenshots (native, Windows):** the import dialog (MobaXterm, with what is left out and the command it would run; CSV with the column mapping), the export dialog, Settings > Data and sync and the conflict dialog, in dark and light, comfortable and compact.
+- **Importers:** fixtures for every format (CRLF and Windows-1252 for MobaXterm, UTF-16 `.reg`), the bundle written and read back, sealed keychains (a wrong password refused, nothing added twice), the OpenSSH config export read back by the importer.
+- **Sync:** the three-way merge by record id, conflicts found and split, the settings folder pointer, the Git helper on a temporary repository, and two instances writing one folder at once (which loses hosts when the merge is taken out).
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 730 + 5 (RDP helper) | ✅ / ✅ | ✅ `windows` | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ OpenSSH, Dropbear, xrdp, TigerVNC, x11vnc, wayvnc, RustFS |
+
+### Manual checks for the owner
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| Import your own MobaXterm export (`.mxtsessions`) and `MobaXterm.ini`; say which sessions came wrong or were skipped (please send the files, with passwords removed, for the fixtures) | ⏳ | — |
+| Import PuTTY's sessions from the registry, and a `.reg` export on Linux | ⏳ | ⏳ |
+| Import Remmina's profiles (`~/.local/share/remmina`) | — | ⏳ |
+| A CSV from a spreadsheet: map its columns, import | ⏳ | ⏳ |
+| Export a bundle with its keychain on one computer and import it on the other (identities and keys work there) | ⏳ | ⏳ |
+| Settings folder in Syncthing on two computers: edit different hosts on both, then the same host on both (conflict dialog) | ⏳ | ⏳ |
+| Settings folder as a Git repository with a private remote: commit, push, pull on the other computer | ⏳ | ⏳ |
+
 ## Sprint 15 (2026-10-02)
 
 ### Automated checks

@@ -6,6 +6,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 16: importers, export and sync ([ADR 0037](docs/adr/0037-importers-bundles-and-sync.md), [guide](docs/sync.md)).**
+  - **Import hosts from MobaXterm** (`.mxtsessions`, `.moba`, `MobaXterm.ini`: SSH, SFTP, RDP and VNC sessions with their gateways, keys, proxies and comments), **PuTTY** (the Windows registry, `.reg` exports, `~/.putty/sessions`: SSH, Telnet and serial), **Remmina** (RDP, VNC, SSH and SFTP profiles) and **CSV files** (columns mapped to host fields, guessed from the headers). Folders become groups; what is left out is listed, and so is any command an import would run on this computer.
+  - **OpenSesh bundles:** hosts and groups, snippets, profiles and themes in one file, and optionally the keychain (identities, keys, passwords) sealed with an export password, as the vault is.
+  - **Export to an OpenSSH config file:** every SSH host, or the selected ones.
+  - **The settings folder anywhere,** such as a Git repository or a Syncthing folder (Settings, Data and sync): saving merges what changed on another computer, record by record, instead of overwriting it; Syncthing's conflict copies and Git's conflict markers are found and resolved in a dialog, per host, group or snippet; a Git helper commits, pulls and pushes when asked. The vault and the keychain stay on each computer.
+
 - **Sprint 15: remote graphical programs ([ADR 0036](docs/adr/0036-remote-graphics.md), [guide](docs/remote-graphics.md)).**
   - **X11 forwarding in the built-in SSH client** (it was OpenSSH only): untrusted (the X SECURITY extension keeps remote programs from reading your other windows) or trusted, per host. The server only ever gets a cookie made up for the connection; the real one is put in here, for each connection to the display.
   - **The display:** `DISPLAY` on Linux (X11, or Xwayland under GNOME, KDE Plasma, Hyprland, Sway), and on Windows an X server such as VcXsrv, X410 or Xming on `localhost:0.0` (the guide says how to set one up; none is bundled).
