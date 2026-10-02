@@ -64,6 +64,14 @@ pub mod qobject {
         #[cxx_name = "startS3TestServer"]
         fn start_s3_test_server(self: &Self) -> i32;
 
+        /// Test runs only: starts the RDP test server next to the app (`cargo xtask rdp
+        /// --test-server`; user `tester`, password `right password`) on 127.0.0.1 and returns its
+        /// port (0 in normal runs or when it isn't there). From then on every RDP connection of
+        /// the run goes to it.
+        #[qinvokable]
+        #[cxx_name = "startRdpTestServer"]
+        fn start_rdp_test_server(self: &Self) -> i32;
+
         /// Test runs only: a temporary folder with `local` and `remote` sample files (the
         /// server's side), made fresh by `startSshTestServer` and removed at exit; empty in
         /// normal runs.
@@ -205,6 +213,11 @@ impl qobject::AppInfo {
                 0
             }
         }
+    }
+
+    /// See the bridge declaration.
+    pub fn start_rdp_test_server(&self) -> i32 {
+        i32::from(crate::rdp::start_test_server())
     }
 
     /// See the bridge declaration.

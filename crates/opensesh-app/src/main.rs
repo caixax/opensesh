@@ -12,6 +12,7 @@ mod keychain;
 mod logging;
 mod monitor;
 mod platform;
+mod rdp;
 mod recordings;
 mod s3;
 mod saves;

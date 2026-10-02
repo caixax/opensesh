@@ -750,10 +750,12 @@ fn open_with(
     Ok(entry)
 }
 
-/// Ends the session of tab `id` and forgets it. Returns whether there was one.
+/// Ends the session of tab `id` (a terminal's, or a remote desktop's) and forgets it. Returns
+/// whether there was one.
 pub fn close(id: i32) -> bool {
     crate::tunnels::session_closed(id);
     crate::recordings::session_closed(id);
+    let desktop = crate::rdp::close(id);
     let entry = sessions().remove(&id);
     match entry {
         Some(entry) => {
@@ -761,7 +763,7 @@ pub fn close(id: i32) -> bool {
             tracing::info!(id, "terminal session closed");
             true
         }
-        None => false,
+        None => desktop,
     }
 }
 
@@ -771,8 +773,9 @@ pub fn count() -> usize {
     sessions().keys().filter(|id| **id > 0).count()
 }
 
-/// Ends every session (the main window closed).
+/// Ends every session (the main window closed), remote desktops included.
 pub fn shutdown_all() {
+    crate::rdp::close_all();
     let entries: Vec<Arc<SessionEntry>> = sessions().drain().map(|(_, entry)| entry).collect();
     if !entries.is_empty() {
         tracing::info!(count = entries.len(), "ending the terminal sessions");

@@ -8,7 +8,8 @@ pragma ComponentBehavior: Bound
 // their shells keep running. An `ssh` pane without a command connects with the built-in client,
 // whose state and questions show in an SshOverlay; the OS it finds becomes the host's icon.
 // A `player` pane plays a session recording, with a bar to play, pause, jump, restart and pick
-// the speed. Any other pane can record its session (the menu; a chip while it records).
+// the speed. Any other pane can record its session (the menu; a chip while it records). An `rdp`
+// pane shows a remote desktop (DesktopView) in place of the terminal, which then runs nothing.
 //
 // Broadcast (MultiExec): while the tab broadcasts, what is typed or pasted in a pane that
 // receives broadcast input also goes to the other receiving panes. Those panes, and only those,
@@ -17,7 +18,7 @@ pragma ComponentBehavior: Bound
 //   workspace: Item        the TabWorkspace (shell, participants, pasteConfirmed, closePane(),
 //                          setFocusedPane(), paneActivity(), paneBell(), reviewPaste())
 //   paneId: int            the pane's id, which is also its session id
-//   kind: string           `local`, `ssh` or `player` (model role)
+//   kind: string           `local`, `ssh`, `player`, `rdp`... (model role)
 //   host: string           the saved host it connects to, if any (model role)
 //   target: string         the quick-connect target it connects to, or the recording a
 //                          player plays (model role)
@@ -31,6 +32,8 @@ pragma ComponentBehavior: Bound
 //   startSession: bool     false: no shell, the renderer's demo frame instead (screenshot runs)
 //   edgeInset: real        room kept free at the right edge (a frameless window's resize grip)
 //   terminal: TerminalItem read-only
+//   desktop: bool          read-only; a remote desktop pane
+//   desktopView: DesktopView  read-only; its view (null for the other panes)
 //   focused: bool          read-only; the tab's focused pane
 //   receiving: bool        read-only; input typed here also reaches other panes
 //   fontZoom: real         points added to the profile's font size (Ctrl+= / Ctrl+- / Ctrl+0)
@@ -67,6 +70,8 @@ Item {
     // What is typed here is recorded as a macro (Snippets.recordStart).
     property bool recordingMacro: false
     readonly property bool player: kind === "player"
+    readonly property bool desktop: kind === "rdp"
+    readonly property Item desktopView: desktopLoader.item
     // It connects somewhere (SSH, telnet, a serial port...), rather than running a shell here.
     readonly property bool remote: kind !== "local" && kind !== "player"
     // The session is recorded into a file (Recordings.start).
@@ -91,7 +96,10 @@ Item {
     readonly property var sshSample: !startSession ? shell.sshSample : null
 
     function focusTerminal() {
-        terminal.forceActiveFocus(Qt.OtherFocusReason);
+        if (desktopLoader.item)
+            desktopLoader.item.focusDesktop();
+        else
+            terminal.forceActiveFocus(Qt.OtherFocusReason);
     }
 
     function closePane() {
@@ -265,7 +273,7 @@ Item {
     // The profile's background image, under the terminal, dimmed with the theme's background.
     Item {
         anchors.fill: terminal
-        visible: terminal.backgroundImage.length > 0
+        visible: terminal.backgroundImage.length > 0 && !pane.desktop
 
         Image {
             anchors.fill: parent
@@ -303,14 +311,17 @@ Item {
 
         anchors.fill: parent
         anchors.bottomMargin: pane.player ? playerBar.height : 0
-        sessionId: pane.startSession ? pane.paneId : 0
+        // A remote desktop pane's terminal runs nothing and isn't shown.
+        visible: !pane.desktop
+        enabled: !pane.desktop
+        sessionId: pane.startSession && !pane.desktop ? pane.paneId : 0
         hostId: pane.host
         connectTarget: pane.remote && pane.host.length === 0 ? pane.target : ""
         playback: pane.player ? pane.target : ""
         shell: pane.kind === "local" ? pane.shellCommand : ""
         installKey: pane.installKey
         command: JSON.parse(pane.commandJson || "[]")
-        demo: !pane.startSession
+        demo: !pane.startSession && !pane.desktop
         demoDark: Theme.dark
         dark: Theme.dark
         profileId: pane.profile
@@ -854,6 +865,19 @@ Item {
                 Keys.onReturnPressed: pane.closePane()
                 Keys.onEnterPressed: pane.closePane()
             }
+        }
+    }
+
+    // A remote desktop.
+    Loader {
+        id: desktopLoader
+
+        anchors.fill: parent
+        active: pane.desktop
+        z: 1
+
+        sourceComponent: DesktopView {
+            pane: pane
         }
     }
 

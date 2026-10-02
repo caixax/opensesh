@@ -160,6 +160,10 @@ OsDialog {
             return qsTr("A program and its arguments, with quotes closed.");
         case "s3.region":
             return qsTr("Letters, digits and hyphens, as in eu-west-1.");
+        case "rdp.resolution":
+            return qsTr("A width and a height from 200 to 8192 pixels, as in 1920x1080.");
+        case "rdp.domain":
+            return qsTr("Not a domain name (no control characters, and not starting with -).");
         case "user":
             return qsTr("Not a user name (no spaces, and not starting with -).");
         case "port":
@@ -368,11 +372,10 @@ OsDialog {
                                 case "docker":
                                 case "kube":
                                 case "s3":
+                                case "rdp":
                                     return "";
                                 case "sftp":
                                     return qsTr("Saved now; the file browser arrives in Sprint 8.");
-                                case "rdp":
-                                    return qsTr("Saved now; remote desktop arrives in Sprint 13.");
                                 case "vnc":
                                     return qsTr("Saved now; VNC arrives in Sprint 14.");
                                 default:
@@ -436,6 +439,47 @@ OsDialog {
                             label: qsTr("Path-style addresses")
                             options: [{ text: qsTr("Default (on)"), value: undefined }].concat(dialog.onOff)
                             helpText: qsTr("Buckets in the path (server/bucket) rather than in the host name (bucket.server): what MinIO, RustFS and most other servers want.")
+                        }
+
+                        // Remote desktops.
+                        EditorTextRow {
+                            editor: dialog
+                            path: "rdp.domain"
+                            inheritKey: ""
+                            visible: dialog.protocol === "rdp"
+                            label: qsTr("Domain")
+                            placeholder: qsTr("none, or the one in the user name")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "rdp.scaling"
+                            inherit: false
+                            visible: dialog.protocol === "rdp"
+                            label: qsTr("Scaling")
+                            options: [{ text: qsTr("Default (follow the pane's size)"), value: undefined },
+                                { text: qsTr("Fit in the pane"), value: "fit" }, { text: qsTr("Actual size"), value: "actual" }]
+                            helpText: qsTr("Following the pane, the desktop takes the pane's size whenever it changes; otherwise it keeps its resolution and is scaled to fit, or shown pixel for pixel.")
+                        }
+
+                        EditorTextRow {
+                            editor: dialog
+                            path: "rdp.resolution"
+                            inheritKey: ""
+                            visible: dialog.protocol === "rdp" && (dialog.draft.rdp ?? {}).scaling !== undefined
+                            label: qsTr("Resolution")
+                            placeholder: qsTr("the pane's size")
+                            helpText: qsTr("Width and height, as in 1920x1080.")
+                        }
+
+                        EditorChoiceRow {
+                            editor: dialog
+                            path: "rdp.clipboard"
+                            inherit: false
+                            visible: dialog.protocol === "rdp"
+                            label: qsTr("Share the clipboard")
+                            options: [{ text: qsTr("Default (on)"), value: undefined }].concat(dialog.onOff)
+                            helpText: qsTr("Text copied here can be pasted on the remote desktop, and the other way round.")
                         }
 
                         // Containers and pods: what runs them, and the running ones to pick.
@@ -711,7 +755,7 @@ OsDialog {
                         EditorTextRow {
                             id: identityRow
 
-                            visible: dialog.protocol !== "s3"
+                            visible: dialog.protocol !== "s3" && dialog.protocol !== "rdp"
                             editor: dialog
                             path: "identity_file"
                             label: qsTr("Private key file")
@@ -721,6 +765,7 @@ OsDialog {
 
                         OsFormRow {
                             width: parent.width
+                            visible: identityRow.visible
 
                             OsButton {
                                 text: qsTr("Choose a key file…")
@@ -764,7 +809,7 @@ OsDialog {
                             editor: dialog
                             path: "jump"
                             type: "list"
-                            visible: ["ssh", "sftp", "mosh"].indexOf(dialog.protocol) >= 0
+                            visible: ["ssh", "sftp", "mosh", "rdp"].indexOf(dialog.protocol) >= 0
                             label: qsTr("Jump hosts")
                             placeholder: qsTr("bastion, ops@hop:2222")
                             helpText: qsTr("Saved hosts or user@host:port, first hop first. \"none\" connects directly even if the group has jump hosts.")
