@@ -30,7 +30,27 @@ PLAN Sprint 13 asks for a Windows remote desktop in a tab:
 
 ## Decision
 
-**IronRDP 0.17**, with our own connection and session loop on `ironrdp-connector`, `ironrdp-session`, `ironrdp-tokio`, `ironrdp-input`, `ironrdp-cliprdr` and `ironrdp-displaycontrol`, in a Qt-free crate, `opensesh-rdp`.
+**IronRDP 0.17**, with our own connection and session loop on `ironrdp-connector`, `ironrdp-session`, `ironrdp-tokio`, `ironrdp-input`, `ironrdp-cliprdr` and `ironrdp-displaycontrol`, **in a helper process with a workspace and a lock file of its own** (`rdp/`, the `opensesh-rdp` program).
+
+### Why a helper process
+
+IronRDP's NLA comes from Devolutions' `sspi` (0.21, the only line `ironrdp-connector` 0.10 accepts). Every `sspi` release pins pre-release cryptography exactly, directly or through `picky`:
+- `picky =7.0.0-rc.25`, `rsa =0.10.0-rc.*` and `sha2 =0.11.0-rc.*`;
+- on macOS, `curve25519-dalek =5.0.0-rc.1`, `ed25519-dalek =3.0.0-rc.1` and `p256 =0.14.0-rc.14`.
+
+Cargo resolves every target's dependencies into one lock file, and keeps one version per compatible range. So these can't live with the released versions the app already uses: `russh` 0.63.3 needs `curve25519-dalek` 5 (`=5.0.0-rc.1` doesn't match `^5`), and the vault and the app use `sha2` 0.11. Patching crypto crates by hand is no option.
+
+**So the RDP engine is a program,** built from its own workspace with its own `Cargo.lock`. The app starts one per RDP pane and talks to it over its standard input and output. This also:
+- keeps the in-process test server's `aws-lc` out of the app's dependency tree;
+- means a crash in a decoder ends one pane, not the app.
+
+**The protocol** (`opensesh-rdp-protocol`, a dependency-free crate both sides share) is length-prefixed messages:
+- **App to helper:** JSON control (connect, input, resize, Ctrl+Alt+Del, disconnect), and raw ones for the password and clipboard text (so secrets never sit in JSON).
+- **Helper to app:** JSON events (state, the certificate to decide on, the pointer), and raw ones for changed rectangles (their RGBA pixels), the pointer's picture and clipboard text.
+
+**What stays in the app:** the certificate store and every question. The helper reports the server's certificate (fingerprint, subject, key) and waits for the answer before CredSSP sends any credential. It reports a refused password, and the app asks again.
+
+**Where the helper comes from:** `cargo xtask rdp` builds it and puts it next to the app (as `cargo xtask conpty` does for ConPTY); CI and the packages ship it beside the executable.
 
 The spike (`spikes/rdp-ironrdp`) connected with NLA to an in-process server in 7 ms:
 - a wrong password was refused with its reason;
@@ -86,14 +106,18 @@ A local tunnel on 127.0.0.1 over the built-in SSH client (ADR 0029) is started w
 
 ### Tests
 
-- **Unit tests:** scancodes, rectangles and the certificate store, in `opensesh-rdp`.
-- **In-process server:** sessions against `ironrdp-server` in `opensesh-rdp`'s tests (it is a dev-dependency there).
-- **Smoke test:** a small test program, `opensesh-rdp-test-server` (in the workspace, never shipped), runs the same server, and the app's smoke test connects to it when it is built next to the app.
+- **Unit tests:** scancodes, rectangles and the protocol in the helper's workspace; the certificate store in the app.
+- **In-process server:** sessions against `ironrdp-server` in the helper's workspace (`opensesh-rdp-testing`, never shipped).
+- **Smoke test:** `opensesh-rdp-test-server`, a program from that crate, runs the same server, and the app's smoke test connects to it through the real helper when both are built next to the app.
 - **CI:** xrdp.
 - **Manual:** Windows 11, in the matrix.
 
 ## Consequences
 
 - One language and toolchain, and tests without a network or a Windows machine.
+- **Two lock files:**
+  - `cargo deny` and `cargo audit` run on both.
+  - The helper is a second program to build, sign and package.
+  - Each RDP pane costs a process (a few MB).
 - **Fewer features than FreeRDP today:** no H.264, gateway or redirections yet; they come with IronRDP's crates as they mature.
-- **Dependencies:** the IronRDP crates, `sspi` (with `picky`, `winscard` and `libz-sys`, C built with `cc`) and `tokio-rustls`. All MIT or Apache-2.0.
+- **Dependencies (the helper's):** the IronRDP crates, `sspi` (with `picky`, `winscard` and `libz-sys`, C built with `cc`) and `tokio-rustls`. All MIT or Apache-2.0. None of them reach the app.

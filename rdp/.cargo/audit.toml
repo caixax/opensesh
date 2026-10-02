@@ -1,0 +1,7 @@
+# cargo audit for the RDP helper's workspace: the advisories its dependencies bring, accepted with
+# their reasons (deny.toml at the repository's root lists the same for cargo deny).
+[advisories]
+# rsa (through sspi's picky, for Kerberos and smart cards), the Marvin timing attack: no fixed
+# version exists. The helper never decrypts with an RSA private key: NLA here is NTLM, and the
+# server's TLS signature is checked by rustls on ring. Reviewed each sprint (ADR 0034).
+ignore = ["RUSTSEC-2023-0071"]

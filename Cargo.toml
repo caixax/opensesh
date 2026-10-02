@@ -8,6 +8,7 @@ members = [
     "crates/opensesh-ssh",
     "crates/opensesh-proto-misc",
     "crates/opensesh-s3",
+    "crates/opensesh-rdp-protocol",
     "crates/opensesh-cli",
     "crates/opensesh-app",
     "xtask",
@@ -20,6 +21,7 @@ default-members = [
     "crates/opensesh-ssh",
     "crates/opensesh-proto-misc",
     "crates/opensesh-s3",
+    "crates/opensesh-rdp-protocol",
     "crates/opensesh-cli",
     "crates/opensesh-app",
 ]
@@ -46,6 +48,7 @@ opensesh-vault = { path = "crates/opensesh-vault" }
 opensesh-ssh = { path = "crates/opensesh-ssh" }
 opensesh-proto-misc = { path = "crates/opensesh-proto-misc" }
 opensesh-s3 = { path = "crates/opensesh-s3" }
+opensesh-rdp-protocol = { path = "crates/opensesh-rdp-protocol" }
 
 # Qt bridge (KDAB cxx-qt)
 cxx = "1.0.202"

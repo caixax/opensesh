@@ -1,0 +1,18 @@
+[package]
+name = "opensesh-rdp-protocol"
+description = "What OpenSesh and its RDP helper say to each other, keyboard scancodes and the shared frame (no Qt, no IronRDP)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

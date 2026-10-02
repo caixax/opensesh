@@ -1,0 +1,40 @@
+[package]
+name = "opensesh-rdp"
+description = "OpenSesh's RDP helper: one IronRDP session, driven by the app over standard input and output"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+name = "opensesh_rdp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "opensesh-rdp"
+path = "src/main.rs"
+
+[dependencies]
+base64ct.workspace = true
+ironrdp.workspace = true
+ironrdp-tokio.workspace = true
+opensesh-rdp-protocol.workspace = true
+picky-krb.workspace = true
+sha2.workspace = true
+sspi.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true
+tracing.workspace = true
+x509-cert.workspace = true
+
+[dev-dependencies]
+opensesh-rdp-testing.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

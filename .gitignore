@@ -1,6 +1,7 @@
-# Build output (the spikes have workspaces of their own)
+# Build output (the spikes and the RDP helper have workspaces of their own)
 /target/
 /spikes/*/target/
+/rdp/target/
 **/*.rs.bk
 
 # Portable-mode data folder created next to the executable during local runs
