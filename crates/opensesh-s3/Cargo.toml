@@ -1,0 +1,26 @@
+[package]
+name = "opensesh-s3"
+description = "OpenSesh's S3 client: buckets, folders, multipart uploads and temporary links (no Qt)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+aws-sdk-s3.workspace = true
+aws-smithy-http-client.workspace = true
+bytes.workspace = true
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+secrecy.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true
