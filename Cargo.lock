@@ -2398,6 +2398,7 @@ version = "0.1.4"
 dependencies = [
  "anyhow",
  "base64ct",
+ "crossbeam-channel",
  "cxx",
  "cxx-qt",
  "cxx-qt-build",
@@ -2405,6 +2406,7 @@ dependencies = [
  "embed-resource",
  "opensesh-core",
  "opensesh-import",
+ "opensesh-proto-misc",
  "opensesh-ssh",
  "opensesh-term",
  "opensesh-vault",
@@ -2460,6 +2462,21 @@ dependencies = [
  "opensesh-core",
  "tempfile",
  "thiserror 2.0.21",
+ "tracing",
+]
+
+[[package]]
+name = "opensesh-proto-misc"
+version = "0.1.4"
+dependencies = [
+ "crossbeam-channel",
+ "opensesh-core",
+ "opensesh-ssh",
+ "opensesh-term",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
  "tracing",
 ]
 

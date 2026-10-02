@@ -19,6 +19,7 @@ mod sftp;
 mod snippets;
 mod ssh;
 mod terminal;
+mod terminals;
 mod tunnels;
 mod update;
 

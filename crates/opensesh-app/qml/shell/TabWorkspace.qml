@@ -147,6 +147,11 @@ Item {
             else
                 command = AppSettings.sshBackend === "openssh" ? Hosts.targetCommand(target) : [];
             label = host.length > 0 ? (JSON.parse(Hosts.hostJson(host) || "{}").name || target) : target;
+        } else if (kind !== "local" && kind !== "player") {
+            // Telnet, serial, mosh, containers: the pane connects (containers through a command).
+            if (host.length > 0)
+                command = kind === "docker" || kind === "kube" ? Hosts.connectCommand(host) : [];
+            label = host.length > 0 ? (JSON.parse(Hosts.hostJson(host) || "{}").name || target) : target;
         } else if (kind === "player") {
             label = target.split(/[\\/]/).pop();
         } else if (kind === "local") {

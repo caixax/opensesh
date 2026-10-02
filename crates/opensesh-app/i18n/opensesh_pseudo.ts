@@ -2230,6 +2230,10 @@
         <translation>[Þŕöťöçöĺ ~~~]</translation>
     </message>
     <message>
+        <source>Telnet sends everything in clear, passwords too: anyone on the network path can read it. Use SSH where the device has it.</source>
+        <translation>[Ťéĺñéť šéñďš évéŕýťĥíñĝ íñ çĺéáŕ, þáššŵöŕďš ťöö: áñýöñé öñ ťĥé ñéťŵöŕķ þáťĥ çáñ ŕéáď íť. Üšé ŠŠĤ ŵĥéŕé ťĥé ďévíçé ĥáš íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>A user name with a password and/or a key from the keychain. The OpenSSH client only uses its user name.</source>
         <translation>[Å üšéŕ ñámé ŵíťĥ á þáššŵöŕď áñď/öŕ á ķéý ƒŕöm ťĥé ķéýçĥáíñ. Ťĥé ÖþéñŠŠĤ çĺíéñť öñĺý üšéš íťš üšéŕ ñámé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -9756,6 +9760,10 @@
     <message>
         <source>ssh could not start: %1. Install the OpenSSH client, or let the host use the built-in client.</source>
         <translation>[ššĥ çöüĺď ñöť šťáŕť: %1. Íñšťáĺĺ ťĥé ÖþéñŠŠĤ çĺíéñť, öŕ ĺéť ťĥé ĥöšť üšé ťĥé büíĺť-íñ çĺíéñť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>%1 could not start: %2. Is it installed, and on the PATH?</source>
+        <translation>[%1 çöüĺď ñöť šťáŕť: %2. Íš íť íñšťáĺĺéď, áñď öñ ťĥé ÞÅŤĤ? ~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Can&apos;t connect to %1: %2</source>

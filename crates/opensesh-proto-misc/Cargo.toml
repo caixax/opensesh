@@ -1,0 +1,27 @@
+[package]
+name = "opensesh-proto-misc"
+description = "OpenSesh's other terminal protocols: telnet, serial ports, mosh and containers (no Qt)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+crossbeam-channel.workspace = true
+opensesh-core.workspace = true
+opensesh-ssh.workspace = true
+opensesh-term.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

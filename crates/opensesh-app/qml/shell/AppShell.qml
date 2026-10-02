@@ -700,6 +700,11 @@ Item {
             Hosts.recordHost(id);
             return openConnection({ kind: "local", host: id }, where ?? "tab");
         }
+        // Terminal kinds the pane starts itself (Sprint 12).
+        if (shell.terminalKinds.indexOf(host.protocol) >= 0 && host.sprint === 0) {
+            Hosts.recordHost(id);
+            return openConnection({ kind: host.protocol, host: id }, where ?? "tab");
+        }
         if (host.protocol !== "ssh") {
             notYet(host.protocol, sprintFor(host.protocol));
             return false;
@@ -724,7 +729,8 @@ Item {
             return false;
         }
         Hosts.recordTarget(parsed.text);
-        return openConnection({ kind: "ssh", target: parsed.text }, where ?? "tab");
+        const kind = shell.terminalKinds.indexOf(parsed.protocol) >= 0 ? parsed.protocol : "ssh";
+        return openConnection({ kind: kind, target: parsed.text }, where ?? "tab");
     }
 
     function showQuickConnect(text) {
@@ -905,6 +911,9 @@ Item {
                 run: () => shell.newTabWithShell(entry)
             }));
     }
+
+    // Protocols a terminal pane connects with besides SSH and local shells.
+    readonly property var terminalKinds: ["telnet", "serial", "mosh", "docker", "kube"]
 
     // Plays the session recording in `path` in a new tab.
     function playRecording(path) {
@@ -1218,6 +1227,7 @@ Item {
             () => shell.hostSmokeSteps(smoke),
             () => shell.sftpSmokeSteps(smoke),
             () => shell.tunnelSmokeSteps(smoke),
+            () => shell.protocolSmokeSteps(smoke),
             () => openTab("the second shell's first output"),
             () => {
                 pane.terminal.sendText("exit\r");
@@ -1728,6 +1738,58 @@ Item {
                 shell.closeTab(shell.currentTab);
                 deadline = Date.now() + timeout;
                 return [waitFor("closed sessions to stop counting as open", () => !WindowRegistry.openHosts["H00000"])];
+            }
+        ];
+    }
+
+    // Functions for SmokeTest.steps: the other terminal kinds (Sprint 12) against their test
+    // servers and devices (never the network): telnet with its warning, the window size
+    // negotiated, and the end of the connection.
+    function protocolSmokeSteps(smoke) {
+        const timeout = 15000;
+        let deadline = 0;
+        let pane = null;
+        const wait = (what, condition, next) => {
+            deadline = Date.now() + timeout;
+            const poll = () => {
+                if (condition())
+                    return next ? next() : [];
+                if (Date.now() > deadline) {
+                    smoke.fail("timed out after " + timeout / 1000 + " s waiting for " + what);
+                    return [];
+                }
+                return [poll];
+            };
+            return [poll];
+        };
+        const screen = () => pane ? pane.terminal.screenText().replace(/\n/g, "") : "";
+        return [
+            () => {
+                if (AppInfo.startTelnetTestServer() <= 0)
+                    smoke.fail("the telnet test server didn't start");
+                if (!shell.connectTarget("telnet://router.example:2323", "tab"))
+                    smoke.fail("telnet quick connect opened nothing");
+                pane = shell.currentTerminal;
+                if (!pane || pane.kind !== "telnet" || pane.terminal.connectTarget.length === 0)
+                    smoke.fail("the pane isn't a telnet pane");
+                return wait("the telnet server's prompt", () => screen().indexOf("OpenSesh telnet test server") >= 0
+                            && screen().indexOf("test>") >= 0);
+            },
+            () => {
+                if (screen().indexOf("in clear") < 0)
+                    smoke.fail("telnet didn't warn that it sends everything in clear");
+                pane.terminal.sendText("size\r");
+                const expected = pane.terminal.columns + "x" + pane.terminal.lines;
+                return wait("the window size the server was told (" + expected + ")", () => screen().indexOf(expected) >= 0);
+            },
+            () => {
+                pane.terminal.sendText("exit\r");
+                return wait("the end of the telnet connection", () => !pane.terminal.running,
+                            () => {
+                                console.info("smoke test: telnet connected to its test server, with the warning and the window size, and ended");
+                                shell.closeTab(shell.currentTab);
+                                return [];
+                            });
             }
         ];
     }

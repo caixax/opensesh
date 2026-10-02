@@ -67,6 +67,8 @@ Item {
     // What is typed here is recorded as a macro (Snippets.recordStart).
     property bool recordingMacro: false
     readonly property bool player: kind === "player"
+    // It connects somewhere (SSH, telnet, a serial port...), rather than running a shell here.
+    readonly property bool remote: kind !== "local" && kind !== "player"
     // The session is recorded into a file (Recordings.start).
     readonly property bool recordingSession: JSON.parse(Recordings.panes || "[]").indexOf(paneId) >= 0
     // A player's state: {playing, position, duration, speed} (seconds).
@@ -303,7 +305,7 @@ Item {
         anchors.bottomMargin: pane.player ? playerBar.height : 0
         sessionId: pane.startSession ? pane.paneId : 0
         hostId: pane.host
-        sshTarget: pane.kind === "ssh" && pane.host.length === 0 ? pane.target : ""
+        connectTarget: pane.remote && pane.host.length === 0 ? pane.target : ""
         playback: pane.player ? pane.target : ""
         shell: pane.kind === "local" ? pane.shellCommand : ""
         installKey: pane.installKey
@@ -817,12 +819,15 @@ Item {
                 Layout.fillWidth: true
                 text: {
                     if (terminal.startError.length > 0) {
-                        if (pane.kind !== "ssh")
+                        if (!pane.remote)
                             return qsTr("The shell could not start: %1").arg(terminal.startError);
-                        return terminal.command.length > 0 ? qsTr("ssh could not start: %1. Install the OpenSSH client, or let the host use the built-in client.").arg(terminal.startError)
-                                                           : qsTr("Can't connect to %1: %2").arg(pane.label).arg(terminal.startError);
+                        if (pane.kind === "ssh" && terminal.command.length > 0)
+                            return qsTr("ssh could not start: %1. Install the OpenSSH client, or let the host use the built-in client.").arg(terminal.startError);
+                        if (terminal.command.length > 0)
+                            return qsTr("%1 could not start: %2. Is it installed, and on the PATH?").arg(terminal.command[0]).arg(terminal.startError);
+                        return qsTr("Can't connect to %1: %2").arg(pane.label).arg(terminal.startError);
                     }
-                    if (pane.kind === "ssh")
+                    if (pane.remote)
                         return terminal.exitCodeKnown ? qsTr("The connection to %1 ended (code %2).").arg(pane.label).arg(pane.exitCodeText(terminal.exitCode))
                                                       : qsTr("The connection to %1 was ended.").arg(pane.label);
                     return terminal.exitCodeKnown ? qsTr("The shell exited with code %1.").arg(pane.exitCodeText(terminal.exitCode))
@@ -834,7 +839,7 @@ Item {
             OsButton {
                 id: restartButton
 
-                text: pane.kind === "ssh" ? qsTr("Reconnect") : qsTr("Restart")
+                text: pane.remote ? qsTr("Reconnect") : qsTr("Restart")
                 iconName: "refresh-cw"
                 variant: "primary"
                 onClicked: pane.restart()

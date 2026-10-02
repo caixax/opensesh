@@ -263,7 +263,7 @@ pub mod qobject {
         #[qproperty(bool, dark, READ, WRITE = set_dark, NOTIFY = dark_changed)]
         #[qproperty(QString, profile_id, cxx_name = "profileId", READ, WRITE = set_profile_id, NOTIFY = inputs_changed)]
         #[qproperty(QString, host_id, cxx_name = "hostId", READ, WRITE = set_host_id, NOTIFY = inputs_changed)]
-        #[qproperty(QString, ssh_target, cxx_name = "sshTarget", READ, WRITE, NOTIFY = inputs_changed)]
+        #[qproperty(QString, connect_target, cxx_name = "connectTarget", READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, install_key, cxx_name = "installKey", READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, playback, READ, WRITE, NOTIFY = inputs_changed)]
         #[qproperty(QString, shell, READ, WRITE, NOTIFY = inputs_changed)]
@@ -925,7 +925,9 @@ pub struct TerminalItemRust {
     dark: bool,
     profile_id: QString,
     host_id: QString,
-    ssh_target: QString,
+    /// Quick-connect text the pane connects to (`user@host`, `telnet://router`...), without a
+    /// saved host.
+    connect_target: QString,
     install_key: QString,
     /// The recording this pane plays (a `.cast` path); empty for a shell or a connection.
     playback: QString,
@@ -1046,7 +1048,7 @@ impl Default for TerminalItemRust {
             dark: true,
             profile_id: QString::default(),
             host_id: QString::default(),
-            ssh_target: QString::default(),
+            connect_target: QString::default(),
             install_key: QString::default(),
             playback: QString::default(),
             shell: QString::default(),
@@ -1556,7 +1558,7 @@ impl qobject::TerminalItem {
             return None;
         }
         let host = self.host_id.to_string();
-        let target = self.ssh_target.to_string();
+        let target = self.connect_target.to_string();
         let start = if !host.is_empty() && crate::ssh::is_internal(&host) {
             crate::ssh::for_host(&host, options.size, &options.term)
         } else if host.is_empty() && !target.trim().is_empty() {
@@ -1587,6 +1589,19 @@ impl qobject::TerminalItem {
         if !self.playback.is_empty() {
             let path = std::path::PathBuf::from(self.playback.to_string());
             return registry::open_player(id, path, options).map_err(|error| error.to_string());
+        }
+        // Telnet, a serial port, mosh (a program to run, as for OpenSSH or a container, is a
+        // local session).
+        if self.command.is_empty()
+            && let Some(start) = crate::terminals::for_pane(
+                &self.host_id.to_string(),
+                &self.connect_target.to_string(),
+                &options.term,
+            )
+        {
+            return start.and_then(|start| {
+                crate::terminals::open(id, start, options).map_err(|error| error.to_string())
+            });
         }
         match self.ssh_start(&options) {
             Some(Ok(ssh)) => {

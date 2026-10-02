@@ -25,6 +25,8 @@ opensesh-core.workspace = true
 opensesh-import.workspace = true
 opensesh-term.workspace = true
 opensesh-ssh.workspace = true
+opensesh-proto-misc.workspace = true
+crossbeam-channel.workspace = true
 opensesh-vault.workspace = true
 # Macro steps that wait for a pattern (snippets.rs).
 regex.workspace = true

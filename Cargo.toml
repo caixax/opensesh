@@ -6,6 +6,7 @@ members = [
     "crates/opensesh-import",
     "crates/opensesh-vault",
     "crates/opensesh-ssh",
+    "crates/opensesh-proto-misc",
     "crates/opensesh-cli",
     "crates/opensesh-app",
     "xtask",
@@ -16,6 +17,7 @@ default-members = [
     "crates/opensesh-import",
     "crates/opensesh-vault",
     "crates/opensesh-ssh",
+    "crates/opensesh-proto-misc",
     "crates/opensesh-cli",
     "crates/opensesh-app",
 ]
@@ -40,6 +42,7 @@ opensesh-import = { path = "crates/opensesh-import" }
 opensesh-term = { path = "crates/opensesh-term" }
 opensesh-vault = { path = "crates/opensesh-vault" }
 opensesh-ssh = { path = "crates/opensesh-ssh" }
+opensesh-proto-misc = { path = "crates/opensesh-proto-misc" }
 
 # Qt bridge (KDAB cxx-qt)
 cxx = "1.0.202"
