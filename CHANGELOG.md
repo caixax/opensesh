@@ -6,6 +6,17 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 14: VNC ([ADR 0035](docs/adr/0035-vnc-client.md)).**
+  - **Saved VNC hosts and `vnc://host` quick connect** (`vnc://host:1` is display 1, port 5901) open in the remote desktop pane of Sprint 13: the questions in the pane, the bar, full screen, scaling, jump hosts, reconnecting.
+  - **Our own RFB client** (`opensesh-vnc`), versions 3.3 to 3.8:
+    - **Security:** none, VNC authentication, and VeNCrypt with a certificate (trusted on first use, like RDP's) and VNC authentication or a user name and password. Servers that offer only anonymous TLS get an explanation, and a session without TLS says "Not encrypted" in the pane's bar.
+    - **Encodings:** CopyRect, Tight (with JPEG), ZRLE, Hextile and Raw, the server's cursor, and the desktop's size as the server changes it.
+    - **Input:** keys as X keysyms (characters land as typed, whatever the server's layout), the mouse and the wheel; Ctrl+Alt+Del from the bar.
+    - **The clipboard** both ways (Latin-1, RFB's own).
+    - **The pane's size** asked of servers that resize (TigerVNC) when the desktop follows the pane; otherwise it is fitted.
+  - **Host settings:** scaling, picture quality (lossless, or JPEG at high, medium or low), view only (nothing typed or clicked reaches the server; a tag in the bar says so), clipboard sharing, and whether other viewers stay connected.
+  - **Tests:** the decoders, VNC authentication against OpenSSL's DES, VeNCrypt, sessions against an in-process RFB server (also the smoke test and screenshots), and TigerVNC, x11vnc and wayvnc in CI.
+  - **Not yet:** RSA-AES and anonymous TLS, the extended (UTF-8) clipboard, H.264.
 - **Sprint 13: remote desktops over RDP ([ADR 0034](docs/adr/0034-rdp-client.md)).**
   - **Saved RDP hosts and `rdp://user@host` quick connect** open a remote desktop in a tab, next to terminals: splits, workspaces and moving tabs between windows work as for them.
   - **The engine** is IronRDP, in a helper program (`opensesh-rdp`) next to the app, one per desktop: NLA (CredSSP) where the server has it, TLS without it (xrdp), RemoteFX and bitmap graphics.

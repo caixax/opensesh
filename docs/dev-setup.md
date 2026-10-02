@@ -162,6 +162,16 @@ cargo xtask rdp --test-server    # also the RDP test server the smoke test and s
 - **Against a real server:** `sudo scripts/rdp-test-server.sh start` installs xrdp with a test account on a Debian or Ubuntu machine you can throw away; the script's header has the test command.
 - **The helper never logs:** IronRDP and `sspi` write NTLM messages to their debug logs, so it installs no log output, even in debug builds. Its integration test shows them with `RUST_LOG=debug`.
 
+### VNC test servers
+
+VNC sessions run in the app (`opensesh-vnc`, [ADR 0035](adr/0035-vnc-client.md)); their tests use an in-process RFB server, so they need nothing installed. Against real servers, on a Debian or Ubuntu machine you can throw away:
+
+```sh
+sudo scripts/vnc-test-servers.sh start     # TigerVNC, x11vnc and wayvnc on 127.0.0.1:5901-5904
+cargo test -p opensesh-vnc --test real_servers -- --ignored --test-threads 1
+sudo scripts/vnc-test-servers.sh stop
+```
+
 ### AltGr
 
 On Windows, the app starts Qt with `QT_QPA_PLATFORM=windows:altgr` unless you set `QT_QPA_PLATFORM` yourself. With that option, Qt reports AltGr as its own modifier instead of Ctrl+Alt, so the terminal can tell AltGr+Q (`@` on a German layout) from Ctrl+Alt+Q. The value is removed from the environment of shells started in local terminals. If you set `QT_QPA_PLATFORM=windows` (or anything else), it is left alone and AltGr arrives as Ctrl+Alt.

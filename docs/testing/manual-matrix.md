@@ -4,6 +4,36 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 14 (2026-10-02)
+
+### Automated checks
+
+- **Main window (`--smoke-test`, 557 steps offscreen with the software renderer and 569 native on Windows):** as before, plus a VNC desktop against the in-process RFB server:
+  - VeNCrypt's certificate and the password asked in the pane, a wrong password first;
+  - the desktop's pixels, Ctrl+Alt+Del as keysyms repainting a square, the clipboard both ways (a stand-in for the user's);
+  - the desktop following the pane once asked to (SetDesktopSize), a disconnection, and connecting again.
+- **Screenshots (native, Windows),** in dark and light, comfortable and compact: a VNC desktop fitted to its pane, and the host editor of a VNC host.
+- **The VNC client against its in-process server:** every version and security type, the encodings in turn, keys, the pointer, the clipboard both ways, the cursor, a resize, read-only sessions; the same session driven as the app drives it.
+- **The VNC client against real servers** in CI (`scripts/vnc-test-servers.sh`, Ubuntu 24.04):
+  - TigerVNC 1.13.1 with VNC authentication: the desktop, keys, the pointer, the clipboard both ways (through the X session's clipboard), and a resize to 800x600;
+  - TigerVNC with VeNCrypt X509Vnc and a certificate made for the run: the certificate's question, then the desktop over TLS;
+  - x11vnc on Xvfb: the desktop, keys and the pointer;
+  - wayvnc on a headless sway, VeNCrypt with a user name and password: the desktop and keys.
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 686 + 5 (RDP helper) | ✅ / ✅ | ✅ `windows` | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ TigerVNC 1.13.1 (two setups), x11vnc, wayvnc, xrdp, OpenSSH, Dropbear, RustFS |
+
+### Manual checks for the owner
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| A VNC server you use (TigerVNC, x11vnc, a NAS or a Raspberry Pi): the password from an identity, typing in your layout, the clipboard, view only | ⏳ | ⏳ |
+| wayvnc on your Wayland desktop, with `enable_auth` and a certificate: the certificate question, then the desktop | — | ⏳ |
+| A slow link: the picture quality at Low against Lossless | ⏳ | ⏳ |
+| macOS Screen Sharing and RealVNC: expected to be refused with an explanation (they want Apple's or RealVNC's own security types unless a VNC password is allowed) | ⏳ | ⏳ |
+
 ## Sprint 13 (2026-10-02)
 
 ### Automated checks

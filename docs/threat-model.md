@@ -75,6 +75,10 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
   - **The server's certificate** is trusted on first use, like a host key: the first one is shown with its SHA-256 fingerprint and subject, and a changed one warns, defaulting to "Don't connect". Remembered certificates are in `trusted_certificates.toml`.
   - **Nothing is sent before the certificate is accepted.** Servers with NLA (Windows) then get the credentials through CredSSP; servers without it (xrdp) get them inside the TLS session.
   - **Through jump hosts** the desktop's TLS still ends at the server, and its certificate is checked against the server's name: the jump hosts carry it, they can't read it.
+- **VNC** is only as private as the server allows:
+  - **VeNCrypt with a certificate** (X509None, X509Vnc, X509Plain): TLS like RDP's, with the same trust on first use; nothing is sent before the certificate is accepted.
+  - **VNC authentication alone** proves the password with a DES challenge (the password itself doesn't cross), but **the session is not encrypted**: everything typed and shown can be read on the way, and the password's challenge can be attacked offline. The pane's bar says "Not encrypted" in the warning colour for such a session: use VeNCrypt, or reach the server through a jump host (an SSH tunnel).
+  - Servers that offer only anonymous TLS (TLSNone, TLSVnc, TLSPlain) are refused with an explanation: anonymous TLS can't tell the server from someone in the middle.
 
 ### A malicious server
 
@@ -124,6 +128,7 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 - **The pointer pictures** the server sends are checked against their size before they are drawn.
 - **The local tunnel through jump hosts** listens on `127.0.0.1` while the pane is open. Programs on this computer could connect to it, as with a local tunnel (see Tunnels), and reach the desktop's login.
 - **Test runs** connect only to an RDP test server started next to the app, remember certificates in their temporary folder, and never touch the user's clipboard.
+- **VNC** (Sprint 14) runs in the app rather than a helper, in Rust (`opensesh-vnc`): what the server sends is bounded before it is decoded (desktops up to 8192 pixels a side, cursors up to 256, compressed rectangles up to 64 MiB, texts up to 1 MiB), and a rectangle outside the desktop ends the session. The password goes to the session once, kept in a wiped string; VeNCrypt's user name and password are sent in one wiped buffer. The clipboard is shared as for RDP (a host setting), and a view-only host sends no keys, pointer or clipboard at all.
 
 ### Pasted text
 
