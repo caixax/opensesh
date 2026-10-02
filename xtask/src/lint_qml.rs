@@ -12,6 +12,10 @@
 //!   the text of `Toasts.show()` and the entries of the text lists and maps `labels` and
 //!   `presetNames`, even when they span several lines.
 //!
+//! * Every icon-only button has a name for screen readers (Sprint 17): an `OsIconButton` sets
+//!   `toolTip`, `text` or `Accessible.name`, and an `OsButton` with an `iconName` but no `text`
+//!   sets `Accessible.name`. Reported on the line that opens the button.
+//!
 //! The checks are line-based heuristics. A line can opt out with a trailing
 //! `// lint-qml: allow` comment, which must be justified in review.
 
@@ -100,11 +104,99 @@ static TOAST_CALL: LazyLock<Regex> = LazyLock::new(|| static_regex(r"\bToasts\.s
 static TEXT_COLLECTION: LazyLock<Regex> =
     LazyLock::new(|| static_regex(r"\b(?:labels|presetNames)\s*(?::|=)"));
 
+/// A button being read, to check that it has a name.
+struct ButtonScan {
+    /// `OsIconButton` (else `OsButton`).
+    icon_only: bool,
+    /// The line that opens it (1-based).
+    line: usize,
+    /// Brace depth inside the button (its own properties are at 1).
+    depth: i32,
+    icon: bool,
+    named: bool,
+    text: bool,
+    /// The opening line said `// lint-qml: allow`.
+    allowed: bool,
+}
+
+static BUTTON_START: LazyLock<Regex> =
+    LazyLock::new(|| static_regex(r"^\s*(OsIconButton|OsButton)\s*\{\s*$"));
+
+/// Braces outside strings: `+1` for each `{`, `-1` for each `}`.
+fn brace_balance(line: &str) -> i32 {
+    let mut balance = 0;
+    let mut quote: Option<char> = None;
+    let mut escaped = false;
+    for c in line.chars() {
+        match quote {
+            Some(open) => {
+                if escaped {
+                    escaped = false;
+                } else if c == '\\' {
+                    escaped = true;
+                } else if c == open {
+                    quote = None;
+                }
+            }
+            None => match c {
+                '"' | '\'' | '`' => quote = Some(c),
+                '{' => balance += 1,
+                '}' => balance -= 1,
+                _ => {}
+            },
+        }
+    }
+    balance
+}
+
+/// Follows the buttons open on `line`; the line of each one that closed without a name.
+fn scan_buttons(line: &str, index: usize, allowed: bool, open: &mut Vec<ButtonScan>) -> Vec<usize> {
+    let mut unnamed = Vec::new();
+    let balance = brace_balance(line);
+    if let Some(top) = open.last_mut() {
+        if top.depth == 1 {
+            let property = |name: &str| {
+                line.trim_start()
+                    .strip_prefix(name)
+                    .is_some_and(|rest| rest.trim_start().starts_with(':'))
+            };
+            top.icon |= property("iconName");
+            top.text |= property("text");
+            top.named |= property("Accessible.name") || property("toolTip");
+        }
+        top.depth += balance;
+        if top.depth <= 0
+            && let Some(done) = open.pop()
+        {
+            // An icon button names itself with `text` too; an OsButton with text has a name.
+            let has_name = done.named || done.text;
+            let needs_name = done.icon_only || done.icon;
+            if needs_name && !has_name && !done.allowed {
+                unnamed.push(done.line);
+            }
+        }
+        return unnamed;
+    }
+    if let Some(found) = BUTTON_START.captures(line) {
+        open.push(ButtonScan {
+            icon_only: found.get(1).is_some_and(|m| m.as_str() == "OsIconButton"),
+            line: index + 1,
+            depth: 1,
+            icon: false,
+            named: false,
+            text: false,
+            allowed,
+        });
+    }
+    unnamed
+}
+
 /// Checks one QML source. `path` is only used for reporting and for the `Theme.qml` exemption.
 #[must_use]
 pub fn lint_source(path: &Path, source: &str) -> Vec<Finding> {
     let is_theme = path.file_name().is_some_and(|name| name == THEME_FILE);
     let mut findings = Vec::new();
+    let mut buttons: Vec<ButtonScan> = Vec::new();
     let mut in_block_comment = false;
     let mut collection: Option<CollectionScan> = None;
 
@@ -115,6 +207,14 @@ pub fn lint_source(path: &Path, source: &str) -> Vec<Finding> {
         }
         // Scanned before the allow marker is honored, so a collection keeps its state.
         let untranslated_entry = has_untranslated_entry(&line, &mut collection);
+        for opened in scan_buttons(&line, index, raw_line.contains(ALLOW_MARKER), &mut buttons) {
+            findings.push(Finding {
+                path: path.to_path_buf(),
+                line: opened,
+                message: "icon-only button without a name: set toolTip, text or Accessible.name"
+                    .to_owned(),
+            });
+        }
         if raw_line.contains(ALLOW_MARKER) {
             continue;
         }
@@ -774,6 +874,35 @@ OsColorPicker {
         );
         assert_eq!(lint(r#"title: ''; text: 'Save'"#).len(), 1);
         assert_eq!(lint(r#"text: "Save"; title: """#).len(), 1);
+    }
+
+    #[test]
+    fn icon_only_buttons_need_a_name() {
+        let unnamed = "OsIconButton {\n    iconName: \"x\"\n    OsTooltip {\n        text: qsTr(\"Close\")\n    }\n}\n";
+        assert_eq!(
+            lint(unnamed),
+            ["1: icon-only button without a name: set toolTip, text or Accessible.name"]
+        );
+        assert!(
+            lint("OsIconButton {\n    iconName: \"x\"\n    toolTip: qsTr(\"Close\")\n}\n")
+                .is_empty()
+        );
+        assert!(lint("OsButton {\n    iconName: \"x\"\n    text: qsTr(\"Close\")\n}\n").is_empty());
+        assert!(lint("OsButton {\n    text: qsTr(\"Close\")\n}\n").is_empty());
+        assert_eq!(
+            lint(
+                "Item {\n    OsButton {\n        iconName: \"x\"\n        onClicked: { close(); }\n    }\n}\n"
+            ),
+            ["2: icon-only button without a name: set toolTip, text or Accessible.name"]
+        );
+        assert!(
+            lint("OsButton {\n    iconName: \"x\"\n    Accessible.name: qsTr(\"Close\")\n}\n")
+                .is_empty()
+        );
+        assert!(
+            lint("OsIconButton { // lint-qml: allow (decorative)\n    iconName: \"x\"\n}\n")
+                .is_empty()
+        );
     }
 
     #[test]
