@@ -491,8 +491,5 @@ async fn ten_thousand_entries() {
     eprintln!("10,000 entries: listed in {listed:?}, sorted in {sorted:?}");
     // A debug build on a shared CI runner, other tests running alongside: a bound that catches a
     // sort gone quadratic, not one that measures the release build (tens of milliseconds).
-    assert!(
-        sorted < Duration::from_secs(2),
-        "sorting took {sorted:?}"
-    );
+    assert!(sorted < Duration::from_secs(2), "sorting took {sorted:?}");
 }
