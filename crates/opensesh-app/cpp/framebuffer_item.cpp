@@ -79,6 +79,18 @@ void FramebufferItemBase::setScaleMode(const QString &mode)
     update();
 }
 
+void FramebufferItemBase::setReleaseShortcut(const QString &shortcut)
+{
+    if (shortcut == m_releaseShortcut)
+        return;
+    m_releaseShortcut = shortcut;
+    // Settings write the portable text; on macOS the app shows (and may pass) the native one.
+    m_release = QKeySequence(shortcut, QKeySequence::PortableText);
+    if (m_release.isEmpty())
+        m_release = QKeySequence(shortcut, QKeySequence::NativeText);
+    emit releaseShortcutChanged();
+}
+
 void FramebufferItemBase::setBackgroundColor(const QColor &color)
 {
     if (color == m_background)
@@ -319,11 +331,13 @@ QString FramebufferItemBase::clipboardText() const
 
 // ---- Input ------------------------------------------------------------------------------------
 
-bool FramebufferItemBase::isEscape(const QKeyEvent *event)
+bool FramebufferItemBase::isRelease(const QKeyEvent *event) const
 {
-    const Qt::KeyboardModifiers modifiers = event->modifiers();
-    return event->key() == Qt::Key_Home && modifiers.testFlag(Qt::ControlModifier)
-            && modifiers.testFlag(Qt::AltModifier);
+    if (m_release.isEmpty())
+        return false;
+    // The keypad flag isn't part of a shortcut.
+    const QKeyCombination pressed(event->modifiers() & ~Qt::KeypadModifier, Qt::Key(event->key()));
+    return m_release.count() == 1 && m_release[0] == pressed;
 }
 
 bool FramebufferItemBase::event(QEvent *event)
@@ -331,7 +345,7 @@ bool FramebufferItemBase::event(QEvent *event)
     // While focused, every key goes to the desktop, shortcuts included.
     if (event->type() == QEvent::ShortcutOverride) {
         auto *key = static_cast<QKeyEvent *>(event);
-        if (!isEscape(key)) {
+        if (!isRelease(key)) {
             event->accept();
             return true;
         }
@@ -341,7 +355,7 @@ bool FramebufferItemBase::event(QEvent *event)
 
 void FramebufferItemBase::keyPressEvent(QKeyEvent *event)
 {
-    if (isEscape(event)) {
+    if (isRelease(event)) {
         emit escapeRequested();
         event->accept();
         return;
