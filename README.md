@@ -39,11 +39,11 @@ curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | b
 |---|---|
 | Debian 13 (trixie), Ubuntu 26.04 LTS | `.deb` (apt), one for each |
 | Fedora | `.rpm` (dnf) |
-| Arch Linux and derivatives (Manjaro, EndeavourOS, CachyOS) | `.pkg.tar.zst` (pacman), or the AUR |
+| Arch Linux and derivatives (Manjaro, EndeavourOS, CachyOS) | `.pkg.tar.zst` (pacman) |
 
 On a Wayland session the script also installs Qt's Wayland plugin. Saved passwords and keys use the desktop's keyring (GNOME Keyring, or KWallet with its Secret Service interface on); without one, set a master password in **Settings > Security**. Each `.deb` asks for the exact Qt of the release it was built on, so other Debian and Ubuntu releases (and their derivatives) need a [build from source](#building-from-source) for now.
 
-On Arch, the AUR has `opensesh` (built from the release's source) and `opensesh-git` (from this repository), for example with `yay -S opensesh`.
+For the AUR, `PKGBUILD`s for `opensesh` (built from the release's source) and `opensesh-git` (from this repository) are in [`packaging/aur/`](packaging/aur/) and in each release; they aren't published on the AUR yet.
 
 Running the script again updates OpenSesh. It asks before installing anything; to pass options through the pipe, add them after `bash -s --`:
 
