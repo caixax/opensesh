@@ -341,6 +341,22 @@ Item {
                 console.info("smoke test: the S3 view listed buckets and folders, uploaded, made a temporary link, downloaded a folder, made, renamed and deleted one");
                 view.setSource(0, leftSide.initial);
                 view.setSource(1, rightSide.initial);
+            },
+            // sftp:// quick connect opens here, not in a terminal (a test run sends it to the
+            // test server, like every SSH connection).
+            () => {
+                if (!view.shell.connectTarget("sftp://tester@files.example", "tab")) // lint-qml: allow (a quick-connect URL)
+                    smoke.fail("sftp:// quick connect opened nothing");
+                right = view.pane(1);
+                if (!right || right.mode !== "remote" || right.target.indexOf("sftp://") !== 0)
+                    smoke.fail("sftp:// quick connect didn't open the files view: " + (right ? right.target : "no pane"));
+                answered = -1;
+                deadline = Date.now() + timeout;
+                return [connectRight];
+            },
+            () => {
+                console.info("smoke test: sftp:// quick connect opened the files view and listed " + right.browser.path);
+                view.setSource(1, rightSide.initial);
             }
         ];
     }

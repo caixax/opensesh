@@ -704,8 +704,8 @@ Item {
             Hosts.recordHost(id);
             return openConnection({ kind: "local", host: id }, where ?? "tab");
         }
-        // S3 storage opens in the files view.
-        if (host.protocol === "s3") {
+        // S3 storage and SFTP hosts open in the files view.
+        if (host.protocol === "s3" || host.protocol === "sftp") {
             Hosts.recordHost(id);
             return openFiles({ mode: "remote", hostId: id, target: "", title: host.name });
         }
@@ -752,7 +752,7 @@ Item {
             return false;
         }
         Hosts.recordTarget(parsed.text);
-        if (parsed.protocol === "s3")
+        if (parsed.protocol === "s3" || parsed.protocol === "sftp")
             return openFiles({ mode: "remote", hostId: "", target: parsed.text, title: parsed.text });
         const kind = shell.terminalKinds.indexOf(parsed.protocol) >= 0 || shell.desktopKinds.indexOf(parsed.protocol) >= 0
                    ? parsed.protocol : "ssh";

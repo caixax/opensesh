@@ -137,15 +137,22 @@ impl Protocol {
         self.default_port().is_some()
     }
 
-    /// The sprint that brings connecting with this protocol, `None` when it works today.
+    /// The sprint that brings connecting with this protocol, `None` when it works today: every
+    /// protocol works since Sprint 14 (SFTP hosts open in the files view).
     #[must_use]
     pub const fn available_in(self) -> Option<u8> {
         match self {
-            Self::Ssh | Self::Local => None,
-            Self::Sftp => Some(8),
-            Self::Telnet | Self::Serial | Self::Mosh | Self::Docker | Self::Kube | Self::S3 => None,
-            Self::Rdp => None,
-            Self::Vnc => None,
+            Self::Ssh
+            | Self::Local
+            | Self::Sftp
+            | Self::Telnet
+            | Self::Serial
+            | Self::Mosh
+            | Self::Docker
+            | Self::Kube
+            | Self::S3
+            | Self::Rdp
+            | Self::Vnc => None,
         }
     }
 }

@@ -376,25 +376,7 @@ OsDialog {
                             inherit: false
                             label: qsTr("Protocol")
                             options: dialog.protocolOptions
-                            helpText: {
-                                switch (dialog.protocol) {
-                                case "ssh":
-                                case "local":
-                                case "telnet":
-                                case "serial":
-                                case "mosh":
-                                case "docker":
-                                case "kube":
-                                case "s3":
-                                case "rdp":
-                                case "vnc":
-                                    return "";
-                                case "sftp":
-                                    return qsTr("Saved now; the file browser arrives in Sprint 8.");
-                                default:
-                                    return qsTr("Saved now; connecting arrives in Sprint 12.");
-                                }
-                            }
+                            helpText: dialog.protocol === "sftp" ? qsTr("Opens the server's files in the files view, without a terminal.") : ""
                         }
 
                         EditorTextRow {
@@ -1201,10 +1183,6 @@ OsDialog {
                             editor: dialog
                             path: "sftp.start_dir"
                             label: qsTr("Start folder")
-                        }
-
-                        Note {
-                            text: qsTr("The SFTP browser arrives in Sprint 8; these settings are kept for it.")
                         }
                     }
                 }

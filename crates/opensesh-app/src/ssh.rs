@@ -463,14 +463,15 @@ pub fn jump_connect_for(file: &HostsFile, host: &Host) -> Result<Option<ConnectS
     hermetic(connect).map(Some)
 }
 
-/// The session of quick-connect `text` (`user@host:port -J jump`).
+/// The session of quick-connect `text` (`user@host:port -J jump`, or an `sftp://` URL for the
+/// files view).
 ///
 /// # Errors
 ///
-/// A message when the text isn't an SSH target.
+/// A message when the text isn't an SSH or SFTP target.
 pub fn for_target(text: &str, size: TermSize, term: &str) -> Result<SshStart, String> {
     let parsed = target::parse(text).map_err(|error| error.to_string())?;
-    if parsed.protocol != Protocol::Ssh {
+    if !matches!(parsed.protocol, Protocol::Ssh | Protocol::Sftp) {
         return Err(format!("{} isn't an SSH target", parsed.protocol.as_str()));
     }
     let library = crate::hosts::current();

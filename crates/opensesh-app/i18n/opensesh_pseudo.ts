@@ -2716,6 +2716,10 @@
         <translation>[Þŕöťöçöĺ ~~~]</translation>
     </message>
     <message>
+        <source>Opens the server&apos;s files in the files view, without a terminal.</source>
+        <translation>[Öþéñš ťĥé šéŕvéŕ&apos;š ƒíĺéš íñ ťĥé ƒíĺéš víéŵ, ŵíťĥöüť á ťéŕmíñáĺ. ~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Endpoint</source>
         <translation>[Éñďþöíñť ~~~]</translation>
     </message>
@@ -3084,14 +3088,6 @@
         <translation>[Ŕéáďš /éťç/öš-ŕéĺéášé öñçé çöññéçťéď, ƒöŕ ťĥé áüťömáťíç íçöñ. ~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Saved now; the file browser arrives in Sprint 8.</source>
-        <translation>[Šávéď ñöŵ; ťĥé ƒíĺé bŕöŵšéŕ áŕŕívéš íñ Šþŕíñť 8. ~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Saved now; connecting arrives in Sprint 12.</source>
-        <translation>[Šávéď ñöŵ; çöññéçťíñĝ áŕŕívéš íñ Šþŕíñť 12. ~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>Device</source>
         <translation>[Ďévíçé ~~]</translation>
     </message>
@@ -3410,10 +3406,6 @@
     <message>
         <source>Start folder</source>
         <translation>[Šťáŕť ƒöĺďéŕ ~~~~]</translation>
-    </message>
-    <message>
-        <source>The SFTP browser arrives in Sprint 8; these settings are kept for it.</source>
-        <translation>[Ťĥé ŠFŤÞ bŕöŵšéŕ áŕŕívéš íñ Šþŕíñť 8; ťĥéšé šéťťíñĝš áŕé ķéþť ƒöŕ íť. ~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Markdown</source>
