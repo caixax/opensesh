@@ -151,6 +151,10 @@ fn windows(root: &Path, dist: &Path) -> Result<()> {
                 "--no-translations",
                 "--no-opengl-sw",
                 "--no-compiler-runtime",
+                // The offscreen platform too (114 KB): `--smoke-test` runs headless with it, which
+                // is how the release workflow checks the installed packages.
+                "--include-plugins",
+                "qoffscreen",
             ])
             .arg(stage.join(WINDOWS_EXE)),
     )?;

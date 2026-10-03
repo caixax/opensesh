@@ -227,12 +227,13 @@ jobs:
         run: ${{ matrix.install }}
       - name: Start it
         run: |
-          opensesh-app --version | tee version.txt
+          # A program that can't start may wait for ever: timeouts fail it instead.
+          timeout 60 opensesh-app --version | tee version.txt
           grep -qx "OpenSesh $VERSION" version.txt
-          opensesh --version
+          timeout 60 opensesh --version
           test -x /usr/lib/opensesh/opensesh-rdp
           test -f /usr/share/applications/cc.caixa.OpenSesh.desktop
-          opensesh-app --gallery --smoke-test
+          timeout 600 opensesh-app --gallery --smoke-test
 
   install-windows:
     name: Install on Windows
@@ -257,19 +258,21 @@ jobs:
           # window and wait for ever.
           MSYS_NO_PATHCONV=1 "./package/OpenSesh-$VERSION-windows-x64-setup.exe" /S
           app="$(cygpath -u "$LOCALAPPDATA")/Programs/OpenSesh"
-          "$app/OpenSesh.exe" --version | tee version.txt
+          # A program that can't start may show a message box and wait: timeouts fail it instead.
+          timeout 60 "$app/OpenSesh.exe" --version | tee version.txt
           grep -qx "OpenSesh $VERSION" version.txt
-          "$app/bin/opensesh.exe" --version
+          timeout 60 "$app/bin/opensesh.exe" --version
           test -f "$app/opensesh-rdp.exe"
+          test -f "$app/platforms/qoffscreen.dll"
           test -f "$(cygpath -u "$APPDATA")/Microsoft/Windows/Start Menu/Programs/OpenSesh.lnk"
-          "$app/OpenSesh.exe" --gallery --smoke-test
+          timeout 600 "$app/OpenSesh.exe" --gallery --smoke-test
       - name: The portable zip
         run: |
           unzip -q "package/OpenSesh-$VERSION-windows-x64-portable.zip" -d portable
           dir="portable/OpenSesh-$VERSION-windows-x64"
           test -f "$dir/portable"
-          "$dir/OpenSesh.exe" --version
-          "$dir/OpenSesh.exe" --gallery --smoke-test
+          timeout 60 "$dir/OpenSesh.exe" --version
+          timeout 600 "$dir/OpenSesh.exe" --gallery --smoke-test
 
   aur:
     name: AUR ${{ matrix.package }}
@@ -327,10 +330,10 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
         run: |
-          opensesh-app --version
-          opensesh --version
+          timeout 60 opensesh-app --version
+          timeout 60 opensesh --version
           test -x /usr/lib/opensesh/opensesh-rdp
-          opensesh-app --gallery --smoke-test
+          timeout 600 opensesh-app --gallery --smoke-test
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: aur-${{ matrix.package }}
