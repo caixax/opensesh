@@ -4,6 +4,31 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 18 (2026-10-03): the 1.0.0 packages
+
+### Automated checks
+
+The `v1.0.0` tag's Release run installed every package on a clean system with its package manager and started it: `--version` (the release's version), the CLI and the RDP helper in place, and the component gallery's offscreen smoke test.
+
+| Package | System | Installed by | Started |
+|---|---|---|---|
+| `opensesh_1.0.0_amd64.deb` | Debian 13 container | apt | ✅ |
+| `opensesh_1.0.0_ubuntu26.04_amd64.deb` | Ubuntu 26.04 container | apt | ✅ |
+| `opensesh-1.0.0.x86_64.rpm` | Fedora container | dnf | ✅ |
+| `opensesh-1.0.0-x86_64.pkg.tar.zst` | Arch container | pacman | ✅ |
+| AUR `opensesh` (the tag's source) and `opensesh-git` (the tag's commit) | Arch container | makepkg, pacman | ✅ |
+| `OpenSesh-1.0.0-windows-x64-setup.exe` | Windows Server 2025 runner | the installer, silent, for the user | ✅ (Start menu shortcut too) |
+| `OpenSesh-1.0.0-windows-x64-portable.zip` | Windows Server 2025 runner | unzipped | ✅ (portable marker) |
+
+### Manual checks for the owner
+
+| Check | Windows 10/11 | Linux |
+|---|---|---|
+| The 1.0.0 installer on a real desktop: SmartScreen's warning (unsigned), Start menu, "Installed apps", uninstall | ⏳ | — |
+| `install.sh` on Debian 13 and on Ubuntu 26.04 (it picks each one's `.deb`), then OpenSesh from the desktop's menu | — | ⏳ |
+| `scoop install` from the release's `opensesh.json`, then `scoop update` at the next release | ⏳ | — |
+| An update from 0.1.4 to 1.0.0 through the in-app check (installed Windows copy) | ⏳ | — |
+
 ## Sprint 17 (2026-10-03)
 
 ### Automated checks
