@@ -55,7 +55,7 @@ pub mod qobject {
         /// `linked` or a group id), optionally one `protocol` and one `tag`, sorted by `sort` (`name`,
         /// `address`, `recent`, `group`) when there is no text: a JSON list of summaries
         /// (`id`, `name`, `protocol`, `address`, `target`, `tags`, `favorite`, `color`, `icon`,
-        /// `detectedIcon`, `group`, `groupPath`, `linked`, `sprint`).
+        /// `detectedIcon`, `group`, `groupPath`, `linked`).
         #[qinvokable]
         fn search(
             self: Pin<&mut Self>,
@@ -66,9 +66,8 @@ pub mod qobject {
             sort: &QString,
         ) -> QString;
 
-        /// Host `id` for the editor (every field as saved, `linked`, `sprint` (0 when it connects
-        /// today) and `inherited`: what its group gives each field, see `inherited`); empty when
-        /// unknown.
+        /// Host `id` for the editor (every field as saved, `linked` and `inherited`: what its
+        /// group gives each field, see `inherited`); empty when unknown.
         #[qinvokable]
         #[cxx_name = "hostJson"]
         fn host_json(self: &Self, id: &QString) -> QString;
@@ -164,7 +163,7 @@ pub mod qobject {
         fn set_detected_os(self: Pin<&mut Self>, id: &QString, icon: &QString);
 
         /// Quick-connect text parsed: `{ok, error, protocol, user, host, port, jump, text
-        /// (canonical), sprint (0 when it connects today)}`.
+        /// (canonical)}`.
         #[qinvokable]
         #[cxx_name = "parseTarget"]
         fn parse_target(self: &Self, text: &QString) -> QString;
@@ -446,7 +445,6 @@ fn summary_value(file: &HostsFile, host: &Host, detected: &DetectedOs) -> Json {
         "group": host.group.clone().unwrap_or_default(),
         "groupPath": host.group.as_deref().map(|id| file.group_path(id)).unwrap_or_default(),
         "linked": host.is_linked(),
-        "sprint": host.protocol.available_in().unwrap_or(0),
     })
 }
 
@@ -948,11 +946,6 @@ impl qobject::Hosts {
                 "protocol".to_owned(),
                 Json::String(host.protocol.as_str().to_owned()),
             );
-            // The sprint that brings connecting over it, 0 when it connects today.
-            object.insert(
-                "sprint".to_owned(),
-                Json::from(host.protocol.available_in().unwrap_or(0)),
-            );
             object.insert(
                 "inherited".to_owned(),
                 inherited_json(&library.file, host.group.as_deref(), host.protocol),
@@ -1386,7 +1379,6 @@ impl qobject::Hosts {
                 "port": target.port.or(target.protocol.default_port()).map_or(Json::Null, Json::from),
                 "jump": target.jump,
                 "text": target.to_string(),
-                "sprint": target.protocol.available_in().unwrap_or(0),
             }),
             Err(error) => json!({ "ok": false, "error": error.to_string() }),
         };

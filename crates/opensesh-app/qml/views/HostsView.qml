@@ -1204,8 +1204,7 @@ Item {
 
                         OsTag {
                             visible: card.modelData.protocol !== "ssh"
-                            text: card.modelData.sprint > 0 ? qsTr("%1 · Sprint %2").arg(card.view.protocolLabel(card.modelData.protocol)).arg(card.modelData.sprint)
-                                                            : card.view.protocolLabel(card.modelData.protocol)
+                            text: card.view.protocolLabel(card.modelData.protocol)
                         }
 
                         OsTag {

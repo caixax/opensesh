@@ -167,8 +167,6 @@ T.Popup {
                         return p.error ?? "";
                     const where = (p.user ? p.user + "@" : "") + p.host + (p.port ? ":" + p.port : "");
                     const via = p.jump && p.jump.length > 0 ? qsTr(" through %1").arg(p.jump.join(", ")) : "";
-                    if (p.sprint > 0)
-                        return qsTr("%1 to %2: arrives in Sprint %3").arg(p.protocol.toUpperCase()).arg(where).arg(p.sprint);
                     return qsTr("%1 to %2%3").arg(p.protocol.toUpperCase()).arg(where).arg(via);
                 }
             }

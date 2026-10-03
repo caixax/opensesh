@@ -1,11 +1,10 @@
 // Settings (PLAN §5.4, §6.1): the list of sections on the left and the selected page on the
-// right, in a scrolling area. SSH, SFTP and Data and sync say which sprint brings them; the other
-// sections work. The section list is one Tab stop: Up/Down and Home/End move between the
+// right, in a scrolling area. The section list is one Tab stop: Up/Down and Home/End move between the
 // sections, Enter/Return or Space opens the focused one.
 //   section: string   id of the selected section: "general", "appearance", "terminal",
 //                     "profiles", "themes", "shortcuts", "ssh", "sftp", "security", "data" or
 //                     "about" (default "general")
-//   sections: var     read-only; [{ id, text, iconName, description?, sprint? }], in list order
+//   sections: var     read-only; [{ id, text, iconName, description? }], in list order
 // Functions: showSection(id) selects a section (false for an unknown id); smokeSteps() returns
 // the functions for SmokeTest.steps that visit every section and open and close the
 // "Restore defaults" dialog.
@@ -433,7 +432,6 @@ FocusScope {
             iconName: view.currentEntry.iconName
             title: view.currentEntry.text
             description: view.currentEntry.description !== undefined ? view.currentEntry.description : ""
-            sprint: view.currentEntry.sprint !== undefined ? view.currentEntry.sprint : 0
             minimumHeight: flick.height - 2 * view.pagePadding
         }
     }

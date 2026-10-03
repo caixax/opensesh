@@ -495,12 +495,12 @@
         <translation>[Ĥöšťš ~~]</translation>
     </message>
     <message>
-        <source>Connecting over %1 arrives in Sprint %2.</source>
-        <translation>[Çöññéçťíñĝ övéŕ %1 áŕŕívéš íñ Šþŕíñť %2. ~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
         <source>That host no longer exists.</source>
         <translation>[Ťĥáť ĥöšť ñö ĺöñĝéŕ éxíšťš. ~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>OpenSesh can&apos;t connect over %1.</source>
+        <translation>[ÖþéñŠéšĥ çáñ&apos;ť çöññéçť övéŕ %1. ~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>%1 can&apos;t be connected to as it is: check its address, user and jump hosts.</source>
@@ -768,13 +768,6 @@
     <message>
         <source>Don&apos;t ask again</source>
         <translation>[Ďöñ&apos;ť ášķ áĝáíñ ~~~~~]</translation>
-    </message>
-</context>
-<context>
-    <name>ComingSoon</name>
-    <message>
-        <source>%1 is coming in Sprint %2.</source>
-        <translation>[%1 íš çömíñĝ íñ Šþŕíñť %2. ~~~~~~~~]</translation>
     </message>
 </context>
 <context>
@@ -3761,10 +3754,6 @@
         <translation>[Íťš ĥöšťš áñď šübĝŕöüþš mövé ťö ťĥé ĝŕöüþ íť íš íñ. Ñö ĥöšť íš ďéĺéťéď. ~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <source>%1 · Sprint %2</source>
-        <translation>[%1 · Šþŕíñť %2 ~~~~~]</translation>
-    </message>
-    <message>
         <source>ssh_config</source>
         <translation>[ššĥ_çöñƒíĝ ~~~]</translation>
     </message>
@@ -5541,10 +5530,6 @@
     <message>
         <source> through %1</source>
         <translation>[ ťĥŕöüĝĥ %1 ~~~~]</translation>
-    </message>
-    <message>
-        <source>%1 to %2: arrives in Sprint %3</source>
-        <translation>[%1 ťö %2: áŕŕívéš íñ Šþŕíñť %3 ~~~~~~~~~]</translation>
     </message>
     <message>
         <source>%1 to %2%3</source>
@@ -8477,13 +8462,6 @@
     <message>
         <source>This can&apos;t be undone.</source>
         <translation>[Ťĥíš çáñ&apos;ť bé üñďöñé. ~~~~~~~]</translation>
-    </message>
-</context>
-<context>
-    <name>SettingsPlaceholderPage</name>
-    <message>
-        <source>Coming in Sprint %1</source>
-        <translation>[Çömíñĝ íñ Šþŕíñť %1 ~~~~~~]</translation>
     </message>
 </context>
 <context>

@@ -674,24 +674,6 @@ Item {
         return true;
     }
 
-    // The sprint that brings connecting over `protocol`.
-    function sprintFor(protocol) {
-        switch (protocol) {
-        case "sftp":
-            return 8;
-        case "rdp":
-            return 13;
-        case "vnc":
-            return 14;
-        default:
-            return 12;
-        }
-    }
-
-    function notYet(protocol, sprint) {
-        Toasts.show(qsTr("Connecting over %1 arrives in Sprint %2.").arg(protocol.toUpperCase()).arg(sprint), "info");
-    }
-
     // Connects to saved host `id` (see openConnection for `where`). Returns whether a session
     // opened.
     function connectHost(id, where) {
@@ -710,13 +692,12 @@ Item {
             return openFiles({ mode: "remote", hostId: id, target: "", title: host.name });
         }
         // Kinds the pane starts itself: terminals (Sprint 12) and remote desktops (Sprint 13).
-        if ((shell.terminalKinds.indexOf(host.protocol) >= 0 || shell.desktopKinds.indexOf(host.protocol) >= 0)
-                && host.sprint === 0) {
+        if (shell.terminalKinds.indexOf(host.protocol) >= 0 || shell.desktopKinds.indexOf(host.protocol) >= 0) {
             Hosts.recordHost(id);
             return openConnection({ kind: host.protocol, host: id }, where ?? "tab");
         }
         if (host.protocol !== "ssh") {
-            notYet(host.protocol, sprintFor(host.protocol));
+            Toasts.show(qsTr("OpenSesh can't connect over %1.").arg(host.protocol.toUpperCase()), "warning");
             return false;
         }
         if (Hosts.connectCommand(id).length === 0) {
@@ -745,10 +726,6 @@ Item {
         const parsed = JSON.parse(Hosts.parseTarget(text) || "{}");
         if (!parsed.ok) {
             Toasts.show(qsTr("Can't connect to %1: %2").arg(text).arg(parsed.error ?? ""), "danger");
-            return false;
-        }
-        if (parsed.sprint > 0) {
-            notYet(parsed.protocol, parsed.sprint);
             return false;
         }
         Hosts.recordTarget(parsed.text);
