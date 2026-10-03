@@ -1,0 +1,57 @@
+# Maintainer: caixax <westlargo at proton dot me>
+#
+# The AUR package built from the repository's main branch. The release workflow builds it at the
+# release's tag with makepkg, installs it and starts it.
+
+pkgname=opensesh-git
+pkgver=1.0.0.r0.g0000000
+pkgrel=1
+pkgdesc="Remote connections client: terminal, SSH, SFTP, tunnels, RDP and VNC (development version)"
+arch=('x86_64')
+url="https://github.com/caixax/opensesh"
+license=('GPL-3.0-or-later')
+depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'gcc-libs' 'glibc')
+makedepends=('cargo' 'git' 'lld')
+optdepends=('qt6-wayland: native Wayland windows')
+provides=('opensesh')
+conflicts=('opensesh')
+# The C++ that cxx-qt compiles is linked by rustc: makepkg's LTO flags are kept out of it.
+options=('!lto')
+source=("$pkgname::git+https://github.com/caixax/opensesh.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$pkgname"
+    git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable
+    local target
+    target="$(rustc -vV | sed -n 's/host: //p')"
+    cargo fetch --locked --target "$target"
+    # The RDP helper: a workspace with a lock file of its own.
+    cargo fetch --locked --target "$target" --manifest-path rdp/Cargo.toml
+}
+
+build() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    export QMAKE=/usr/bin/qmake6
+    cargo build --frozen --release -p opensesh-app -p opensesh-cli
+    CARGO_TARGET_DIR=target/rdp cargo build --frozen --release --manifest-path rdp/Cargo.toml --bin opensesh-rdp
+}
+
+package() {
+    cd "$pkgname"
+    install -Dm755 target/release/opensesh-app "$pkgdir/usr/bin/opensesh-app"
+    install -Dm755 target/release/opensesh "$pkgdir/usr/bin/opensesh"
+    # Where the app looks for it: ../lib/opensesh/ from its own folder.
+    install -Dm755 target/rdp/release/opensesh-rdp "$pkgdir/usr/lib/opensesh/opensesh-rdp"
+    install -Dm644 crates/opensesh-app/data/cc.caixa.OpenSesh.desktop -t "$pkgdir/usr/share/applications"
+    install -Dm644 crates/opensesh-app/data/icons/cc.caixa.OpenSesh.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
+    install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/opensesh"
+    install -Dm644 README.md CHANGELOG.md THIRD_PARTY_NOTICES.md -t "$pkgdir/usr/share/doc/opensesh"
+}

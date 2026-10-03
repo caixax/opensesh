@@ -1,26 +1,79 @@
-# Fallback release build. Releases are normally cut locally with scripts/release.bat (Windows plus
-# the WSL distros, minutes instead of hours); this workflow builds the same packages on GitHub's
-# runners for an existing tag and attaches them to its release (creating the release if needed).
-name: Release (fallback)
+# Release (ADR 0039): runs when a version tag is pushed (scripts/release.ps1 pushes it), or by hand
+# for an existing tag. By hand with dry_run, on any branch or tag: everything is built and tested,
+# nothing is published, and the release's files are kept as the run's `release-dry-run` artifact.
+#
+#   version    the tag names Cargo.toml's version and CHANGELOG.md has its section
+#   linux      the .debs (Debian 13, Ubuntu 26.04), .rpm (Fedora) and pacman package (Arch), each
+#              built on its distribution against the distribution's Qt (scripts/linux/build.sh)
+#   windows    the portable zip and the NSIS installer (cargo xtask dist windows), code-signed when
+#              a certificate is configured (secrets WINDOWS_SIGNING_CERTIFICATE, a base64 .pfx, and
+#              WINDOWS_SIGNING_PASSWORD)
+#   install-*  every package installed on a clean system with its package manager (which brings
+#              Qt), then started: --version, and the component gallery's offscreen smoke test
+#   aur        the AUR PKGBUILDs (opensesh from the tag's source, opensesh-git at the tag) built
+#              with makepkg, installed and started
+#   publish    SHA256SUMS.txt, the notes from CHANGELOG.md, the Scoop manifest and the package
+#              manager manifests (scripts/release-assets.sh), and the GitHub release. When
+#              scripts/release.ps1 already published the packages it built, those stay: the
+#              manifests are made from them and only what the release lacks is added.
+name: Release
 
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build, e.g. v0.1.0"
+        description: "Existing tag to release, e.g. v1.0.0 (or a branch, with dry_run)"
         required: true
+      dry_run:
+        description: "Build and test everything, publish nothing"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
   QT_VERSION: "6.10.3"
+  TAG: ${{ inputs.tag || github.ref_name }}
+  DRY_RUN: ${{ inputs.dry_run == true }}
 
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+      - name: The tag names the workspace's version, and the changelog has it
+        id: check
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          if [ "$DRY_RUN" = true ]; then
+            echo "::notice::A dry run of $version at $TAG: nothing is published."
+          elif [ "v$version" != "$TAG" ]; then
+            echo "::error::the tag $TAG is not Cargo.toml's version ($version)"
+            exit 1
+          elif ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
   linux:
     name: ${{ matrix.name }} package
+    needs: version
     runs-on: ubuntu-24.04
+    timeout-minutes: 120
     container: ${{ matrix.image }}
     strategy:
       fail-fast: false
@@ -28,6 +81,14 @@ jobs:
         include:
           - name: Debian 13
             image: debian:trixie
+            setup: >-
+              apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y
+              build-essential dpkg-dev git curl ca-certificates pkg-config lld
+              qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-wayland-dev
+              qml6-module-qtquick qml6-module-qtquick-layouts qml6-module-qtquick-window
+              qml6-module-qtquick-templates qml6-module-qtqml-workerscript qml6-module-qtquick-dialogs qt6-svg-plugins
+          - name: Ubuntu 26.04
+            image: ubuntu:26.04
             setup: >-
               apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y
               build-essential dpkg-dev git curl ca-certificates pkg-config lld
@@ -50,7 +111,7 @@ jobs:
         run: ${{ matrix.setup }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ env.TAG }}
       - name: Install rustup and the pinned toolchain
         shell: bash
         run: |
@@ -62,20 +123,24 @@ jobs:
         run: bash scripts/linux/build.sh
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: package-${{ strategy.job-index }}
+          name: package-linux-${{ strategy.job-index }}
           path: dist/*
           if-no-files-found: error
 
   windows:
     name: Windows packages
+    needs: version
     runs-on: windows-2025
+    timeout-minutes: 120
+    env:
+      SIGNING: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE != '' }}
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ env.TAG }}
       - name: Install Qt
         uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
         with:
@@ -88,6 +153,33 @@ jobs:
         run: echo "QMAKE=$QT_ROOT_DIR/bin/qmake.exe" >> "$GITHUB_ENV"
       - name: Install the pinned Rust toolchain
         run: rustup toolchain install
+      # The runner image has no NSIS; xtask finds it in Program Files (x86).
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis --version=3.12.0 --no-progress -y
+      - name: Import the code signing certificate
+        if: env.SIGNING == 'true'
+        shell: pwsh
+        env:
+          CERTIFICATE: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "signing.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CERTIFICATE))
+          $password = ConvertTo-SecureString $env:CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password |
+            Where-Object HasPrivateKey | Select-Object -First 1
+          Remove-Item $pfx
+          if (-not $certificate) { throw "the certificate has no private key" }
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName | Select-Object -Last 1
+          if (-not $signtool) { throw "signtool.exe not found" }
+          "SIGN_THUMBPRINT=$($certificate.Thumbprint)" >> $env:GITHUB_ENV
+          "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
+          "OPENSESH_SIGN=$env:GITHUB_WORKSPACE\packaging\windows\sign.cmd" >> $env:GITHUB_ENV
+      - name: No code signing certificate
+        if: env.SIGNING != 'true'
+        run: echo "::notice::No code signing certificate is configured; the Windows packages are not signed."
       - name: Build the portable zip and the installer
         run: |
           cargo xtask dist windows
@@ -99,27 +191,215 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  install-linux:
+    name: Install on ${{ matrix.name }}
+    needs: [version, linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 13
+            image: debian:trixie
+            install: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y "./package/opensesh_${VERSION}_amd64.deb"
+          - name: Ubuntu 26.04
+            image: ubuntu:26.04
+            install: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y "./package/opensesh_${VERSION}_ubuntu26.04_amd64.deb"
+          - name: Fedora
+            image: fedora:latest
+            install: dnf install -y ./package/*.rpm
+          - name: Arch Linux
+            image: archlinux:latest
+            install: pacman -Syu --noconfirm && pacman -U --noconfirm ./package/*.pkg.tar.zst
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      QT_QPA_PLATFORM: offscreen
+      QT_QUICK_BACKEND: software
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: package-linux-*
+          path: package
+          merge-multiple: true
+      - name: Install the package with the system's package manager
+        run: ${{ matrix.install }}
+      - name: Start it
+        run: |
+          opensesh-app --version | tee version.txt
+          grep -qx "OpenSesh $VERSION" version.txt
+          opensesh --version
+          test -x /usr/lib/opensesh/opensesh-rdp
+          test -f /usr/share/applications/cc.caixa.OpenSesh.desktop
+          opensesh-app --gallery --smoke-test
+
+  install-windows:
+    name: Install on Windows
+    needs: [version, windows]
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      QT_QPA_PLATFORM: offscreen
+      QT_QUICK_BACKEND: software
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: package-windows
+          path: package
+      - name: The installer (silent, for this user, no administrator rights)
+        run: |
+          # MSYS would turn /S into a path (C:/Program Files/Git/S): the installer would open its
+          # window and wait for ever.
+          MSYS_NO_PATHCONV=1 "./package/OpenSesh-$VERSION-windows-x64-setup.exe" /S
+          app="$(cygpath -u "$LOCALAPPDATA")/Programs/OpenSesh"
+          "$app/OpenSesh.exe" --version | tee version.txt
+          grep -qx "OpenSesh $VERSION" version.txt
+          "$app/bin/opensesh.exe" --version
+          test -f "$app/opensesh-rdp.exe"
+          test -f "$(cygpath -u "$APPDATA")/Microsoft/Windows/Start Menu/Programs/OpenSesh.lnk"
+          "$app/OpenSesh.exe" --gallery --smoke-test
+      - name: The portable zip
+        run: |
+          unzip -q "package/OpenSesh-$VERSION-windows-x64-portable.zip" -d portable
+          dir="portable/OpenSesh-$VERSION-windows-x64"
+          test -f "$dir/portable"
+          "$dir/OpenSesh.exe" --version
+          "$dir/OpenSesh.exe" --gallery --smoke-test
+
+  aur:
+    name: AUR ${{ matrix.package }}
+    needs: version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [opensesh, opensesh-git]
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      PACKAGE: ${{ matrix.package }}
+    steps:
+      - name: Install makepkg's tools
+        run: pacman -Syu --noconfirm --needed base-devel git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+      - name: Build the package with makepkg
+        run: |
+          # makepkg refuses to run as root.
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          work="/home/builder/$PACKAGE"
+          mkdir -p "$work"
+          cp "packaging/aur/$PACKAGE/PKGBUILD" "$work/PKGBUILD"
+          commit="$(git -c safe.directory='*' rev-parse HEAD)"
+          if [ "$PACKAGE" = opensesh ]; then
+            # This release's source and its checksum (a dry run has no tag: the same archive, made here).
+            source="$work/opensesh-$VERSION.tar.gz"
+            if [ "$DRY_RUN" = true ]; then
+              git -c safe.directory='*' archive --format=tar.gz --prefix="opensesh-$VERSION/" -o "$source" HEAD
+            else
+              curl -fsSL -o "$source" "https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/$TAG.tar.gz"
+            fi
+            sum="$(sha256sum "$source" | cut -d' ' -f1)"
+            sed -i -e "s/^pkgver=.*/pkgver=$VERSION/" -e "s/^sha256sums=.*/sha256sums=('$sum')/" "$work/PKGBUILD"
+          else
+            # The repository at this commit rather than at the head of main.
+            sed -i "s|opensesh.git\")|opensesh.git#commit=$commit\")|" "$work/PKGBUILD"
+            grep -q "#commit=$commit" "$work/PKGBUILD"
+          fi
+          chown -R builder "$work"
+          su builder -c "cd '$work' && makepkg --syncdeps --noconfirm"
+          pacman -U --noconfirm $(ls "$work"/*.pkg.tar.zst | grep -v -- '-debug-')
+          # What goes to the AUR: the PKGBUILD as built (opensesh) or as in the repository (-git).
+          [ "$PACKAGE" = opensesh ] || cp "packaging/aur/$PACKAGE/PKGBUILD" "$work/PKGBUILD"
+          su builder -c "cd '$work' && makepkg --printsrcinfo > .SRCINFO"
+          mkdir -p "aur/$PACKAGE"
+          cp "$work/PKGBUILD" "$work/.SRCINFO" "aur/$PACKAGE/"
+      - name: Start it
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: |
+          opensesh-app --version
+          opensesh --version
+          test -x /usr/lib/opensesh/opensesh-rdp
+          opensesh-app --gallery --smoke-test
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aur-${{ matrix.package }}
+          path: aur
+          include-hidden-files: true
+          if-no-files-found: error
+
   publish:
     name: Publish
-    needs: [linux, windows]
+    needs: [version, install-linux, install-windows, aur]
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: package-*
           path: dist
           merge-multiple: true
-      - name: Checksums and upload
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: aur-*
+          path: aur
+          merge-multiple: true
+      - name: Publish the release
+        if: env.DRY_RUN != 'true'
         run: |
-          cd dist
-          sha256sum -- *.exe *.zip *.deb *.rpm *.zst | sort -k2 > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "OpenSesh $TAG" --notes "See CHANGELOG.md."
+          repo=(--repo "$GITHUB_REPOSITORY")
+          if gh release view "$TAG" "${repo[@]}" > /dev/null 2>&1; then
+            # scripts/release.ps1 published the packages it built: those are what people download.
+            # The manifests are made from them; the release gets only what it lacks.
+            mkdir shipped
+            gh release download "$TAG" "${repo[@]}" --dir shipped
+            added=()
+            for file in dist/*; do
+              name="$(basename "$file")"
+              if [ ! -e "shipped/$name" ]; then
+                cp "$file" shipped/
+                added+=("shipped/$name")
+              fi
+            done
+            bash scripts/release-assets.sh "$VERSION" shipped aur
+            gh release upload "$TAG" "${repo[@]}" --clobber -- "${added[@]}" shipped/SHA256SUMS.txt \
+              shipped/opensesh.json "shipped/OpenSesh-$VERSION-package-manifests.zip"
+          else
+            bash scripts/release-assets.sh "$VERSION" dist aur
+            gh release create "$TAG" "${repo[@]}" --verify-tag --title "OpenSesh $TAG" \
+              --notes-file dist/release-notes.md -- \
+              dist/*.exe dist/*.zip dist/*.deb dist/*.rpm dist/*.zst dist/SHA256SUMS.txt dist/opensesh.json
           fi
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber -- *
+      - name: "Dry run: the release's files"
+        if: env.DRY_RUN == 'true'
+        run: |
+          # The notes need the version's section: the unreleased changes stand in for it.
+          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+            sed -i "s/^## \[Unreleased\].*/## [Unreleased]\n\n## [$VERSION] - dry run/" CHANGELOG.md
+          fi
+          bash scripts/release-assets.sh "$VERSION" dist aur
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: env.DRY_RUN == 'true'
+        with:
+          name: release-dry-run
+          path: dist
+          retention-days: 7
+          if-no-files-found: error

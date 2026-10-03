@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Builds the release binary on this distro, against the distro's own Qt, and packages it the way
-# the distro family installs software: a .deb on Debian (13 and later, also Ubuntu 25.04 and
-# later: Qt 6.8 or newer), an .rpm on Fedora, a pacman package on Arch.
+# the distro family installs software: a .deb on Debian 13 and on Ubuntu 26.04, an .rpm on Fedora,
+# a pacman package on Arch. The app uses Qt's private API, so the .deb asks for the exact Qt it
+# was built with: Debian's and Ubuntu's are different packages (the Ubuntu one is named
+# opensesh_<version>_ubuntu<release>_amd64.deb).
 #
 #   wsl -d Debian -- bash /mnt/i/Projects/opensesh/scripts/linux/build.sh
 #   wsl -d FedoraLinux-43 -- bash .../build.sh
@@ -98,7 +100,10 @@ Recommends: qt6-wayland
 Description: $summary
  $description
 EOF
-        dpkg-deb --root-owner-group --build "$deb" "$out/opensesh_${version}_amd64.deb"
+        # Ubuntu's Qt isn't Debian's: its package says which release it is for.
+        flavor=""
+        [ "${ID:-}" = "ubuntu" ] && flavor="_ubuntu${VERSION_ID:-}"
+        dpkg-deb --root-owner-group --build "$deb" "$out/opensesh_${version}${flavor}_amd64.deb"
         ;;
     fedora)
         top="$work/target/package/rpm"

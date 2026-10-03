@@ -282,24 +282,35 @@ Smoke-test exit codes:
 
 ## Releasing
 
-Releases are cut from this Windows machine, with the Linux packages built in the WSL distros:
+Releases start on this Windows machine:
 
 ```bat
-scripts\release.bat -Patch        :: or -Minor, -Major, -V 0.3.0; -SkipTests, -NoPublish, -SkipLinux
+scripts\release.bat -Patch        :: or -Minor, -Major, -V 1.2.0; -SkipTests, -NoPublish, -SkipLinux, -InCi
 ```
 
 The script:
 
 1. Checks that `main` is clean.
-2. Sets the version in `Cargo.toml` and moves the `CHANGELOG.md` [Unreleased] section under it.
+2. Sets the version in `Cargo.toml` and in the RDP helper's `rdp/Cargo.toml`, updates the three lock files (the app's, the RDP helper's and the fuzz workspace's), and moves the `CHANGELOG.md` [Unreleased] section under it.
 3. Runs the tests.
-4. Builds the Windows packages with `cargo xtask dist windows`: `windeployqt`, the MSVC runtime from System32, the bundled ConPTY, the portable zip (with the `portable` marker) and the NSIS installer (`packaging/windows/opensesh.nsi`; NSIS 3 is needed, found in Program Files or through `NSIS_HOME`).
-5. Runs `scripts/linux/build.sh` in `Debian` (.deb), `FedoraLinux-43` (.rpm) and `archlinux` (pacman package) at the same time. Each build copies the tree into the distro's own filesystem and links against the distro's Qt. The distros need the Qt development packages from [Linux](#linux) plus `dpkg-dev`, `rpm-build` or `base-devel`.
+4. Builds the Windows packages with `cargo xtask dist windows`: `windeployqt`, the MSVC runtime from System32, the bundled ConPTY, the portable zip (with the `portable` marker) and the NSIS installer (`packaging/windows/opensesh.nsi`; NSIS 3 is needed, found in Program Files or through `NSIS_HOME`). With `OPENSESH_SIGN` set to a signing command, OpenSesh's executables, the installer and its uninstaller are signed (`packaging/windows/sign.cmd` with a certificate in the user's store).
+5. Runs `scripts/linux/build.sh` in `Debian` (.deb), `FedoraLinux-43` (.rpm) and `archlinux` (pacman package), one after another. Each build copies the tree into the distro's own filesystem and links against the distro's Qt. The distros need the Qt development packages from [Linux](#linux) plus `dpkg-dev`, `rpm-build` or `base-devel`.
 6. Writes `dist/SHA256SUMS.txt`, commits, tags `vX.Y.Z`, pushes and publishes the GitHub release with `gh`, using the version's changelog section as notes.
 
-The **Release (fallback)** workflow in GitHub Actions builds the same packages for an existing tag when this machine isn't available (`gh workflow run release.yml -f tag=v0.1.0`).
+With `-InCi`, steps 4 to 6 are left to GitHub Actions: the script commits, tags and pushes, and the workflow publishes.
 
-Each Linux package asks for the Qt it was built against: the `.deb` targets Debian 13, and Ubuntu needs its own build (not packaged yet). `install.sh` (`curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | bash`) picks the package for the distribution, verifies it and installs it; running it again updates OpenSesh.
+The tag starts the **Release** workflow (`.github/workflows/release.yml`, [ADR 0039](adr/0039-release-pipeline.md)):
+
+- It builds the same packages on GitHub's runners.
+- It installs each one on a clean system with its package manager and starts it (`--version`, the gallery's offscreen smoke test): the `.deb` on Debian 13 and Ubuntu 26.04, the `.rpm` on Fedora, the pacman package on Arch, and the installer and the portable zip on Windows.
+- It builds the AUR `PKGBUILD`s (`packaging/aur/`) with `makepkg`.
+- It writes the release's extra files with `scripts/release-assets.sh`: `SHA256SUMS.txt`, the notes, the Scoop manifest `opensesh.json`, and `OpenSesh-X.Y.Z-package-manifests.zip`, which holds the winget, Scoop and AUR files to submit by hand.
+
+If the script already published the release, its packages stay, and only the missing files are added. A dry run builds and tests everything without publishing: `gh workflow run release.yml -f tag=main -f dry_run=true`.
+
+**Code signing** uses two repository secrets, `WINDOWS_SIGNING_CERTIFICATE` (the `.pfx`, base64) and `WINDOWS_SIGNING_PASSWORD`. Without them, the packages are built unsigned.
+
+Each Linux package asks for the Qt it was built against: the app uses Qt's private API, so the `.deb` built on Debian 13 depends on Debian 13's exact Qt, and Ubuntu 26.04 has its own (`opensesh_X.Y.Z_ubuntu26.04_amd64.deb`, built by the Release workflow; the local script builds only the Debian one and the workflow adds Ubuntu's). `install.sh` (`curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | bash`) picks the package for the distribution, verifies it and installs it. Running it again updates OpenSesh.
 
 ## Checking Wayland and X11
 

@@ -5,8 +5,12 @@
 //! (with the `portable` marker) and the NSIS installer (`packaging/windows/opensesh.nsi`). The
 //! Linux packages are built by `scripts/linux/build.sh`, on each distribution with its own Qt.
 //!
+//! With `OPENSESH_SIGN` set to a command, OpenSesh's own executables, the installer and its
+//! uninstaller are code-signed with it ([ADR 0039]); unset, nothing is signed.
+//!
 //! [ADR 0014]: ../../docs/adr/0014-bundled-conpty.md
 //! [ADR 0034]: ../../docs/adr/0034-rdp-client.md
+//! [ADR 0039]: ../../docs/adr/0039-release-pipeline.md
 
 use std::ffi::OsString;
 use std::fs;
@@ -28,6 +32,9 @@ const CLI_PACKAGE: &str = "opensesh-cli";
 const CLI_BINARY: &str = "opensesh";
 /// Its name in the Windows packages.
 const WINDOWS_EXE: &str = "OpenSesh.exe";
+/// A command that signs the files it is given (`packaging/windows/sign.cmd` in the release
+/// workflow, when a certificate is configured).
+const SIGN_ENV: &str = "OPENSESH_SIGN";
 /// The MSVC runtime DLLs the executable and Qt link against (redistributable, from System32).
 const MSVC_RUNTIME: [&str; 5] = [
     "msvcp140.dll",
@@ -175,6 +182,16 @@ fn windows(root: &Path, dist: &Path) -> Result<()> {
     ] {
         copy(&root.join(doc), &stage.join(doc))?;
     }
+    let sign = std::env::var_os(SIGN_ENV).filter(|command| !command.is_empty());
+    if let Some(command) = &sign {
+        // OpenSesh's own executables; Qt's and the bundled ConPTY's come as they are.
+        run_command(
+            Command::new(command)
+                .arg(stage.join(WINDOWS_EXE))
+                .arg(stage.join("bin").join(format!("{CLI_BINARY}.exe")))
+                .arg(stage.join("opensesh-rdp.exe")),
+        )?;
+    }
 
     // The portable zip: data next to the executable (the `portable` marker, PLAN §4.1).
     let zip_path = dist.join(format!("{name}-portable.zip"));
@@ -183,14 +200,18 @@ fn windows(root: &Path, dist: &Path) -> Result<()> {
 
     let makensis = find_makensis()?;
     let setup = dist.join(format!("OpenSesh-{VERSION}-windows-x64-setup.exe"));
-    run_command(
-        Command::new(&makensis)
-            .arg("/V2")
-            .arg(format!("/DVERSION={VERSION}"))
-            .arg(format!("/DSRCDIR={}", stage.display()))
-            .arg(format!("/DOUTFILE={}", setup.display()))
-            .arg(root.join("packaging/windows/opensesh.nsi")),
-    )?;
+    let mut nsis = Command::new(&makensis);
+    nsis.arg("/V2")
+        .arg(format!("/DVERSION={VERSION}"))
+        .arg(format!("/DSRCDIR={}", stage.display()))
+        .arg(format!("/DOUTFILE={}", setup.display()));
+    if let Some(command) = &sign {
+        // makensis signs the installer and the uninstaller it writes (`!finalize`).
+        let mut define = OsString::from("/DSIGN=");
+        define.push(command);
+        nsis.arg(define);
+    }
+    run_command(nsis.arg(root.join("packaging/windows/opensesh.nsi")))?;
     println!("dist: {}", setup.display());
     Ok(())
 }

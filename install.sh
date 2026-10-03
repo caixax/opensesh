@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | bash
 #
 # Finds out which distribution this machine runs, downloads the matching package of the latest
-# release (a .deb for Debian 13, an .rpm for Fedora, a pacman package for Arch), checks it against
+# release (a .deb for Debian 13 or Ubuntu 26.04, an .rpm for Fedora, a pacman package for Arch), checks it against
 # the release's SHA256SUMS.txt and installs it with the system's package manager, which pulls in
 # Qt. On a Wayland session it also adds Qt's Wayland plugin. Running it again updates OpenSesh.
 #
@@ -60,14 +60,26 @@ for id in ${ID:-} ${ID_LIKE:-}; do
     esac
     [ -n "$family" ] && break
 done
-[ -n "$family" ] || die "no OpenSesh package for ${PRETTY_NAME:-this distribution} yet (Debian 13, Fedora and Arch are packaged); build it from source: https://github.com/$REPO"
+[ -n "$family" ] || die "no OpenSesh package for ${PRETTY_NAME:-this distribution} yet (Debian 13, Ubuntu 26.04, Fedora and Arch are packaged); build it from source: https://github.com/$REPO"
 
-# The .deb is built against Debian 13's Qt 6.8.2 and asks for exactly that Qt.
-if [ "$family" = "debian" ] && [ "${ID:-}" != "debian" ]; then
-    die "${PRETTY_NAME:-this distribution} is not packaged yet: the .deb needs Debian 13's Qt; build from source: https://github.com/$REPO"
-fi
-if [ "$family" = "debian" ] && [ "${VERSION_ID:-0}" -lt 13 ] 2>/dev/null; then
-    die "Debian ${VERSION_ID:-?} is too old: OpenSesh needs Qt 6.8 (Debian 13 or later)"
+# A .deb asks for the exact Qt it was built against (the app uses Qt's private API): Debian 13's
+# and Ubuntu 26.04's are different packages.
+deb_flavor=""
+if [ "$family" = "debian" ]; then
+    case "${ID:-}" in
+        debian)
+            [ "${VERSION_ID:-}" = "13" ] \
+                || die "Debian ${VERSION_ID:-testing} is not packaged: the .deb is for Debian 13; build from source: https://github.com/$REPO"
+            ;;
+        ubuntu)
+            [ "${VERSION_ID:-}" = "26.04" ] \
+                || die "Ubuntu ${VERSION_ID:-?} is not packaged: the .deb is for Ubuntu 26.04; build from source: https://github.com/$REPO"
+            deb_flavor="_ubuntu26.04"
+            ;;
+        *)
+            die "${PRETTY_NAME:-this distribution} is not packaged yet: the .debs are for Debian 13 and Ubuntu 26.04; build from source: https://github.com/$REPO"
+            ;;
+    esac
 fi
 
 session="${XDG_SESSION_TYPE:-}"
@@ -129,7 +141,7 @@ else
     version="${version#v}"
 fi
 case "$family" in
-    debian) asset="opensesh_${version}_amd64.deb" ;;
+    debian) asset="opensesh_${version}${deb_flavor}_amd64.deb" ;;
     fedora) asset="opensesh-${version}.x86_64.rpm" ;;
     arch) asset="opensesh-${version}-x86_64.pkg.tar.zst" ;;
 esac
