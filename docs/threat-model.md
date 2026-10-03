@@ -1,6 +1,6 @@
 # Threat model
 
-This document says what OpenSesh protects, from whom, how, and where it stops. It is kept up to date as features arrive (PLAN §8). It was last reviewed in Sprint 11 (the remote monitor and host info).
+This document says what OpenSesh protects, from whom, how, and where it stops. It is kept up to date as features arrive (PLAN §8). It was last reviewed in Sprint 17, before 1.0: what was checked and found is in the [security review](security-review.md).
 
 ## What is worth protecting
 

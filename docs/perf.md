@@ -6,13 +6,14 @@ Two layers are measured separately:
 
 - **Engine** (`opensesh-term`: PTY backend, parser, `Term`, snapshots), headless. Measured in Sprint 2, below.
 - **GUI** (the release app with a real terminal tab: start-up, the whole process's memory, render loop, event loop, input). Measured in Sprint 2 after the terminal item was integrated, [below](#gui-results-2026-09-25).
+- **Sprint 17 re-check** of start-up and memory on the app as it is before 1.0, [below](#sprint-17-re-check-2026-10-03), with the changes it led to.
 
 ## Budgets (PLAN §9)
 
 | Budget | Engine (measured) | GUI (measured) |
 |---|---|---|
-| Cold start to a usable window under 1 s on modest hardware (target 500 ms) | not an engine matter: a session starts in the background and returns at once | **Pass.** Process start to the first frame: Windows median 343 ms (warm file cache: no reboot); Debian WSLg median 417 ms on Wayland and 445 ms on X11 after dropping the page cache, 179 ms and 193 ms warm |
-| RAM at rest with 1 terminal under 150 MB (target 100 MB) | one idle session adds about 1 MB; a full 10,000-line scrollback adds 30 MB at 120 columns and 50 MB at 200 columns | **Windows: pass, target missed:** 117.5 MB working set (135 MB private) with one idle tab. **Debian WSLg: fail:** 212 MB RSS (201 MB PSS), about 115 MB of it Mesa's software renderer. A full scrollback adds 28 MB at 124 columns and 45 MB at 204 columns, which takes a maximized Windows tab to 167.5 MB |
+| Cold start to a usable window under 1 s on modest hardware (target 500 ms) | not an engine matter: a session starts in the background and returns at once | **Pass.** Process start to the first frame: Windows median 343 ms (warm file cache: no reboot); Debian WSLg median 417 ms on Wayland and 445 ms on X11 after dropping the page cache, 179 ms and 193 ms warm Sprint 17: **pass**, median 720 ms after the dialogs became lazy (889 ms before) |
+| RAM at rest with 1 terminal under 150 MB (target 100 MB) | one idle session adds about 1 MB; a full 10,000-line scrollback adds 30 MB at 120 columns and 50 MB at 200 columns | **Windows: pass, target missed:** 117.5 MB working set (135 MB private) with one idle tab. **Debian WSLg: fail:** 212 MB RSS (201 MB PSS), about 115 MB of it Mesa's software renderer. A full scrollback adds 28 MB at 124 columns and 45 MB at 204 columns, which takes a maximized Windows tab to 167.5 MB Sprint 17: **Windows D3D11 (NVIDIA): not met**, 166.7 MB working set with one tab; **software renderer: pass**, 137 MB |
 | `cat` of a 100 MB file or `yes` for 10 s: the UI doesn't freeze and input keeps responding | a renderer thread never waited more than 4.5 ms for a snapshot; Ctrl+C ends `yes` in 5 to 8 ms on Linux | **Pass.** Frames at the display rate while output flows; event-loop lag p99 under 1 ms on Windows and under 4.5 ms on Linux; typed keys reach the program in 0.8 ms (Windows) and 1.9 to 3.1 ms (Linux) at the median during `yes`; Ctrl+C to the prompt 57 to 101 ms on Windows (`yes.exe`, bundled ConPTY) and at most 12 ms on Linux (median 7.5 ms). A few isolated stalls of 34 to 63 ms, none of 100 ms |
 | Key-to-pixel latency comparable to native terminals; render at the display refresh, only with damage | input is handled before output; one `Dirty` per frame; a snapshot with nothing damaged costs 2 µs | **Pass on Windows.** Key to pixels p50 5.9 to 6.1 ms, against 8.1 ms for Windows Terminal and 13.8 ms for the console host with the same probe. 180 frames/s on the 180 Hz monitor while output flows, no frames when idle except the cursor blink. On WSLg the software renderer isn't throttled to the 60 Hz display (144 frames/s during floods) |
 | Hosts view with 1000 entries: smooth scrolling, search under 16 ms | **Pass.** The slowest query over 1000 hosts takes 0.86 ms (release) | **Pass.** A query takes 7 to 8 ms from typing to updated cards, listing all 1000 hosts 6 to 8 ms (release, Windows); cards are reused while scrolling ([below](#hosts-search-sprint-5-2026-09-26)) |
@@ -293,3 +294,27 @@ With no output, the only frames are the cursor blink (0.25 to 1.1 frames/s in th
 
 - **Portable mode leaks Qt's pipeline cache.** With `portable=true` and `data_dir=...\target\release\data` in the log, Qt still reads and writes its shader pipeline cache in the per-user cache folder: `Attempting to seed pipeline cache ... from 'C:/Users/<user>/AppData/Local/OpenSesh/cache/qtpipelinecache-x86_64-little_endian-llp64/qqpc_d3d11'` on Windows and `Writing pipeline cache contents (26952 bytes) ... to '/home/<user>/.cache/OpenSesh/qtpipelinecache-x86_64-little_endian-lp64/qqpc_opengl'` on Linux (logged with `qt.scenegraph.general.debug=true`). PLAN §4.1 keeps everything under `<exe dir>/data` in portable mode.
 - **The Linux event-loop probe can't use `_NET_WM_PING`** (see the lag method above): Qt 6.8 gets the ping, but no reply reached a root-window listener in WSLg.
+
+## Sprint 17 re-check (2026-10-03)
+
+PLAN Sprint 17 asks to profile against §9 again before 1.0. Start-up and memory were measured on the release app at commit `4dbc135` and before its two start-up changes (`2098af6`), the same way as in Sprint 2 (release build, portable mode, Windows 10, D3D11 on the RTX 3060, warm file cache; process creation to the first rendered frame, then the working set and private bytes 7 s later). The probe is a PowerShell script outside the repository: it starts the app 5 times, reads the first `frame rendered` line of Qt's render-loop log, and stops the app with `taskkill /T`. "One terminal tab" restores a session with a local PowerShell tab at start (`restore_sessions` and a `last-session.toml` with one local pane).
+
+| State (5 runs) | First frame | Working set | Private bytes |
+|---|---|---|---|
+| Sprint 2, Hosts view | median 343 ms | 109.8 to 110.4 MB | 126.1 to 126.8 MB |
+| Before Sprint 17's changes, Hosts view | 869 to 933 ms, **median 889 ms** | 167.9 to 170.0 MB | 180.0 to 184.0 MB |
+| **After, Hosts view** | 711 to 757 ms, **median 720 ms** | 136.4 to 141.5 MB, **median 137.0 MB** | 149.2 to 154.2 MB |
+| **After, one terminal tab** | 849 to 914 ms, median 911 ms | 165.9 to 167.9 MB, **median 166.7 MB** | 177.5 to 182.5 MB |
+| After, Hosts view, software renderer (`QT_QUICK_BACKEND=software`, 2 runs) | 591 and 623 ms | 114.5 and 115.0 MB | 89.8 and 90.1 MB |
+| After, one terminal tab, software renderer (2 runs) | 770 and 782 ms | 137.0 MB | 111.1 and 111.7 MB |
+
+**What changed since Sprint 2:** fourteen sprints of features, most of them in QML that was created at start whether it was used or not. Qt took 700 ms from creating the application to the first polish (175 ms in Sprint 2).
+
+**What was done:**
+- **Dialogs are created the first time they open** (`LazyPopup`): the host, group, identity and snippet editors, the importers and exporters, the keychain's dialogs, the vault's, the conflict and error-details dialogs, seventeen in all; then a pane's context menu (twenty items, one per pane) and a tab's paste review. An experiment that only left them out measured 250 ms and 30 MB of the gain before the change was made.
+- **A leak check in the smoke test:** twelve rounds of a local terminal tab, the host editor and the import dialog opened and closed, after two warm-up rounds: the working set moved from 415.5 to 418.1 MB in the first run and not at all in the second (324.3 MB both times; the offscreen software renderer after the whole smoke test). The check fails above 30 MB.
+
+**Where the budgets stand on Windows:**
+- **Cold start under 1 s: pass** (720 ms on this machine; the 500 ms target is missed). What remains is QML that the window needs at once: the shell, the Hosts view, the tab strip, the status bar, the command palette.
+- **RAM at rest with one terminal under 150 MB: not met with D3D11 on this NVIDIA card** (166.7 MB working set), **met with the software renderer** (137 MB). Sprint 2 measured the NVIDIA D3D11 driver at about 37 MB of private memory; the app's own share is the software renderer's number. A terminal tab costs 22 MB more than Sprint 2's 7.5 MB even with the software renderer; its QML (the pane, the workspace, the status bar's readings) is the next place to look.
+- **The other budgets** (floods, key to pixels, the Hosts view with 1000 hosts) weren't measured again: the terminal engine, its renderer and the hosts search haven't changed since Sprints 2 and 5. The smoke test still times the search over 1000 hosts.

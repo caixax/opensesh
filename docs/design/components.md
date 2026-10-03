@@ -9,7 +9,7 @@ This document is the contract for every QML file under `crates/opensesh-app/qml/
 ### Inputs
 
 Bound once per window by `shell/ThemeBinder.qml` from `AppSettings` and the OS color scheme; components never write them:
-`requestedMode`, `requestedAccent`, `requestedDensity`, `uiScale`, `reduceMotion`, `uiFontFamily`, `systemDark`.
+`requestedMode`, `requestedAccent`, `requestedDensity`, `uiScale`, `reduceMotion`, `uiFontFamily`, `systemDark`, `requestedContrast` (`system`, `high`, `standard`) and `systemHighContrast` (Qt 6.10's `Application.styleHints.accessibility.contrastPreference`).
 The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, so they never write the user's settings.
 
 ### Colors (`color`, read-only)
@@ -53,7 +53,7 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 
 ### Flags
 
-`dark` (bool), `compact` (bool), `accentLowContrast` (bool: the user's accent is under 3:1 against `bg`, so Settings shows a warning).
+`dark` (bool), `compact` (bool), `highContrast` (bool: text at 7:1, outlines, the focus ring and status colors at 4.5:1, black or white surfaces; `focusRingWidth` is 3 instead of 2), `accentLowContrast` (bool: the user's accent is under 3:1 against `bg`, so Settings shows a warning).
 
 ## 2. Building a component
 
@@ -65,7 +65,7 @@ The gallery and the screenshot runs use `ThemeBinder`'s `override*` properties, 
 - **Icons:** use `OsIcon { name: "search"; color: Theme.text; size: Theme.iconSize }` with a name from `assets/icons/icons.toml`. Never use a file path, never inline SVG.
 - **Focus:** every interactive component shows a visible focus ring when it has **keyboard** focus (`visualFocus` on templates; for custom items, `activeFocus` plus the last input being the keyboard, which they pass to `OsFocusRing` as `keyboardFocus`). Use `OsFocusRing { target: control }`: a rounded outline in `Theme.focusRing`, `Theme.focusRingWidth` thick, drawn outside the control. Tab order follows the visual order; `activeFocusOnTab: true` on custom interactive items.
 - **Keyboard:** buttons activate with Space/Enter; lists and rails move with the arrow keys and Home/End; popups close with Escape; menus open with the Menu key and Shift+F10 where it applies.
-- **Accessibility:** set `Accessible.name` (translated) on every interactive component. Icon-only buttons **must** take a `text`/`toolTip` used as the name. Set `Accessible.role` whenever the template doesn't already set the right one, and `Accessible.description` for extra hints.
+- **Accessibility:** set `Accessible.name` (translated) on every interactive component. Icon-only buttons **must** take a `text`/`toolTip` used as the name (`cargo xtask lint-qml` checks every `OsIconButton`, and every `OsButton` with an `iconName` and no `text`). Set `Accessible.role` whenever the template doesn't already set the right one, and `Accessible.description` for extra hints.
 - **States:** hover and pressed use the `Theme.hover` / `Theme.pressed` overlays. Disabled uses `Theme.textDisabled` and no hover. Every state change animates with `Theme.durationFast` (a `Behavior on color` is fine).
 - **Density:** heights come from `Theme.controlHeight` / `rowHeight`, never literals. Compact mode must never clip text.
 - **No heavy shadows (§5.1):** separate things with surfaces and 1 px `Theme.border` lines. Popups may use `Theme.borderStrong` outlines.
@@ -129,7 +129,7 @@ Every component appears in the Gallery (`opensesh-app --gallery`) in every state
 | `Keychain` | Rust | The vault, identities, keys, agents and known hosts (ADR 0023): every operation runs on a worker thread and returns a token, reported by `finished(token, code, detail, value)` (`code` empty on success). Vault: `createVault`, `unlock`, `unlockWithKeyring`, `lock`, `setMasterPassword`, `changeMasterPassword`, `removeMasterPassword`, `setRemember`, `resetVault`; keychain: `saveIdentity(json, passwordMode, password)`, `deleteIdentity`, `generateKey`, `importKeyFile`, `importKeyText`, `exportPrivateKey`, `exportPublicKey`, `renameKey`, `deleteKey`, `refreshAgents`, `refreshKnownHosts`; `loadSample()` in test runs. Properties: `vaultStatus`, `protection`, `remembered`, `keyringAvailable`, `failures`, `waitUntil` (ms), `busy`, and the lists as JSON (`identities`, `keys`, `agents`, `knownHosts`) |
 | `KeychainTasks` | QML singleton | `run(token, done)` calls `done(code, detail, value)` when that Keychain operation finishes; `message(code, detail)` words an error code; `waitSeconds()` counts down the wait after wrong master passwords |
 | `ActionRegistry` | QML singleton | The single list of user actions. Each is an `OsAction` (`actionId`, `text`, `shortcut`, `category`, `iconName`, `enabled`, `showInPalette`, signal `triggered`) declared next to its handler and added with `register(action)`. `find(id)`, `trigger(id)`, `search(query)` (fuzzy, for the palette) and `conflicts()` (duplicate shortcuts). The shell's `ShortcutHost` creates one `Shortcut` per action. |
-| `Toasts` | QML singleton | `show(text, kind, actionText, actionId)` plus the history (`history`, `unread`) used by the notifications panel |
+| `Toasts` | QML singleton | `show(text, kind, actionText, actionId, details)` plus the history (`history`, `unread`) used by the notifications panel. The message is plain words; `details` holds the technical text (a library's error, a path, a code): without another action the toast offers "Details", and `requestDetails(id)` makes the main window show it in `ErrorDetailsDialog` (selectable, copyable) |
 
 `AppSettings` notes: every setter validates and saves in the background. `readOnly` is true when `config.toml` must not be overwritten, and `readOnlyReason` says why: `"newer"` (written by a newer OpenSesh) or `"unreadable"` (a syntax error; Restore defaults replaces it and keeps a backup). Changes still apply in memory. `reloadedFromDisk` fires after an external edit, and `problem(message)` reports a failed save or a rejected edit.
 
@@ -137,6 +137,7 @@ Every component appears in the Gallery (`opensesh-app --gallery`) in every state
 
 | File | Responsibility |
 |---|---|
+| `LazyPopup.qml` | A `Loader` for a popup created the first time it is wanted (Sprint 17): `get()` creates and returns it, `close()` closes it only if it exists. Dialogs most sessions never open go in one, so they cost neither start-up time nor memory |
 | `AppShell.qml` | A window's content: title bar, rail, views, side panel, status bar, command palette, notifications, toasts, tab switcher. The tab functions (insert, move, pin, color, rename, duplicate, close others, reopen, move to another window) live here. With `detached: true` (in `DetachedWindow.qml`) it has only terminal tabs |
 | `TitleBar.qml`, `SessionTabStrip.qml`, `WindowButtons.qml`, `WindowResizeHandles.qml` | Custom title bar with tabs, window buttons for the `custom` decoration mode, and frameless move/resize through `startSystemMove()` / `startSystemResize()` |
 | `StatusBar.qml`, `SidePanel.qml`, `NotificationsPanel.qml` | Bottom bar, collapsible side panel, notification history drawer |

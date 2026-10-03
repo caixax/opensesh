@@ -4,6 +4,31 @@ PLAN §10 asks for a manual pass on every Tier 1 environment in each sprint with
 
 **Legend:** ✅ passed · ❌ failed · ⏳ not run yet (needs that environment) · — not applicable
 
+## Sprint 17 (2026-10-03)
+
+### Automated checks
+
+- **Main window (`--smoke-test`):** a leak check (twelve terminal tabs, host editors and import dialogs opened and closed; the working set may grow by 30 MB at most: it grew by 0 to 2.6 MB); every dialog now created on first use still opens and works in the existing steps.
+- **Screenshots (native, Windows):** high contrast on the Hosts view, Settings > Appearance, a dialog and the first start's welcome, in dark and light, comfortable and compact.
+- **Fuzzing:** the eleven targets of `fuzz/`, an hour each on GitHub's runners, without a crash on the final code (four crashes found and fixed on the way, see the security review).
+- **Contrast:** the high-contrast tokens at AAA for text and 4.5:1 for outlines and indicators, with every accent preset (unit tests).
+- **Lint:** every icon-only button has a name (`lint-qml`).
+
+| Environment | Qt | Build, clippy, tests | `offscreen` (main / gallery) | Native (main) | Real servers |
+|---|---|---|---|---|---|
+| Windows 10 22H2, MSVC 2022 | 6.10.3 (aqt) | ✅ 738 + 5 (RDP helper) | ✅ / ✅ | ✅ `windows` | — |
+| GitHub Actions: Ubuntu 24.04, Windows, Arch, Fedora and Debian 13 containers | aqt and distro | ✅ | ✅ / ✅ | — | ✅ OpenSSH (X11 to Xvfb, Waypipe to sway), Dropbear, xrdp, TigerVNC, x11vnc, wayvnc, RustFS |
+
+### Manual checks for the owner
+
+| Check | Windows 10 | Linux |
+|---|---|---|
+| The system's high-contrast setting (Windows: Settings, Accessibility, Contrast themes; KDE: a high-contrast color scheme) turns on OpenSesh's high contrast with Contrast on "System" | ⏳ | ⏳ |
+| A screen reader (Narrator, Orca) names the rail, the tab strip, the Hosts view's buttons and a dialog's fields | ⏳ | ⏳ |
+| The first start (an empty settings folder): import, new host and local terminal from the welcome | ⏳ | ⏳ |
+| An error's "Details" (for example a theme file that isn't a theme): the message, the details, Copy | ⏳ | ⏳ |
+| Start-up and memory on a modest machine (a laptop without a discrete GPU) | ⏳ | ⏳ |
+
 ## Sprint 16 (2026-10-03)
 
 ### Automated checks

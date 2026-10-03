@@ -6,6 +6,14 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 17: polish before 1.0 ([ADR 0038](docs/adr/0038-polish-before-1-0.md), [security review](docs/security-review.md)).**
+  - **High contrast** (Settings, Appearance, Contrast): follows the system's preference, or on or off; text at 7:1, stronger outlines and status colors, a wider focus ring.
+  - **Error messages in plain words,** with a "Details" button for what the system or a library said, selectable and copyable.
+  - **A welcome on first start:** import hosts, add one, open a local terminal or quick connect, one click each.
+  - **Faster start, less memory:** dialogs are created the first time they open; start-up went from 889 to 720 ms and the idle window from 168 to 137 MB on the measuring machine ([perf](docs/perf.md)).
+  - **Fuzzing** of every parser of untrusted input (quick connect, pastes, terminal themes, the remote monitor, `~/.ssh/config`, MobaXterm, PuTTY, Remmina, CSV, bundles, the sync merge), an hour per parser every week in CI.
+  - **Checks:** a leak check in the smoke test; `lint-qml` asks every icon-only button for a name.
+
 - **Sprint 16: importers, export and sync ([ADR 0037](docs/adr/0037-importers-bundles-and-sync.md), [guide](docs/sync.md)).**
   - **Import hosts from MobaXterm** (`.mxtsessions`, `.moba`, `MobaXterm.ini`: SSH, SFTP, RDP and VNC sessions with their gateways, keys, proxies and comments), **PuTTY** (the Windows registry, `.reg` exports, `~/.putty/sessions`: SSH, Telnet and serial), **Remmina** (RDP, VNC, SSH and SFTP profiles) and **CSV files** (columns mapped to host fields, guessed from the headers). Folders become groups; what is left out is listed, and so is any command an import would run on this computer.
   - **OpenSesh bundles:** hosts and groups, snippets, profiles and themes in one file, and optionally the keychain (identities, keys, passwords) sealed with an export password, as the vault is.
@@ -80,8 +88,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Fixed
 
+- **Found by fuzzing:** a remote monitor reading from macOS whose swap figure ended in a character of several bytes crashed its parser, and so did counters whose sum was past the largest 64-bit number; `Include /*/*` in `~/.ssh/config` made an import read the whole disk (now at most 256 files and 8 MiB); a `nan` in a settings file was a conflict on every merge.
+- **Found in the security review:** an import read whatever its path named (`Include /dev/zero` never ended; importers now read regular files of a bounded size); after moving the settings folder, a second start before restarting didn't find the running instance.
 - **Forwarded Unix sockets** (`forwarded-streamlocal`) that the client never asked for were accepted (`russh`'s default); they are refused now.
 - A new host's Tags field showed the word "none".
+- An SFTP host, or `sftp://` in quick connect, said that SFTP "arrives in Sprint 8" instead of opening the files view.
+- With Qt older than 6.10 (Debian 13's 6.8), reading the system's high-contrast setting printed a QML warning; the setting is read only where Qt has it.
 
 ## [0.1.4] - 2026-09-28
 
