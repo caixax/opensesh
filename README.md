@@ -2,9 +2,28 @@
 
 > *"Open sesame" for your servers.*
 
-OpenSesh is an open source, cross-platform and lightweight remote connections client. It is planned to cover SSH, SFTP, S3, tunnels, local terminals, serial, telnet, mosh, containers, RDP and VNC in a single native app built with **Rust** and **Qt 6 / QML** (through [cxx-qt](https://github.com/KDAB/cxx-qt)).
+OpenSesh is an open source, cross-platform and lightweight remote connections client: local terminals, SSH, SFTP, S3, tunnels, serial, telnet, mosh, containers, RDP and VNC in a single native app built with **Rust** and **Qt 6 / QML** (through [cxx-qt](https://github.com/KDAB/cxx-qt)). No webviews, no Electron, and no telemetry.
 
-> **Status: pre-alpha** ([latest release](https://github.com/caixax/opensesh/releases/latest)). The app shell, the design system, settings and a fast local terminal (Windows ConPTY, Linux PTY) work, and the terminal is customizable: profiles, themes (with importers from other terminals), fonts, keyword highlighting and shortcuts. Tabs split into panes, move between windows and broadcast input; layouts save as workspaces. Saved hosts have groups, fuzzy search, quick connect and `~/.ssh/config` import. SSH connects with a built-in client: host key checks, jump hosts, proxies, agents, one-time codes and reconnection, with its questions asked inside each pane (the system's OpenSSH stays available per host). The keychain keeps identities, passwords and SSH keys (generated, or imported from OpenSSH and PuTTY) in an encrypted vault, and uses the keys of the running SSH agents. SFTP browses and transfers files in a two-pane view and in a side panel that follows the terminal's folder, with a queue that pauses and resumes, and edits a server's files with the user's editor. Tunnels forward local, remote and dynamic (SOCKS) ports, on their own connection with reconnection or with a host's terminal sessions, and import from `~/.ssh/config`. Snippets with variables and secrets from the vault run in one terminal or in many at once, macros wait for a server's output, risky pastes are shown for review first, and sessions can be recorded and played back. The status bar shows a connected server's CPU, memory, network and disks, read without installing anything there. New tabs open any shell the computer has (PowerShell, cmd, Git Bash, WSL distros, `/etc/shells`), and hosts also connect over telnet, serial ports (with a hexadecimal view), mosh, and into Docker or Podman containers and Kubernetes pods. S3 storage (AWS, MinIO, RustFS...) is browsed in the files view, with multipart uploads, temporary links and the secret key in the vault. Remote desktops open in tabs over RDP (NLA, the server's certificate checked like a host key, the clipboard both ways, a desktop that follows the pane's size, jump hosts) and VNC (VeNCrypt with certificates, Tight, ZRLE and Hextile, view-only hosts). Remote graphical programs show here through X11 forwarding or Waypipe ([guide](docs/remote-graphics.md)). Hosts import from MobaXterm, PuTTY, Remmina and CSV files, export as bundles or OpenSSH config, and the settings sync between computers through Git or Syncthing, merging instead of overwriting ([guide](docs/sync.md)). Nothing here is ready for daily use yet. Sprint reports are in [`docs/sprints/`](docs/sprints/), design decisions in [`docs/adr/`](docs/adr/) and the changes in [`CHANGELOG.md`](CHANGELOG.md).
+![The Hosts view, dark theme](docs/images/hosts.png)
+
+| | |
+|---|---|
+| ![A terminal tab split in three panes](docs/images/terminal.png) | ![Snippets with variables, in folders and tags](docs/images/snippets.png) |
+| ![Tunnels: local, remote and SOCKS](docs/images/tunnels.png) | ![Settings, Appearance, light theme](docs/images/appearance.png) |
+
+## What it does
+
+- **Terminals:** a fast GPU-drawn terminal for every shell the computer has (PowerShell, cmd, Git Bash, WSL, `/etc/shells`), with tabs that split into panes, move between windows and broadcast input, and layouts saved as workspaces. Profiles, themes (imported from other terminals), fonts, keyword highlighting and shortcuts are yours to change.
+- **SSH** with a built-in client: host key checks, jump hosts, proxies, agents, one-time codes and reconnection, with its questions asked inside each pane (the system's OpenSSH stays available per host). X11 forwarding and Waypipe show remote graphical programs here ([guide](docs/remote-graphics.md)).
+- **A keychain:** identities, passwords and SSH keys (generated, or imported from OpenSSH and PuTTY) in an encrypted vault, unlocked by the system keyring or a master password.
+- **Files:** SFTP in a two-pane view and in a side panel that follows the terminal's folder, with a transfer queue that pauses and resumes, and server files edited in your own editor. S3 storage (AWS, MinIO, RustFS...) works the same way.
+- **Tunnels:** local, remote and dynamic (SOCKS) forwards, on their own connection or with a host's sessions.
+- **Snippets and macros** with variables and secrets, in one terminal or many at once; risky pastes shown for review first; sessions recorded and played back.
+- **The server at a glance:** CPU, memory, network and disks of the connected server in the status bar, without installing anything there.
+- **More protocols:** telnet, serial ports (with a hexadecimal view), mosh, Docker and Podman containers and Kubernetes pods, and remote desktops over RDP and VNC in tabs.
+- **Your hosts, everywhere:** groups, tags, fuzzy search and quick connect; imports from `~/.ssh/config`, MobaXterm, PuTTY, Remmina and CSV; exports as bundles or OpenSSH config; settings synced between computers through Git or Syncthing, merged rather than overwritten ([guide](docs/sync.md)).
+
+The **[user guide](docs/user-guide.md)** walks through all of it. Design decisions are in [`docs/adr/`](docs/adr/), sprint reports in [`docs/sprints/`](docs/sprints/), and the changes in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Install
 
@@ -18,11 +37,13 @@ curl -fsSL https://raw.githubusercontent.com/caixax/opensesh/main/install.sh | b
 
 | Distribution | Package |
 |---|---|
-| Debian 13 (trixie) or later | `.deb` (apt) |
+| Debian 13 (trixie), Ubuntu 26.04 LTS | `.deb` (apt), one for each |
 | Fedora | `.rpm` (dnf) |
-| Arch Linux and derivatives (Manjaro, EndeavourOS, CachyOS) | `.pkg.tar.zst` (pacman) |
+| Arch Linux and derivatives (Manjaro, EndeavourOS, CachyOS) | `.pkg.tar.zst` (pacman), or the AUR |
 
-On a Wayland session the script also installs Qt's Wayland plugin. Saved passwords and keys use the desktop's keyring (GNOME Keyring, or KWallet with its Secret Service interface on); without one, set a master password in **Settings > Security**. Ubuntu and other distributions aren't packaged yet: the `.deb` is built against Debian 13's Qt, so [build from source](#building-from-source) there.
+On a Wayland session the script also installs Qt's Wayland plugin. Saved passwords and keys use the desktop's keyring (GNOME Keyring, or KWallet with its Secret Service interface on); without one, set a master password in **Settings > Security**. Each `.deb` asks for the exact Qt of the release it was built on, so other Debian and Ubuntu releases (and their derivatives) need a [build from source](#building-from-source) for now.
+
+On Arch, the AUR has `opensesh` (built from the release's source) and `opensesh-git` (from this repository), for example with `yay -S opensesh`.
 
 Running the script again updates OpenSesh. It asks before installing anything; to pass options through the pipe, add them after `bash -s --`:
 
@@ -45,8 +66,12 @@ From the [releases page](https://github.com/caixax/opensesh/releases/latest):
 
 - **Installer** (`OpenSesh-X.Y.Z-windows-x64-setup.exe`): installs for your user only, without administrator rights, and adds OpenSesh to the Start menu and to "Installed apps" for uninstalling.
 - **Portable** (`OpenSesh-X.Y.Z-windows-x64-portable.zip`): unzip it anywhere and run `OpenSesh.exe`. Settings and data stay in the `data` folder next to it, so it runs from a USB stick.
+- **[Scoop](https://scoop.sh):** the portable app, kept up to date by `scoop update`:
+  ```powershell
+  scoop install https://github.com/caixax/opensesh/releases/latest/download/opensesh.json
+  ```
 
-Both bundle Qt, the Microsoft C++ runtime and a modern ConPTY, so nothing else is needed. Windows SmartScreen may warn the first time, since the builds aren't code-signed yet.
+All of them bundle Qt, the Microsoft C++ runtime and a modern ConPTY, so nothing else is needed. Windows SmartScreen may warn the first time, since the builds aren't code-signed yet.
 
 ### Updates
 
@@ -97,13 +122,13 @@ cargo xtask rdp      # the RDP helper next to the app (remote desktops)
 
 ## Releasing
 
-Releases are built on one Windows machine with the Linux packages made in its WSL distributions (Debian 13, Fedora and Arch), which takes minutes instead of the hours GitHub's runners need:
+A release starts from one command on a Windows machine:
 
 ```bat
-scripts\release.bat -Patch        :: or -Minor, -Major, -V 0.2.0
+scripts\release.bat -Patch        :: or -Minor, -Major, -V 1.2.0; add -InCi to build in GitHub Actions only
 ```
 
-The script sets the version, moves the changelog's unreleased section under it, runs the tests, builds the Windows installer and portable zip and the three Linux packages, writes `SHA256SUMS.txt`, tags the release and publishes it on GitHub. The **Release (fallback)** workflow in GitHub Actions builds the same packages for an existing tag when that machine isn't available. Details are in [`docs/dev-setup.md`](docs/dev-setup.md#releasing).
+The script sets the version (of the app, the RDP helper and the lock files), moves the changelog's unreleased section under it, runs the tests, and tags the release. By default it also builds the Windows installer and portable zip, and the Linux packages in the machine's WSL distributions (Debian 13, Fedora and Arch), and publishes them, which takes minutes. The tag starts the **Release** workflow, which builds every package on GitHub's runners and **installs and starts each one on a clean system** (Debian 13, Ubuntu 26.04, Fedora, Arch and Windows, plus the AUR packages with `makepkg`). It then adds the checksums, the Scoop manifest and the winget and AUR manifests to the release, or publishes the whole release itself with `-InCi` ([ADR 0039](docs/adr/0039-release-pipeline.md)). Details are in [`docs/dev-setup.md`](docs/dev-setup.md#releasing).
 
 ## Contributing
 

@@ -6,6 +6,14 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- **Sprint 18: packaging and the 1.0 release ([ADR 0039](docs/adr/0039-release-pipeline.md), [user guide](docs/user-guide.md)).**
+  - **Every package is installed and started on a clean system before a release is public:** the Release workflow builds them on GitHub's runners when a version is tagged, installs each one with its system's package manager (Debian 13, Ubuntu 26.04, Fedora, Arch; the installer and the portable zip on Windows), and checks that it starts. A dry run tries all of it without publishing.
+  - **Ubuntu 26.04 LTS has its own `.deb`** (the Debian 13 one needs Debian's exact Qt), and the install script picks the right package.
+  - **Scoop:** `scoop install https://github.com/caixax/opensesh/releases/latest/download/opensesh.json` installs the portable app and keeps it up to date.
+  - **The AUR:** `PKGBUILD`s for `opensesh` (the release's source) and `opensesh-git` (this repository), built and checked by the Release workflow; each release also carries the winget manifests, ready to submit.
+  - **Code signing** of the Windows executables, installer and uninstaller, as soon as a certificate is configured.
+  - **A user guide** ([docs/user-guide.md](docs/user-guide.md)) and a README with screenshots of the app.
+
 - **Sprint 17: polish before 1.0 ([ADR 0038](docs/adr/0038-polish-before-1-0.md), [security review](docs/security-review.md)).**
   - **High contrast** (Settings, Appearance, Contrast): follows the system's preference, or on or off; text at 7:1, stronger outlines and status colors, a wider focus ring.
   - **Error messages in plain words,** with a "Details" button for what the system or a library said, selectable and copyable.
