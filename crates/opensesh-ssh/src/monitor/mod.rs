@@ -215,7 +215,8 @@ impl Rates {
                         let total = now.total.checked_sub(before.total).filter(|t| *t > 0);
                         let busy = now.busy.checked_sub(before.busy);
                         total.zip(busy).map(|(total, busy)| {
-                            u16::try_from((busy.min(total) * 1000) / total).unwrap_or(1000)
+                            u16::try_from(busy.min(total).saturating_mul(1000) / total)
+                                .unwrap_or(1000)
                         })
                     }
                     _ => None,
@@ -338,19 +339,26 @@ fn linux_cpu(lines: &[&str]) -> Option<CpuTicks> {
     let values: Vec<u64> = numbers(line);
     // guest and guest_nice are already counted in user and nice.
     let counted = &values[..values.len().min(8)];
-    let total: u64 = counted.iter().sum();
-    let idle = values.get(3)? + values.get(4).copied().unwrap_or(0);
+    let total = sum(counted.iter().copied());
+    let idle = values
+        .get(3)?
+        .saturating_add(values.get(4).copied().unwrap_or(0));
     Some(CpuTicks {
         busy: total.saturating_sub(idle),
         total,
     })
 }
 
+/// The sum of a server's counters, at most `u64::MAX` (a server can print any number).
+fn sum(values: impl IntoIterator<Item = u64>) -> u64 {
+    values.into_iter().fold(0, u64::saturating_add)
+}
+
 /// `kern.cp_time`: user, nice, system, interrupt and idle ticks (FreeBSD).
 fn bsd_cpu(sysctl: &HashMap<&str, &str>) -> Option<CpuTicks> {
     let values: Vec<u64> = numbers(sysctl.get("kern.cp_time")?);
     let idle = *values.get(4)?;
-    let total: u64 = values.iter().take(5).sum();
+    let total = sum(values.iter().take(5).copied());
     Some(CpuTicks {
         busy: total.saturating_sub(idle),
         total,
@@ -386,9 +394,8 @@ fn linux_memory(lines: &[&str]) -> Option<Memory> {
     let kb = |key: &str| values.get(key).map(|value| value.saturating_mul(1024));
     let total = kb("MemTotal")?;
     // Kernels before 3.14 have no MemAvailable.
-    let available = kb("MemAvailable").unwrap_or_else(|| {
-        kb("MemFree").unwrap_or(0) + kb("Buffers").unwrap_or(0) + kb("Cached").unwrap_or(0)
-    });
+    let available = kb("MemAvailable")
+        .unwrap_or_else(|| sum(["MemFree", "Buffers", "Cached"].map(|key| kb(key).unwrap_or(0))));
     Some(Memory {
         total,
         available: available.min(total),
@@ -406,7 +413,7 @@ fn bsd_memory(sysctl: &HashMap<&str, &str>) -> Option<Memory> {
     let total = sysctl_number(sysctl, "hw.physmem")?;
     let page = sysctl_number(sysctl, "hw.pagesize").unwrap_or(4096);
     let pages = sysctl_number(sysctl, "vm.stats.vm.v_free_count")?
-        + sysctl_number(sysctl, "vm.stats.vm.v_inactive_count").unwrap_or(0);
+        .saturating_add(sysctl_number(sysctl, "vm.stats.vm.v_inactive_count").unwrap_or(0));
     Some(Memory {
         total,
         available: pages.saturating_mul(page).min(total),
@@ -440,7 +447,7 @@ fn mac_memory(lines: &[&str], sysctl: &HashMap<&str, &str>) -> Option<Memory> {
             })
             .unwrap_or(0)
     };
-    let free = pages("Pages free") + pages("Pages inactive") + pages("Pages speculative");
+    let free = sum(["Pages free", "Pages inactive", "Pages speculative"].map(pages));
     let (swap_total, swap_free) = sysctl
         .get("vm.swapusage")
         .map(|usage| (swap_amount(usage, "total"), swap_amount(usage, "free")))
@@ -516,8 +523,8 @@ fn linux_traffic(lines: &[&str], route: &[&str]) -> Option<Traffic> {
                 received: 0,
                 sent: 0,
             });
-            sum.received += received;
-            sum.sent += sent;
+            sum.received = sum.received.saturating_add(*received);
+            sum.sent = sum.sent.saturating_add(*sent);
         }
     }
     total
@@ -565,8 +572,8 @@ fn bsd_traffic(lines: &[&str], route: &[&str]) -> Option<Traffic> {
                 received: 0,
                 sent: 0,
             });
-            sum.received += received;
-            sum.sent += sent;
+            sum.received = sum.received.saturating_add(received);
+            sum.sent = sum.sent.saturating_add(sent);
         }
     }
     total

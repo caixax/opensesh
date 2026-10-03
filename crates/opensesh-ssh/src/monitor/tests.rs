@@ -342,3 +342,18 @@ fn a_unit_after_a_multibyte_character_is_no_crash() {
         2048 * 1024 * 1024
     );
 }
+
+#[test]
+fn counters_too_big_to_add_are_no_crash() {
+    // Found by fuzzing (Sprint 17): macOS `netstat` counters whose sum is past `u64::MAX`.
+    let output = String::from_utf8_lossy(include_bytes!("fixtures/fuzz-netstat.bin"));
+    let _ = parse(&output);
+    let _ = parse_info(&output);
+    let max = u64::MAX;
+    assert_eq!(sum([max, 1, 2]), max);
+    let reading = parse(&format!(
+        "@os Linux\n@cpu\ncpu  {max} {max} 1 {max} 1 0 0 0\n"
+    ));
+    let cpu = reading.cpu.expect("the cpu line");
+    assert_eq!((cpu.total, cpu.busy), (max, 0));
+}
