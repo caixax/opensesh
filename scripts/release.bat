@@ -1,3 +1,3 @@
 @echo off
-rem Local release: release.bat -Patch | -Minor | -Major | -V 0.3.0 [-SkipTests] [-NoPublish] [-SkipLinux]
+rem Release: release.bat -Patch | -Minor | -Major | -V 1.2.0 [-SkipTests] [-NoPublish] [-SkipLinux] [-InCi]
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0release.ps1" %*
