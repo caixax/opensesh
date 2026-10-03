@@ -33,6 +33,23 @@ Checked with GitHub Security Lab's `gh-secure` (`gh secure status`), after 1.0.0
   - **Release tags (`v*`):** only the admin can create, move or delete them.
   - **Workflows of outside contributors** run only after the maintainer approves them (every outside contributor, not only first-time ones), so unknown code doesn't run on the project's runners before someone has read it.
 
+### CodeQL's first analysis (2026-10-03)
+
+CodeQL's first run raised 75 alerts in three rules. Each one was read, and none was a vulnerability:
+
+- **Hard-coded cryptographic values (67):**
+  - 60 are in tests, test servers and a Sprint 13 spike: made-up keys, nonces and passwords.
+  - Four are the vault's header nonce, a placeholder: `format::seal_file` replaces it with a random one before encrypting. A test now checks that every seal takes a fresh, non-zero nonce.
+  - One is a buffer filled from the system's random generator on the next line.
+  - Two are PuTTY's PPK v2 format, which OpenSesh only reads: the empty passphrase of an unencrypted key's MAC, and the zero IV of its AES-256-CBC.
+- **Cleartext logging (7):**
+  - Three are in the SSH and S3 password prompts. There is no logging there: the query took the `secrets` binding that receives the user's answer for a log.
+  - Two are a test that checks no secret reaches the files.
+  - Two are the spike.
+- **A weak algorithm (1):** DES in VNC authentication, which RFC 6143 defines that way. The pane says the session isn't encrypted, and VeNCrypt with TLS is offered (ADR 0035).
+
+Each one was dismissed on GitHub with its reason. New alerts block pull requests (see the rulesets above).
+
 ## What was checked and held
 
 - **Secrets never logged:** no log call prints a password, passphrase, key, cookie or token; the types that hold secrets print `[REDACTED]` or their size in `Debug` (the vault's tests check it), and the RDP helper installs no log output at all (ADR 0034).

@@ -434,6 +434,26 @@ mod tests {
     }
 
     #[test]
+    fn every_seal_takes_a_fresh_nonce() {
+        // The header's nonce is a placeholder until `seal_file` draws a random one: the same key
+        // never encrypts two files under one nonce, whatever the caller put there.
+        let key = Key::random().unwrap();
+        let mut header = Header {
+            vault_id: [3; 16],
+            holder: Holder::Keyring,
+            body_nonce: [0; NONCE_LEN],
+        };
+        let entries = sample();
+        let first = seal_file(&mut header, &key, &entries).unwrap();
+        let first_nonce = header.body_nonce;
+        let second = seal_file(&mut header, &key, &entries).unwrap();
+        assert_ne!(first_nonce, [0; NONCE_LEN]);
+        assert_ne!(header.body_nonce, first_nonce);
+        assert_ne!(first, second);
+        assert_eq!(read_header(&first).unwrap().0.body_nonce, first_nonce);
+    }
+
+    #[test]
     fn password_vault_round_trip() {
         let key = Key::random().unwrap();
         let slot =
