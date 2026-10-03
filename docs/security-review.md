@@ -28,7 +28,10 @@ PLAN Sprint 17 asks for a security review against the [threat model](threat-mode
 Checked with GitHub Security Lab's `gh-secure` (`gh secure status`), after 1.0.0:
 
 - **On:** private vulnerability reporting (with `SECURITY.md`), secret scanning with push protection, Dependabot alerts and security updates (next to the weekly version updates of `.github/dependabot.yml`), and CodeQL's default setup (Rust, C++ and the GitHub Actions workflows).
-- **Off:** classic branch protection. As `gh-secure` sets it, it asks for pull requests with an approving review. That doesn't fit a project with one maintainer who pushes to `main` and tags releases from a script, and an admin would bypass it anyway. A ruleset that only forbids deleting or force-pushing `main` and the `v*` tags would protect what matters (the history and the releases) without that; it is left to the owner.
+- **Rulesets instead of classic branch protection** (which `gh-secure` would set for everyone), so that the maintainer keeps pushing to `main` and tagging releases from a script while everyone else goes through review:
+  - **`main`:** for everyone but the repository's admin, changes come through a pull request with an approval of its latest push, every review conversation resolved, the ten CI jobs green, and no new CodeQL alert of high severity or above (or error). Nobody but the admin can delete `main` or force-push to it.
+  - **Release tags (`v*`):** only the admin can create, move or delete them.
+  - **Workflows of outside contributors** run only after the maintainer approves them (every outside contributor, not only first-time ones), so unknown code doesn't run on the project's runners before someone has read it.
 
 ## What was checked and held
 

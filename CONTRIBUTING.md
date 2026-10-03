@@ -1,6 +1,6 @@
 # Contributing to OpenSesh
 
-Thanks for your interest! OpenSesh is in an early stage (see [`docs/sprints/`](docs/sprints/) and [`docs/adr/`](docs/adr/)). This guide lists the rules every change follows.
+Thanks for your interest! OpenSesh 1.0 is out; how it got here is in [`docs/sprints/`](docs/sprints/) and [`docs/adr/`](docs/adr/). This guide lists the rules every change follows.
 
 ## Getting started
 
@@ -19,6 +19,18 @@ Thanks for your interest! OpenSesh is in an early stage (see [`docs/sprints/`](d
 - **Icons:** never draw, generate or hand-edit SVG paths. Icons come only from the pinned Lucide / Tabler / Simple Icons packages through `cargo xtask icons`.
 - **Dependencies:** check the latest stable version and its real API on crates.io / docs.rs, and pin it in `[workspace.dependencies]` in the root `Cargo.toml`. Licenses must pass `cargo deny check`.
 - **Decisions:** any relevant architectural decision gets an ADR in `docs/adr/NNNN-title.md` with the sections Context, Options, Decision and Consequences.
+
+## Pull requests
+
+- Changes reach `main` through pull requests, from a fork or a branch. The maintainer reviews and merges them.
+- A pull request can be merged when:
+  - the maintainer approved its latest push;
+  - every review conversation is resolved;
+  - all CI jobs pass;
+  - CodeQL found no new security alert of high severity or above.
+- CI runs on a pull request from an outside contributor once the maintainer has approved the run.
+- Security problems don't go in a pull request or an issue: see [`SECURITY.md`](SECURITY.md).
+- Release tags (`v*`) are made by the maintainer.
 
 ## Commits
 
