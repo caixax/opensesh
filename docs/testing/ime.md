@@ -4,7 +4,7 @@ The Sprint 2 checklist asks for basic preedit with ibus and fcitx5 in the termin
 
 ## Result (2026-09-25)
 
-Checked with ibus and the Chinese pinyin engine on Debian 13 in WSLg, release build of commit `a47d994`, Qt 6.8.2, `QT_IM_MODULE=ibus`. Typing `nihao`, then Space, then Return in a terminal tab:
+Checked with ibus and the Chinese pinyin engine on Debian 13 in WSLg, release build of commit `e90f60e`, Qt 6.8.2, `QT_IM_MODULE=ibus`. Typing `nihao`, then Space, then Return in a terminal tab:
 
 | Check | X11 (`xcb`, Xwayland) | Wayland |
 |---|---|---|

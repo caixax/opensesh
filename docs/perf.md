@@ -26,7 +26,7 @@ Two layers are measured separately:
 | Windows | Windows 10 Pro 22H2 (build 19045), inbox console host `conhost.exe` 10.0.19041.1; bundled ConPTY 1.24.260710001 ([ADR 0014](adr/0014-bundled-conpty.md)) |
 | Linux | WSL2, kernel 6.18.33.2-microsoft-standard-WSL2, Debian 13 (15 GB for the VM) |
 | Build | Rust 1.88.0, `--release` (thin LTO, `codegen-units = 1`), `alacritty_terminal` 0.26.0, `portable-pty` 0.9.0 |
-| Code | engine: commit `e79a0d2` plus the Sprint 2 verification probes (`crates/opensesh-term/tests/perf.rs`); GUI: commit `a47d994` |
+| Code | engine: commit `e2b03bc` plus the Sprint 2 verification probes (`crates/opensesh-term/tests/perf.rs`); GUI: commit `e90f60e` |
 | GPU and display | NVIDIA GeForce RTX 3060 (driver 32.0.16.1074); 1920 x 1080 at 180 Hz, 100 % scale |
 | GUI on Windows | Qt 6.10.3, D3D11, threaded render loop (Qt measures a 5.56 ms vsync); portable mode; the bundled ConPTY unless a row says "inbox". `yes.exe` and `cat.exe` from Git for Windows 2.55.0 (MSYS2 runtime 3.6.9); the shell is Windows PowerShell 5.1 |
 | GUI on Linux | Debian 13 in WSLg 1.0.73.2 (Weston, Xwayland 24.1.6), Qt 6.8.2 from Debian, OpenGL, threaded render loop, 60 Hz vsync. Mesa 25.0.7 renders on the CPU: the process maps `libgallium` and `libLLVM` but no d3d12 library. The shell is bash 5.2 |
@@ -297,7 +297,7 @@ With no output, the only frames are the cursor blink (0.25 to 1.1 frames/s in th
 
 ## Sprint 17 re-check (2026-10-03)
 
-PLAN Sprint 17 asks to profile against §9 again before 1.0. Start-up and memory were measured on the release app at commit `4dbc135` and before its two start-up changes (`2098af6`), the same way as in Sprint 2 (release build, portable mode, Windows 10, D3D11 on the RTX 3060, warm file cache; process creation to the first rendered frame, then the working set and private bytes 7 s later). The probe is a PowerShell script outside the repository: it starts the app 5 times, reads the first `frame rendered` line of Qt's render-loop log, and stops the app with `taskkill /T`. "One terminal tab" restores a session with a local PowerShell tab at start (`restore_sessions` and a `last-session.toml` with one local pane).
+PLAN Sprint 17 asks to profile against §9 again before 1.0. Start-up and memory were measured on the release app at commit `e5abe9d` and before its two start-up changes (`ccac233`), the same way as in Sprint 2 (release build, portable mode, Windows 10, D3D11 on the RTX 3060, warm file cache; process creation to the first rendered frame, then the working set and private bytes 7 s later). The probe is a PowerShell script outside the repository: it starts the app 5 times, reads the first `frame rendered` line of Qt's render-loop log, and stops the app with `taskkill /T`. "One terminal tab" restores a session with a local PowerShell tab at start (`restore_sessions` and a `last-session.toml` with one local pane).
 
 | State (5 runs) | First frame | Working set | Private bytes |
 |---|---|---|---|
