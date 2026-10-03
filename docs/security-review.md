@@ -21,6 +21,14 @@ PLAN Sprint 17 asks for a security review against the [threat model](threat-mode
 | 4 | Updates | The installer downloaded by an update is checked against `SHA256SUMS.txt` of the same GitHub release, over HTTPS: that catches a damaged download, not a release replaced by someone with access to the repository. | Medium | **Open:** code signing has its place in Sprint 18 (PLAN); until then authenticity rests on GitHub's account security and TLS. |
 | 5 | Dependencies | `lru` 0.16.4 (through `aws-sdk-s3`) is unsound (RUSTSEC-2026-0253): `LruCache::pop()` can leave dangling pointers if a key's `Drop` panics inside `catch_unwind`. The SDK's keys are strings and plain values whose `Drop` doesn't panic, and OpenSesh doesn't catch panics around it. | Low | **Accepted** until the SDK moves to `lru` 0.18.2 or later; `cargo audit` reports it as a warning. |
 | 6 | Dependencies | `rsa` (RUSTSEC-2023-0071, the Marvin timing attack) has no fixed release. OpenSesh signs with RSA keys (once per connection) and never decrypts with them. | Low | **Accepted** (ADR 0024, ADR 0027), as before. |
+| 7 | Dependencies | `aws-smithy-json` 0.62.3 (through `aws-sdk-s3`) recurses without a limit when it skips unknown keys (GHSA-8ffr-xgwf-xj56, 2026-10-02): deeply nested JSON can exhaust the stack of a smithy-rs **server**. In OpenSesh, `aws-sdk-s3` uses that parser only for the AWS partition table compiled into the SDK (`endpoint_lib/partition.rs`); S3's responses are XML, and `aws-config` isn't used. No JSON from the network reaches it. The fix (0.62.7) needs Rust 1.91.1, above the 1.89 MSRV (ADR 0026). | None reachable | **Accepted** until the MSRV moves to 1.91.1 or later; the Dependabot alerts were dismissed as "vulnerable code is not actually used" (2026-10-03). When RustSec publishes it, `cargo deny` and `cargo audit` will need the same exception. |
+
+## Repository settings (2026-10-03)
+
+Checked with GitHub Security Lab's `gh-secure` (`gh secure status`), after 1.0.0:
+
+- **On:** private vulnerability reporting (with `SECURITY.md`), secret scanning with push protection, Dependabot alerts and security updates (next to the weekly version updates of `.github/dependabot.yml`), and CodeQL's default setup (Rust, C++ and the GitHub Actions workflows).
+- **Off:** classic branch protection. As `gh-secure` sets it, it asks for pull requests with an approving review. That doesn't fit a project with one maintainer who pushes to `main` and tags releases from a script, and an admin would bypass it anyway. A ruleset that only forbids deleting or force-pushing `main` and the `v*` tags would protect what matters (the history and the releases) without that; it is left to the owner.
 
 ## What was checked and held
 
