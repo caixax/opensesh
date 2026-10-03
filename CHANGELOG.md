@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-03
+
 ### Added
 
 - **Sprint 18: packaging and the 1.0 release ([ADR 0039](docs/adr/0039-release-pipeline.md), [user guide](docs/user-guide.md)).**

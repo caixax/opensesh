@@ -2711,7 +2711,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "opensesh-core"
-version = "0.1.4"
+version = "1.0.0"
 dependencies = [
  "directories",
  "interprocess",
@@ -2740,7 +2740,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-import"
-version = "0.1.4"
+version = "1.0.0"
 dependencies = [
  "encoding_rs",
  "opensesh-core",
@@ -2752,7 +2752,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-s3"
-version = "0.1.4"
+version = "1.0.0"
 dependencies = [
  "aws-sdk-s3",
  "aws-smithy-http-client",
@@ -2768,7 +2768,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-ssh"
-version = "0.1.4"
+version = "1.0.0"
 dependencies = [
  "base64ct",
  "crossbeam-channel",
@@ -2791,7 +2791,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-term"
-version = "0.1.4"
+version = "1.0.0"
 dependencies = [
  "alacritty_terminal",
  "crossbeam-channel",
@@ -2808,7 +2808,7 @@ dependencies = [
 
 [[package]]
 name = "opensesh-vault"
-version = "0.1.4"
+version = "1.0.0"
 dependencies = [
  "aes 0.8.4",
  "argon2 0.5.3",
