@@ -8300,8 +8300,12 @@
         <translation>[Ŵĥéñ ťĥé ĺášť ťáb çĺöšéš ~~~~~~~~]</translation>
     </message>
     <message>
-        <source>Keep the window open</source>
-        <translation>[Ķééþ ťĥé ŵíñďöŵ öþéñ ~~~~~~]</translation>
+        <source>The last terminal or remote desktop tab: Home stays, so OpenSesh can go back to it or quit.</source>
+        <translation>[Ťĥé ĺášť ťéŕmíñáĺ öŕ ŕémöťé ďéšķťöþ ťáb: Ĥömé šťáýš, šö ÖþéñŠéšĥ çáñ ĝö báçķ ťö íť öŕ qüíť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Show Home</source>
+        <translation>[Šĥöŵ Ĥömé ~~~]</translation>
     </message>
     <message>
         <source>Quit OpenSesh</source>

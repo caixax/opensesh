@@ -67,12 +67,13 @@ SettingsPage {
 
         SettingsRow {
             label: qsTr("When the last tab closes")
+            helpText: qsTr("The last terminal or remote desktop tab: Home stays, so OpenSesh can go back to it or quit.")
 
             SettingsChoice {
                 width: parent.width
                 values: AppSettings.choices("onLastTabClosed")
                 labels: ({
-                        keep_window: qsTr("Keep the window open"),
+                        keep_window: qsTr("Show Home"),
                         quit: qsTr("Quit OpenSesh")
                     })
                 value: AppSettings.onLastTabClosed

@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Fixed
+
+- **Windows: the window behaves like other windows again** with the custom title bar: dragging it to the top of the screen maximizes it and to a side snaps it (Aero Snap), Win+arrows work, minimizing and maximizing are animated, and it casts the system's shadow. The light outline around it is gone.
+- Settings > General: "When the last tab closes" says **Show Home** instead of "Keep the window open", and explains that Home stays.
+
 ## [1.0.0] - 2026-10-03
 
 ### Added
