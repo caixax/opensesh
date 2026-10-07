@@ -29,7 +29,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 # MSRV: see docs/adr/0002-toolchain-and-msrv.md. Keep in sync with rust-toolchain.toml.
 rust-version = "1.89"

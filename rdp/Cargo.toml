@@ -10,7 +10,7 @@ resolver = "3"
 members = ["helper", "testing"]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 # The app's MSRV (rust-toolchain.toml at the repository's root applies here too).
 rust-version = "1.89"
