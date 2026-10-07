@@ -380,10 +380,12 @@ Window {
             persistState: window.persistState
         }
 
-        // Frameless windows get no system border; draw a hairline while windowed.
+        // Frameless windows get no system border; draw a hairline while windowed. Not on Windows,
+        // where the system draws their shadow (and on Windows 11 their border) too: see
+        // cpp/window_frame.cpp.
         Rectangle {
             anchors.fill: parent
-            visible: window.frameless && window.windowed
+            visible: window.frameless && window.windowed && Qt.platform.pluginName !== "windows"
             color: "transparent"
             border.width: Theme.borderWidth
             border.color: Theme.borderStrong

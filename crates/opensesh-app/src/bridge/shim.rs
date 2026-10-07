@@ -70,6 +70,13 @@ pub mod ffi {
         #[namespace = "opensesh"]
         fn install_activity_filter();
 
+        include!("opensesh-app/window_frame.h");
+
+        /// Windows: frameless windows keep Aero Snap, Win+arrows and the shadow (a native event
+        /// filter gives them back their sizing frame and caption styles). Elsewhere a no-op.
+        #[namespace = "opensesh"]
+        fn install_window_frame_filter();
+
         /// Milliseconds since the last user input the activity filter saw.
         #[namespace = "opensesh"]
         fn idle_milliseconds() -> i64;
