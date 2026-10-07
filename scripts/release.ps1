@@ -62,6 +62,12 @@ Set-Location $repo
 if (-not $env:QMAKE) { $env:QMAKE = "C:\Qt\6.10.3\msvc2022_64\bin\qmake.exe" }
 if (-not (Test-Path $env:QMAKE)) { throw "qmake not found at $env:QMAKE; set QMAKE" }
 $env:PATH = (Split-Path -Parent $env:QMAKE) + ";" + $env:PATH
+# A new version rebuilds every crate. With one compiler per logical CPU (20 on the release
+# machine), rustc and cl.exe failed now and then without a message (exit code 1), most likely
+# out of memory; half the CPUs, eight at most, unless CARGO_BUILD_JOBS says otherwise.
+if (-not $env:CARGO_BUILD_JOBS) {
+    $env:CARGO_BUILD_JOBS = [string][Math]::Max(1, [Math]::Min(8, [int]($env:NUMBER_OF_PROCESSORS / 2)))
+}
 
 function Step($text) { Write-Host "`n== $text" -ForegroundColor Cyan }
 function Run($command) {
