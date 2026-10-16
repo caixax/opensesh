@@ -121,7 +121,7 @@ jobs:
       - name: Build the package
         shell: bash
         run: bash scripts/linux/build.sh
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-linux-${{ strategy.job-index }}
           path: dist/*
@@ -185,7 +185,7 @@ jobs:
           cargo xtask dist windows
           mkdir -p dist
           cp target/dist/*.zip target/dist/*-setup.exe dist/
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-windows
           path: dist/*
@@ -334,7 +334,7 @@ jobs:
           timeout 60 opensesh --version
           test -x /usr/lib/opensesh/opensesh-rdp
           timeout 600 opensesh-app --gallery --smoke-test
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: aur-${{ matrix.package }}
           path: aur
@@ -399,7 +399,7 @@ jobs:
             sed -i "s/^## \[Unreleased\].*/## [Unreleased]\n\n## [$VERSION] - dry run/" CHANGELOG.md
           fi
           bash scripts/release-assets.sh "$VERSION" dist aur
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: env.DRY_RUN == 'true'
         with:
           name: release-dry-run
