@@ -10,5 +10,5 @@ license = "GPL-3.0-or-later"
 [workspace]
 
 [dependencies]
-russh = { version = "=0.63.3", default-features = false, features = ["ring", "flate2", "rsa"] }
+russh = { version = "=0.64.1", default-features = false, features = ["ring", "flate2", "rsa"] }
 tokio = { version = "=1.53.1", features = ["rt-multi-thread", "fs", "io-util", "macros", "time"] }
