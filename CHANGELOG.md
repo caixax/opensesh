@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Security
+
+- **rustls 0.23.46**, for four advisories (RUSTSEC-2026-0346 to 0349): `Debug` output of client sessions that could show TLS secrets, data sent after an ECH rejection, a certificate decompression that could allocate 1 GiB, and a server hello that could downgrade later key exchanges. rustls carries the TLS of S3 storage, of VNC's VeNCrypt, of the update check and of the RDP helper.
+- **rustls-webpki 0.103.16** (RUSTSEC-2026-0382, certificate verification could accept distrusted intermediates) and **webpki-roots 1.0.10** (RUSTSEC-2026-0381, distrusted emSign roots), for the same TLS connections.
+- **zip 9.0.0** (RUSTSEC-2026-0367 and 0368, unsafe extraction). Only the build tasks use it, to write the portable zip and read archives they download; they never extract to disk with it.
+- **russh 0.64.1**, for GHSA-4wc5-f2rc-q74m and GHSA-j7h2-66j4-ghjf. Both are in russh's SSH agent server and SSH server, which OpenSesh runs only in its tests; its client is unaffected, and is updated with them.
+
+### Changed
+
+- tokio 1.53.2, zeroize 1.9.1, pageant 0.2.4 and winreg 0.56.0; the workflows' upload-artifact 7.0.2, download-artifact 8.0.2 and install-action 2.87.28.
+
 ## [1.0.1] - 2026-10-07
 
 ### Fixed

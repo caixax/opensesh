@@ -82,7 +82,7 @@ directories = "6.0.0"
 # Terminal encodings other than UTF-8 (Sprint 3, opensesh-term).
 encoding_rs = "0.8.42"
 # PuTTY's sessions in the Windows registry (Sprint 16, opensesh-import).
-winreg = "0.55.0"
+winreg = "0.56.0"
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
@@ -104,7 +104,7 @@ argon2 = { version = "0.5.3", default-features = false, features = ["alloc"] }
 chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["alloc"] }
 rand_core = { version = "0.6.4", features = ["getrandom"] }
 secrecy = "0.10.3"
-zeroize = "1.9.0"
+zeroize = "1.9.1"
 ssh-key = { version = "0.6.7", features = ["ed25519", "p256", "p384", "p521", "rsa", "encryption", "getrandom"] }
 ssh-encoding = "0.2.0"
 base64ct = { version = "1.8.3", features = ["alloc"] }
@@ -119,13 +119,13 @@ keyring = "4.2.0"
 # SSH client (Sprint 7, opensesh-ssh; ADR 0027). `ring` instead of the default `aws-lc-rs`, which
 # needs NASM or CMake on some platforms; `des` for the legacy 3des-cbc cipher. 0.63.3 needs Rust
 # 1.89 (ADR 0026).
-russh = { version = "0.63.3", default-features = false, features = ["ring", "flate2", "rsa", "des"] }
+russh = { version = "0.64.1", default-features = false, features = ["ring", "flate2", "rsa", "des"] }
 # SFTP over a channel of the SSH connection, client and (for tests) server (Sprint 8, ADR 0028).
 russh-sftp = "3.0.0"
 # Pageant on Windows (named pipe or WM_COPYDATA), the agent russh itself uses; signing only.
-pageant = "0.2.3"
+pageant = "0.2.4"
 # The async runtime of the SSH client, off the GUI thread (PLAN §2).
-tokio = { version = "1.53.1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "process", "fs"] }
+tokio = { version = "1.53.2", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "process", "fs"] }
 
 # xtask only (regex is also used by opensesh-term)
 flate2 = "1.1.10"
@@ -141,7 +141,7 @@ tar = "0.4.46"
 ureq = "3.4.2"
 # Exact pin: zip may raise its MSRV (1.88 today) in any minor release. Reading deflate entries is
 # all `cargo xtask fonts` needs.
-zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "=9.0.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 # The Windows icon (`cargo xtask icons`): the composed app logo rendered at each size and packed as
 # an .ico. resvg without its default features (text, raster images): the logo is plain shapes.
 resvg = { version = "0.48.1", default-features = false }
