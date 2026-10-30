@@ -19,14 +19,14 @@ use opensesh_ssh::connect::{self, quiet};
 use opensesh_ssh::copy_id::{self, Installed};
 use opensesh_ssh::prompt::{Answer, Asker, HostKeyKind, Prompt, Request};
 use opensesh_ssh::spec::{
-    AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, LogSpec, Reconnect, SessionSpec,
-    X11Spec,
+    AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, LogSpec, Reconnect, Remembered,
+    SecretSink, SessionSpec, X11Spec,
 };
 use opensesh_ssh::testing::{self, CODE, PASSWORD, Rules, USER};
 use opensesh_ssh::{SshError, osdetect};
 use opensesh_term::backend::BackendEvent;
 use russh::keys::PrivateKey;
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 
 const PASSPHRASE: &str = "fixture passphrase";
 
@@ -292,6 +292,137 @@ async fn keys_from_files_and_the_vault() {
     .await
     .unwrap_err();
     assert!(matches!(error, SshError::Auth { .. }), "{error}");
+}
+
+/// Records what a connection asked to remember.
+#[derive(Default)]
+struct Memo(Mutex<Vec<(Remembered, String)>>);
+
+impl SecretSink for Memo {
+    fn remember(&self, which: Remembered, secret: SecretString) {
+        self.0
+            .lock()
+            .unwrap()
+            .push((which, secret.expose_secret().to_owned()));
+    }
+}
+
+fn remember(text: &str) -> Answer {
+    Answer::Remember(vec![SecretString::from(text)])
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn saved_and_remembered_secrets() {
+    let encrypted = key("ed25519-enc", Some(PASSPHRASE));
+    let port = serve(Rules {
+        password: true,
+        keys: vec![encrypted.public_key().clone()],
+        ..Rules::default()
+    })
+    .await;
+    let dir = tempfile::tempdir().unwrap();
+    let connect = async |plan: AuthPlan, answers: &Script| {
+        connect::connect(
+            &spec(dir.path(), vec![hop(port, plan)]),
+            &answers.asker,
+            &quiet(),
+        )
+        .await
+        .unwrap()
+        .close()
+        .await;
+    };
+    // A saved passphrase opens the key without asking.
+    let answers = script(|prompt| match prompt {
+        Prompt::HostKey(_) => Answer::TrustAndRemember,
+        other => panic!("unexpected {other:?}"),
+    });
+    let keyed = AuthPlan {
+        key_files: vec![fixture("ed25519-enc")],
+        order: vec![AuthMethod::PublicKey],
+        ..AuthPlan::default()
+    };
+    connect(
+        AuthPlan {
+            key_passphrase: Some(SecretString::from(PASSPHRASE)),
+            ..keyed.clone()
+        },
+        &answers,
+    )
+    .await;
+
+    // A stale saved passphrase, then one typed with "remember": wrong first, which isn't
+    // remembered, then right.
+    let memo = Arc::new(Memo::default());
+    let answers = script(|prompt| match prompt {
+        Prompt::Passphrase {
+            retry,
+            can_remember,
+            ..
+        } => {
+            assert!(*can_remember);
+            remember(if *retry { PASSPHRASE } else { "not it" })
+        }
+        other => panic!("unexpected {other:?}"),
+    });
+    connect(
+        AuthPlan {
+            key_passphrase: Some(SecretString::from("an old one")),
+            remember: Some(Arc::clone(&memo) as Arc<dyn SecretSink>),
+            ..keyed.clone()
+        },
+        &answers,
+    )
+    .await;
+    assert_eq!(answers.asked.lock().unwrap().len(), 2);
+    assert_eq!(
+        *memo.0.lock().unwrap(),
+        [(Remembered::KeyPassphrase, PASSPHRASE.to_owned())]
+    );
+
+    // A password typed with "remember" is saved once the server accepts it, not before.
+    let memo = Arc::new(Memo::default());
+    let answers = script(|prompt| match prompt {
+        Prompt::Password {
+            retry,
+            can_remember,
+            ..
+        } => {
+            assert!(*can_remember);
+            remember(if *retry { PASSWORD } else { "wrong" })
+        }
+        other => panic!("unexpected {other:?}"),
+    });
+    connect(
+        AuthPlan {
+            order: vec![AuthMethod::Password],
+            remember: Some(Arc::clone(&memo) as Arc<dyn SecretSink>),
+            ..AuthPlan::default()
+        },
+        &answers,
+    )
+    .await;
+    assert_eq!(
+        *memo.0.lock().unwrap(),
+        [(Remembered::Password, PASSWORD.to_owned())]
+    );
+
+    // Without a place to remember them, the prompts don't offer it.
+    let answers = script(|prompt| match prompt {
+        Prompt::Password { can_remember, .. } => {
+            assert!(!*can_remember);
+            secret(PASSWORD)
+        }
+        other => panic!("unexpected {other:?}"),
+    });
+    connect(
+        AuthPlan {
+            order: vec![AuthMethod::Password],
+            ..AuthPlan::default()
+        },
+        &answers,
+    )
+    .await;
 }
 
 #[tokio::test(flavor = "multi_thread")]

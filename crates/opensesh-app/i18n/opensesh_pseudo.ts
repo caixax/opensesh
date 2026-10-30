@@ -2953,6 +2953,18 @@
         <translation>[ťĥé íďéñťíťý&apos;š üšéŕ ñámé ~~~~~~~~]</translation>
     </message>
     <message>
+        <source>Password</source>
+        <translation>[Þáššŵöŕď ~~~]</translation>
+    </message>
+    <message>
+        <source>For this host only, tried before the identity&apos;s. Saved encrypted in the vault on this computer; left empty, the saved one stays. The OpenSSH client doesn&apos;t use it.</source>
+        <translation>[Föŕ ťĥíš ĥöšť öñĺý, ťŕíéď béƒöŕé ťĥé íďéñťíťý&apos;š. Šávéď éñçŕýþťéď íñ ťĥé váüĺť öñ ťĥíš çömþüťéŕ; ĺéƒť émþťý, ťĥé šávéď öñé šťáýš. Ťĥé ÖþéñŠŠĤ çĺíéñť ďöéšñ&apos;ť üšé íť. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>For this host only, used before the identity&apos;s. Saved encrypted in the vault on this computer; left empty, the saved one stays.</source>
+        <translation>[Föŕ ťĥíš ĥöšť öñĺý, üšéď béƒöŕé ťĥé íďéñťíťý&apos;š. Šávéď éñçŕýþťéď íñ ťĥé váüĺť öñ ťĥíš çömþüťéŕ; ĺéƒť émþťý, ťĥé šávéď öñé šťáýš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <source>Secret key</source>
         <translation>[Šéçŕéť ķéý ~~~]</translation>
     </message>
@@ -2975,6 +2987,18 @@
     <message>
         <source>A certificate next to it (key-cert.pub) is used too.</source>
         <translation>[Å çéŕťíƒíçáťé ñéxť ťö íť (ķéý-çéŕť.þüb) íš üšéď ťöö. ~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Key passphrase</source>
+        <translation>[Ķéý þáššþĥŕášé ~~~~~]</translation>
+    </message>
+    <message>
+        <source>Tried on the key file before asking. Saved encrypted in the vault on this computer; left empty, the saved one stays.</source>
+        <translation>[Ťŕíéď öñ ťĥé ķéý ƒíĺé béƒöŕé ášķíñĝ. Šávéď éñçŕýþťéď íñ ťĥé váüĺť öñ ťĥíš çömþüťéŕ; ĺéƒť émþťý, ťĥé šávéď öñé šťáýš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Passwords and keys stay in the encrypted vault; hosts.toml only names the identity. The vault is opened only when a connection needs them. A password or passphrase typed when connecting can be remembered for the host too.</source>
+        <translation>[Þáššŵöŕďš áñď ķéýš šťáý íñ ťĥé éñçŕýþťéď váüĺť; ĥöšťš.ťömĺ öñĺý ñáméš ťĥé íďéñťíťý. Ťĥé váüĺť íš öþéñéď öñĺý ŵĥéñ á çöññéçťíöñ ñééďš ťĥém. Å þáššŵöŕď öŕ þáššþĥŕášé ťýþéď ŵĥéñ çöññéçťíñĝ çáñ bé ŕémémbéŕéď ƒöŕ ťĥé ĥöšť ťöö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>The system&apos;s OpenSSH client is there for what the built-in one doesn&apos;t do (Kerberos, smart cards, Match exec). It uses its own settings: most options here don&apos;t apply to it.</source>
@@ -3081,6 +3105,18 @@
         <translation>[Ŕéáďš /éťç/öš-ŕéĺéášé öñçé çöññéçťéď, ƒöŕ ťĥé áüťömáťíç íçöñ. ~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <source>forgotten when you save</source>
+        <translation>[ƒöŕĝöťťéñ ŵĥéñ ýöü šávé ~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>[Üñďö ~~]</translation>
+    </message>
+    <message>
+        <source>Forget</source>
+        <translation>[Föŕĝéť ~~]</translation>
+    </message>
+    <message>
         <source>Device</source>
         <translation>[Ďévíçé ~~]</translation>
     </message>
@@ -3183,10 +3219,6 @@
     <message>
         <source>A socket path or a Windows pipe name (\.pipe...), for an agent other than the usual one.</source>
         <translation>[Å šöçķéť þáťĥ öŕ á Ŵíñďöŵš þíþé ñámé (\.þíþé...), ƒöŕ áñ áĝéñť öťĥéŕ ťĥáñ ťĥé üšüáĺ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <source>Passwords and keys stay in the encrypted vault; hosts.toml only names the identity. The vault is opened only when a connection needs them.</source>
-        <translation>[Þáššŵöŕďš áñď ķéýš šťáý íñ ťĥé éñçŕýþťéď váüĺť; ĥöšťš.ťömĺ öñĺý ñáméš ťĥé íďéñťíťý. Ťĥé váüĺť íš öþéñéď öñĺý ŵĥéñ á çöññéçťíöñ ñééďš ťĥém. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Jump hosts</source>
@@ -10716,6 +10748,18 @@
     <message>
         <source>Wrong password. Try again.</source>
         <translation>[Ŵŕöñĝ þáššŵöŕď. Ťŕý áĝáíñ. ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Remember on this computer</source>
+        <translation>[Ŕémémbéŕ öñ ťĥíš çömþüťéŕ ~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved in the vault for this host once it opens the key</source>
+        <translation>[Šávéď íñ ťĥé váüĺť ƒöŕ ťĥíš ĥöšť öñçé íť öþéñš ťĥé ķéý ~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <source>Saved in the vault for this host once the server accepts it</source>
+        <translation>[Šávéď íñ ťĥé váüĺť ƒöŕ ťĥíš ĥöšť öñçé ťĥé šéŕvéŕ áççéþťš íť ~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <source>Use the key</source>

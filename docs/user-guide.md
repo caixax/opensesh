@@ -71,6 +71,7 @@ OpenSesh has its own SSH client. Its questions (a new host key, a password, a on
 
 - **Host keys** are checked before anything is sent, on every hop. A new key is shown with its fingerprint for you to accept. A key that changed stops the connection.
 - **Logging in:** a password, a key from the keychain, the keys of a running SSH agent (`SSH_AUTH_SOCK`, the Windows OpenSSH agent, Pageant), one-time codes, or a mix, as the server asks.
+- **Saved passwords:** tick **Remember on this computer** when a saved host asks for its password or a key's passphrase, or type them on the host editor's Authentication page. They are kept in the encrypted vault for that host only (no identity needed), and **Forget** there removes them. RDP and VNC hosts can remember their password the same way.
 - **Jump hosts and proxies:** a host can go through one or several jump hosts, or a SOCKS or HTTP proxy.
 - **Reconnection:** when a connection drops, OpenSesh tries again and says when. The pane keeps its scrollback.
 - **Install your key on a server** from the host's menu in the Hosts view: it is added to the server's `authorized_keys`, and the password isn't needed after that.
@@ -79,7 +80,7 @@ OpenSesh has its own SSH client. Its questions (a new host key, a password, a on
 
 ## The keychain
 
-The keychain holds identities (a user with a password or a key), passwords and SSH keys.
+The keychain holds identities (a user with a password or a key, for several hosts), passwords and SSH keys. A single host can also keep its own password and key passphrase, without an identity (see [SSH](#ssh)); those stay on this computer and aren't exported.
 
 - **Where secrets live:** in an encrypted vault. Its key is kept in your system's keyring (Windows Credential Manager; on Linux the Secret Service: GNOME Keyring, or KWallet with its Secret Service interface on), or comes from a master password you choose in **Settings > Security**, which can also lock the vault after a while. Without a keyring, set a master password.
 - **SSH keys:** generate Ed25519, ECDSA or RSA 4096 keys, import them from OpenSSH or PuTTY files, and export them. The keys of running SSH agents are listed too.

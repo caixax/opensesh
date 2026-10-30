@@ -23,6 +23,8 @@ pub enum Prompt {
         target: String,
         /// A previous attempt was refused.
         retry: bool,
+        /// The answer may be [`Answer::Remember`].
+        can_remember: bool,
     },
     /// The passphrase of a key file.
     Passphrase {
@@ -30,6 +32,8 @@ pub enum Prompt {
         key: String,
         /// A previous attempt was wrong.
         retry: bool,
+        /// The answer may be [`Answer::Remember`].
+        can_remember: bool,
     },
     /// Keyboard-interactive prompts from the server (one-time codes, PAM questions).
     KeyboardInteractive {
@@ -96,6 +100,8 @@ pub enum Answer {
     TrustAndRemember,
     /// Secrets typed in (one per field of the question).
     Secrets(Vec<SecretString>),
+    /// A password or passphrase typed in, to remember for the host once it works.
+    Remember(Vec<SecretString>),
     /// No.
     Cancel,
 }
@@ -159,6 +165,7 @@ mod tests {
             Prompt::Password {
                 target: "a@b".into(),
                 retry: false,
+                can_remember: false,
             },
         )
         .await;
@@ -170,7 +177,8 @@ mod tests {
                 &dropper,
                 Prompt::Passphrase {
                     key: "k".into(),
-                    retry: false
+                    retry: false,
+                    can_remember: false,
                 }
             )
             .await,

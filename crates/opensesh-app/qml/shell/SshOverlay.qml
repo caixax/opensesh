@@ -9,7 +9,8 @@ pragma ComponentBehavior: Bound
 //     way.
 //     Passwords, key passphrases and keyboard-interactive prompts (one-time codes) have their
 //     fields; Escape cancels. What is typed goes straight to the connection and the fields
-//     are cleared.
+//     are cleared. A saved host's password or passphrase can be remembered on this computer
+//     (`canRemember`, ADR 0040): it is saved in the vault once it worked.
 //   - Disconnected: a banner at the bottom with the reason and Reconnect (or, when the vault is
 //     locked, Unlock and connect), and the countdown of an automatic reconnection.
 //   terminal: QtObject      where the questions come from: a TerminalItem, or a file pane's
@@ -49,6 +50,12 @@ Item {
     property int countdown: -1
     // The question on the card (its id; -1 for none).
     property int shownPrompt: -1
+    // The vault can take a remembered secret without asking for its master password.
+    readonly property bool canStore: !Keychain.readOnly
+                                     && (Keychain.vaultStatus === "unlocked"
+                                         || (Keychain.vaultStatus === "missing" && Keychain.keyringAvailable)
+                                         || (Keychain.vaultStatus === "locked"
+                                             && (Keychain.protection === "keyring" || Keychain.remembered)))
 
     signal answered
     signal closeRequested
@@ -68,7 +75,7 @@ Item {
             promptLoader.item.takeFocus();
     }
 
-    // action: "trust-once", "trust-save", "submit" or "cancel".
+    // action: "trust-once", "trust-save", "submit", "submit-remember" or "cancel".
     function answer(action, secrets) {
         const id = prompt.id ?? 0;
         terminal.answerPrompt(id, action, secrets ?? []);
@@ -483,7 +490,7 @@ Item {
                     return;
                 const value = field.text;
                 field.text = "";
-                overlay.answer("submit", [value]);
+                overlay.answer(rememberBox.visible && rememberBox.checked ? "submit-remember" : "submit", [value]);
             }
 
             spacing: Theme.spacingMd
@@ -523,6 +530,18 @@ Item {
                 size: "small"
                 color: Theme.danger
                 text: secret.passphrase ? qsTr("Wrong passphrase. Try again.") : qsTr("Wrong password. Try again.")
+            }
+
+            OsCheckBox {
+                id: rememberBox
+
+                visible: secret.question.canRemember === true && overlay.canStore
+                text: qsTr("Remember on this computer")
+
+                OsTooltip {
+                    visible: rememberBox.hovered
+                    text: secret.passphrase ? qsTr("Saved in the vault for this host once it opens the key") : qsTr("Saved in the vault for this host once the server accepts it")
+                }
             }
 
             Flow {

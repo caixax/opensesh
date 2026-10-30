@@ -8,6 +8,10 @@
 //!
 //! The identities are also published for other singletons (`Hosts` asks for an identity's user
 //! name when it builds an `ssh` command) through [`identity_user`].
+//!
+//! A saved host can have its own password and key passphrase without an identity (ADR 0040):
+//! the connections get them through [`Job::ConnectionSecrets`], and save what the user asked to
+//! remember with [`Job::SetHostSecret`].
 
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::Receiver;
@@ -20,7 +24,9 @@ use opensesh_vault::crypto::KdfParams;
 use opensesh_vault::keychain::KeychainFile;
 use opensesh_vault::keys::{self, KeyType};
 use opensesh_vault::known_hosts::{self, KNOWN_HOSTS_FILE};
-use opensesh_vault::manager::{IdentityEdit, Keychain, KeychainOpError};
+use opensesh_vault::manager::{
+    HostSecret, IdentityEdit, Keychain, KeychainOpError, PasswordChange,
+};
 use opensesh_vault::{KeyStore, MemoryKeyStore, Protection, Status, SystemKeyring, VaultError};
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::{Value as Json, json};
@@ -32,16 +38,18 @@ const AGENT_TIMEOUT: Duration = Duration::from_secs(3);
 /// Largest key file read for an import.
 const MAX_KEY_FILE: u64 = 1024 * 1024;
 
-/// An identity's secrets for a connection (the SSH client), or why they aren't available.
+/// A host's and its identity's secrets for a connection, or why they aren't available.
 pub type ConnectionSecrets = Result<IdentitySecrets, &'static str>;
 
-/// What a connection gets from an identity. `Debug` shows no secret.
+/// What a connection gets from the keychain. `Debug` shows no secret.
 #[derive(Default)]
 pub struct IdentitySecrets {
-    /// The password.
+    /// The password: the host's, else its identity's.
     pub password: Option<SecretString>,
-    /// The private key, in OpenSSH's binary encoding.
+    /// The identity's private key, in OpenSSH's binary encoding.
     pub key: Option<Zeroizing<Vec<u8>>>,
+    /// The host's key passphrase.
+    pub key_passphrase: Option<SecretString>,
 }
 
 impl std::fmt::Debug for IdentitySecrets {
@@ -49,6 +57,7 @@ impl std::fmt::Debug for IdentitySecrets {
         f.debug_struct("IdentitySecrets")
             .field("password", &self.password.is_some())
             .field("key", &self.key.is_some())
+            .field("key_passphrase", &self.key_passphrase.is_some())
             .finish()
     }
 }
@@ -69,13 +78,26 @@ pub struct KeychainDirs {
 pub enum Job {
     /// `keychain.toml` changed on disk.
     Reload,
-    /// An identity's secrets for a connection; answered on `reply`, not through QML.
+    /// The secrets for a connection; answered on `reply`, not through QML.
     ConnectionSecrets {
-        /// The identity id.
-        identity: String,
+        /// The saved host's id, whose own secrets come first.
+        host: Option<String>,
+        /// The identity's id (or name).
+        identity: Option<String>,
         /// Where the answer goes.
         reply: tokio::sync::oneshot::Sender<ConnectionSecrets>,
     },
+    /// Save, replace or clear a host's password or key passphrase.
+    SetHostSecret {
+        /// The host's id.
+        host: String,
+        /// Which.
+        which: HostSecret,
+        /// What to do.
+        change: PasswordChange,
+    },
+    /// Forget what is saved for these hosts (they were deleted).
+    ForgetHosts(Vec<String>),
     /// Unlock with the key in the system keyring, when there is one.
     UnlockWithKeyring,
     /// Create the vault: with a password, protected by it; without, held by the keyring.
@@ -222,6 +244,8 @@ pub struct Snapshot {
     pub identities: String,
     /// Keys as JSON.
     pub keys: String,
+    /// What is saved for each host, as JSON: `{<host id>: {password, keyPassphrase}}`.
+    pub host_secrets: String,
     /// Problems reading `keychain.toml`, as a JSON list.
     pub problems: String,
     /// `keychain.toml` can't be changed.
@@ -258,6 +282,16 @@ pub fn identity_user(id: &str) -> Option<String> {
         .identity(id)
         .map(|identity| identity.user.clone())
         .filter(|user| !user.is_empty())
+}
+
+/// Whether something is saved for host `id` (ADR 0040).
+#[must_use]
+pub fn has_host_secrets(id: &str) -> bool {
+    LIBRARY
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .host_secrets(id)
+        .is_some()
 }
 
 fn publish(file: &KeychainFile) {
@@ -309,8 +343,14 @@ pub fn spawn(
             }
             publish(&worker.keychain.file);
             while let Ok((token, job)) = jobs.recv() {
-                if let Job::ConnectionSecrets { identity, reply } = job {
-                    let _ = reply.send(worker.connection_secrets(&identity));
+                if let Job::ConnectionSecrets {
+                    host,
+                    identity,
+                    reply,
+                } = job
+                {
+                    let _ =
+                        reply.send(worker.connection_secrets(host.as_deref(), identity.as_deref()));
                     continue;
                 }
                 let outcome = worker.run(job);
@@ -359,9 +399,49 @@ pub fn request(job: Job) -> bool {
 }
 
 impl Worker {
+    /// Whether the vault is open, opening it when the keyring holds (or remembers) its key.
+    fn open_vault(&mut self) -> bool {
+        if self.keychain.vault.status() == Status::Locked {
+            let _ = self.keychain.vault.unlock_with_keyring();
+        }
+        self.keychain.vault.status() == Status::Unlocked
+    }
+
+    /// The secrets of saved host `host` and of `identity`, the host's first: `locked` when the
+    /// vault holds them and is locked, `unknown` for an identity that doesn't exist (without a
+    /// host).
+    fn connection_secrets(
+        &mut self,
+        host: Option<&str>,
+        identity: Option<&str>,
+    ) -> ConnectionSecrets {
+        let mut secrets = match identity {
+            Some(identity) => match self.identity_secrets(identity) {
+                Ok(secrets) => secrets,
+                // A host's missing identity leaves its own secrets and the other methods.
+                Err("unknown") if host.is_some() => IdentitySecrets::default(),
+                Err(why) => return Err(why),
+            },
+            None => IdentitySecrets::default(),
+        };
+        let Some(host) = host.filter(|host| self.keychain.file.host_secrets(host).is_some()) else {
+            return Ok(secrets);
+        };
+        if !self.open_vault() {
+            return Err("locked");
+        }
+        if let Ok(password) = self.keychain.host_secret(host, HostSecret::Password) {
+            secrets.password = Some(password);
+        }
+        if let Ok(passphrase) = self.keychain.host_secret(host, HostSecret::KeyPassphrase) {
+            secrets.key_passphrase = Some(passphrase);
+        }
+        Ok(secrets)
+    }
+
     /// The password and key of identity `id`: `locked` when the vault holds them and is locked,
     /// `unknown` for an identity that doesn't exist.
-    fn connection_secrets(&mut self, id: &str) -> ConnectionSecrets {
+    fn identity_secrets(&mut self, id: &str) -> ConnectionSecrets {
         // By id (hosts), or by name (a snippet's `{{secret:name}}`).
         let file = &self.keychain.file;
         let Some(identity) = file
@@ -373,11 +453,7 @@ impl Worker {
         };
         let id = identity.id.as_str();
         let needs_vault = identity.password.is_some() || identity.key.is_some();
-        if needs_vault && self.keychain.vault.status() == Status::Locked {
-            // Opens by itself when the keyring holds (or remembers) the key.
-            let _ = self.keychain.vault.unlock_with_keyring();
-        }
-        if needs_vault && self.keychain.vault.status() != Status::Unlocked {
+        if needs_vault && !self.open_vault() {
             return Err("locked");
         }
         let password = identity
@@ -390,7 +466,11 @@ impl Worker {
             .as_deref()
             .and_then(|key| self.keychain.private_key(key).ok())
             .and_then(|key| keys::to_vault(&key).ok());
-        Ok(IdentitySecrets { password, key })
+        Ok(IdentitySecrets {
+            password,
+            key,
+            key_passphrase: None,
+        })
     }
 
     fn run(&mut self, job: Job) -> Outcome {
@@ -400,10 +480,31 @@ impl Worker {
                 self.keychain.reload();
                 Ok(String::new())
             }
-            Job::ConnectionSecrets { identity, reply } => {
-                let _ = reply.send(self.connection_secrets(&identity));
+            Job::ConnectionSecrets {
+                host,
+                identity,
+                reply,
+            } => {
+                let _ = reply.send(self.connection_secrets(host.as_deref(), identity.as_deref()));
                 Ok(String::new())
             }
+            Job::SetHostSecret {
+                host,
+                which,
+                change,
+            } => {
+                if !matches!(change, PasswordChange::Keep) {
+                    // A remembered secret goes into a vault the keyring can open.
+                    self.open_vault();
+                }
+                self.keychain
+                    .set_host_secret(&host, which, change)
+                    .map(|()| String::new())
+            }
+            Job::ForgetHosts(hosts) => hosts
+                .iter()
+                .try_for_each(|host| self.keychain.forget_host(host))
+                .map(|()| String::new()),
             Job::UnlockWithKeyring => self
                 .keychain
                 .vault
@@ -603,6 +704,7 @@ impl Worker {
             wait_until_ms,
             identities: self.identities_json().to_string(),
             keys: self.keys_json().to_string(),
+            host_secrets: self.host_secrets_json().to_string(),
             problems: Json::from(
                 self.keychain
                     .warnings
@@ -636,6 +738,25 @@ impl Worker {
                         "keyName": key.map(|key| key.name.clone()).unwrap_or_default(),
                         "notes": identity.notes,
                     })
+                })
+                .collect(),
+        )
+    }
+
+    fn host_secrets_json(&self) -> Json {
+        Json::Object(
+            self.keychain
+                .file
+                .hosts
+                .iter()
+                .map(|entry| {
+                    (
+                        entry.host.clone(),
+                        json!({
+                            "password": entry.password.is_some(),
+                            "keyPassphrase": entry.key_passphrase.is_some(),
+                        }),
+                    )
                 })
                 .collect(),
         )
@@ -820,11 +941,9 @@ impl Worker {
                 name: name.to_owned(),
                 user: user.to_owned(),
                 password: if password {
-                    opensesh_vault::manager::PasswordChange::Set(SecretString::from(
-                        "sample password",
-                    ))
+                    PasswordChange::Set(SecretString::from("sample password"))
                 } else {
-                    opensesh_vault::manager::PasswordChange::Keep
+                    PasswordChange::Keep
                 },
                 key,
                 ..IdentityEdit::default()

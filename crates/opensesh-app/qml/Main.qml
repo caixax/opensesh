@@ -469,7 +469,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "hosts"
-        pages: ["cards", "list", "editor", "quickconnect"]
+        pages: ["cards", "list", "editor", "auth", "quickconnect"]
         prepare: (mode, density, page) => shell.prepareHostsScreenshot(page)
         onFinished: keychainScreenshots.start()
     }
@@ -491,7 +491,7 @@ Window {
         target: window.contentItem
         binder: themeBinder
         prefix: "ssh"
-        pages: ["hostkey", "changed", "code", "disconnected"]
+        pages: ["hostkey", "changed", "password", "code", "disconnected"]
         prepare: (mode, density, page) => shell.prepareSshScreenshot(page)
         onFinished: shell.prepareSftpScreenshots(() => sftpScreenshots.start())
     }

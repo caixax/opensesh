@@ -301,8 +301,8 @@ use opensesh_core::hosts::recent::{RECENT_FILE, RecentList};
 use opensesh_core::hosts::search::{self, Query, Scope, Searcher, Sort, natural_cmp, sample_hosts};
 use opensesh_core::hosts::target::{self, SshArgs};
 use opensesh_core::hosts::{
-    Group, HOSTS_FILE, Host, HostsFile, Origin, Protocol, SOURCE_SSH_CONFIG, Source, SshBackend,
-    new_id,
+    Group, HOSTS_FILE, Host, HostsFile, LINKED_PREFIX, Origin, Protocol, SOURCE_SSH_CONFIG, Source,
+    SshBackend, new_id,
 };
 use opensesh_core::watch::FileWatcher;
 use opensesh_import::ssh_config::{self, SshConfig};
@@ -1115,6 +1115,19 @@ impl qobject::Hosts {
             })
             .unwrap_or(0);
         if removed > 0 {
+            // Their saved passwords and passphrases go too (ADR 0040); linked hosts stay.
+            let saved: Vec<String> = ids
+                .iter()
+                .filter(|id| {
+                    !id.starts_with(LINKED_PREFIX) && crate::keychain::has_host_secrets(id)
+                })
+                .cloned()
+                .collect();
+            if !saved.is_empty()
+                && !crate::keychain::request(crate::keychain::Job::ForgetHosts(saved))
+            {
+                tracing::warn!("the keychain isn't running: the hosts' secrets stay saved");
+            }
             let mut changed = false;
             for id in &ids {
                 changed |= self.as_mut().rust_mut().recent.remove_host(id);

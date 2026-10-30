@@ -6,12 +6,12 @@ This document says what OpenSesh protects, from whom, how, and where it stops. I
 
 | Asset | Where it lives |
 |---|---|
-| Saved passwords (identities) | `vault.bin`, encrypted |
+| Saved passwords (identities, and hosts' own passwords and key passphrases) | `vault.bin`, encrypted |
 | Private SSH keys | `vault.bin`, encrypted |
 | The master password | only in the user's head; typed into the unlock dialog |
 | The vault key | the system keyring (without a master password, or "remembered"), or wrapped by the master password in `vault.bin` |
 | Passphrases of imported or exported keys | typed once; never stored |
-| Hosts, users, identities' names, public keys, known hosts | readable TOML files (`hosts.toml`, `keychain.toml`, `known_hosts`) |
+| Hosts, users, identities' names, public keys, known hosts, which hosts have a saved password | readable TOML files (`hosts.toml`, `keychain.toml`, `known_hosts`) |
 | What remote sessions show | the terminal's memory; session logs when a host turns them on; recordings of the panes the user records |
 | Snippets and macros | `snippets.toml`, readable; their secrets stay in the vault (`{{secret:identity}}`) |
 | Files on servers | the servers; copies the user transfers; private copies of files being edited, in the cache folder |
@@ -84,7 +84,7 @@ A malicious Wi-Fi, a compromised router, a proxy or a jump host in the middle.
 ### A malicious server
 
 - **It sees what the session sends it,** like any SSH client: what is typed, pasted or broadcast.
-- **It can't get the user's other secrets:** passwords are sent only to the host whose identity holds them, and only after its key was checked. A password is asked for with the host's name in the question.
+- **It can't get the user's other secrets:** passwords are sent only to the host they were saved for or whose identity holds them, and only after its key was checked. A password is asked for with the host's name in the question. One typed with "remember" is saved only once the server accepted it ([ADR 0040](adr/0040-host-passwords-without-an-identity.md)), so a server can't make OpenSesh keep a wrong one in place of the right one.
 - **Agent forwarding** is off by default. When a host turns it on, anyone with root on that host can ask the user's agent to sign while the session lasts (the host editor says so). Agent channels are refused unless the host asked for forwarding.
 - **X11 forwarding** (off by default; a host setting, [ADR 0036](adr/0036-remote-graphics.md)):
   - **The server never gets the display's cookie:** it gets one made up for the connection, and each `x11` channel must present it before the real one is put in its place, here. Channels with another cookie, and `x11` channels on a host without forwarding, are refused.

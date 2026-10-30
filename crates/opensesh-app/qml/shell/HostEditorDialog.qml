@@ -6,7 +6,9 @@ pragma ComponentBehavior: Bound
 // the host is edited (Hosts.validateHost); Save is off until there are none. A host linked from
 // ~/.ssh/config is shown read-only, with Duplicate to make an editable copy. An S3 host's secret
 // key goes into the vault, as the password of the host's identity (a new one named after the
-// host when it has none): hosts.toml keeps only the identity's id.
+// host when it has none): hosts.toml keeps only the identity's id. A host can also have its own
+// password and key passphrase without an identity (ADR 0040): they go into the vault on this
+// computer, by the host's id, when the host is saved.
 //   shell: Item   the AppShell (unlockVault())
 // Functions: edit(id), create(group) (a new host in group `group`, "" for none).
 import QtQuick
@@ -35,6 +37,12 @@ OsDialog {
     readonly property var profileList: JSON.parse(TerminalProfiles.profiles || "[]")
     readonly property var themeList: JSON.parse(TerminalProfiles.themes || "[]")
     readonly property string protocol: revision >= 0 ? (draft.protocol ?? "ssh") : "ssh"
+    // The built-in clients that log in with a password, and the SSH ones that open key files.
+    readonly property bool sshLogin: ["ssh", "sftp", "mosh"].indexOf(protocol) >= 0
+    readonly property bool hasPassword: sshLogin || protocol === "rdp" || protocol === "vnc"
+    // What the vault keeps for this host ({password, keyPassphrase}), and what Save forgets.
+    readonly property var savedSecrets: revision >= 0 ? (JSON.parse(Keychain.hostSecrets || "{}")[draft.id ?? ""] ?? {}) : {}
+    property var forget: ({})
 
     signal loaded
 
@@ -60,6 +68,9 @@ OsDialog {
 
     function open_(host) {
         secretField.text = "";
+        passwordRow.input.text = "";
+        passphraseRow.input.text = "";
+        forget = {};
         draft = host;
         section = 0;
         refreshInherited();
@@ -210,15 +221,35 @@ OsDialog {
                 Qt.callLater(() => dialog.edit(copy));
             return;
         }
-        // Taken out of the field at once: it goes to the vault or nowhere.
+        // Taken out of the fields at once: they go to the vault or nowhere.
         const secret = secretField.text;
         secretField.text = "";
+        const changes = [passwordRow.change(), passphraseRow.change()].filter(change => change !== null);
+        passwordRow.input.text = "";
+        passphraseRow.input.text = "";
         if (protocol === "s3" && secret.length > 0) {
             saveS3Keys(secret);
             return;
         }
-        if (Hosts.saveHost(JSON.stringify(draft)).length === 0)
+        const id = Hosts.saveHost(JSON.stringify(draft));
+        if (id.length === 0) {
             Toasts.show(qsTr("The host could not be saved."), "danger");
+            return;
+        }
+        if (changes.some(change => change.mode === "set") && Keychain.vaultStatus === "locked" && shell)
+            shell.unlockVault(() => dialog.saveHostSecrets(id, changes));
+        else
+            saveHostSecrets(id, changes);
+    }
+
+    // The host's own password and passphrase into the vault, or out of it.
+    function saveHostSecrets(id, changes) {
+        for (const change of changes) {
+            KeychainTasks.run(Keychain.setHostSecret(id, change.which, change.mode, change.secret), (code, detail) => {
+                if (code.length > 0)
+                    Toasts.show(KeychainTasks.message(code, detail), "danger");
+            });
+        }
     }
 
     // The secret key into the vault (it must be open), then the host with its identity.
@@ -295,7 +326,11 @@ OsDialog {
     acceptEnabled: readOnly || (revision >= 0 && !hasErrors())
 
     onAccepted: save()
-    onRejected: secretField.text = ""
+    onRejected: {
+        secretField.text = "";
+        passwordRow.input.text = "";
+        passphraseRow.input.text = "";
+    }
 
     // A fixed size the dialog shrinks to fit the window (OsDialog caps it); the sections scroll.
     Item {
@@ -782,6 +817,16 @@ OsDialog {
                             placeholder: dialog.protocol === "s3" ? qsTr("the identity's user name") : qsTr("the identity's, else the local user name")
                         }
 
+                        HostSecretRow {
+                            id: passwordRow
+
+                            which: "password"
+                            shown: dialog.hasPassword
+                            label: qsTr("Password")
+                            helpText: dialog.sshLogin ? qsTr("For this host only, tried before the identity's. Saved encrypted in the vault on this computer; left empty, the saved one stays. The OpenSSH client doesn't use it.")
+                                                      : qsTr("For this host only, used before the identity's. Saved encrypted in the vault on this computer; left empty, the saved one stays.")
+                        }
+
                         OsFormRow {
                             width: parent.width
                             visible: dialog.protocol === "s3"
@@ -825,6 +870,15 @@ OsDialog {
                             }
                         }
 
+                        HostSecretRow {
+                            id: passphraseRow
+
+                            which: "keyPassphrase"
+                            shown: dialog.sshLogin
+                            label: qsTr("Key passphrase")
+                            helpText: qsTr("Tried on the key file before asking. Saved encrypted in the vault on this computer; left empty, the saved one stays.")
+                        }
+
                         EditorTextRow {
                             editor: dialog
                             path: "ssh.auth_order"
@@ -844,7 +898,7 @@ OsDialog {
                         }
 
                         Note {
-                            text: qsTr("Passwords and keys stay in the encrypted vault; hosts.toml only names the identity. The vault is opened only when a connection needs them.")
+                            text: qsTr("Passwords and keys stay in the encrypted vault; hosts.toml only names the identity. The vault is opened only when a connection needs them. A password or passphrase typed when connecting can be remembered for the host too.")
                         }
                     }
                 }
@@ -1289,6 +1343,59 @@ OsDialog {
         onAccepted: {
             dialog.setValue("identity_file", Platform.localPath(selectedFile));
             dialog.loaded();
+        }
+    }
+
+    // The host's own password or key passphrase (`which`): typed to save it, or forgotten.
+    //   shown: bool   the host's protocol uses it (not `visible`: the section may be hidden)
+    component HostSecretRow: OsFormRow {
+        id: secretRow
+
+        required property string which
+        property bool shown: true
+        readonly property alias input: secretInput
+        readonly property bool saved: dialog.savedSecrets[which] === true
+        readonly property bool forgotten: saved && dialog.forget[which] === true
+
+        // What Save does: {which, mode, secret}, or null.
+        function change() {
+            if (!shown || dialog.readOnly)
+                return null;
+            if (secretInput.text.length > 0)
+                return { which: which, mode: "set", secret: secretInput.text };
+            return forgotten ? { which: which, mode: "clear", secret: "" } : null;
+        }
+
+        function setForgotten(value) {
+            const next = Object.assign({}, dialog.forget);
+            next[which] = value;
+            dialog.forget = next;
+        }
+
+        width: parent ? parent.width : implicitWidth
+        visible: shown
+
+        Row {
+            width: parent.width
+            spacing: Theme.spacingSm
+
+            OsTextField {
+                id: secretInput
+
+                width: parent.width - (forgetButton.visible ? forgetButton.width + parent.spacing : 0)
+                readOnly: dialog.readOnly
+                echoMode: TextInput.Password
+                placeholderText: secretRow.forgotten ? qsTr("forgotten when you save") : secretRow.saved ? qsTr("saved in the vault") : qsTr("not saved")
+                Accessible.name: secretRow.label
+            }
+
+            OsButton {
+                id: forgetButton
+
+                visible: secretRow.saved && !dialog.readOnly
+                text: secretRow.forgotten ? qsTr("Undo") : qsTr("Forget")
+                onClicked: secretRow.setForgotten(!secretRow.forgotten)
+            }
         }
     }
 

@@ -103,7 +103,8 @@ async fn fetch_secrets(names: &[String]) -> Result<HashMap<String, SecretString>
     for name in names {
         let (reply, answer) = tokio::sync::oneshot::channel();
         if !keychain::request(Job::ConnectionSecrets {
-            identity: name.clone(),
+            host: None,
+            identity: Some(name.clone()),
             reply,
         }) {
             return Err(Outcome::Stopped {

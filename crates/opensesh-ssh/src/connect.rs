@@ -27,7 +27,7 @@ use crate::SshError;
 use crate::algorithms;
 use crate::prompt::{self, Answer, Asker, Field, HostKeyKind, HostKeyQuestion, Prompt};
 use crate::proxy::{self, Transport};
-use crate::spec::{AuthMethod, ConnectSpec, Hop, KnownHostsFiles, Proxy};
+use crate::spec::{AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, Proxy, Remembered};
 use crate::tunnel;
 use crate::x11;
 
@@ -451,6 +451,9 @@ pub async fn authenticate(
             if with.auth.password.is_none() {
                 with.auth.password = secrets.password;
             }
+            if with.auth.key_passphrase.is_none() {
+                with.auth.key_passphrase = secrets.key_passphrase;
+            }
             let mut keys = secrets.keys;
             keys.append(&mut with.auth.keys);
             with.auth.keys = keys;
@@ -554,7 +557,7 @@ impl<'a> AuthSession<'a> {
             }
         }
         for file in &self.hop.auth.key_files {
-            let Some(key) = load_key_file(file, asker).await? else {
+            let Some(key) = load_key_file(file, &self.hop.auth, asker).await? else {
                 continue;
             };
             let key = Arc::new(key);
@@ -589,7 +592,7 @@ impl<'a> AuthSession<'a> {
             if !file.is_file() {
                 continue;
             }
-            let Some(key) = load_key_file(file, asker).await? else {
+            let Some(key) = load_key_file(file, &self.hop.auth, asker).await? else {
                 continue;
             };
             let key = Arc::new(key);
@@ -650,7 +653,7 @@ impl<'a> AuthSession<'a> {
                             fields,
                         };
                         match prompt::ask(asker, question).await {
-                            Answer::Secrets(secrets) => secrets
+                            Answer::Secrets(secrets) | Answer::Remember(secrets) => secrets
                                 .iter()
                                 .map(|secret| secret.expose_secret().to_owned())
                                 .collect(),
@@ -685,19 +688,20 @@ impl<'a> AuthSession<'a> {
     ) -> Result<Step, SshError> {
         let mut last = Step::Failed(MethodSet::empty());
         for attempt in 0..3 {
-            let password: SecretString = match (&self.hop.auth.password, self.password_used) {
+            let (password, remember) = match (&self.hop.auth.password, self.password_used) {
                 (Some(password), false) => {
                     self.password_used = true;
-                    password.clone()
+                    (password.clone(), false)
                 }
                 _ => {
                     let question = Prompt::Password {
                         target: self.hop.label(),
                         retry: attempt > 0,
+                        can_remember: self.hop.auth.remember.is_some(),
                     };
-                    match prompt::ask(asker, question).await {
-                        Answer::Secrets(mut secrets) if !secrets.is_empty() => secrets.remove(0),
-                        _ => return Err(SshError::Cancelled),
+                    match typed(prompt::ask(asker, question).await) {
+                        Some(typed) => typed,
+                        None => return Err(SshError::Cancelled),
                     }
                 }
             };
@@ -712,16 +716,35 @@ impl<'a> AuthSession<'a> {
                         break;
                     }
                 }
-                other => return Ok(other),
+                other => {
+                    if remember && let Some(sink) = &self.hop.auth.remember {
+                        sink.remember(Remembered::Password, password);
+                    }
+                    return Ok(other);
+                }
             }
         }
         Ok(last)
     }
 }
 
-/// A key file, asking for its passphrase (three tries) when it has one. `None` when the file is
-/// missing or the user skipped it.
-async fn load_key_file(path: &Path, asker: &Asker) -> Result<Option<PrivateKey>, SshError> {
+/// The secret typed in a password or passphrase prompt, and whether to remember it. `None` when
+/// the user cancelled.
+fn typed(answer: Answer) -> Option<(SecretString, bool)> {
+    match answer {
+        Answer::Secrets(secrets) => secrets.into_iter().next().map(|secret| (secret, false)),
+        Answer::Remember(secrets) => secrets.into_iter().next().map(|secret| (secret, true)),
+        _ => None,
+    }
+}
+
+/// A key file, trying the saved passphrase and then asking for one (three tries) when it has
+/// one. `None` when the file is missing or the user skipped it.
+async fn load_key_file(
+    path: &Path,
+    auth: &AuthPlan,
+    asker: &Asker,
+) -> Result<Option<PrivateKey>, SshError> {
     let text = match tokio::fs::read_to_string(path).await {
         Ok(text) => zeroize::Zeroizing::new(text),
         Err(error) => {
@@ -737,17 +760,26 @@ async fn load_key_file(path: &Path, asker: &Asker) -> Result<Option<PrivateKey>,
             return Ok(None);
         }
     }
+    // The saved one may be for another key file: a mismatch isn't a wrong attempt.
+    if let Some(saved) = &auth.key_passphrase
+        && let Ok(key) = russh::keys::decode_secret_key(&text, Some(saved.expose_secret()))
+    {
+        return Ok(Some(key));
+    }
     for attempt in 0..3 {
         let question = Prompt::Passphrase {
             key: path.display().to_string(),
             retry: attempt > 0,
+            can_remember: auth.remember.is_some(),
         };
-        let passphrase = match prompt::ask(asker, question).await {
-            Answer::Secrets(mut secrets) if !secrets.is_empty() => secrets.remove(0),
-            // Skipping one key is not cancelling the connection: the next method may work.
-            _ => return Ok(None),
+        // Skipping one key is not cancelling the connection: the next method may work.
+        let Some((passphrase, remember)) = typed(prompt::ask(asker, question).await) else {
+            return Ok(None);
         };
         if let Ok(key) = russh::keys::decode_secret_key(&text, Some(passphrase.expose_secret())) {
+            if remember && let Some(sink) = &auth.remember {
+                sink.remember(Remembered::KeyPassphrase, passphrase);
+            }
             return Ok(Some(key));
         }
     }

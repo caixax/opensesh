@@ -16,7 +16,7 @@ use zeroize::Zeroizing;
 use crate::backoff::ATTEMPTS_FILE;
 use crate::crypto::KdfParams;
 use crate::format::SecretKind;
-use crate::keychain::{Identity, KEYCHAIN_FILE, KeyEntry, KeychainFile, new_id};
+use crate::keychain::{HostSecrets, Identity, KEYCHAIN_FILE, KeyEntry, KeychainFile, new_id};
 use crate::keys::{self, KeyError, KeyFormat, KeyType};
 use crate::store::KeyStore;
 use crate::vault::{VAULT_FILE, parse_ref, secret_ref};
@@ -100,6 +100,31 @@ pub enum PasswordChange {
     Clear,
     /// A new one (`Debug` shows `[REDACTED]`).
     Set(SecretString),
+}
+
+/// Which of a host's saved secrets (ADR 0040).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostSecret {
+    /// The host's password.
+    Password,
+    /// The passphrase of the host's key file.
+    KeyPassphrase,
+}
+
+impl HostSecret {
+    fn slot(self, entry: &mut HostSecrets) -> &mut Option<String> {
+        match self {
+            Self::Password => &mut entry.password,
+            Self::KeyPassphrase => &mut entry.key_passphrase,
+        }
+    }
+
+    fn reference(self, entry: &HostSecrets) -> Option<&str> {
+        match self {
+            Self::Password => entry.password.as_deref(),
+            Self::KeyPassphrase => entry.key_passphrase.as_deref(),
+        }
+    }
 }
 
 /// An identity as the editor saves it.
@@ -396,6 +421,135 @@ impl Keychain {
         Ok(())
     }
 
+    /// Saves, replaces or clears one of host `host`'s secrets (ADR 0040). Clearing what isn't
+    /// saved does nothing.
+    ///
+    /// # Errors
+    ///
+    /// When a secret must be stored and the vault can't take it (locked, or none and no
+    /// keyring), or `keychain.toml` can't be written.
+    pub fn set_host_secret(
+        &mut self,
+        host: &str,
+        which: HostSecret,
+        change: PasswordChange,
+    ) -> Result<(), KeychainOpError> {
+        let host = host.trim();
+        let saved = self
+            .file
+            .host_secrets(host)
+            .and_then(|entry| which.reference(entry))
+            .and_then(parse_ref);
+        if matches!(change, PasswordChange::Keep)
+            || (matches!(change, PasswordChange::Clear) && saved.is_none())
+        {
+            return Ok(());
+        }
+        if self.locked_file {
+            return Err(KeychainOpError::ReadOnly);
+        }
+        if host.is_empty() {
+            return Err(KeychainOpError::NotFound("a host without an id".to_owned()));
+        }
+        let mut file = self.file.clone();
+        let index = match file.hosts.iter().position(|entry| entry.host == host) {
+            Some(index) => index,
+            None => {
+                file.hosts.push(HostSecrets {
+                    host: host.to_owned(),
+                    ..HostSecrets::default()
+                });
+                file.hosts.len() - 1
+            }
+        };
+        let mut doomed = None;
+        let mut inserted = None;
+        let value = match change {
+            PasswordChange::Keep => return Ok(()),
+            PasswordChange::Clear => {
+                doomed = saved;
+                None
+            }
+            PasswordChange::Set(secret) => {
+                self.ensure_vault()?;
+                let data = Zeroizing::new(secret.expose_secret().as_bytes().to_vec());
+                let id = match saved {
+                    Some(id) => {
+                        self.vault.replace(id, SecretKind::Password, data)?;
+                        id
+                    }
+                    None => {
+                        let id = self.vault.insert(SecretKind::Password, data)?;
+                        inserted = Some(id);
+                        id
+                    }
+                };
+                Some(secret_ref(id))
+            }
+        };
+        if let Some(entry) = file.hosts.get_mut(index) {
+            *which.slot(entry) = value;
+        }
+        file.hosts.retain(|entry| !entry.is_empty());
+        if let Err(error) = self.commit(file) {
+            if let Some(inserted) = inserted {
+                self.forget_secret(inserted);
+            }
+            return Err(error);
+        }
+        if let Some(doomed) = doomed {
+            self.forget_secret(doomed);
+        }
+        Ok(())
+    }
+
+    /// One of host `host`'s saved secrets (for the SSH client and the remote desktops).
+    ///
+    /// # Errors
+    ///
+    /// When it isn't saved, or the vault is locked.
+    pub fn host_secret(
+        &self,
+        host: &str,
+        which: HostSecret,
+    ) -> Result<SecretString, KeychainOpError> {
+        let secret = self
+            .file
+            .host_secrets(host)
+            .and_then(|entry| which.reference(entry))
+            .and_then(parse_ref)
+            .ok_or_else(|| KeychainOpError::NotFound(format!("{host}'s saved secret")))?;
+        let bytes = &self.vault.get(&secret)?.data;
+        Ok(SecretString::from(
+            String::from_utf8_lossy(bytes).into_owned(),
+        ))
+    }
+
+    /// Forgets everything saved for host `host` (it was deleted). Nothing saved is no error.
+    ///
+    /// # Errors
+    ///
+    /// When `keychain.toml` can't be written.
+    pub fn forget_host(&mut self, host: &str) -> Result<(), KeychainOpError> {
+        let Some(index) = self.file.hosts.iter().position(|entry| entry.host == host) else {
+            return Ok(());
+        };
+        if self.locked_file {
+            return Err(KeychainOpError::ReadOnly);
+        }
+        let mut file = self.file.clone();
+        let removed = file.hosts.remove(index);
+        self.commit(file)?;
+        for secret in [removed.password, removed.key_passphrase]
+            .iter()
+            .flatten()
+            .filter_map(|text| parse_ref(text))
+        {
+            self.forget_secret(secret);
+        }
+        Ok(())
+    }
+
     /// The password of identity `id` (for the SSH client, or to copy it).
     ///
     /// # Errors
@@ -589,7 +743,7 @@ impl Keychain {
     }
 
     /// Deletes the vault (a lost master password): every password and private key is gone, and
-    /// the entries that referred to them say so.
+    /// the entries that referred to them say so (the hosts' entries go).
     ///
     /// # Errors
     ///
@@ -606,6 +760,7 @@ impl Keychain {
         for key in &mut file.keys {
             key.private = None;
         }
+        file.hosts.clear();
         self.commit(file)
     }
 }
@@ -617,6 +772,78 @@ mod tests {
 
     fn set(text: &str) -> PasswordChange {
         PasswordChange::Set(SecretString::from(text))
+    }
+
+    #[test]
+    fn a_host_keeps_its_password_and_passphrase_in_the_vault() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryKeyStore::new());
+        let mut keychain = Keychain::open(
+            Some((dir.path(), dir.path())),
+            Arc::clone(&store) as Arc<dyn KeyStore>,
+        );
+        let host = "01HZ3W7D8V9X0Y1Z2A3B4C5D6E";
+        keychain
+            .set_host_secret(host, HostSecret::Password, set("host-pw-one"))
+            .unwrap();
+        keychain
+            .set_host_secret(host, HostSecret::KeyPassphrase, set("phrase"))
+            .unwrap();
+        // The first secret created a vault held by the keyring.
+        assert_eq!(keychain.vault.status(), Status::Unlocked);
+        assert_eq!(
+            keychain
+                .host_secret(host, HostSecret::Password)
+                .unwrap()
+                .expose_secret(),
+            "host-pw-one"
+        );
+        assert_eq!(keychain.vault.len(), 2);
+        // The file names the host and refers to the vault; the secrets aren't in it.
+        let text = std::fs::read_to_string(dir.path().join(KEYCHAIN_FILE)).unwrap();
+        assert!(text.contains(host) && text.contains("vault:"));
+        assert!(!text.contains("host-pw-one") && !text.contains("phrase\""));
+
+        // Replacing keeps one secret; clearing removes it, and the entry once both are gone.
+        keychain
+            .set_host_secret(host, HostSecret::Password, set("host-pw-two"))
+            .unwrap();
+        assert_eq!(keychain.vault.len(), 2);
+        assert_eq!(
+            keychain
+                .host_secret(host, HostSecret::Password)
+                .unwrap()
+                .expose_secret(),
+            "host-pw-two"
+        );
+        keychain
+            .set_host_secret(host, HostSecret::Password, PasswordChange::Clear)
+            .unwrap();
+        assert!(keychain.host_secret(host, HostSecret::Password).is_err());
+        assert_eq!(keychain.vault.len(), 1);
+        // Clearing what isn't saved does nothing.
+        keychain
+            .set_host_secret("another", HostSecret::Password, PasswordChange::Clear)
+            .unwrap();
+        // The garbage collection keeps a host's secret.
+        assert_eq!(keychain.collect_garbage().unwrap(), 0);
+        assert_eq!(keychain.vault.len(), 1);
+
+        // Reopened from disk, then the host deleted.
+        let mut again = Keychain::open(Some((dir.path(), dir.path())), store);
+        assert_eq!(again.file.hosts.len(), 1);
+        assert!(again.vault.unlock_with_keyring().unwrap());
+        assert_eq!(
+            again
+                .host_secret(host, HostSecret::KeyPassphrase)
+                .unwrap()
+                .expose_secret(),
+            "phrase"
+        );
+        again.forget_host(host).unwrap();
+        assert!(again.file.hosts.is_empty());
+        assert_eq!(again.vault.len(), 0);
+        again.forget_host(host).unwrap();
     }
 
     #[test]
@@ -807,8 +1034,12 @@ mod tests {
                 ..IdentityEdit::default()
             })
             .unwrap();
+        keychain
+            .set_host_secret("web", HostSecret::Password, set("h"))
+            .unwrap();
         keychain.reset_vault().unwrap();
         assert_eq!(keychain.vault.status(), Status::Missing);
+        assert!(keychain.file.hosts.is_empty());
         assert_eq!(keychain.file.identity(&identity).unwrap().password, None);
         assert_eq!(keychain.file.key(&key).unwrap().private, None);
         // The public half stays usable.

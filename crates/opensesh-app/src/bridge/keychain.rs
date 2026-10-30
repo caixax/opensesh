@@ -35,6 +35,7 @@ pub mod qobject {
         #[qproperty(f64, wait_until, cxx_name = "waitUntil", READ, NOTIFY = changed)]
         #[qproperty(QString, identities, READ, NOTIFY = changed)]
         #[qproperty(QString, keys, READ, NOTIFY = changed)]
+        #[qproperty(QString, host_secrets, cxx_name = "hostSecrets", READ, NOTIFY = changed)]
         #[qproperty(QString, agents, READ, NOTIFY = changed)]
         #[qproperty(QString, known_hosts, cxx_name = "knownHosts", READ, NOTIFY = changed)]
         #[qproperty(QString, problems, READ, NOTIFY = changed)]
@@ -120,6 +121,19 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "deleteIdentity"]
         fn delete_identity(self: Pin<&mut Self>, id: &QString) -> i32;
+
+        /// Saves (`set`, with `secret`) or forgets (`clear`) host `host`'s `password` or
+        /// `keyPassphrase` (ADR 0040). `hostSecrets` says what is saved: `{<host id>: {password,
+        /// keyPassphrase}}`.
+        #[qinvokable]
+        #[cxx_name = "setHostSecret"]
+        fn set_host_secret(
+            self: Pin<&mut Self>,
+            host: &QString,
+            which: &QString,
+            mode: &QString,
+            secret: &QString,
+        ) -> i32;
 
         /// Generates a key of `kind` (`ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`,
         /// `rsa-4096`).
@@ -234,7 +248,7 @@ use cxx_qt_lib::QString;
 use opensesh_core::watch::FileWatcher;
 use opensesh_vault::keychain::KEYCHAIN_FILE;
 use opensesh_vault::keys::KeyType;
-use opensesh_vault::manager::{IdentityEdit, PasswordChange};
+use opensesh_vault::manager::{HostSecret, IdentityEdit, PasswordChange};
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::Value as Json;
 
@@ -257,6 +271,7 @@ pub struct KeychainRust {
     wait_until: f64,
     identities: QString,
     keys: QString,
+    host_secrets: QString,
     agents: QString,
     known_hosts: QString,
     problems: QString,
@@ -329,6 +344,7 @@ impl qobject::Keychain {
             state.wait_until = snapshot.wait_until_ms;
             state.identities = QString::from(&snapshot.identities);
             state.keys = QString::from(&snapshot.keys);
+            state.host_secrets = QString::from(&snapshot.host_secrets);
             state.problems = QString::from(&snapshot.problems);
             state.read_only = snapshot.read_only;
             state.file_path = QString::from(&snapshot.file_path);
@@ -440,6 +456,30 @@ impl qobject::Keychain {
     /// See the bridge declaration.
     pub fn delete_identity(self: Pin<&mut Self>, id: &QString) -> i32 {
         self.submit(Job::DeleteIdentity(id.to_string()))
+    }
+
+    /// See the bridge declaration.
+    pub fn set_host_secret(
+        self: Pin<&mut Self>,
+        host: &QString,
+        which: &QString,
+        mode: &QString,
+        secret: &QString,
+    ) -> i32 {
+        let which = match which.to_string().as_str() {
+            "keyPassphrase" => HostSecret::KeyPassphrase,
+            _ => HostSecret::Password,
+        };
+        let change = match mode.to_string().as_str() {
+            "clear" => PasswordChange::Clear,
+            "set" => PasswordChange::Set(self::secret(secret)),
+            _ => PasswordChange::Keep,
+        };
+        self.submit(Job::SetHostSecret {
+            host: host.to_string(),
+            which,
+            change,
+        })
     }
 
     /// See the bridge declaration.

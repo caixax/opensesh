@@ -77,7 +77,11 @@ async fn keys(file: &HostsFile, host: &Host) -> Result<(String, Option<SecretStr
         return Ok((access, None));
     };
     let (reply, answer) = tokio::sync::oneshot::channel();
-    if !keychain::request(Job::ConnectionSecrets { identity, reply }) {
+    if !keychain::request(Job::ConnectionSecrets {
+        host: None,
+        identity: Some(identity),
+        reply,
+    }) {
         return Ok((access, None));
     }
     match answer.await {
@@ -130,6 +134,7 @@ pub async fn open(host: &Host, start: &str, asker: &Asker) -> Result<Fs, OpenErr
                 Prompt::Password {
                     target: format!("{access}@{server}"),
                     retry: attempt > 0,
+                    can_remember: false,
                 },
             )
             .await

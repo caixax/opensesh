@@ -109,7 +109,6 @@ use opensesh_core::fsutil;
 use opensesh_core::tunnels::{self as model, Kind, TUNNELS_FILE, Tunnel, TunnelsFile};
 use opensesh_core::watch::FileWatcher;
 use opensesh_import::ssh_config;
-use opensesh_ssh::prompt::Answer;
 use serde_json::{Value as Json, json};
 
 use crate::bridge::app_info::is_test_run;
@@ -423,17 +422,7 @@ impl qobject::Tunnels {
         action: &QString,
         secrets: &QStringList,
     ) -> bool {
-        let answer = match action.to_string().as_str() {
-            "trust-once" => Answer::TrustOnce,
-            "trust-save" => Answer::TrustAndRemember,
-            "submit" => Answer::Secrets(
-                secrets
-                    .iter()
-                    .map(|secret| secrecy::SecretString::from(secret.to_string()))
-                    .collect(),
-            ),
-            _ => Answer::Cancel,
-        };
+        let answer = crate::bridge::terminal_view::ssh_answer(action, secrets);
         let answered = service::answer(&id.to_string(), u64::try_from(prompt).unwrap_or(0), answer);
         self.refresh();
         answered

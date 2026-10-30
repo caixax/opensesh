@@ -1,6 +1,7 @@
 //! `keychain.toml` in the config folder (Sprint 6): identities and SSH keys, without their
-//! secrets. Passwords and private keys are `vault:<ulid>` references into the vault; the rest
-//! (names, users, public keys, fingerprints) stays readable, like `hosts.toml`.
+//! secrets, and the secrets saved for a host without an identity (ADR 0040). Passwords and
+//! private keys are `vault:<ulid>` references into the vault; the rest (names, users, public keys,
+//! fingerprints) stays readable, like `hosts.toml`.
 //!
 //! Loading is lenient per entry and fixes what it can with a warning. Anything that isn't a
 //! `vault:` reference where a secret belongs is dropped (and never written back), and warnings
@@ -24,11 +25,39 @@ pub const KEYCHAIN_FILE: &str = "keychain.toml";
 /// Current layout of `keychain.toml`.
 pub const SCHEMA_VERSION: i64 = 1;
 
-const HEADER: &str = "# OpenSesh identities and SSH keys. Secrets are not here: passwords and private keys\n\
-                      # live in the encrypted vault and are referenced as vault:<id>.\n";
+const HEADER: &str = "# OpenSesh identities, SSH keys and the hosts with saved passwords. Secrets are not\n\
+                      # here: passwords, passphrases and private keys live in the encrypted vault and\n\
+                      # are referenced as vault:<id>.\n";
 
 /// Longest id accepted.
 const MAX_ID_LEN: usize = 64;
+
+/// What is saved for one host without an identity (ADR 0040): its password and its key file's
+/// passphrase, by the host's id in `hosts.toml`. They are here rather than in `hosts.toml`, which
+/// may be synced to other computers, because the vault stays on this one.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct HostSecrets {
+    /// The host's id.
+    #[serde(default)]
+    pub host: String,
+    /// `vault:<ulid>` of its password.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+    /// `vault:<ulid>` of its key file's passphrase.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key_passphrase: Option<String>,
+    /// Keys this version doesn't know, written back unchanged.
+    #[serde(flatten)]
+    pub extra: Table,
+}
+
+impl HostSecrets {
+    /// Whether nothing is saved for the host any more.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.password.is_none() && self.key_passphrase.is_none()
+    }
+}
 
 /// A user name with a password and/or a key, given to hosts and groups.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -140,6 +169,8 @@ pub struct KeychainFile {
     pub identities: Vec<Identity>,
     /// Keys, in file order.
     pub keys: Vec<KeyEntry>,
+    /// Secrets saved for hosts, one entry per host.
+    pub hosts: Vec<HostSecrets>,
     /// Written by a newer OpenSesh: shown, never saved over.
     pub read_only: bool,
     /// Top-level keys this version doesn't know.
@@ -244,9 +275,11 @@ impl KeychainFile {
         }
         let identities = entries(&mut root, "identity", &mut warnings);
         let keys = entries(&mut root, "key", &mut warnings);
+        let hosts = entries(&mut root, "host", &mut warnings);
         let mut file = Self {
             identities,
             keys,
+            hosts,
             read_only,
             extra: root,
         };
@@ -345,6 +378,40 @@ impl KeychainFile {
             identities.push(identity);
         }
         self.identities = identities;
+
+        let mut seen = HashSet::new();
+        let mut hosts = Vec::with_capacity(self.hosts.len());
+        for (index, mut entry) in std::mem::take(&mut self.hosts).into_iter().enumerate() {
+            let label = format!("host[{index}]");
+            entry.host = entry.host.trim().to_owned();
+            if entry.host.is_empty() || entry.host.len() > MAX_ID_LEN {
+                warnings.push(warning(&label, "no valid host id; skipped"));
+                continue;
+            }
+            if !seen.insert(entry.host.clone()) {
+                warnings.push(warning(&label, "the host is listed twice; skipped"));
+                continue;
+            }
+            for (field, value) in [
+                ("password", &mut entry.password),
+                ("key_passphrase", &mut entry.key_passphrase),
+            ] {
+                if value
+                    .as_deref()
+                    .is_some_and(|text| parse_ref(text).is_none())
+                {
+                    warnings.push(warning(
+                        format!("{label}.{field}"),
+                        "not a vault reference; dropped",
+                    ));
+                    *value = None;
+                }
+            }
+            if !entry.is_empty() {
+                hosts.push(entry);
+            }
+        }
+        self.hosts = hosts;
     }
 
     /// The file's text.
@@ -366,6 +433,12 @@ impl KeychainFile {
             root.insert(
                 "key".to_owned(),
                 array(self.keys.iter().map(to_table).collect()),
+            );
+        }
+        if !self.hosts.is_empty() {
+            root.insert(
+                "host".to_owned(),
+                array(self.hosts.iter().map(to_table).collect()),
             );
         }
         let body = toml::to_string(&root).map_err(|error| error.to_string())?;
@@ -414,13 +487,24 @@ impl KeychainFile {
         self.keys.iter().find(|key| key.fingerprint == fingerprint)
     }
 
-    /// Every vault secret the file refers to.
+    /// What is saved for host `id`, if anything.
+    #[must_use]
+    pub fn host_secrets(&self, id: &str) -> Option<&HostSecrets> {
+        self.hosts.iter().find(|entry| entry.host == id)
+    }
+
+    /// Every vault secret the file refers to (the vault keeps these and drops the rest).
     #[must_use]
     pub fn secret_ids(&self) -> HashSet<Ulid> {
         self.identities
             .iter()
             .filter_map(|identity| identity.password.as_deref())
             .chain(self.keys.iter().filter_map(|key| key.private.as_deref()))
+            .chain(self.hosts.iter().flat_map(|entry| {
+                [entry.password.as_deref(), entry.key_passphrase.as_deref()]
+                    .into_iter()
+                    .flatten()
+            }))
             .filter_map(parse_ref)
             .collect()
     }
@@ -512,6 +596,45 @@ bits = "hunter3"
         let saved = file.to_toml_string().unwrap();
         assert!(!saved.contains("hunter2"));
         assert!(!saved.contains("BEGIN"));
+    }
+
+    #[test]
+    fn hosts_keep_vault_references_only() {
+        let id = Ulid::generate();
+        let text = format!(
+            r#"
+[[host]]
+host = " web "
+password = "vault:{id}"
+key_passphrase = "hunter2"
+
+[[host]]
+host = "web"
+password = "vault:{id}"
+
+[[host]]
+password = "vault:{id}"
+
+[[host]]
+host = "db"
+key_passphrase = "hunter3"
+"#
+        );
+        let (file, warnings) = KeychainFile::from_toml_str(&text).unwrap();
+        // " web " is trimmed and keeps its password, the second "web" is a duplicate, the one
+        // without an id is skipped, and "db" has nothing left once its clear text is dropped.
+        assert_eq!(file.hosts.len(), 1);
+        let web = file.host_secrets("web").unwrap();
+        assert_eq!(web.password, Some(format!("vault:{id}")));
+        assert_eq!(web.key_passphrase, None);
+        assert_eq!(file.secret_ids(), HashSet::from([id]));
+        assert_eq!(warnings.len(), 4, "{warnings:?}");
+        assert!(!format!("{warnings:?}").contains("hunter"));
+
+        let saved = file.to_toml_string().unwrap();
+        assert!(saved.contains("[[host]]") && !saved.contains("hunter"));
+        let (again, _) = KeychainFile::from_toml_str(&saved).unwrap();
+        assert_eq!(again, file);
     }
 
     #[test]

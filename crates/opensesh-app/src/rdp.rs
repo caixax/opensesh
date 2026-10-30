@@ -435,6 +435,9 @@ pub struct Plan {
     pub connect: Connect,
     /// Where certificates are remembered: the server's name and port.
     pub server: (String, u16),
+    /// The saved host's id (none for a typed target): its own password comes first, and a
+    /// password typed with "remember" is saved for it.
+    pub host: Option<String>,
     /// The keychain identity holding the password, if any.
     pub identity: Option<String>,
     /// The host's fixed desktop size, for when the desktop doesn't follow the pane.
@@ -627,6 +630,7 @@ pub fn plan_for(host_id: &str, target_text: &str) -> Result<Plan, String> {
     Ok(Plan {
         connect,
         server: (address, port),
+        host: Some(host.id.trim().to_owned()).filter(|id| !id.is_empty()),
         identity: if is_test_run() { None } else { identity },
         size: if vnc { None } else { host.rdp.size() },
         jump,
@@ -643,16 +647,24 @@ fn client_name() -> String {
         .unwrap_or_else(|| "OpenSesh".to_owned())
 }
 
-/// The password of `identity` from the keychain: `Ok(None)` when it has none, `Err("locked")`
-/// when the vault is locked.
+/// The password of saved host `host` (ADR 0040), else of `identity`, from the keychain:
+/// `Ok(None)` when neither has one.
 ///
 /// # Errors
 ///
 /// `locked` when the vault holds it and is locked.
-pub async fn identity_password(identity: &str) -> Result<Option<SecretString>, &'static str> {
+pub async fn saved_password(
+    host: Option<String>,
+    identity: Option<String>,
+) -> Result<Option<SecretString>, &'static str> {
+    let host = host.filter(|host| keychain::has_host_secrets(host));
+    if host.is_none() && identity.is_none() {
+        return Ok(None);
+    }
     let (reply, answer) = tokio::sync::oneshot::channel();
     if !keychain::request(Job::ConnectionSecrets {
-        identity: identity.to_owned(),
+        host,
+        identity,
         reply,
     }) {
         return Ok(None);

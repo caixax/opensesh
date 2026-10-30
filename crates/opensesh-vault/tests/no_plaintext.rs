@@ -1,6 +1,7 @@
 //! Sprint 6 "done when": after every kind of secret has gone through the keychain (identity
-//! passwords set, replaced and cleared; keys generated and imported with passphrases; the vault
-//! switched from the keyring to a master password, changed and remembered; wrong passwords),
+//! passwords set, replaced and cleared; a host's own password and key passphrase, ADR 0040; keys
+//! generated and imported with passphrases; the vault switched from the keyring to a master
+//! password, changed and remembered; wrong passwords),
 //! no file in the config and data folders holds any of those secrets in clear, as raw bytes,
 //! hex, base64 or UTF-16. And the wait after wrong master passwords holds across a restart.
 
@@ -12,7 +13,7 @@ use std::sync::Arc;
 use base64ct::{Base64Unpadded, Encoding as _};
 use opensesh_vault::crypto::KdfParams;
 use opensesh_vault::keys::{self, KeyType};
-use opensesh_vault::manager::{IdentityEdit, Keychain, PasswordChange};
+use opensesh_vault::manager::{HostSecret, IdentityEdit, Keychain, PasswordChange};
 use opensesh_vault::{KeyStore, MemoryKeyStore, Status, VaultError};
 use secrecy::ExposeSecret;
 use ssh_key::PrivateKey;
@@ -22,6 +23,11 @@ const IDENTITY_PASSWORDS: [&str; 3] = [
     "Identity-Password-One-7f3a9c1e5b",
     "Identity-Password-Two-2d8e40aa91",
     "Identity-Password-Three-c05b7713ee",
+];
+const HOST_SECRETS: [&str; 3] = [
+    "Host-Password-One-5a9d2c77e1",
+    "Host-Password-Two-b3e81f046c",
+    "Host-Passphrase-0c7e5a3d92",
 ];
 const MASTER_ONE: &str = "Master-Password-One-91be30f2";
 const MASTER_TWO: &str = "Master-Password-Two-44cd8a17";
@@ -172,6 +178,16 @@ fn no_secret_is_written_in_clear() {
         })
         .unwrap();
 
+    // A host's own password, replaced, and its key passphrase.
+    let host = "01J9ZM00000000000000HOST01";
+    for (which, text) in [
+        (HostSecret::Password, HOST_SECRETS[0]),
+        (HostSecret::Password, HOST_SECRETS[1]),
+        (HostSecret::KeyPassphrase, HOST_SECRETS[2]),
+    ] {
+        keychain.set_host_secret(host, which, set(text)).unwrap();
+    }
+
     // Keys: every generated type, and imports with passphrases.
     let mut key_ids = Vec::new();
     for kind in KeyType::ALL {
@@ -214,6 +230,9 @@ fn no_secret_is_written_in_clear() {
             format!("identity password {index}"),
             password.as_bytes().to_vec(),
         ));
+    }
+    for (index, text) in HOST_SECRETS.iter().enumerate() {
+        secrets.push((format!("host secret {index}"), text.as_bytes().to_vec()));
     }
     for (name, text) in [
         ("master password one", MASTER_ONE),

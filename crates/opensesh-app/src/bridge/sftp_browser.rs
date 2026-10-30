@@ -669,17 +669,7 @@ impl qobject::SftpBrowser {
         else {
             return false;
         };
-        let answer = match action.to_string().as_str() {
-            "trust-once" => Answer::TrustOnce,
-            "trust-save" => Answer::TrustAndRemember,
-            "submit" => Answer::Secrets(
-                secrets
-                    .iter()
-                    .map(|secret| secrecy::SecretString::from(secret.to_string()))
-                    .collect(),
-            ),
-            _ => Answer::Cancel,
-        };
+        let answer = crate::bridge::terminal_view::ssh_answer(action, secrets);
         request.answer(answer);
         self.publish_prompt();
         true

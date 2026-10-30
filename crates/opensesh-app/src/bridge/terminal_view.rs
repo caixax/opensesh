@@ -558,7 +558,8 @@ pub mod qobject {
         fn read_host_info(self: &TerminalItem) -> bool;
 
         /// Answers the SSH question `id`: `action` is `trust-once`, `trust-save`, `submit` (with
-        /// `secrets`, one per field) or `cancel`. Returns whether it was still waiting.
+        /// `secrets`, one per field), `submit-remember` (a password or passphrase to save for the
+        /// host once it works) or `cancel`. Returns whether it was still waiting.
         #[qinvokable]
         #[cxx_name = "answerPrompt"]
         fn answer_prompt(
@@ -839,11 +840,21 @@ pub(crate) fn ssh_prompt_json(id: u64, prompt: &opensesh_ssh::prompt::Prompt) ->
                 "otherTypes": others,
             })
         }
-        Prompt::Password { target, retry } => serde_json::json!({
+        Prompt::Password {
+            target,
+            retry,
+            can_remember,
+        } => serde_json::json!({
             "id": id, "kind": "password", "target": target, "retry": retry,
+            "canRemember": can_remember,
         }),
-        Prompt::Passphrase { key, retry } => serde_json::json!({
+        Prompt::Passphrase {
+            key,
+            retry,
+            can_remember,
+        } => serde_json::json!({
             "id": id, "kind": "passphrase", "key": key, "retry": retry,
+            "canRemember": can_remember,
         }),
         Prompt::KeyboardInteractive {
             target,
@@ -859,6 +870,25 @@ pub(crate) fn ssh_prompt_json(id: u64, prompt: &opensesh_ssh::prompt::Prompt) ->
         }),
     };
     value.to_string()
+}
+
+/// The answer to an SSH question from the overlay: its action (`trust-once`, `trust-save`,
+/// `submit`, `submit-remember`; anything else cancels) and the secrets typed in.
+pub(crate) fn ssh_answer(action: &QString, secrets: &QStringList) -> opensesh_ssh::prompt::Answer {
+    use opensesh_ssh::prompt::Answer;
+    let typed = || {
+        secrets
+            .iter()
+            .map(|secret| secrecy::SecretString::from(secret.to_string()))
+            .collect()
+    };
+    match action.to_string().as_str() {
+        "trust-once" => Answer::TrustOnce,
+        "trust-save" => Answer::TrustAndRemember,
+        "submit" => Answer::Secrets(typed()),
+        "submit-remember" => Answer::Remember(typed()),
+        _ => Answer::Cancel,
+    }
 }
 use qobject::{
     QList_i32, QStringList, TerminalCell, TerminalCursorShape, TerminalFontOptions,
@@ -1757,21 +1787,10 @@ impl qobject::TerminalItem {
         action: &QString,
         secrets: &QStringList,
     ) -> bool {
-        use opensesh_ssh::prompt::Answer;
         let Some(entry) = self.entry() else {
             return false;
         };
-        let answer = match action.to_string().as_str() {
-            "trust-once" => Answer::TrustOnce,
-            "trust-save" => Answer::TrustAndRemember,
-            "submit" => Answer::Secrets(
-                secrets
-                    .iter()
-                    .map(|secret| secrecy::SecretString::from(secret.to_string()))
-                    .collect(),
-            ),
-            _ => Answer::Cancel,
-        };
+        let answer = ssh_answer(action, secrets);
         entry.answer(u64::try_from(id).unwrap_or(0), answer)
     }
 

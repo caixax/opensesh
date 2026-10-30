@@ -75,8 +75,9 @@ pub mod qobject {
         #[qinvokable]
         fn start(self: Pin<&mut RdpItem>);
 
-        /// Answers question `id`: `trust-once`, `trust-save`, `submit` (the password) or
-        /// `cancel`. Returns whether it was still waiting.
+        /// Answers question `id`: `trust-once`, `trust-save`, `submit` (the password),
+        /// `submit-remember` (the password, saved for the host once connected) or `cancel`.
+        /// Returns whether it was still waiting.
         #[qinvokable]
         #[cxx_name = "answerPrompt"]
         fn answer_prompt(
@@ -244,8 +245,10 @@ use opensesh_core::trusted_certificates::Trust;
 use opensesh_rdp_protocol::keys::{self, Platform};
 use opensesh_rdp_protocol::{Button, Control, Status, ToHelper};
 use opensesh_ssh::connect;
-use opensesh_ssh::prompt::{Answer, Asker, HostKeyKind, HostKeyQuestion, Prompt, Request};
+use opensesh_ssh::prompt::{Asker, HostKeyKind, HostKeyQuestion, Prompt, Request};
 use opensesh_ssh::tunnel::{self, Endpoint, Forward, Link, Report};
+use opensesh_vault::manager::{HostSecret, PasswordChange};
+use secrecy::SecretString;
 
 use crate::bridge::app_info::is_test_run;
 use crate::rdp::{self, Connection, PointerChange};
@@ -292,6 +295,8 @@ pub struct RdpItemRust {
     keysyms: opensesh_vnc::keysym::Pressed,
     /// The frame's generation last drawn (a new one is drawn whole).
     drawn_generation: u64,
+    /// A password typed with "remember": saved for the host once the desktop is connected.
+    remember: Option<SecretString>,
 }
 
 impl Default for RdpItemRust {
@@ -318,6 +323,7 @@ impl Default for RdpItemRust {
             test_clipboard: (String::new(), String::new()),
             keysyms: opensesh_vnc::keysym::Pressed::default(),
             drawn_generation: u64::MAX,
+            remember: None,
         }
     }
 }
@@ -390,6 +396,20 @@ impl qobject::RdpItem {
                 this.encrypted = true;
             }
             this.running = running;
+            // The password worked: remember it, as asked. A failed one is forgotten.
+            let remember = this.remember.take();
+            if running {
+                let host = this.plan.as_ref().and_then(|plan| plan.host.clone());
+                if let (Some(host), Some(password)) = (host, remember) {
+                    let _ = crate::keychain::request(crate::keychain::Job::SetHostSecret {
+                        host,
+                        which: HostSecret::Password,
+                        change: PasswordChange::Set(password),
+                    });
+                }
+            } else if !matches!(status, Status::Disconnected { .. }) {
+                this.remember = remember;
+            }
         }
         self.session_changed();
     }
@@ -450,11 +470,13 @@ impl qobject::RdpItem {
                         }
                     })
                     .unwrap_or_default();
+                let can_remember = self.plan.as_ref().is_some_and(|plan| plan.host.is_some());
                 crate::bridge::terminal_view::ssh_prompt_json(
                     u64::try_from(id).unwrap_or(0),
                     &Prompt::Password {
                         target,
                         retry: !first,
+                        can_remember,
                     },
                 )
             }
@@ -666,10 +688,22 @@ impl qobject::RdpItem {
         });
     }
 
-    /// The password step: the identity's (from the keychain worker), else asked.
+    /// The password step: the host's or its identity's (from the keychain worker), else asked.
     fn begin_password(mut self: Pin<&mut Self>) {
-        let identity = self.plan.as_ref().and_then(|plan| plan.identity.clone());
-        let (Some(identity), Some(runtime)) = (identity, opensesh_ssh::runtime()) else {
+        let (host, identity) = self
+            .plan
+            .as_ref()
+            .map(|plan| {
+                (
+                    plan.host
+                        .clone()
+                        .filter(|host| crate::keychain::has_host_secrets(host)),
+                    plan.identity.clone(),
+                )
+            })
+            .unwrap_or_default();
+        let runtime = opensesh_ssh::runtime();
+        let Some(runtime) = runtime.filter(|_| host.is_some() || identity.is_some()) else {
             self.ask(Question::Password { first: true });
             return;
         };
@@ -677,7 +711,7 @@ impl qobject::RdpItem {
         self.as_mut().set_status(&Status::Connecting { label });
         let thread = self.qt_thread();
         runtime.spawn(async move {
-            let password = rdp::identity_password(&identity).await;
+            let password = rdp::saved_password(host, identity).await;
             let _ = thread.queue(move |mut item| match password {
                 Ok(Some(password)) => {
                     use secrecy::ExposeSecret as _;
@@ -864,12 +898,14 @@ impl qobject::RdpItem {
                 self.send(ToHelper::Control(Control::Certificate { accept }));
             }
             Question::Password { first } => {
-                if action == "submit" {
+                if action == "submit" || action == "submit-remember" {
                     let password = secrets
                         .iter()
                         .next()
                         .map(ToString::to_string)
                         .unwrap_or_default();
+                    self.as_mut().rust_mut().remember =
+                        (action == "submit-remember").then(|| SecretString::from(password.clone()));
                     self.connect_with(password, first);
                 } else if first {
                     self.set_status(&Status::Disconnected {
@@ -878,17 +914,10 @@ impl qobject::RdpItem {
                     });
                 }
             }
-            Question::Jump(request) => request.answer(match action.as_str() {
-                "trust-once" => Answer::TrustOnce,
-                "trust-save" => Answer::TrustAndRemember,
-                "submit" => Answer::Secrets(
-                    secrets
-                        .iter()
-                        .map(|secret| secrecy::SecretString::from(secret.to_string()))
-                        .collect(),
-                ),
-                _ => Answer::Cancel,
-            }),
+            Question::Jump(request) => request.answer(crate::bridge::terminal_view::ssh_answer(
+                &QString::from(&action),
+                secrets,
+            )),
         }
         true
     }

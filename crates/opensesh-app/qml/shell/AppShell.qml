@@ -1576,6 +1576,7 @@ Item {
         const screen = () => pane ? pane.terminal.screenText() : "";
         let macroId = "";
         let stuckId = "";
+        let remembered = "";
         let recording = "";
         let player = null;
         const runs = [];
@@ -1776,6 +1777,44 @@ Item {
                 shell.closeTab(shell.currentTab);
                 deadline = Date.now() + timeout;
                 return [waitFor("closed sessions to stop counting as open", () => !WindowRegistry.openHosts["H00000"])];
+            },
+            // A host's own password (ADR 0040): typed with "remember", it goes into the vault once
+            // the server takes it, the reconnection doesn't ask for it, and deleting the host
+            // forgets it.
+            () => {
+                remembered = Hosts.saveHost(JSON.stringify({ id: "", name: "remembered", protocol: "ssh", address: "10.0.9.9", tags: [] }));
+                if (remembered.length === 0 || !shell.connectHost(remembered, "tab"))
+                    smoke.fail("a new host didn't connect");
+                pane = shell.currentTerminal;
+                return wait("the new host's first question", () => question().kind === "password" || question().kind === "hostKey");
+            },
+            () => {
+                if (question().kind === "hostKey")
+                    pane.terminal.answerPrompt(question().id, "trust-once", []);
+                return wait("the new host's password prompt", () => question().kind === "password");
+            },
+            () => {
+                if (question().canRemember !== true)
+                    smoke.fail("a saved host's password prompt doesn't offer to remember it");
+                pane.terminal.answerPrompt(question().id, "submit-remember", ["right password"]); // lint-qml: allow (the test server's password)
+                return wait("the password to be remembered", () => state() === "connected"
+                            && (JSON.parse(Keychain.hostSecrets || "{}")[remembered] ?? {}).password === true);
+            },
+            () => {
+                pane.terminal.sendText("drop\r");
+                return wait("the remembered host's disconnection", () => state() === "disconnected");
+            },
+            () => {
+                pane.terminal.sendText("\r");
+                return wait("the reconnection with the remembered password", () => state() === "connected" && question().kind === undefined);
+            },
+            () => {
+                shell.closeTab(shell.currentTab);
+                pane = null;
+                if (Hosts.deleteHosts(JSON.stringify([remembered])) !== 1)
+                    smoke.fail("the remembered host wasn't deleted");
+                return wait("the deleted host's password to be forgotten", () => JSON.parse(Keychain.hostSecrets || "{}")[remembered] === undefined,
+                            () => console.info("smoke test: a host's password was remembered, reconnected with, and forgotten with the host"));
             }
         ];
     }
@@ -2413,8 +2452,8 @@ Item {
         }
     }
 
-    // --screenshots: the Hosts view with generated hosts, as cards or a list, the host editor and
-    // quick connect.
+    // --screenshots: the Hosts view with generated hosts, as cards or a list, the host editor (its
+    // Authentication section with a saved password: "auth") and quick connect.
     function prepareHostsScreenshot(page) {
         closeDialog.close();
         closeHostDialogs();
@@ -2428,15 +2467,21 @@ Item {
             hosts.cards = page !== "list";
             hosts.selectOnly("H00002");
         }
-        if (page === "editor")
+        if (page === "editor") {
             editHost("H00001");
-        else if (page === "quickconnect")
+        } else if (page === "auth") {
+            // The test run's vault is in memory.
+            Keychain.setHostSecret("H00001", "password", "set", "sample password"); // lint-qml: allow (sample data for screenshots)
+            editHost("H00001");
+            hostEditor.get().section = 1;
+        } else if (page === "quickconnect")
             showQuickConnect("deploy@web-0");
     }
 
     // --screenshots: an SSH pane of a sample host with its connection in state `page`: a new host
-    // key ("hostkey"), a changed one ("changed"), a one-time code ("code") or disconnected
-    // ("disconnected"). The pane shows the demo frame under it.
+    // key ("hostkey"), a changed one ("changed"), a password that can be remembered ("password"),
+    // a one-time code ("code") or disconnected ("disconnected"). The pane shows the demo frame
+    // under it.
     function prepareSshScreenshot(page) {
         closeHostDialogs();
         closeKeychainDialogs();
@@ -2450,6 +2495,7 @@ Item {
             changed: { prompt: { id: 1, kind: "hostKey", host: "db-01.eu-west", port: 22, keyType: "ssh-ed25519",
                     fingerprint: fingerprint, changed: true, knownFingerprint: "SHA256:3Yq8GmT0cVbq1kX2hZr5n7Q0fWv9aLpE4sJd6uHc2Ro",
                     file: "~/.ssh/known_hosts", line: 12 } }, // lint-qml: allow (sample data for screenshots)
+            password: { prompt: { id: 1, kind: "password", target: "deploy@db-01.eu-west", retry: false, canRemember: true } },
             code: { prompt: { id: 1, kind: "keyboard", target: "deploy@db-01.eu-west", name: "", instructions: "",
                     fields: [{ label: qsTr("Verification code:"), echo: false }] } },
             disconnected: { connection: { state: "disconnected", code: "network", retryIn: 8,

@@ -48,12 +48,14 @@ impl AuthMethod {
     }
 }
 
-/// Secrets fetched when a connection needs them (the identity's password and key, from the
-/// vault): never held by the connection between attempts.
+/// Secrets fetched when a connection needs them (the host's or its identity's password and key,
+/// from the vault): never held by the connection between attempts.
 #[derive(Default)]
 pub struct Secrets {
     /// The password.
     pub password: Option<SecretString>,
+    /// A saved passphrase for the key files.
+    pub key_passphrase: Option<SecretString>,
     /// Decrypted keys.
     pub keys: Vec<Arc<PrivateKey>>,
 }
@@ -62,9 +64,25 @@ impl std::fmt::Debug for Secrets {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Secrets")
             .field("password", &self.password.is_some())
+            .field("key_passphrase", &self.key_passphrase.is_some())
             .field("keys", &self.keys.len())
             .finish()
     }
+}
+
+/// A secret the user typed and asked to remember for the host (ADR 0040).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Remembered {
+    /// The password, once the server accepted it.
+    Password,
+    /// A key file's passphrase, once it opened the key.
+    KeyPassphrase,
+}
+
+/// Where the secrets the user asked to remember go (the app's vault).
+pub trait SecretSink: Send + Sync {
+    /// Saves `secret` as the host's `which`. It must return at once.
+    fn remember(&self, which: Remembered, secret: SecretString);
 }
 
 /// Where a hop's secrets come from at connection time.
@@ -85,6 +103,8 @@ pub struct AuthPlan {
     /// Key files (their passphrase is asked when they have one; a `<file>-cert.pub` next to one
     /// is used as its certificate).
     pub key_files: Vec<PathBuf>,
+    /// A saved passphrase, tried on encrypted key files before asking.
+    pub key_passphrase: Option<SecretString>,
     /// Try the SSH agent's keys.
     pub agent: bool,
     /// Key files tried after the agent, when present (OpenSSH's default `~/.ssh/id_*`).
@@ -94,6 +114,9 @@ pub struct AuthPlan {
     /// The agent to use instead of the usual one (like OpenSSH's `IdentityAgent`): a Unix socket
     /// path, or a named pipe (`\\.\pipe\...`) on Windows.
     pub agent_socket: Option<String>,
+    /// Where a password or passphrase typed with "remember" goes; without one, the prompts don't
+    /// offer to remember.
+    pub remember: Option<Arc<dyn SecretSink>>,
 }
 
 impl std::fmt::Debug for AuthPlan {
@@ -103,10 +126,12 @@ impl std::fmt::Debug for AuthPlan {
             .field("password", &self.password.is_some())
             .field("keys", &self.keys.len())
             .field("key_files", &self.key_files)
+            .field("key_passphrase", &self.key_passphrase.is_some())
             .field("agent", &self.agent)
             .field("fallback_key_files", &self.fallback_key_files)
             .field("source", &self.source.is_some())
             .field("agent_socket", &self.agent_socket)
+            .field("remember", &self.remember.is_some())
             .finish()
     }
 }

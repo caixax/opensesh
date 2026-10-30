@@ -1,8 +1,9 @@
 //! SSH connections for the terminal panes (Sprint 7): a saved host (with what its groups give it
 //! and its identity) or quick-connect text becomes an `opensesh_ssh` connection and session.
 //!
-//! The identity's password and key are not copied here: an [`IdentitySource`] asks the keychain
-//! worker for them each time the connection authenticates, so a locked vault stays locked.
+//! The host's and its identity's secrets are not copied here: a [`KeychainSource`] asks the
+//! keychain worker for them each time the connection authenticates, so a locked vault stays
+//! locked. What the user asks to remember goes back to it through a [`HostSink`] (ADR 0040).
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -16,11 +17,13 @@ use opensesh_core::hosts::{Host, HostsFile, Protocol, SessionLog, SshBackend, X1
 use opensesh_ssh::SshError;
 use opensesh_ssh::backend::Options;
 use opensesh_ssh::spec::{
-    AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, LogSpec, Proxy, Reconnect,
-    SecretSource, Secrets, SessionSpec, X11Spec, key_from_openssh_bytes, locale_env,
+    AuthMethod, AuthPlan, ConnectSpec, Hop, KnownHostsFiles, LogSpec, Proxy, Reconnect, Remembered,
+    SecretSink, SecretSource, Secrets, SessionSpec, X11Spec, key_from_openssh_bytes, locale_env,
 };
 use opensesh_term::backend::TermSize;
 use opensesh_vault::known_hosts::KNOWN_HOSTS_FILE;
+use opensesh_vault::manager::{HostSecret, PasswordChange};
+use secrecy::SecretString;
 
 use crate::bridge::app_info::is_test_run;
 use crate::keychain::{self, Job};
@@ -99,20 +102,30 @@ fn hermetic(mut connect: ConnectSpec) -> Result<ConnectSpec, String> {
     Ok(connect)
 }
 
-/// An identity's secrets, fetched from the keychain worker when needed.
-struct IdentitySource {
-    identity: String,
+/// A saved host's and its identity's secrets, fetched from the keychain worker when needed.
+struct KeychainSource {
+    host: Option<String>,
+    identity: Option<String>,
 }
 
-impl SecretSource for IdentitySource {
+impl SecretSource for KeychainSource {
     fn fetch(&self) -> Pin<Box<dyn Future<Output = Result<Secrets, SshError>> + Send + '_>> {
         Box::pin(async move {
+            // Checked each time: a secret remembered meanwhile is used by the next attempt.
+            let host = self
+                .host
+                .clone()
+                .filter(|host| keychain::has_host_secrets(host));
+            if host.is_none() && self.identity.is_none() {
+                return Ok(Secrets::default());
+            }
             let (reply, answer) = tokio::sync::oneshot::channel();
             let unavailable = || SshError::Local {
                 what: "the keychain".to_owned(),
                 message: "it is not available".to_owned(),
             };
             if !keychain::request(Job::ConnectionSecrets {
+                host,
                 identity: self.identity.clone(),
                 reply,
             }) {
@@ -126,6 +139,7 @@ impl SecretSource for IdentitySource {
                     };
                     Ok(Secrets {
                         password: secrets.password,
+                        key_passphrase: secrets.key_passphrase,
                         keys,
                     })
                 }
@@ -134,6 +148,28 @@ impl SecretSource for IdentitySource {
                 Err(_) => Ok(Secrets::default()),
             }
         })
+    }
+}
+
+/// Saves what the user asked to remember for a saved host (ADR 0040).
+pub struct HostSink {
+    /// The host's id.
+    pub host: String,
+}
+
+impl SecretSink for HostSink {
+    fn remember(&self, which: Remembered, secret: SecretString) {
+        let which = match which {
+            Remembered::Password => HostSecret::Password,
+            Remembered::KeyPassphrase => HostSecret::KeyPassphrase,
+        };
+        if !keychain::request(Job::SetHostSecret {
+            host: self.host.clone(),
+            which,
+            change: PasswordChange::Set(secret),
+        }) {
+            tracing::warn!("the keychain isn't running: the secret was not remembered");
+        }
     }
 }
 
@@ -188,6 +224,8 @@ fn host_hop(file: &HostsFile, host: &Host, home: Option<&Path>) -> Hop {
         .iter()
         .filter_map(|name| AuthMethod::parse(name))
         .collect();
+    // A host typed in quick connect has no id: nothing is saved for it.
+    let saved = Some(host.id.trim().to_owned()).filter(|id| !id.is_empty());
     let key_files = resolved
         .string("identity_file")
         .map(|file| match home {
@@ -206,8 +244,11 @@ fn host_hop(file: &HostsFile, host: &Host, home: Option<&Path>) -> Hop {
             agent: !is_test_run(),
             agent_socket: resolved.string("ssh.agent_socket").map(str::to_owned),
             fallback_key_files: home.map(default_keys).unwrap_or_default(),
-            source: identity
-                .map(|identity| Arc::new(IdentitySource { identity }) as Arc<dyn SecretSource>),
+            source: Some(Arc::new(KeychainSource {
+                host: saved.clone(),
+                identity,
+            })),
+            remember: saved.map(|host| Arc::new(HostSink { host }) as Arc<dyn SecretSink>),
             ..AuthPlan::default()
         },
     }

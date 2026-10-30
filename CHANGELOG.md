@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- **A host's own password and key passphrase, without an identity** ([#23](https://github.com/caixax/opensesh/issues/23), ADR 0040): tick **Remember on this computer** when a saved host asks for its password or a key's passphrase, or type them on the host editor's Authentication page. They are kept in the encrypted vault on this computer, by host, and used before the identity's. A password is saved only once the server accepted it, a passphrase once it opened the key. RDP and VNC hosts remember their password too. Deleting a host forgets them.
+
 ### Security
 
 - **tokio 1.54.1** (GHSA-5wjr-9356-4wc8): 1.54.0, which a dependency update of 2026-10-21 brought in, could free a timer still in use by `tokio::time::Interval` on the multi-threaded runtime (a use-after-free).

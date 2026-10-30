@@ -77,7 +77,7 @@ No backups are kept. A backup would keep secrets that were deleted, and a copy s
 
 These files hold no secrets:
 
-- **`keychain.toml`** (config folder): identities (name, user, `password = "vault:<id>"`, `key = "<key id>"`) and keys (name, algorithm, public key, fingerprint, `private = "vault:<id>"`). A value that isn't a `vault:` reference where a secret belongs is dropped when the file is read, and never written back.
+- **`keychain.toml`** (config folder): identities (name, user, `password = "vault:<id>"`, `key = "<key id>"`), keys (name, algorithm, public key, fingerprint, `private = "vault:<id>"`) and hosts' own secrets (`host = "<host id>"`, `password` and `key_passphrase` as `vault:<id>`; [ADR 0040](adr/0040-host-passwords-without-an-identity.md)). A value that isn't a `vault:` reference where a secret belongs is dropped when the file is read, and never written back.
 - **`vault-attempts.toml`** (data folder): wrong master passwords in a row and when the last one was; see the [threat model](threat-model.md).
 - **`hosts.toml`**: a host or group names an identity by its id.
 
