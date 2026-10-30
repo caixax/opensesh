@@ -65,126 +65,136 @@ OsDialog {
     dangerous: risky
     onAccepted: pasteRequested(editor.text)
 
-    ColumnLayout {
-        width: Math.min(Theme.spacingXxl * 18, dialog.maxWidth - dialog.leftPadding - dialog.rightPadding)
-        spacing: Theme.spacingMd
+    // A popup takes its width from its content's implicit width, and neither the list nor the
+    // text box has one: without this item the dialog stayed narrow while its content went past
+    // its right edge (issue #25).
+    Item {
+        implicitWidth: Math.min(Theme.spacingXxl * 18, dialog.maxWidth - dialog.leftPadding - dialog.rightPadding)
+        implicitHeight: content.implicitHeight
 
-        OsText {
-            Layout.fillWidth: true
-            visible: dialog.broadcast
-            text: qsTr("Broadcast is on, so the text goes to every receiving pane of this tab (%n). You won't be asked again until broadcast is turned off, unless a paste looks risky.", "", dialog.receivers)
-            wrapMode: Text.Wrap
-        }
+        ColumnLayout {
+            id: content
 
-        ListView {
-            Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(contentHeight, Theme.spacingXxl * 4)
-            visible: dialog.findings.length > 0
-            clip: true
-            spacing: Theme.spacingXs
-            model: dialog.findings
-            Accessible.role: Accessible.List
-            Accessible.name: qsTr("What was found")
+            width: parent.width
+            spacing: Theme.spacingMd
 
-            T.ScrollBar.vertical: OsScrollBar {}
+            OsText {
+                Layout.fillWidth: true
+                visible: dialog.broadcast
+                text: qsTr("Broadcast is on, so the text goes to every receiving pane of this tab (%n). You won't be asked again until broadcast is turned off, unless a paste looks risky.", "", dialog.receivers)
+                wrapMode: Text.Wrap
+            }
 
-            delegate: T.AbstractButton {
-                id: findingRow
+            ListView {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(contentHeight, Theme.spacingXxl * 4)
+                visible: dialog.findings.length > 0
+                clip: true
+                spacing: Theme.spacingXs
+                model: dialog.findings
+                Accessible.role: Accessible.List
+                Accessible.name: qsTr("What was found")
 
-                required property var modelData
+                T.ScrollBar.vertical: OsScrollBar {}
 
-                width: ListView.view.width
-                implicitHeight: findingLayout.implicitHeight + Theme.spacingXs
-                hoverEnabled: true
-                Accessible.name: dialog.message(modelData)
-                onClicked: {
-                    editor.forceActiveFocus();
-                    editor.select(modelData.start, modelData.end);
-                }
+                delegate: T.AbstractButton {
+                    id: findingRow
 
-                background: Rectangle {
-                    radius: Theme.radiusControl
-                    color: findingRow.hovered ? Theme.hover : "transparent"
-                }
+                    required property var modelData
 
-                contentItem: RowLayout {
-                    id: findingLayout
-
-                    spacing: Theme.spacingSm
-
-                    OsIcon {
-                        Layout.alignment: Qt.AlignTop
-                        name: findingRow.modelData.severity === "info" ? "info" : "triangle-alert"
-                        size: Theme.iconSizeSmall
-                        color: findingRow.modelData.severity === "danger" ? Theme.danger
-                             : findingRow.modelData.severity === "warning" ? Theme.warning : Theme.textMuted
+                    width: ListView.view.width
+                    implicitHeight: findingLayout.implicitHeight + Theme.spacingXs
+                    hoverEnabled: true
+                    Accessible.name: dialog.message(modelData)
+                    onClicked: {
+                        editor.forceActiveFocus();
+                        editor.select(modelData.start, modelData.end);
                     }
-                    OsText {
-                        Layout.fillWidth: true
-                        text: dialog.message(findingRow.modelData)
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 3
-                        elide: Text.ElideRight
+
+                    background: Rectangle {
+                        radius: Theme.radiusControl
+                        color: findingRow.hovered ? Theme.hover : "transparent"
                     }
-                    OsText {
-                        Layout.alignment: Qt.AlignTop
-                        visible: findingRow.modelData.kind !== "runs-at-once" && findingRow.modelData.kind !== "multiline"
-                        text: qsTr("line %1").arg(findingRow.modelData.line)
-                        muted: true
-                        size: "small"
+
+                    contentItem: RowLayout {
+                        id: findingLayout
+
+                        spacing: Theme.spacingSm
+
+                        OsIcon {
+                            Layout.alignment: Qt.AlignTop
+                            name: findingRow.modelData.severity === "info" ? "info" : "triangle-alert"
+                            size: Theme.iconSizeSmall
+                            color: findingRow.modelData.severity === "danger" ? Theme.danger
+                                 : findingRow.modelData.severity === "warning" ? Theme.warning : Theme.textMuted
+                        }
+                        OsText {
+                            Layout.fillWidth: true
+                            text: dialog.message(findingRow.modelData)
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 3
+                            elide: Text.ElideRight
+                        }
+                        OsText {
+                            Layout.alignment: Qt.AlignTop
+                            visible: findingRow.modelData.kind !== "runs-at-once" && findingRow.modelData.kind !== "multiline"
+                            text: qsTr("line %1").arg(findingRow.modelData.line)
+                            muted: true
+                            size: "small"
+                        }
                     }
                 }
             }
-        }
 
-        OsText {
-            Layout.fillWidth: true
-            text: qsTr("What will be pasted (you can edit it):")
-            muted: true
-            size: "small"
-        }
+            OsText {
+                Layout.fillWidth: true
+                text: qsTr("What will be pasted (you can edit it):")
+                muted: true
+                size: "small"
+            }
 
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: Theme.spacingXxl * 5
-            radius: Theme.radiusControl
-            color: Theme.surface
-            border.width: Theme.borderWidth
-            border.color: editor.activeFocus ? Theme.focusRing : Theme.border
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Theme.spacingXxl * 5
+                radius: Theme.radiusControl
+                color: Theme.surface
+                border.width: Theme.borderWidth
+                border.color: editor.activeFocus ? Theme.focusRing : Theme.border
 
-            Flickable {
-                id: textFlick
+                Flickable {
+                    id: textFlick
 
-                anchors.fill: parent
-                anchors.margins: Theme.spacingSm
-                clip: true
-                contentWidth: width
-                contentHeight: editor.implicitHeight
-                boundsBehavior: Flickable.StopAtBounds
+                    anchors.fill: parent
+                    anchors.margins: Theme.spacingSm
+                    clip: true
+                    contentWidth: width
+                    contentHeight: editor.implicitHeight
+                    boundsBehavior: Flickable.StopAtBounds
 
-                T.TextArea {
-                    id: editor
+                    T.TextArea {
+                        id: editor
 
-                    width: textFlick.width
-                    // A template TextArea keeps a one-line implicit height: it grows with its text.
-                    implicitHeight: contentHeight + topPadding + bottomPadding
-                    wrapMode: TextEdit.WrapAnywhere
-                    color: Theme.text
-                    selectionColor: Theme.selection
-                    selectedTextColor: Theme.text
-                    font.family: Theme.monoFontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    inputMethodHints: Qt.ImhNoPredictiveText
-                    Accessible.name: qsTr("Text to paste")
-                    onCursorRectangleChanged: {
-                        if (cursorRectangle.y < textFlick.contentY)
-                            textFlick.contentY = cursorRectangle.y;
-                        else if (cursorRectangle.y + cursorRectangle.height > textFlick.contentY + textFlick.height)
-                            textFlick.contentY = cursorRectangle.y + cursorRectangle.height - textFlick.height;
+                        width: textFlick.width
+                        // A template TextArea keeps a one-line implicit height: it grows with its text.
+                        implicitHeight: contentHeight + topPadding + bottomPadding
+                        wrapMode: TextEdit.WrapAnywhere
+                        color: Theme.text
+                        selectionColor: Theme.selection
+                        selectedTextColor: Theme.text
+                        font.family: Theme.monoFontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        inputMethodHints: Qt.ImhNoPredictiveText
+                        Accessible.name: qsTr("Text to paste")
+                        onCursorRectangleChanged: {
+                            if (cursorRectangle.y < textFlick.contentY)
+                                textFlick.contentY = cursorRectangle.y;
+                            else if (cursorRectangle.y + cursorRectangle.height > textFlick.contentY + textFlick.height)
+                                textFlick.contentY = cursorRectangle.y + cursorRectangle.height - textFlick.height;
+                        }
                     }
-                }
 
-                T.ScrollBar.vertical: OsScrollBar {}
+                    T.ScrollBar.vertical: OsScrollBar {}
+                }
             }
         }
     }

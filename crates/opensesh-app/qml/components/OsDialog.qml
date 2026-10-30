@@ -70,6 +70,16 @@ T.Dialog {
 
     onAboutToShow: focusReturn.save()
     onClosed: focusReturn.restore()
+    // A popup takes its width from its content's implicit width: content that only sets its
+    // `width` can be wider than the dialog and show past its edge (issue #25). The warning fails
+    // the smoke test, which opens most dialogs.
+    onOpened: {
+        for (const child of contentChildren) {
+            if (child.visible && child.width > availableWidth + 1)
+                console.warn("OsDialog:", title, "has content", Math.round(child.width), "wide in",
+                             Math.round(availableWidth));
+        }
+    }
 
     enter: Transition {
         NumberAnimation {

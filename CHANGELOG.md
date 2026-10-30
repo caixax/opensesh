@@ -15,6 +15,10 @@ All notable changes to this project are documented in this file. The format is b
 - **zip 9.0.0** (RUSTSEC-2026-0367 and 0368, unsafe extraction). Only the build tasks use it, to write the portable zip and read archives they download; they never extract to disk with it.
 - **russh 0.64.1**, for GHSA-4wc5-f2rc-q74m and GHSA-j7h2-66j4-ghjf. Both are in russh's SSH agent server and SSH server, which OpenSesh runs only in its tests; its client is unaffected, and is updated with them.
 
+### Fixed
+
+- **The paste review** ("Check this paste") stayed narrow while its text box went past its right edge, which long text made plain to see ([#25](https://github.com/caixax/opensesh/issues/25)). Every dialog now checks, when it opens, that its content fits, and the smoke test fails if one doesn't.
+
 ### Changed
 
 - tokio 1.53.2, zeroize 1.9.1, pageant 0.2.4 and winreg 0.56.0; the workflows' upload-artifact 7.0.2, download-artifact 8.0.2 and install-action 2.87.28.
