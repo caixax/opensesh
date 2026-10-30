@@ -31,7 +31,7 @@ ironrdp-tokio = "0.10.0"
 # NLA's NTLM. picky-krb 0.12.5 breaks sspi 0.21.3 (a new enum variant): pinned exactly.
 sspi = { version = "0.21.3", default-features = false }
 picky-krb = "=0.12.4"
-tokio = { version = "1.53.2", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros"] }
 tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
 x509-cert = { version = "0.2.5", features = ["std"] }
 sha2 = "0.10.9"
@@ -39,8 +39,9 @@ base64ct = { version = "1.8.3", features = ["alloc"] }
 thiserror = "2.0.21"
 tracing = "0.1.44"
 # The test server (opensesh-rdp-testing, never shipped: tokio-rustls's default features bring
-# aws-lc).
-ironrdp-server = "0.13.0"
+# aws-lc). Without the default `qoiz` codec, which brings zstd (RUSTSEC-2026-0398, 0403, 0410);
+# the client and the test server agree on another codec.
+ironrdp-server = { version = "0.13.0", default-features = false, features = ["rayon", "qoi"] }
 ironrdp-cliprdr = "0.7.0"
 ironrdp-core = "0.2.1"
 ironrdp-displaycontrol = "0.8.0"

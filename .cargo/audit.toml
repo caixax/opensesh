@@ -3,4 +3,7 @@
 # rsa (through ssh-key and russh), the Marvin timing attack: no fixed version exists. The vault
 # uses RSA locally; the SSH client signs with RSA keys but never decrypts, one signature per
 # connection, and agents sign outside OpenSesh (ADR 0024, ADR 0027). Reviewed each sprint.
-ignore = ["RUSTSEC-2023-0071"]
+# crypto-bigint 0.5.5 (through ssh-key 0.6 and elliptic-curve 0.13): constant-time operations
+# that could branch on secrets; 0.5 has no fixed release. Only local key generation and
+# conversion use it; russh signs with the fixed 0.7 (ADR 0024). Until ssh-key 0.7 is stable.
+ignore = ["RUSTSEC-2023-0071", "RUSTSEC-2026-0387"]

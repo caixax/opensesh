@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Security
 
+- **tokio 1.54.1** (GHSA-5wjr-9356-4wc8): 1.54.0, which a dependency update of 2026-10-21 brought in, could free a timer still in use by `tokio::time::Interval` on the multi-threaded runtime (a use-after-free).
+- **crypto-bigint 0.7.10 and ctutils 0.4.6** (RUSTSEC-2026-0387, 0385): operations meant to be constant-time could branch on secrets. The keys russh signs with use them. The older crypto-bigint 0.5.5, through `ssh-key` 0.6, has no fixed release; the vault uses it only to generate and convert keys on this computer, and it is accepted until `ssh-key` 0.7 is stable (ADR 0024).
+- **The RDP helper:** libz-sys 1.1.31 (RUSTSEC-2026-0418); its test server leaves out the `qoiz` codec, so zstd (RUSTSEC-2026-0398, 0403, 0410) is gone.
+
 - **rustls 0.23.46**, for four advisories (RUSTSEC-2026-0346 to 0349): `Debug` output of client sessions that could show TLS secrets, data sent after an ECH rejection, a certificate decompression that could allocate 1 GiB, and a server hello that could downgrade later key exchanges. rustls carries the TLS of S3 storage, of VNC's VeNCrypt, of the update check and of the RDP helper.
 - **rustls-webpki 0.103.16** (RUSTSEC-2026-0382, certificate verification could accept distrusted intermediates) and **webpki-roots 1.0.10** (RUSTSEC-2026-0381, distrusted emSign roots), for the same TLS connections.
 - **zip 9.0.0** (RUSTSEC-2026-0367 and 0368, unsafe extraction). Only the build tasks use it, to write the portable zip and read archives they download; they never extract to disk with it.
@@ -14,6 +18,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - tokio 1.53.2, zeroize 1.9.1, pageant 0.2.4 and winreg 0.56.0; the workflows' upload-artifact 7.0.2, download-artifact 8.0.2 and install-action 2.87.28.
+- interprocess 2.4.6, sha2 0.11.1, serde_json 1.0.154, zip 9.0.5 and hyper 1.12.0; the workflows' rust-cache 2.9.3.
 
 ## [1.0.1] - 2026-10-07
 

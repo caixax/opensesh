@@ -21,6 +21,11 @@ ignore = [
     # signature per connection, and agents sign outside OpenSesh (ADR 0024, ADR 0027). Reviewed
     # each sprint.
     { id = "RUSTSEC-2023-0071", reason = "RSA signs only, once per connection; no fixed release (ADR 0027)" },
+    # crypto-bigint 0.5.5 (through ssh-key 0.6 and elliptic-curve 0.13): operations meant to be
+    # constant-time could branch on secrets. 0.5 has no fixed release; the fixed 0.7 is the one
+    # russh signs with. The vault uses ssh-key 0.6 only to generate, read and convert keys on
+    # this computer, never to sign (ADR 0024). Until ssh-key 0.7 is stable.
+    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5 only, for local key generation and conversion; no fixed 0.5 release (ADR 0024)" },
 ]
 
 [licenses]

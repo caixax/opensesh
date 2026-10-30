@@ -85,7 +85,7 @@ encoding_rs = "0.8.42"
 winreg = "0.56.0"
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+serde_json = "1.0.154"
 toml = "1.1.6"
 # iTerm2 `.itermcolors` theme import (an XML property list; opensesh-core).
 quick-xml = "0.42.0"
@@ -95,7 +95,7 @@ quick-xml = "0.42.0"
 nucleo-matcher = "0.3.1"
 ulid = "3.0.0"
 # One running instance and the `opensesh` CLI: local sockets (ADR 0021).
-interprocess = "2.4.4"
+interprocess = "2.4.6"
 
 # Vault, identities and SSH keys (Sprint 6, opensesh-vault; ADR 0024). The RustCrypto crates
 # follow the generation of ssh-key 0.6 (rand_core 0.6, digest 0.10, cipher 0.4), so one copy of
@@ -125,7 +125,7 @@ russh-sftp = "3.0.0"
 # Pageant on Windows (named pipe or WM_COPYDATA), the agent russh itself uses; signing only.
 pageant = "0.2.4"
 # The async runtime of the SSH client, off the GUI thread (PLAN §2).
-tokio = { version = "1.53.2", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "process", "fs"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "process", "fs"] }
 
 # xtask only (regex is also used by opensesh-term)
 flate2 = "1.1.10"
@@ -136,12 +136,12 @@ zune-jpeg = "0.5.15"
 tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
 x509-cert = { version = "0.3.0", default-features = false, features = ["std"] }
 regex = "1.13.1"
-sha2 = "0.11.0"
+sha2 = "0.11.1"
 tar = "0.4.46"
 ureq = "3.4.2"
 # Exact pin: zip may raise its MSRV (1.88 today) in any minor release. Reading deflate entries is
 # all `cargo xtask fonts` needs.
-zip = { version = "=9.0.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "=9.0.5", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 # The Windows icon (`cargo xtask icons`): the composed app logo rendered at each size and packed as
 # an .ico. resvg without its default features (text, raster images): the logo is plain shapes.
 resvg = { version = "0.48.1", default-features = false }
@@ -160,7 +160,7 @@ aws-smithy-http-client = { version = "1.1.9", default-features = false, features
 # server, the versions the SDK's client already brings.
 bytes = "1.12.1"
 http-body-util = "0.1.5"
-hyper = { version = "1.11.1", features = ["server", "http1"] }
+hyper = { version = "1.12.0", features = ["server", "http1"] }
 hyper-util = { version = "0.1.21", features = ["tokio"] }
 
 # Windows only (opensesh-app: console attach and error message box)
