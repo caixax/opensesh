@@ -141,7 +141,7 @@ tar = "0.4.46"
 ureq = "3.4.2"
 # Exact pin: zip may raise its MSRV (1.88 today) in any minor release. Reading deflate entries is
 # all `cargo xtask fonts` needs.
-zip = { version = "=9.0.5", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "=9.1.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 # The Windows icon (`cargo xtask icons`): the composed app logo rendered at each size and packed as
 # an .ico. resvg without its default features (text, raster images): the logo is plain shapes.
 resvg = { version = "0.48.1", default-features = false }
