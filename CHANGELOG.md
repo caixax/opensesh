@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-14
+
 ### Security
 
 - **russh 0.65.1**, for RUSTSEC-2026-0495 and the other advisories fixed in 0.65.0 and 0.65.1. Most are in russh's SSH agent and server, which OpenSesh runs only in its tests. Those of its client: a server could send EXT_INFO messages without limit (GHSA-4p9f-7p9m-5vfg) and stall a channel with a zero maximum packet size (GHSA-fw5c-8223-6h42). The one about `kex_done` (GHSA-9264-jvgf-6w2f) doesn't apply: OpenSesh doesn't use that callback.
