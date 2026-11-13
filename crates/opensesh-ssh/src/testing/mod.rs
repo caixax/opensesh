@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use russh::keys::{PrivateKey, PublicKey};
-use russh::server::{Auth, Handler, Msg, Session};
+use russh::server::{Auth, Handler, Msg, PublicKeyOffer, Session, VerifiedPublicKey};
 use russh::{Channel, ChannelId, MethodKind, MethodSet};
 use tokio::net::TcpListener;
 
@@ -131,13 +131,13 @@ impl Handler for Server {
     async fn auth_publickey_offered(
         &mut self,
         _user: &str,
-        key: &PublicKey,
+        offer: PublicKeyOffer<'_>,
     ) -> Result<Auth, Self::Error> {
         if self
             .rules
             .keys
             .iter()
-            .any(|allowed| allowed.key_data() == key.key_data())
+            .any(|allowed| allowed.key_data() == offer.public_key.key_data())
         {
             Ok(Auth::Accept)
         } else {
@@ -145,13 +145,17 @@ impl Handler for Server {
         }
     }
 
-    async fn auth_publickey(&mut self, user: &str, key: &PublicKey) -> Result<Auth, Self::Error> {
+    async fn auth_publickey(
+        &mut self,
+        user: &str,
+        verified: VerifiedPublicKey<'_>,
+    ) -> Result<Auth, Self::Error> {
         let allowed = user == USER
             && self
                 .rules
                 .keys
                 .iter()
-                .any(|allowed| allowed.key_data() == key.key_data());
+                .any(|allowed| allowed.key_data() == verified.public_key.key_data());
         if !allowed {
             return Ok(Auth::Reject {
                 proceed_with_methods: Some(methods(&self.rules, false)),

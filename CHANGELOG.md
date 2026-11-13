@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Security
+
+- **russh 0.65.1**, for RUSTSEC-2026-0495 and the other advisories fixed in 0.65.0 and 0.65.1. Most are in russh's SSH agent and server, which OpenSesh runs only in its tests. Those of its client: a server could send EXT_INFO messages without limit (GHSA-4p9f-7p9m-5vfg) and stall a channel with a zero maximum packet size (GHSA-fw5c-8223-6h42). The one about `kex_done` (GHSA-9264-jvgf-6w2f) doesn't apply: OpenSesh doesn't use that callback.
+- **rustix 1.1.6** (RUSTSEC-2026-0486: its `xattr` functions could mark unwritten bytes as initialized), and **async-executor 1.14.1**, as 1.14.0 was yanked.
+
+### Changed
+
+- russh-sftp 3.0.1, ureq 3.5.1 (the update check), embed-resource 3.0.12, and zip 9.1.3 (the build tasks only); the workflows' install-action 2.90.3 and install-qt-action 4.5.0.
+
 ## [1.1.0] - 2026-10-30
 
 ### Added

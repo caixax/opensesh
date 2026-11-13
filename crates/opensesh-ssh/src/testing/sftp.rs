@@ -16,9 +16,13 @@ use crate::sftp::path::normalize_posix;
 
 enum Open {
     File(StdFile),
-    /// A listing, handed out once.
-    Dir(Option<Vec<File>>),
+    /// A listing, handed out in batches.
+    Dir(Vec<File>),
 }
+
+/// Names per READDIR reply, as OpenSSH's `sftp-server` sends: a big folder takes several, and
+/// each stays under the 256 KiB a client accepts.
+const DIR_BATCH: usize = 100;
 
 /// The handler of one SFTP session.
 pub(super) struct Server {
@@ -284,7 +288,7 @@ impl Handler for Server {
         }
         Ok(Handle {
             id,
-            handle: self.handle(Open::Dir(Some(files))),
+            handle: self.handle(Open::Dir(files)),
         })
     }
 
@@ -292,10 +296,11 @@ impl Handler for Server {
         let Some(Open::Dir(files)) = self.handles.get_mut(&handle) else {
             return Err(StatusReply::new(StatusCode::Failure));
         };
-        match files.take() {
-            Some(files) if !files.is_empty() => Ok(Name { id, files }),
-            _ => Err(StatusReply::new(StatusCode::Eof)),
+        if files.is_empty() {
+            return Err(StatusReply::new(StatusCode::Eof));
         }
+        let batch = files.drain(..files.len().min(DIR_BATCH)).collect();
+        Ok(Name { id, files: batch })
     }
 
     async fn remove(&mut self, id: u32, filename: String) -> Result<Status, Self::Error> {
