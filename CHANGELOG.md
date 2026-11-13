@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Security
+
+- **pageant 0.2.5** (GHSA-662x-8wvj-2276): the transport that carries requests to Pageant on Windows buffered a frame of any declared length before checking it. The requests it carries are OpenSesh's own, so this wasn't reachable from outside.
+
 ## [1.1.1] - 2026-11-14
 
 ### Security

@@ -123,7 +123,7 @@ russh = { version = "0.65.1", default-features = false, features = ["ring", "fla
 # SFTP over a channel of the SSH connection, client and (for tests) server (Sprint 8, ADR 0028).
 russh-sftp = "3.0.1"
 # Pageant on Windows (named pipe or WM_COPYDATA), the agent russh itself uses; signing only.
-pageant = "0.2.4"
+pageant = "0.2.5"
 # The async runtime of the SSH client, off the GUI thread (PLAN §2).
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros", "process", "fs"] }
 
