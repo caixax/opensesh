@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-20
+
 ### Added
 
 - **The interface in six more languages** ([#35](https://github.com/caixax/opensesh/issues/35), ADR 0041): Simplified Chinese, French, German, Japanese, Brazilian Portuguese and Spanish, under Settings > General > Language. "System default" picks the one your system uses. The translations have not been reviewed by native speakers yet, so corrections are welcome: they are in `crates/opensesh-app/i18n/opensesh_<language>.ts`. On Linux, Chinese and Japanese need a CJK font such as Noto Sans CJK.
