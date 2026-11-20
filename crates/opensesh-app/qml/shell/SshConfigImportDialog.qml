@@ -43,105 +43,112 @@ OsDialog {
         }
     }
 
-    ColumnLayout {
+    // A popup takes its width from its content's implicit width (see PasteReviewDialog).
+    Item {
         implicitWidth: Math.min(Theme.spacingXxl * 16, dialog.maxWidth - dialog.leftPadding - dialog.rightPadding)
-        width: implicitWidth
-        spacing: Theme.spacingMd
+        implicitHeight: content.implicitHeight
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.spacingSm
+        ColumnLayout {
+            id: content
 
-            OsTextField {
-                id: pathField
+            width: parent.width
+            spacing: Theme.spacingMd
 
+            RowLayout {
                 Layout.fillWidth: true
-                Accessible.name: qsTr("File")
-                onEditingFinished: dialog.reload()
-            }
+                spacing: Theme.spacingSm
 
-            OsButton {
-                text: qsTr("Choose…")
-                iconName: "folder-open"
-                onClicked: fileDialog.open()
-            }
-        }
+                OsTextField {
+                    id: pathField
 
-        OsText {
-            Layout.fillWidth: true
-            text: (dialog.preview.hosts ?? []).length > 0 ? qsTr("%n host(s) found.", "", dialog.preview.hosts.length)
-                                                           : qsTr("No hosts found in this file.")
-            muted: true
-        }
+                    Layout.fillWidth: true
+                    Accessible.name: qsTr("File")
+                    onEditingFinished: dialog.reload()
+                }
 
-        ListView {
-            id: hostList
-
-            Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(contentHeight, Theme.rowHeight * 6)
-            visible: count > 0
-            clip: true
-            model: dialog.preview.hosts ?? []
-            boundsBehavior: Flickable.StopAtBounds
-            Accessible.role: Accessible.List
-            Accessible.name: qsTr("Hosts in the file")
-
-            delegate: OsListRow {
-                id: importRow
-
-                required property var modelData
-
-                width: ListView.view.width
-                text: modelData.alias
-                subtitle: modelData.jump.length > 0 ? qsTr("%1 through %2").arg(modelData.target).arg(modelData.jump.join(", "))
-                                                    : modelData.target
-                iconName: "server"
-                focusPolicy: Qt.NoFocus
-
-                OsTag {
-                    visible: importRow.modelData.saved
-                    text: qsTr("Already saved")
+                OsButton {
+                    text: qsTr("Choose…")
+                    iconName: "folder-open"
+                    onClicked: fileDialog.open()
                 }
             }
 
-            T.ScrollBar.vertical: OsScrollBar {}
-        }
+            OsText {
+                Layout.fillWidth: true
+                text: (dialog.preview.hosts ?? []).length > 0 ? qsTr("%n host(s) found.", "", dialog.preview.hosts.length)
+                                                               : qsTr("No hosts found in this file.")
+                muted: true
+            }
 
-        SettingsNotice {
-            Layout.fillWidth: true
-            visible: (dialog.preview.warnings ?? []).length > 0
-            kind: "info"
-            title: qsTr("Skipped")
-            lines: (dialog.preview.warnings ?? []).slice(0, 6).concat((dialog.preview.warnings ?? []).length > 6
-                                                                      ? [qsTr("…and %n more.", "", dialog.preview.warnings.length - 6)] : [])
-        }
+            ListView {
+                id: hostList
 
-        OsCheckBox {
-            text: qsTr("Link the file: its hosts show read-only and follow it as it changes")
-            checked: dialog.mode === "link"
-            enabled: !dialog.preview.linked
-            onToggled: dialog.mode = checked ? "link" : "copy"
-        }
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(contentHeight, Theme.rowHeight * 6)
+                visible: count > 0
+                clip: true
+                model: dialog.preview.hosts ?? []
+                boundsBehavior: Flickable.StopAtBounds
+                Accessible.role: Accessible.List
+                Accessible.name: qsTr("Hosts in the file")
 
-        OsText {
-            Layout.fillWidth: true
-            visible: dialog.preview.linked === true
-            text: qsTr("This file is already linked.")
-            muted: true
-            size: "small"
-        }
+                delegate: OsListRow {
+                    id: importRow
 
-        OsFormRow {
-            Layout.fillWidth: true
-            visible: dialog.mode === "copy"
-            label: qsTr("New group")
+                    required property var modelData
 
-            OsTextField {
-                id: groupField
+                    width: ListView.view.width
+                    text: modelData.alias
+                    subtitle: modelData.jump.length > 0 ? qsTr("%1 through %2").arg(modelData.target).arg(modelData.jump.join(", "))
+                                                        : modelData.target
+                    iconName: "server"
+                    focusPolicy: Qt.NoFocus
 
-                width: parent.width
-                placeholderText: qsTr("~/.ssh/config")
-                Accessible.name: qsTr("Name of the group for the copies")
+                    OsTag {
+                        visible: importRow.modelData.saved
+                        text: qsTr("Already saved")
+                    }
+                }
+
+                T.ScrollBar.vertical: OsScrollBar {}
+            }
+
+            SettingsNotice {
+                Layout.fillWidth: true
+                visible: (dialog.preview.warnings ?? []).length > 0
+                kind: "info"
+                title: qsTr("Skipped")
+                lines: (dialog.preview.warnings ?? []).slice(0, 6).concat((dialog.preview.warnings ?? []).length > 6
+                                                                          ? [qsTr("…and %n more.", "", dialog.preview.warnings.length - 6)] : [])
+            }
+
+            OsCheckBox {
+                text: qsTr("Link the file: its hosts show read-only and follow it as it changes")
+                checked: dialog.mode === "link"
+                enabled: !dialog.preview.linked
+                onToggled: dialog.mode = checked ? "link" : "copy"
+            }
+
+            OsText {
+                Layout.fillWidth: true
+                visible: dialog.preview.linked === true
+                text: qsTr("This file is already linked.")
+                muted: true
+                size: "small"
+            }
+
+            OsFormRow {
+                Layout.fillWidth: true
+                visible: dialog.mode === "copy"
+                label: qsTr("New group")
+
+                OsTextField {
+                    id: groupField
+
+                    width: parent.width
+                    placeholderText: qsTr("~/.ssh/config")
+                    Accessible.name: qsTr("Name of the group for the copies")
+                }
             }
         }
     }

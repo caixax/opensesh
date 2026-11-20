@@ -49,57 +49,66 @@ OsDialog {
         Toasts.show(qsTr("Imported %n tunnel(s).", "", imported), "success");
     }
 
-    ColumnLayout {
-        width: Math.min(Theme.spacingXxl * 16, dialog.maxWidth - dialog.leftPadding - dialog.rightPadding)
-        spacing: Theme.spacingSm
+    // A popup takes its width from its content's implicit width (see PasteReviewDialog): with a
+    // short translation, the buttons alone made the dialog narrower than the list.
+    Item {
+        implicitWidth: Math.min(Theme.spacingXxl * 16, dialog.maxWidth - dialog.leftPadding - dialog.rightPadding)
+        implicitHeight: content.implicitHeight
 
-        OsText {
-            Layout.fillWidth: true
-            text: dialog.candidates.length > 0
-                  ? qsTr("Each forward becomes a tunnel of its host that runs while a terminal session to it is connected, as with OpenSSH.")
-                  : qsTr("~/.ssh/config has no LocalForward, RemoteForward or DynamicForward lines in Host blocks OpenSesh reads.")
-            muted: true
-            wrapMode: Text.Wrap
-        }
+        ColumnLayout {
+            id: content
 
-        ListView {
-            Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(contentHeight, Theme.spacingXxl * 8)
-            visible: dialog.candidates.length > 0
-            clip: true
-            model: dialog.candidates
-            spacing: Theme.spacingXs
+            width: parent.width
+            spacing: Theme.spacingSm
 
-            T.ScrollBar.vertical: OsScrollBar {}
+            OsText {
+                Layout.fillWidth: true
+                text: dialog.candidates.length > 0
+                      ? qsTr("Each forward becomes a tunnel of its host that runs while a terminal session to it is connected, as with OpenSSH.")
+                      : qsTr("~/.ssh/config has no LocalForward, RemoteForward or DynamicForward lines in Host blocks OpenSesh reads.")
+                muted: true
+                wrapMode: Text.Wrap
+            }
 
-            delegate: RowLayout {
-                id: candidateRow
+            ListView {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(contentHeight, Theme.spacingXxl * 8)
+                visible: dialog.candidates.length > 0
+                clip: true
+                model: dialog.candidates
+                spacing: Theme.spacingXs
 
-                required property var modelData
+                T.ScrollBar.vertical: OsScrollBar {}
 
-                width: ListView.view.width
-                spacing: Theme.spacingSm
+                delegate: RowLayout {
+                    id: candidateRow
 
-                OsCheckBox {
-                    enabled: candidateRow.modelData.host.length > 0
-                    checked: dialog.picked[candidateRow.modelData.key] === true
-                    text: candidateRow.modelData.alias
-                    onToggled: dialog.toggle(candidateRow.modelData.key, checked)
-                }
+                    required property var modelData
 
-                OsText {
-                    Layout.fillWidth: true
-                    text: dialog.describe(candidateRow.modelData)
-                    font.family: Theme.monoFontFamily
-                    size: "small"
-                    elide: Text.ElideRight
-                }
+                    width: ListView.view.width
+                    spacing: Theme.spacingSm
 
-                OsText {
-                    visible: candidateRow.modelData.host.length === 0 || candidateRow.modelData.known
-                    text: candidateRow.modelData.host.length === 0 ? qsTr("Host not in OpenSesh") : qsTr("Already a tunnel")
-                    muted: true
-                    size: "small"
+                    OsCheckBox {
+                        enabled: candidateRow.modelData.host.length > 0
+                        checked: dialog.picked[candidateRow.modelData.key] === true
+                        text: candidateRow.modelData.alias
+                        onToggled: dialog.toggle(candidateRow.modelData.key, checked)
+                    }
+
+                    OsText {
+                        Layout.fillWidth: true
+                        text: dialog.describe(candidateRow.modelData)
+                        font.family: Theme.monoFontFamily
+                        size: "small"
+                        elide: Text.ElideRight
+                    }
+
+                    OsText {
+                        visible: candidateRow.modelData.host.length === 0 || candidateRow.modelData.known
+                        text: candidateRow.modelData.host.length === 0 ? qsTr("Host not in OpenSesh") : qsTr("Already a tunnel")
+                        muted: true
+                        size: "small"
+                    }
                 }
             }
         }
