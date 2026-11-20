@@ -373,8 +373,11 @@ bool apply_translation(const QString& code)
     QStringList candidates;
     if (code == QStringLiteral("system")) {
         for (QString language : QLocale::system().uiLanguages()) {
+            // QLocale's name drops the script, so "zh-Hans-CN" also tries "zh_CN".
+            const QString name = QLocale(language).name();
             language.replace(u'-', u'_');
             candidates.append(language);
+            candidates.append(name);
             candidates.append(language.section(u'_', 0, 0));
         }
     } else if (code != QStringLiteral("en")) {
@@ -416,11 +419,17 @@ QString language_native_name(const QString& code)
         return QStringLiteral("English");
     }
     const QLocale locale(code);
-    const QString name = locale.nativeLanguageName();
+    QString name = locale.nativeLanguageName();
     if (name.isEmpty()) {
         return code;
     }
-    return name.left(1).toUpper() + name.mid(1);
+    name = name.left(1).toUpper() + name.mid(1);
+    // "pt_BR" is "Português (Brasil)": the territory tells regional variants apart.
+    const QString territory = locale.nativeTerritoryName();
+    if (code.contains(u'_') && !territory.isEmpty()) {
+        name += QStringLiteral(" (") + territory + u')';
+    }
+    return name;
 }
 
 } // namespace opensesh

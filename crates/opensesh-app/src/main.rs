@@ -152,11 +152,16 @@ fn run(options: Options, log_guard: &mut Option<LogGuard>) -> Result<ExitCode> {
         identity::APP_NAME
     );
 
-    let initial_language = opensesh_core::config::load_file(
-        &paths.config_dir().join(opensesh_core::config::CONFIG_FILE),
-    )
-    .map(|loaded| loaded.config.general.language)
-    .unwrap_or_else(|_| "system".to_owned());
+    // The smoke test checks English text, so it runs in English (ADR 0041).
+    let initial_language = if options.smoke_test {
+        "en".to_owned()
+    } else {
+        opensesh_core::config::load_file(
+            &paths.config_dir().join(opensesh_core::config::CONFIG_FILE),
+        )
+        .map(|loaded| loaded.config.general.language)
+        .unwrap_or_else(|_| "system".to_owned())
+    };
 
     let gallery = options.mode == Mode::Gallery;
     let (qml, crash_report) = match options.mode {

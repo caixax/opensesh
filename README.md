@@ -22,6 +22,7 @@ OpenSesh is an open source, cross-platform and lightweight remote connections cl
 - **The server at a glance:** CPU, memory, network and disks of the connected server in the status bar, without installing anything there.
 - **More protocols:** telnet, serial ports (with a hexadecimal view), mosh, Docker and Podman containers and Kubernetes pods, and remote desktops over RDP and VNC in tabs.
 - **Your hosts, everywhere:** groups, tags, fuzzy search and quick connect; imports from `~/.ssh/config`, MobaXterm, PuTTY, Remmina and CSV; exports as bundles or OpenSSH config; settings synced between computers through Git or Syncthing, merged rather than overwritten ([guide](docs/sync.md)).
+- **In your language:** English, Simplified Chinese, French, German, Japanese, Brazilian Portuguese and Spanish. Corrections to the translations are welcome ([guide](docs/user-guide.md#settings)).
 
 The **[user guide](docs/user-guide.md)** walks through all of it. Design decisions are in [`docs/adr/`](docs/adr/), sprint reports in [`docs/sprints/`](docs/sprints/), and the changes in [`CHANGELOG.md`](CHANGELOG.md).
 

@@ -1,6 +1,6 @@
 # ADR 0009: Translation pipeline, and a pseudo-locale while Spanish is postponed
 
-- **Status:** accepted
+- **Status:** accepted; the first real translations came with [ADR 0041](0041-first-translations.md)
 - **Date:** 2026-09-25
 - **Sprint:** 1
 

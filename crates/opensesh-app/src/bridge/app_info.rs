@@ -375,6 +375,13 @@ pub fn screenshot_run() -> bool {
         .is_some_and(|startup| startup.screenshot_dir.is_some())
 }
 
+/// Whether this is a smoke test, which checks English text and so runs in English whatever the
+/// configured language (ADR 0041).
+#[must_use]
+pub fn smoke_test_run() -> bool {
+    STARTUP.get().is_some_and(|startup| startup.smoke_test)
+}
+
 /// Whether this run must leave the user's files alone: a smoke test or a screenshot run reads
 /// the settings but never writes them (or creates folders for them).
 #[must_use]

@@ -155,6 +155,8 @@ While a terminal is connected to a server over SSH, the status bar shows the ser
 | Data and sync | Import and export, the settings folder, Git, conflicts |
 | About | Version, system details, third-party notices |
 
+**Language:** OpenSesh is in English, Simplified Chinese, French, German, Japanese, Brazilian Portuguese and Spanish. It follows your system's language unless you pick one under Settings > General > Language, which applies at once. Corrections to a translation are welcome: the files are `crates/opensesh-app/i18n/opensesh_<language>.ts`.
+
 **High contrast:** with Contrast on "System", OpenSesh follows your desktop's high-contrast setting (Qt 6.10 or newer). "High" turns it on always: stronger text, outlines and a thicker focus ring.
 
 Settings are plain TOML files that you can read, back up and sync.

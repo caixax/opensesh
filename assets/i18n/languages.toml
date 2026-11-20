@@ -4,7 +4,5 @@
 # for translators and the compiled opensesh_<code>.qm that the app bundles and offers in the
 # language selector. English is the source language and needs no entry. The pseudo-locale
 # (opensesh_pseudo, shown in debug builds only) is always generated and must not be listed.
-#
-# Spanish is postponed by the owner: add "es" here when the owner asks for it.
 schema_version = 1
-languages = []
+languages = ["de", "es", "fr", "ja", "pt_BR", "zh_CN"]

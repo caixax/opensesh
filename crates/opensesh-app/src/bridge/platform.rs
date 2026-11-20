@@ -461,6 +461,10 @@ impl qobject::Platform {
 
     /// See the bridge declaration.
     pub fn apply_language(&self, code: &QString) -> bool {
+        if crate::bridge::app_info::smoke_test_run() {
+            // The smoke test checks English text (ADR 0041).
+            return shim::apply_translation(&QString::from("en"));
+        }
         let applied = shim::apply_translation(code);
         tracing::info!(language = %code, applied, "UI language");
         applied
