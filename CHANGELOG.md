@@ -6,11 +6,17 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Fixed
 
+- **Connect in a split from the Hosts view** ([#40](https://github.com/caixax/opensesh/issues/40)) opened a new tab: it now splits the terminal tab you were last in, as quick connect's Shift+Enter and Ctrl+Enter do from a terminal tab. The user guide explains how to put a different host in each pane.
+- The tunnel import dialog could be narrower than its content.
+
+### Fixed
+
 - The tunnel import dialog could be narrower than its content.
 
 ### Security
 
 - **pageant 0.2.5** (GHSA-662x-8wvj-2276): the transport that carries requests to Pageant on Windows buffered a frame of any declared length before checking it. The requests it carries are OpenSesh's own, so this wasn't reachable from outside.
+- **The RDP helper:** libz-sys 1.1.33 (RUSTSEC-2026-0544, a heap buffer overflow in zlib's non-blocking `gzwrite`, which the helper doesn't call).
 - **The RDP helper:** libz-sys 1.1.33 (RUSTSEC-2026-0544, a heap buffer overflow in zlib's non-blocking `gzwrite`, which the helper doesn't call).
 - **The RDP helper:** libz-sys 1.1.33 (RUSTSEC-2026-0544, a heap buffer overflow in zlib's non-blocking `gzwrite`, which the helper doesn't call).
 

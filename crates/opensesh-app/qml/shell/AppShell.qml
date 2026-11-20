@@ -659,10 +659,18 @@ Item {
     }
 
     // Opens `connection` ({kind, host, target}): where "tab" (a new tab), "right" or "down" (a
-    // split of the current terminal tab, else a new tab).
+    // split of the current terminal tab; from a view such as Hosts, of the last terminal tab;
+    // a new tab when there is none).
     function openConnection(connection, where) {
-        if ((where === "right" || where === "down") && currentWorkspace && currentTab > 0)
-            return currentWorkspace.splitPane(0, where === "right" ? "horizontal" : "vertical", connection) > 0;
+        if (where === "right" || where === "down") {
+            if (!currentWorkspace) {
+                const index = tabIndexOf(lastSessionTabId);
+                if (index > 0)
+                    selectTab(index);
+            }
+            if (currentWorkspace && currentTab > 0)
+                return currentWorkspace.splitPane(0, where === "right" ? "horizontal" : "vertical", connection) > 0;
+        }
         const id = TerminalSessions.allocateId();
         const seed = {
             layout: { pane: id },
@@ -1765,6 +1773,11 @@ Item {
             () => {
                 if (!shell.connectHost("H00000", "right") || shell.currentWorkspace.paneCount !== 2)
                     smoke.fail("connecting in a split didn't split the tab");
+                // From a view, a split goes into the last terminal tab (issue #40).
+                shell.showView("hosts");
+                if (!shell.connectHost("H00000", "down") || shell.currentTabId !== tabId
+                        || shell.currentWorkspace.paneCount !== 3)
+                    smoke.fail("connecting in a split from the Hosts view didn't split the last terminal tab");
                 if (JSON.parse(Hosts.search("", "recent", "", "", "name"))[0].id !== "H00000")
                     smoke.fail("the connection isn't in Recent");
                 Instance.simulate("connect", "cache-01.eu-west");

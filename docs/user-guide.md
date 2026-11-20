@@ -55,7 +55,8 @@ A host is a saved connection: an address, a user, a protocol, and how to log in.
 ## Terminals
 
 - **Local shells:** `Ctrl+Shift+T` opens your default shell. The **+** menu next to the tabs lists every shell the computer has: PowerShell, cmd, Git Bash and the WSL distributions on Windows, the shells in `/etc/shells` on Linux.
-- **Split** a tab into panes (`Alt+Shift+=` to the right, `Alt+Shift+-` down). Move between panes with `Alt+arrows`, resize them with `Alt+Shift+arrows`, and maximize one with `Ctrl+Shift+Z`.
+- **Split** a tab into panes (`Alt+Shift+=` to the right, `Alt+Shift+-` down): the new pane opens the same host as the one it splits, or a new local shell. Move between panes with `Alt+arrows`, resize them with `Alt+Shift+arrows`, and maximize one with `Ctrl+Shift+Z`.
+- **Another host in a split:** right-click a host in the Hosts view and choose **Connect in a split**, to the right or below, or select it and press `Shift+Enter` (to the right). It splits the terminal tab you were last in. From a terminal tab, quick connect (`Ctrl+Shift+O`) does the same: `Shift+Enter` opens the host in a pane to the right, `Ctrl+Enter` below. Each pane can hold a different host, and a workspace remembers them all.
 - **Broadcast** (`Ctrl+Shift+B`) types into every pane of the tab at once; each pane can opt out.
 - **Workspaces** save the tabs of every window under a name (their split layouts, each pane's profile and folder, tab names and colors), to open them again later with new shells in the same folders.
 - **Copy and paste** with `Ctrl+Shift+C` and `Ctrl+Shift+V` ("Copy on select" in Settings > Terminal copies what you select). A paste that deserves a look is shown for review first, where it can be edited: several lines that would run at once, characters that hide what is seen (escape sequences, invisible or look-alike letters), or commands such as a download piped to a shell or `rm -rf /`.
