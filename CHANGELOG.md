@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Security
 
 - **pageant 0.2.5** (GHSA-662x-8wvj-2276): the transport that carries requests to Pageant on Windows buffered a frame of any declared length before checking it. The requests it carries are OpenSesh's own, so this wasn't reachable from outside.
+- **The RDP helper:** libz-sys 1.1.33 (RUSTSEC-2026-0544, a heap buffer overflow in zlib's non-blocking `gzwrite`, which the helper doesn't call).
 
 ## [1.1.1] - 2026-11-14
 
